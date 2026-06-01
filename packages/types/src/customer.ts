@@ -7,6 +7,8 @@ export interface Customer {
   city?: string
   order_count: number
   created_at: string
+  tags?: string[]
+  notes?: string
 }
 
 export interface CreateCustomerInput {

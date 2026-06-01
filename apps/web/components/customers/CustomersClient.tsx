@@ -2,7 +2,21 @@
 
 import { useState, useTransition, useMemo } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import type { CustomerInput } from '@/app/(dashboard)/customers/actions'
+
+const TAG_COLORS = [
+  'bg-purple-100 text-purple-700',
+  'bg-blue-100 text-blue-700',
+  'bg-green-100 text-green-700',
+  'bg-orange-100 text-orange-700',
+  'bg-pink-100 text-pink-700',
+  'bg-teal-100 text-teal-700',
+]
+function tagColor(tag: string) {
+  const hash = tag.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+  return TAG_COLORS[hash % TAG_COLORS.length]
+}
 
 type Order = {
   id: string
@@ -18,6 +32,7 @@ type Customer = {
   address?: string
   city?: string
   created_at: string
+  tags?: string[] | null
   orders: Order[] | null
 }
 
@@ -36,6 +51,7 @@ function getStats(orders: Order[] | null) {
 }
 
 export default function CustomersClient({ customers, updateCustomer, deleteCustomer }: Props) {
+  const router = useRouter()
   const [search, setSearch] = useState('')
   const [isPending, startTransition] = useTransition()
 
@@ -169,14 +185,33 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
             <tbody className="divide-y divide-gray-100">
               {filtered.map(c => {
                 const stats = getStats(c.orders)
+                const tags = c.tags ?? []
                 return (
-                  <tr key={c.id} className="hover:bg-gray-50 transition-colors">
+                  <tr
+                    key={c.id}
+                    onClick={() => router.push(`/customers/${c.id}`)}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                  >
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-brand-100 text-brand-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
                           {c.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
                         </div>
-                        <p className="font-medium text-gray-900">{c.name}</p>
+                        <div>
+                          <p className="font-medium text-gray-900">{c.name}</p>
+                          {tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {tags.map(tag => (
+                                <span
+                                  key={tag}
+                                  className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium ${tagColor(tag)}`}
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-5 py-4 text-gray-600 font-mono text-xs">{c.phone}</td>
@@ -194,7 +229,7 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
                         ? new Date(stats.last.created_at).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short', year: '2-digit' })
                         : <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4" onClick={e => e.stopPropagation()}>
                       <div className="flex gap-3">
                         <button
                           onClick={() => openEdit(c)}

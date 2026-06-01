@@ -28,6 +28,7 @@ export async function updateCustomer(id: string, input: CustomerInput) {
 
   if (error) throw new Error(error.message)
   revalidatePath('/customers')
+  revalidatePath(`/customers/${id}`)
 }
 
 export async function deleteCustomer(id: string) {
