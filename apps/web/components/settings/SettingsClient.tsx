@@ -77,7 +77,7 @@ type Props = {
 type Tab = 'profile' | 'security' | 'plan' | 'link'
 type Msg = { type: 'success' | 'error'; text: string }
 
-const BASE_URL = 'hanut.tn'
+const BASE_URL = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://hanut.tn').replace(/\/$/, '')
 
 export default function SettingsClient({ seller, stats, updateProfile, updateSlug, checkSlugAvailability }: Props) {
   const router = useRouter()
@@ -115,8 +115,8 @@ export default function SettingsClient({ seller, stats, updateProfile, updateSlu
     .toUpperCase()
 
   const planCfg = PLAN_CONFIG[seller.plan]
-  const orderLink = seller.slug ? `${BASE_URL}/order/${seller.slug}` : null
-  const orderLinkFull = seller.slug ? `https://${BASE_URL}/order/${seller.slug}` : null
+  const orderLinkFull = seller.slug ? `${BASE_URL}/order/${seller.slug}` : null
+  const orderLink = orderLinkFull ? orderLinkFull.replace(/^https?:\/\//, '') : null
 
   function handleProfileSave(e: React.FormEvent) {
     e.preventDefault()
