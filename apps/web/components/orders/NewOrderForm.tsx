@@ -1,31 +1,45 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useEffect, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import type { Product } from '@hanut/types'
 import type { CreateOrderInput } from '@/app/(dashboard)/orders/actions'
+
+type CustomerSuggestion = {
+  id: string
+  name: string
+  phone: string
+  address?: string | null
+  city?: string | null
+}
 
 type Props = {
   products: Product[]
   createOrder: (input: CreateOrderInput) => Promise<void>
+  initialCustomer?: CustomerSuggestion
 }
 
-export default function NewOrderForm({ products, createOrder }: Props) {
+export default function NewOrderForm({ products, createOrder, initialCustomer }: Props) {
   const router = useRouter()
-  const supabase = createClient()
   const [isPending, startTransition] = useTransition()
 
-  // Customer
-  const [phone, setPhone] = useState('')
-  const [customerId, setCustomerId] = useState<string | undefined>()
-  const [customerName, setCustomerName] = useState('')
-  const [customerAddress, setCustomerAddress] = useState('')
-  const [customerCity, setCustomerCity] = useState('')
-  const [lookingUp, setLookingUp] = useState(false)
-  const [customerFound, setCustomerFound] = useState(false)
+  // ── Customer section ──
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerSuggestion | null>(
+    initialCustomer ?? null
+  )
+  const [customerName, setCustomerName] = useState(initialCustomer?.name ?? '')
+  const [phone, setPhone] = useState(initialCustomer?.phone ?? '')
+  const [customerAddress, setCustomerAddress] = useState(initialCustomer?.address ?? '')
+  const [customerCity, setCustomerCity] = useState(initialCustomer?.city ?? '')
 
-  // Product
+  // Search dropdown
+  const [search, setSearch] = useState('')
+  const [suggestions, setSuggestions] = useState<CustomerSuggestion[]>([])
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [searching, setSearching] = useState(false)
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // ── Product section ──
   const [productId, setProductId] = useState('')
   const [variant, setVariant] = useState('')
   const [quantity, setQuantity] = useState(1)
@@ -35,44 +49,48 @@ export default function NewOrderForm({ products, createOrder }: Props) {
 
   const selectedProduct = products.find(p => p.id === productId)
 
-  // Auto-fill COD from product price
   useEffect(() => {
-    if (selectedProduct && codAmount === '') {
-      setCodAmount(selectedProduct.price * quantity)
-    }
+    if (selectedProduct && codAmount === '') setCodAmount(selectedProduct.price * quantity)
   }, [selectedProduct])
 
   useEffect(() => {
-    if (selectedProduct && codAmount !== '') {
-      setCodAmount(selectedProduct.price * quantity)
-    }
+    if (selectedProduct && codAmount !== '') setCodAmount(selectedProduct.price * quantity)
   }, [quantity])
 
-  // Reset variant when product changes
-  useEffect(() => {
-    setVariant('')
-  }, [productId])
+  useEffect(() => { setVariant('') }, [productId])
 
-  async function lookupCustomer(value = phone) {
-    if (value.length < 6) return
-    setLookingUp(true)
-    const { data } = await supabase
-      .from('customers')
-      .select('id, name, address, city')
-      .eq('phone', value)
-      .maybeSingle()
+  function onSearchChange(value: string) {
+    setSearch(value)
+    if (searchTimeout.current) clearTimeout(searchTimeout.current)
+    if (value.length < 2) { setSuggestions([]); setDropdownOpen(false); return }
+    setSearching(true)
+    searchTimeout.current = setTimeout(async () => {
+      const res = await fetch(`/api/customers?search=${encodeURIComponent(value)}`)
+      const data: CustomerSuggestion[] = await res.json()
+      setSuggestions(data)
+      setDropdownOpen(true)
+      setSearching(false)
+    }, 300)
+  }
 
-    if (data) {
-      setCustomerId(data.id)
-      setCustomerName(data.name)
-      setCustomerAddress(data.address ?? '')
-      setCustomerCity(data.city ?? '')
-      setCustomerFound(true)
-    } else {
-      setCustomerId(undefined)
-      setCustomerFound(false)
-    }
-    setLookingUp(false)
+  function selectCustomer(c: CustomerSuggestion) {
+    setSelectedCustomer(c)
+    setCustomerName(c.name)
+    setPhone(c.phone)
+    setCustomerAddress(c.address ?? '')
+    setCustomerCity(c.city ?? '')
+    setSearch('')
+    setSuggestions([])
+    setDropdownOpen(false)
+  }
+
+  function clearCustomer() {
+    setSelectedCustomer(null)
+    setCustomerName('')
+    setPhone('')
+    setCustomerAddress('')
+    setCustomerCity('')
+    setSearch('')
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -80,12 +98,11 @@ export default function NewOrderForm({ products, createOrder }: Props) {
     if (!productId) return setError('Sélectionnez un produit.')
     if (!customerName.trim()) return setError('Entrez le nom du client.')
     if (!phone.trim()) return setError('Entrez le téléphone du client.')
-
     setError(null)
     startTransition(async () => {
       try {
         await createOrder({
-          customer_id: customerId,
+          customer_id: selectedCustomer?.id,
           customer_name: customerName.trim(),
           customer_phone: phone.trim(),
           customer_address: customerAddress.trim() || undefined,
@@ -118,6 +135,10 @@ export default function NewOrderForm({ products, createOrder }: Props) {
     )
   }
 
+  const initials = selectedCustomer
+    ? selectedCustomer.name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()
+    : ''
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div className="flex items-center gap-3">
@@ -139,36 +160,105 @@ export default function NewOrderForm({ products, createOrder }: Props) {
             Client
           </h2>
 
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone *</label>
-              <input
-                className="input"
-                type="tel"
-                value={phone}
-                onChange={e => { setPhone(e.target.value); setCustomerFound(false) }}
-                onBlur={e => lookupCustomer(e.target.value)}
-                placeholder="+216 XX XXX XXX"
-                required
-              />
-            </div>
-            <div className="flex items-end">
+          {/* Selected customer badge OR search input */}
+          {selectedCustomer ? (
+            <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl">
+              <div className="w-8 h-8 bg-brand-100 text-brand-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0 select-none">
+                {initials}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm text-gray-900">{selectedCustomer.name}</p>
+                <p className="text-xs text-gray-500 font-mono">{selectedCustomer.phone}</p>
+                {selectedCustomer.city && <p className="text-xs text-gray-400">{selectedCustomer.city}</p>}
+              </div>
               <button
                 type="button"
-                onClick={() => lookupCustomer()}
-                disabled={lookingUp || phone.length < 6}
-                className="btn-secondary px-3 text-sm h-[38px]"
+                onClick={clearCustomer}
+                className="text-gray-400 hover:text-gray-600 text-lg leading-none px-1 shrink-0"
+                title="Désélectionner ce client"
               >
-                {lookingUp ? '...' : 'Chercher'}
+                ×
               </button>
             </div>
-          </div>
+          ) : (
+            <div className="relative">
+              <div className="relative">
+                <input
+                  className="input pr-8"
+                  placeholder="Rechercher par nom ou téléphone…"
+                  value={search}
+                  onChange={e => onSearchChange(e.target.value)}
+                  onFocus={() => { if (suggestions.length > 0) setDropdownOpen(true) }}
+                  onBlur={() => setTimeout(() => setDropdownOpen(false), 150)}
+                  autoComplete="off"
+                />
+                {searching && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">…</span>
+                )}
+              </div>
 
-          {customerFound && (
-            <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2.5 text-sm text-green-700 flex items-center gap-2">
-              <span>✓</span> Client existant trouvé — informations pré-remplies
+              {dropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
+                  {suggestions.length > 0 ? (
+                    <>
+                      {suggestions.map(c => {
+                        const ini = c.name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onMouseDown={() => selectCustomer(c)}
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-0"
+                          >
+                            <div className="w-8 h-8 bg-brand-100 text-brand-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
+                              {ini}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm text-gray-900 truncate">{c.name}</p>
+                              <p className="text-xs text-gray-400 font-mono">{c.phone}{c.city ? ` · ${c.city}` : ''}</p>
+                            </div>
+                          </button>
+                        )
+                      })}
+                      <button
+                        type="button"
+                        onMouseDown={() => { setDropdownOpen(false); setSearch('') }}
+                        className="w-full px-4 py-2.5 text-sm text-brand-600 hover:bg-brand-50 transition-colors text-left font-medium border-t border-gray-100"
+                      >
+                        + Créer un nouveau client
+                      </button>
+                    </>
+                  ) : (
+                    search.length >= 2 && !searching && (
+                      <div className="px-4 py-3 text-sm text-gray-500">
+                        Aucun client trouvé.{' '}
+                        <button
+                          type="button"
+                          onMouseDown={() => { setDropdownOpen(false) }}
+                          className="text-brand-600 font-medium hover:underline"
+                        >
+                          Créer un nouveau client
+                        </button>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
             </div>
           )}
+
+          {/* Fields — always visible, pre-filled when customer selected */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone *</label>
+            <input
+              className="input"
+              type="tel"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              placeholder="+216 XX XXX XXX"
+              required
+            />
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet *</label>

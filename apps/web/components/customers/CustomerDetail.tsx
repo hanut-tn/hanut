@@ -166,12 +166,20 @@ export default function CustomerDetail({ customer, orders, stats, updateCustomer
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <h1 className="text-xl font-bold text-gray-900">{customer.name}</h1>
-              <button
-                onClick={() => { setEditOpen(true); setEditMsg(null) }}
-                className="btn-secondary text-sm shrink-0"
-              >
-                Modifier
-              </button>
+              <div className="flex gap-2 shrink-0">
+                <Link
+                  href={`/orders/new?customer_id=${customer.id}`}
+                  className="btn-primary text-sm"
+                >
+                  + Nouvelle commande
+                </Link>
+                <button
+                  onClick={() => { setEditOpen(true); setEditMsg(null) }}
+                  className="btn-secondary text-sm"
+                >
+                  Modifier
+                </button>
+              </div>
             </div>
             <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-gray-500">
               <span className="font-mono">{customer.phone}</span>

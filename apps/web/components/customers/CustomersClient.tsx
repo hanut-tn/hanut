@@ -230,10 +230,16 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
                         : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-5 py-4" onClick={e => e.stopPropagation()}>
-                      <div className="flex gap-3">
+                      <div className="flex gap-3 items-center">
+                        <Link
+                          href={`/orders/new?customer_id=${c.id}`}
+                          className="text-xs text-brand-600 hover:text-brand-800 font-medium whitespace-nowrap"
+                        >
+                          + Commande
+                        </Link>
                         <button
                           onClick={() => openEdit(c)}
-                          className="text-xs text-brand-600 hover:text-brand-800 font-medium"
+                          className="text-xs text-gray-500 hover:text-gray-800 font-medium"
                         >
                           Éditer
                         </button>
