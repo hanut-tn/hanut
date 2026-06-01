@@ -3,6 +3,8 @@
 -- À exécuter dans l'éditeur SQL de Supabase (Project > SQL Editor)
 -- ============================================================
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- ─────────────────────────────────────────────────────────────
 -- 1. TABLE sellers
 -- ─────────────────────────────────────────────────────────────
@@ -11,6 +13,7 @@ CREATE TABLE IF NOT EXISTS sellers (
   email            TEXT UNIQUE NOT NULL,
   name             TEXT NOT NULL,
   phone            TEXT,
+  slug             TEXT UNIQUE,
   plan             TEXT NOT NULL DEFAULT 'starter' CHECK (plan IN ('starter', 'pro', 'business')),
   subscription_end TIMESTAMP WITH TIME ZONE,
   created_at       TIMESTAMP WITH TIME ZONE DEFAULT now()
@@ -37,10 +40,10 @@ CREATE TABLE IF NOT EXISTS products (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   seller_id       UUID NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
   name            TEXT NOT NULL,
-  price           DECIMAL(10,2) NOT NULL,
-  cost            DECIMAL(10,2),
-  stock           INTEGER NOT NULL DEFAULT 0,
-  low_stock_alert INTEGER NOT NULL DEFAULT 3,
+  price           DECIMAL(10,2) NOT NULL CHECK (price >= 0),
+  cost            DECIMAL(10,2) CHECK (cost IS NULL OR cost >= 0),
+  stock           INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
+  low_stock_alert INTEGER NOT NULL DEFAULT 3 CHECK (low_stock_alert >= 0),
   variants        JSONB NOT NULL DEFAULT '[]',
   image_url       TEXT,
   created_at      TIMESTAMP WITH TIME ZONE DEFAULT now()
@@ -63,6 +66,8 @@ CREATE TABLE IF NOT EXISTS customers (
   phone       TEXT NOT NULL,
   address     TEXT,
   city        TEXT,
+  tags        TEXT[] NOT NULL DEFAULT '{}',
+  notes       TEXT,
   order_count INTEGER NOT NULL DEFAULT 0,
   created_at  TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
@@ -83,10 +88,10 @@ CREATE TABLE IF NOT EXISTS orders (
   customer_id UUID NOT NULL REFERENCES customers(id),
   product_id  UUID NOT NULL REFERENCES products(id),
   variant     TEXT,
-  quantity    INTEGER NOT NULL DEFAULT 1,
-  cod_amount  DECIMAL(10,2) NOT NULL,
+  quantity    INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+  cod_amount  DECIMAL(10,2) NOT NULL CHECK (cod_amount >= 0),
   status      TEXT NOT NULL DEFAULT 'new'
-              CHECK (status IN ('new', 'confirmed', 'shipped', 'delivered', 'returned')),
+              CHECK (status IN ('pending', 'new', 'confirmed', 'shipped', 'delivered', 'returned')),
   notes       TEXT,
   created_at  TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at  TIMESTAMP WITH TIME ZONE DEFAULT now()
@@ -122,7 +127,7 @@ CREATE TABLE IF NOT EXISTS deliveries (
                  CHECK (carrier IN ('intigo', 'navex', 'adex', 'aramex', 'bestdelivery')),
   tracking_number TEXT,
   carrier_status  TEXT,
-  fee            DECIMAL(10,2),
+  fee            DECIMAL(10,2) CHECK (fee IS NULL OR fee >= 0),
   cod_collected  BOOLEAN NOT NULL DEFAULT false,
   cod_reversed   BOOLEAN NOT NULL DEFAULT false,
   created_at     TIMESTAMP WITH TIME ZONE DEFAULT now(),
@@ -152,7 +157,35 @@ CREATE POLICY "Sellers manage own deliveries"
 -- La vérification se fait par signature dans le code
 
 -- ─────────────────────────────────────────────────────────────
--- 6. FONCTION — décrémentation du stock
+-- 6. TABLE waitlist
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS waitlist (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email      TEXT UNIQUE NOT NULL CHECK (position('@' in email) > 1),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+ALTER TABLE waitlist ENABLE ROW LEVEL SECURITY;
+
+-- Insertion via route serveur avec service role.
+
+-- ─────────────────────────────────────────────────────────────
+-- 7. TABLE contact_messages
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS contact_messages (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name       TEXT NOT NULL CHECK (length(trim(name)) > 0),
+  email      TEXT NOT NULL CHECK (position('@' in email) > 1),
+  message    TEXT NOT NULL CHECK (length(trim(message)) > 0),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+ALTER TABLE contact_messages ENABLE ROW LEVEL SECURITY;
+
+-- Insertion via route serveur avec service role.
+
+-- ─────────────────────────────────────────────────────────────
+-- 8. FONCTION — décrémentation du stock
 -- ─────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION decrement_stock(product_id UUID, qty INTEGER)
 RETURNS VOID AS $$
@@ -164,7 +197,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ─────────────────────────────────────────────────────────────
--- 7. FONCTION — incrémenter order_count d'un client
+-- 9. FONCTION — incrémenter order_count d'un client
 -- ─────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION increment_customer_order_count()
 RETURNS TRIGGER AS $$
@@ -181,12 +214,16 @@ CREATE TRIGGER orders_increment_customer_count
   FOR EACH ROW EXECUTE FUNCTION increment_customer_order_count();
 
 -- ─────────────────────────────────────────────────────────────
--- 8. INDEX pour les requêtes courantes
+-- 10. INDEX pour les requêtes courantes
 -- ─────────────────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_orders_seller_id     ON orders(seller_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status        ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at    ON orders(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_seller_status ON orders(seller_id, status);
 CREATE INDEX IF NOT EXISTS idx_products_seller_id   ON products(seller_id);
 CREATE INDEX IF NOT EXISTS idx_customers_seller_id  ON customers(seller_id);
 CREATE INDEX IF NOT EXISTS idx_customers_phone      ON customers(phone);
+CREATE INDEX IF NOT EXISTS idx_customers_seller_phone ON customers(seller_id, phone);
 CREATE INDEX IF NOT EXISTS idx_deliveries_order_id  ON deliveries(order_id);
+CREATE INDEX IF NOT EXISTS idx_waitlist_created_at  ON waitlist(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_contact_messages_created_at ON contact_messages(created_at DESC);
