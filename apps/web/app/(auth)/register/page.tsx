@@ -5,6 +5,17 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
+function generateSlug(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'boutique'
+  )
+}
+
 export default function RegisterPage() {
   const router = useRouter()
   const supabase = createClient()
@@ -21,13 +32,10 @@ export default function RegisterPage() {
     setLoading(true)
     setError(null)
 
-    // 1. Créer le compte auth Supabase
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: { name: shopName, phone },
-      },
+      options: { data: { name: shopName, phone } },
     })
 
     if (signUpError) {
@@ -42,16 +50,35 @@ export default function RegisterPage() {
       return
     }
 
-    // 2. Créer le profil vendeur dans la table sellers
-    const { error: profileError } = await supabase.from('sellers').insert({
-      id: data.user.id,
-      email,
-      name: shopName,
-      phone: phone || null,
-    })
+    // Generate slug from shop name, retry with -2/-3 on unique conflict
+    const baseSlug = generateSlug(shopName)
+    let inserted = false
 
-    if (profileError) {
-      setError(profileError.message)
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const slug = attempt === 0 ? baseSlug : `${baseSlug}-${attempt + 1}`
+      const { error: profileError } = await supabase.from('sellers').insert({
+        id: data.user.id,
+        email,
+        name: shopName,
+        phone: phone || null,
+        slug,
+      })
+
+      if (!profileError) {
+        inserted = true
+        break
+      }
+
+      // 23505 = unique_violation — try next slug
+      if (profileError.code !== '23505') {
+        setError(profileError.message)
+        setLoading(false)
+        return
+      }
+    }
+
+    if (!inserted) {
+      setError('Impossible de créer le profil. Réessayez.')
       setLoading(false)
       return
     }

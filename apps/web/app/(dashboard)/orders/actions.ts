@@ -91,6 +91,48 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
   revalidatePath('/dashboard')
 }
 
+export async function confirmPendingOrder(id: string) {
+  return updateOrderStatus(id, 'new')
+}
+
+export async function cancelPendingOrder(id: string) {
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Non autorisé')
+
+  const { data: order } = await supabase
+    .from('orders')
+    .select('product_id, quantity, status')
+    .eq('id', id)
+    .eq('seller_id', user.id)
+    .single()
+
+  if (!order) throw new Error('Commande introuvable')
+  if (order.status !== 'pending') throw new Error('Seules les commandes en attente peuvent être annulées ici')
+
+  // Restore stock
+  const { data: product } = await supabase
+    .from('products')
+    .select('stock')
+    .eq('id', order.product_id)
+    .single()
+
+  if (product) {
+    await supabase.from('products')
+      .update({ stock: product.stock + order.quantity })
+      .eq('id', order.product_id)
+  }
+
+  const { error } = await supabase.from('orders')
+    .update({ status: 'returned' })
+    .eq('id', id)
+    .eq('seller_id', user.id)
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/orders')
+  revalidatePath('/dashboard')
+}
+
 export async function deleteOrder(id: string) {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()

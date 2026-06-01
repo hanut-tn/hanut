@@ -1,6 +1,6 @@
 import { createServerClient } from '@/lib/supabase/server'
 import OrdersClient from '@/components/orders/OrdersClient'
-import { updateOrderStatus, deleteOrder } from './actions'
+import { updateOrderStatus, deleteOrder, confirmPendingOrder, cancelPendingOrder } from './actions'
 
 export default async function OrdersPage() {
   const supabase = await createServerClient()
@@ -22,6 +22,8 @@ export default async function OrdersPage() {
       orders={(orders ?? []) as any[]}
       updateStatus={updateOrderStatus}
       deleteOrder={deleteOrder}
+      confirmOrder={confirmPendingOrder}
+      cancelPendingOrder={cancelPendingOrder}
     />
   )
 }

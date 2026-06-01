@@ -7,5 +7,6 @@ export interface Seller {
   phone?: string
   plan: SellerPlan
   subscription_end?: string
+  slug?: string
   created_at: string
 }

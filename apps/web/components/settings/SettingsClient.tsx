@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { ProfileInput } from '@/app/(dashboard)/settings/actions'
@@ -63,19 +63,23 @@ type Seller = {
   plan: 'starter' | 'pro' | 'business'
   subscription_end: string | null
   created_at: string | null
+  slug: string | null
 }
 
 type Props = {
   seller: Seller
   stats: { products: number; customers: number; orders: number }
   updateProfile: (input: ProfileInput) => Promise<void>
+  updateSlug: (slug: string) => Promise<void>
+  checkSlugAvailability: (slug: string) => Promise<boolean>
 }
 
-type Tab = 'profile' | 'security' | 'plan'
-
+type Tab = 'profile' | 'security' | 'plan' | 'link'
 type Msg = { type: 'success' | 'error'; text: string }
 
-export default function SettingsClient({ seller, stats, updateProfile }: Props) {
+const BASE_URL = 'hanut.tn'
+
+export default function SettingsClient({ seller, stats, updateProfile, updateSlug, checkSlugAvailability }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [tab, setTab] = useState<Tab>('profile')
@@ -95,6 +99,14 @@ export default function SettingsClient({ seller, stats, updateProfile }: Props) 
   // Logout all
   const [logoutPending, setLogoutPending] = useState(false)
 
+  // Link / slug
+  const [newSlug, setNewSlug] = useState(seller.slug ?? '')
+  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null)
+  const [slugChecking, setSlugChecking] = useState(false)
+  const [slugMsg, setSlugMsg] = useState<Msg | null>(null)
+  const [copied, setCopied] = useState(false)
+  const slugTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const initials = seller.name
     .split(' ')
     .map(w => w[0] ?? '')
@@ -103,6 +115,8 @@ export default function SettingsClient({ seller, stats, updateProfile }: Props) 
     .toUpperCase()
 
   const planCfg = PLAN_CONFIG[seller.plan]
+  const orderLink = seller.slug ? `${BASE_URL}/order/${seller.slug}` : null
+  const orderLinkFull = seller.slug ? `https://${BASE_URL}/order/${seller.slug}` : null
 
   function handleProfileSave(e: React.FormEvent) {
     e.preventDefault()
@@ -147,8 +161,47 @@ export default function SettingsClient({ seller, stats, updateProfile }: Props) 
     router.push('/login')
   }
 
+  function onSlugChange(value: string) {
+    setNewSlug(value)
+    setSlugAvailable(null)
+    setSlugMsg(null)
+    if (slugTimeout.current) clearTimeout(slugTimeout.current)
+    const cleaned = value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '')
+    if (cleaned.length >= 3) {
+      setSlugChecking(true)
+      slugTimeout.current = setTimeout(async () => {
+        const available = await checkSlugAvailability(cleaned)
+        setSlugAvailable(available)
+        setSlugChecking(false)
+      }, 500)
+    }
+  }
+
+  function handleSlugSave(e: React.FormEvent) {
+    e.preventDefault()
+    setSlugMsg(null)
+    startTransition(async () => {
+      try {
+        await updateSlug(newSlug)
+        setSlugMsg({ type: 'success', text: 'Lien mis à jour avec succès.' })
+        setSlugAvailable(null)
+      } catch (err) {
+        setSlugMsg({ type: 'error', text: err instanceof Error ? err.message : 'Erreur inconnue' })
+      }
+    })
+  }
+
+  function handleCopy() {
+    if (!orderLinkFull) return
+    navigator.clipboard.writeText(orderLinkFull).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
   const TABS: { key: Tab; label: string }[] = [
     { key: 'profile',  label: 'Profil' },
+    { key: 'link',     label: 'Lien commande' },
     { key: 'security', label: 'Sécurité' },
     { key: 'plan',     label: 'Abonnement' },
   ]
@@ -184,7 +237,7 @@ export default function SettingsClient({ seller, stats, updateProfile }: Props) 
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit flex-wrap">
         {TABS.map(t => (
           <button
             key={t.key}
@@ -207,11 +260,7 @@ export default function SettingsClient({ seller, stats, updateProfile }: Props) 
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Adresse email</label>
-            <input
-              className="input bg-gray-50 text-gray-400 cursor-not-allowed"
-              value={seller.email}
-              readOnly
-            />
+            <input className="input bg-gray-50 text-gray-400 cursor-not-allowed" value={seller.email} readOnly />
             <p className="text-xs text-gray-400 mt-1">L&apos;email ne peut pas être modifié.</p>
           </div>
 
@@ -264,6 +313,125 @@ export default function SettingsClient({ seller, stats, updateProfile }: Props) 
         </form>
       )}
 
+      {/* ── LIEN COMMANDE ── */}
+      {tab === 'link' && (
+        <div className="space-y-4">
+          {/* Current link card */}
+          <div className="card p-5 space-y-4">
+            <div>
+              <h2 className="font-semibold text-gray-900 mb-0.5">Votre lien de commande</h2>
+              <p className="text-sm text-gray-500">
+                Partagez ce lien dans votre bio Instagram, statut WhatsApp ou description TikTok.
+                Vos clients pourront passer commande directement depuis leur téléphone.
+              </p>
+            </div>
+
+            {orderLink ? (
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-400 mb-0.5">Votre lien</p>
+                  <p className="text-sm font-mono font-medium text-gray-900 truncate">{orderLink}</p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button
+                    onClick={handleCopy}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                      copied
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {copied ? '✓ Copié !' : 'Copier'}
+                  </button>
+                  <a
+                    href={orderLinkFull!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-brand-600 text-white hover:bg-brand-700 transition-colors"
+                  >
+                    Voir ma page
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-sm text-orange-700">
+                Vous n&apos;avez pas encore de lien de commande. Créez-en un ci-dessous.
+              </div>
+            )}
+          </div>
+
+          {/* Edit slug */}
+          <form onSubmit={handleSlugSave} className="card p-5 space-y-4">
+            <h2 className="font-semibold text-gray-900">
+              {seller.slug ? 'Modifier votre lien' : 'Créer votre lien'}
+            </h2>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Identifiant de boutique
+              </label>
+              <div className="flex items-center gap-0">
+                <span className="px-3 py-2.5 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg text-sm text-gray-500 shrink-0 font-mono">
+                  hanut.tn/order/
+                </span>
+                <div className="relative flex-1">
+                  <input
+                    className={`input rounded-l-none border-l-0 font-mono ${
+                      slugAvailable === true ? 'border-green-300 focus:ring-green-100' :
+                      slugAvailable === false ? 'border-red-300 focus:ring-red-100' : ''
+                    }`}
+                    value={newSlug}
+                    onChange={e => onSlugChange(e.target.value)}
+                    placeholder="ma-boutique"
+                    required
+                    minLength={3}
+                    maxLength={50}
+                  />
+                  {slugChecking && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                      Vérification…
+                    </span>
+                  )}
+                  {!slugChecking && slugAvailable === true && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-green-600 font-semibold">
+                      ✓ Disponible
+                    </span>
+                  )}
+                  {!slugChecking && slugAvailable === false && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-red-500 font-semibold">
+                      ✗ Pris
+                    </span>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-1.5">
+                Uniquement lettres, chiffres et tirets. Exemple : <span className="font-mono">boutique-rania</span>
+              </p>
+            </div>
+
+            {slugMsg && (
+              <div className={`rounded-lg px-4 py-3 text-sm ${
+                slugMsg.type === 'success'
+                  ? 'bg-green-50 border border-green-200 text-green-700'
+                  : 'bg-red-50 border border-red-200 text-red-700'
+              }`}>
+                {slugMsg.text}
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={isPending || slugAvailable === false}
+                className="btn-primary"
+              >
+                {isPending ? 'Sauvegarde...' : seller.slug ? 'Mettre à jour' : 'Créer le lien'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* ── SÉCURITÉ ── */}
       {tab === 'security' && (
         <div className="space-y-4">
@@ -271,9 +439,7 @@ export default function SettingsClient({ seller, stats, updateProfile }: Props) 
             <h2 className="font-semibold text-gray-900">Changer le mot de passe</h2>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nouveau mot de passe
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nouveau mot de passe</label>
               <input
                 className="input"
                 type="password"
@@ -285,9 +451,7 @@ export default function SettingsClient({ seller, stats, updateProfile }: Props) 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Confirmer le mot de passe
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Confirmer le mot de passe</label>
               <input
                 className="input"
                 type="password"
@@ -315,7 +479,6 @@ export default function SettingsClient({ seller, stats, updateProfile }: Props) 
             </div>
           </form>
 
-          {/* Sessions */}
           <div className="card p-5">
             <h2 className="font-semibold text-gray-900 mb-1">Sessions actives</h2>
             <p className="text-sm text-gray-500 mb-4">
@@ -335,7 +498,6 @@ export default function SettingsClient({ seller, stats, updateProfile }: Props) 
       {/* ── ABONNEMENT ── */}
       {tab === 'plan' && (
         <div className="space-y-4">
-          {/* Current plan summary */}
           <div className="card p-5 flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500 mb-1">Abonnement actuel</p>
@@ -358,7 +520,6 @@ export default function SettingsClient({ seller, stats, updateProfile }: Props) 
             )}
           </div>
 
-          {/* Plan cards */}
           <div className="grid grid-cols-3 gap-3">
             {PLANS.map(plan => {
               const isCurrent = plan.key === seller.plan

@@ -1,6 +1,6 @@
 import { createServerClient } from '@/lib/supabase/server'
 import SettingsClient from '@/components/settings/SettingsClient'
-import { updateProfile } from './actions'
+import { updateProfile, updateSlug, checkSlugAvailability } from './actions'
 
 export default async function SettingsPage() {
   const supabase = await createServerClient()
@@ -9,7 +9,7 @@ export default async function SettingsPage() {
 
   const { data: seller } = await supabase
     .from('sellers')
-    .select('name, email, phone, plan, subscription_end, created_at')
+    .select('name, email, phone, plan, subscription_end, created_at, slug')
     .eq('id', user.id)
     .single()
 
@@ -28,6 +28,7 @@ export default async function SettingsPage() {
         plan: (seller?.plan ?? 'starter') as 'starter' | 'pro' | 'business',
         subscription_end: seller?.subscription_end ?? null,
         created_at: seller?.created_at ?? null,
+        slug: seller?.slug ?? null,
       }}
       stats={{
         products: productCount ?? 0,
@@ -35,6 +36,8 @@ export default async function SettingsPage() {
         orders: orderCount ?? 0,
       }}
       updateProfile={updateProfile}
+      updateSlug={updateSlug}
+      checkSlugAvailability={checkSlugAvailability}
     />
   )
 }
