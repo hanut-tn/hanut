@@ -1,3 +1,4 @@
+import { headers } from 'next/headers'
 import { createServerClient } from '@/lib/supabase/server'
 import SettingsClient from '@/components/settings/SettingsClient'
 import { updateProfile, updateSlug, checkSlugAvailability } from './actions'
@@ -6,6 +7,10 @@ export default async function SettingsPage() {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
+
+  const headersList = await headers()
+  const host = headersList.get('host') ?? 'hanut.tn'
+  const appUrl = host.startsWith('localhost') ? `http://${host}` : `https://${host}`
 
   const { data: seller } = await supabase
     .from('sellers')
@@ -35,6 +40,7 @@ export default async function SettingsPage() {
         customers: customerCount ?? 0,
         orders: orderCount ?? 0,
       }}
+      appUrl={appUrl}
       updateProfile={updateProfile}
       updateSlug={updateSlug}
       checkSlugAvailability={checkSlugAvailability}

@@ -69,6 +69,7 @@ type Seller = {
 type Props = {
   seller: Seller
   stats: { products: number; customers: number; orders: number }
+  appUrl: string
   updateProfile: (input: ProfileInput) => Promise<void>
   updateSlug: (slug: string) => Promise<void>
   checkSlugAvailability: (slug: string) => Promise<boolean>
@@ -77,9 +78,8 @@ type Props = {
 type Tab = 'profile' | 'security' | 'plan' | 'link'
 type Msg = { type: 'success' | 'error'; text: string }
 
-const BASE_URL = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://hanut.tn').replace(/\/$/, '')
-
-export default function SettingsClient({ seller, stats, updateProfile, updateSlug, checkSlugAvailability }: Props) {
+export default function SettingsClient({ seller, stats, appUrl, updateProfile, updateSlug, checkSlugAvailability }: Props) {
+  const BASE_URL = appUrl.replace(/\/$/, '')
   const router = useRouter()
   const supabase = createClient()
   const [tab, setTab] = useState<Tab>('profile')
