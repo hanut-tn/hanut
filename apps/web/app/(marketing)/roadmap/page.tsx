@@ -1,0 +1,190 @@
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Roadmap — Hanut',
+  description: 'Les fonctionnalités à venir sur Hanut. On construit avec les vendeurs tunisiens.',
+}
+
+type RoadmapItem = {
+  title: string
+  desc: string
+  eta?: string
+}
+
+const IN_DEV: RoadmapItem[] = [
+  {
+    title: 'Automatisations SMS',
+    desc: 'Templates SMS personnalisables envoyés automatiquement à chaque changement de statut de commande.',
+    eta: 'Juillet 2026',
+  },
+  {
+    title: 'Analytics avancés',
+    desc: 'Profit net réel après frais, taux de retour par livreur, heures de pointe, export PDF des rapports.',
+    eta: 'Août 2026',
+  },
+]
+
+const COMING_SOON: RoadmapItem[] = [
+  {
+    title: 'App mobile iOS & Android',
+    desc: 'Notifications push à chaque nouvelle commande, gestion complète depuis votre téléphone.',
+  },
+  {
+    title: 'Multi-utilisateurs',
+    desc: 'Invitez votre équipe avec des rôles différents : admin, opérateur, livreur.',
+  },
+  {
+    title: 'Export CSV',
+    desc: 'Exportez vos commandes et livraisons en CSV pour vos comptables ou analyses externes.',
+  },
+]
+
+const PLANNED: RoadmapItem[] = [
+  {
+    title: 'Inbox WhatsApp',
+    desc: 'Recevez et répondez aux messages WhatsApp de vos clients directement depuis Hanut.',
+  },
+  {
+    title: 'Salesbot',
+    desc: 'Réponses automatiques aux questions fréquentes de vos clients (horaires, délais, prix).',
+  },
+  {
+    title: 'Multi-boutiques',
+    desc: 'Gérez plusieurs boutiques distinctes depuis un seul compte Hanut.',
+  },
+  {
+    title: 'Intégrations avancées',
+    desc: 'Google Sheets, Facebook Ads, TikTok Shop — synchronisation automatique de vos données.',
+  },
+  {
+    title: 'Rapports fiscaux',
+    desc: 'Conformité TEIF, génération de factures PDF et rapports mensuels pour votre comptable.',
+  },
+]
+
+function StatusBadge({ status }: { status: 'dev' | 'soon' | 'planned' }) {
+  if (status === 'dev') return (
+    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+      <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+      En développement
+    </span>
+  )
+  if (status === 'soon') return (
+    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-orange-50 text-orange-700 border border-orange-100">
+      <span className="w-1.5 h-1.5 bg-orange-400 rounded-full" />
+      Bientôt
+    </span>
+  )
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
+      Prévu
+    </span>
+  )
+}
+
+function RoadmapCard({ item, status }: { item: RoadmapItem; status: 'dev' | 'soon' | 'planned' }) {
+  return (
+    <div className={`bg-white rounded-2xl p-5 border shadow-sm transition-shadow hover:shadow-md ${
+      status === 'dev' ? 'border-blue-100' : status === 'soon' ? 'border-orange-100' : 'border-gray-100'
+    }`}>
+      <StatusBadge status={status} />
+      <h3 className="font-bold text-[#1C1917] mt-3 mb-1.5">{item.title}</h3>
+      <p className="text-sm text-gray-500 leading-relaxed">{item.desc}</p>
+      {item.eta && (
+        <p className="text-xs text-blue-600 font-semibold mt-3">
+          Prévu pour {item.eta}
+        </p>
+      )}
+    </div>
+  )
+}
+
+export default function RoadmapPage() {
+  return (
+    <div className="bg-[#FAFAF9]">
+      {/* Hero */}
+      <section className="pt-20 pb-16 px-4 sm:px-6 text-center">
+        <div className="max-w-2xl mx-auto">
+          <p className="text-sm font-semibold text-[#16A34A] uppercase tracking-widest mb-4">Roadmap</p>
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-[#1C1917] leading-tight tracking-tight mb-5">
+            Ce qui arrive bientôt sur Hanut
+          </h1>
+          <p className="text-lg text-gray-500 leading-relaxed">
+            On construit Hanut avec les vendeurs tunisiens. Voilà ce qui est prévu.
+          </p>
+        </div>
+      </section>
+
+      {/* Roadmap grid */}
+      <section className="pb-24 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* En développement */}
+            <div>
+              <div className="flex items-center gap-2 mb-5">
+                <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
+                <h2 className="font-bold text-[#1C1917]">En développement</h2>
+              </div>
+              <div className="space-y-4">
+                {IN_DEV.map(item => (
+                  <RoadmapCard key={item.title} item={item} status="dev" />
+                ))}
+              </div>
+            </div>
+
+            {/* Bientôt */}
+            <div>
+              <div className="flex items-center gap-2 mb-5">
+                <div className="w-3 h-3 bg-orange-400 rounded-full" />
+                <h2 className="font-bold text-[#1C1917]">Bientôt</h2>
+              </div>
+              <div className="space-y-4">
+                {COMING_SOON.map(item => (
+                  <RoadmapCard key={item.title} item={item} status="soon" />
+                ))}
+              </div>
+            </div>
+
+            {/* Prévu */}
+            <div>
+              <div className="flex items-center gap-2 mb-5">
+                <div className="w-3 h-3 bg-gray-400 rounded-full" />
+                <h2 className="font-bold text-[#1C1917]">Prévu</h2>
+              </div>
+              <div className="space-y-4">
+                {PLANNED.map(item => (
+                  <RoadmapCard key={item.title} item={item} status="planned" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feedback */}
+      <section className="py-16 px-4 sm:px-6 bg-[#F5F5F4] border-t border-gray-200">
+        <div className="max-w-xl mx-auto text-center">
+          <p className="text-2xl font-bold text-[#1C1917] mb-3">
+            Une fonctionnalité que vous voulez voir ?
+          </p>
+          <p className="text-gray-500 mb-6">
+            Dites-le nous sur WhatsApp. On prend chaque suggestion au sérieux.
+          </p>
+          <a
+            href="https://wa.me/21600000000?text=Bonjour%20Hanut%2C%20je%20voudrais%20suggérer%20une%20fonctionnalité%20%3A%20"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2.5 bg-[#25D366] hover:bg-green-500 text-white font-semibold px-6 py-3 rounded-xl transition-colors shadow-lg shadow-green-100"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.553 4.115 1.522 5.847L0 24l6.347-1.498A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.817 9.817 0 01-5.007-1.37l-.359-.213-3.72.877.894-3.629-.234-.373A9.818 9.818 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/>
+            </svg>
+            Nous contacter sur WhatsApp
+          </a>
+        </div>
+      </section>
+    </div>
+  )
+}

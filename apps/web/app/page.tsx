@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import MarketingNavbar from '@/components/marketing/Navbar'
+import MarketingFooter from '@/components/marketing/Footer'
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -109,13 +111,6 @@ const PLANS: Plan[] = [
     highlighted: false,
   },
 ]
-
-const FOOTER_COLS: Record<string, string[]> = {
-  Produit: ['Fonctionnalités', 'Tarifs', 'Mises à jour'],
-  Livreurs: ['IntiGo', 'Navex', 'Adex', 'Aramex', 'Best Delivery'],
-  Ressources: ['Documentation', 'Guide démarrage', 'Support'],
-  Légal: ['Mentions légales', 'Confidentialité', 'CGU'],
-}
 
 // ─── Mockups ──────────────────────────────────────────────────────────────────
 
@@ -280,7 +275,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#FAFAF9] text-[#1C1917]">
-      <Navbar />
+      <MarketingNavbar />
       <main>
         <Hero />
         <CarrierBand />
@@ -290,58 +285,8 @@ export default function LandingPage() {
         <PricingSection />
         <CtaSection />
       </main>
-      <Footer />
+      <MarketingFooter />
     </div>
-  )
-}
-
-// ─── Navbar ───────────────────────────────────────────────────────────────────
-
-function Navbar() {
-  const [scrolled, setScrolled] = useState(false)
-
-  useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 10)
-    window.addEventListener('scroll', fn, { passive: true })
-    return () => window.removeEventListener('scroll', fn)
-  }, [])
-
-  return (
-    <header
-      className={`sticky top-0 z-50 bg-white/95 backdrop-blur-md transition-all duration-200 ${
-        scrolled ? 'border-b border-gray-100 shadow-sm' : ''
-      }`}
-    >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-6">
-        <Link href="/" className="flex items-center gap-2.5 shrink-0">
-          <div className="w-8 h-8 bg-[#0B5E46] rounded-lg flex items-center justify-center shadow-sm">
-            <span className="text-white font-bold text-sm">H</span>
-          </div>
-          <span className="font-bold text-[#1C1917] text-lg tracking-tight">Hanut</span>
-        </Link>
-
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-500">
-          <a href="#features" className="hover:text-[#1C1917] transition-colors">Fonctionnalités</a>
-          <a href="#pricing" className="hover:text-[#1C1917] transition-colors">Tarifs</a>
-          <a href="#about" className="hover:text-[#1C1917] transition-colors">À propos</a>
-        </nav>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <Link
-            href="/login"
-            className="hidden sm:inline-flex text-sm font-medium text-gray-600 hover:text-[#1C1917] px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Se connecter
-          </Link>
-          <Link
-            href="/register"
-            className="inline-flex items-center text-white text-sm font-semibold px-4 py-2 rounded-lg bg-[#16A34A] hover:bg-green-700 transition-colors shadow-sm"
-          >
-            Commencer
-          </Link>
-        </div>
-      </div>
-    </header>
   )
 }
 
@@ -709,52 +654,3 @@ function CtaSection() {
   )
 }
 
-// ─── Footer ───────────────────────────────────────────────────────────────────
-
-function Footer() {
-  return (
-    <footer className="bg-[#1C1917] text-gray-400 pt-16 pb-10 px-4 sm:px-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
-          <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-[#16A34A] rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">H</span>
-              </div>
-              <span className="font-bold text-white text-lg">Hanut</span>
-            </Link>
-            <p className="text-sm leading-relaxed text-gray-500">
-              L&apos;outil de gestion fait pour les vendeurs tunisiens qui vendent via DM.
-            </p>
-          </div>
-
-          {Object.entries(FOOTER_COLS).map(([col, links]) => (
-            <div key={col}>
-              <p className="text-xs font-bold text-white uppercase tracking-widest mb-4">{col}</p>
-              <ul className="space-y-2.5">
-                {links.map(l => (
-                  <li key={l}>
-                    <a href="#" className="text-sm text-gray-500 hover:text-white transition-colors">
-                      {l}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-
-        <div className="border-t border-white/5 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-gray-600">© 2026 Hanut. Tous droits réservés.</p>
-          <div className="flex items-center gap-5">
-            {['Instagram', 'Facebook', 'LinkedIn'].map(s => (
-              <a key={s} href="#" className="text-sm text-gray-500 hover:text-white transition-colors">
-                {s}
-              </a>
-            ))}
-          </div>
-        </div>
-      </div>
-    </footer>
-  )
-}
