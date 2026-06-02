@@ -1,0 +1,83 @@
+import { redirect } from 'next/navigation'
+import { getUserContext } from '@/lib/get-context'
+import { createServiceClient } from '@/lib/supabase/service'
+import TeamPageClient from '@/components/team/TeamPageClient'
+
+export default async function TeamPage() {
+  const context = await getUserContext()
+  if (!context) redirect('/login')
+  if (context.role !== 'admin') redirect('/dashboard')
+  if (context.plan !== 'business') redirect('/settings?tab=abonnement')
+
+  const serviceClient = createServiceClient()
+
+  const [membersRes, logsRes] = await Promise.all([
+    serviceClient
+      .from('team_members')
+      .select('id, email, name, role, status, invited_at, joined_at, user_id')
+      .eq('seller_id', context.sellerId)
+      .order('invited_at', { ascending: true }),
+
+    serviceClient
+      .from('activity_logs')
+      .select('*')
+      .eq('seller_id', context.sellerId)
+      .order('created_at', { ascending: false })
+      .limit(20),
+  ])
+
+  // Fetch last_sign_in_at for each active member
+  const members = (membersRes.data ?? []) as TeamMember[]
+  const userIds = members.map(m => m.user_id).filter(Boolean) as string[]
+
+  const lastSignInMap: Record<string, string | null> = {}
+  if (userIds.length > 0) {
+    const { data: authUsers } = await serviceClient.auth.admin.listUsers({ perPage: 1000 })
+    if (authUsers?.users) {
+      for (const u of authUsers.users) {
+        if (userIds.includes(u.id)) {
+          lastSignInMap[u.id] = u.last_sign_in_at ?? null
+        }
+      }
+    }
+  }
+
+  const membersWithSignIn = members.map(m => ({
+    ...m,
+    last_sign_in_at: m.user_id ? (lastSignInMap[m.user_id] ?? null) : null,
+  }))
+
+  return (
+    <TeamPageClient
+      sellerId={context.sellerId}
+      currentUserId={context.userId}
+      members={membersWithSignIn}
+      initialLogs={(logsRes.data ?? []) as ActivityLog[]}
+    />
+  )
+}
+
+export type TeamMember = {
+  id: string
+  email: string
+  name: string | null
+  role: 'admin' | 'operator' | 'readonly'
+  status: 'pending' | 'active'
+  invited_at: string
+  joined_at: string | null
+  user_id: string | null
+  last_sign_in_at?: string | null
+}
+
+export type ActivityLog = {
+  id: string
+  seller_id: string
+  user_id: string | null
+  user_name: string
+  action_type: string
+  entity_type: string | null
+  entity_id: string | null
+  description: string
+  metadata: Record<string, unknown>
+  created_at: string
+}
