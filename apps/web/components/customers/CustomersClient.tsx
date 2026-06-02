@@ -335,7 +335,7 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
             {getStats(confirmDelete.orders).count > 0 && !deleteError && (
               <p className="text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 mb-4">
                 Ce client a {getStats(confirmDelete.orders).count} commande{getStats(confirmDelete.orders).count > 1 ? 's' : ''}.
-                La suppression sera refusée — supprimez d'abord ses commandes.
+                La suppression sera refusée — supprimez d&apos;abord ses commandes.
               </p>
             )}
             {deleteError && (

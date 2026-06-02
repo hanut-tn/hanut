@@ -22,55 +22,21 @@ export async function createOrder(input: CreateOrderInput) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Non autorisé')
 
-  let customerId = input.customer_id
-
-  if (!customerId) {
-    const { data: existing } = await supabase
-      .from('customers')
-      .select('id')
-      .eq('seller_id', user.id)
-      .eq('phone', input.customer_phone)
-      .maybeSingle()
-
-    if (existing) {
-      customerId = existing.id
-      await supabase.from('customers').update({
-        name: input.customer_name,
-        address: input.customer_address ?? null,
-        city: input.customer_city ?? null,
-      }).eq('id', customerId)
-    } else {
-      const { data: newCustomer, error } = await supabase
-        .from('customers')
-        .insert({
-          seller_id: user.id,
-          name: input.customer_name,
-          phone: input.customer_phone,
-          address: input.customer_address ?? null,
-          city: input.customer_city ?? null,
-        })
-        .select('id')
-        .single()
-      if (error) throw new Error(error.message)
-      customerId = newCustomer.id
-    }
-  }
-
-  const { error: orderError } = await supabase.from('orders').insert({
-    seller_id: user.id,
-    customer_id: customerId,
-    product_id: input.product_id,
-    variant: input.variant || null,
-    quantity: input.quantity,
-    cod_amount: input.cod_amount,
-    notes: input.notes || null,
+  const { error } = await supabase.rpc('create_order_with_stock', {
+    p_seller_id: user.id,
+    p_product_id: input.product_id,
+    p_quantity: input.quantity,
+    p_customer_name: input.customer_name,
+    p_customer_phone: input.customer_phone,
+    p_customer_address: input.customer_address ?? null,
+    p_customer_city: input.customer_city ?? null,
+    p_customer_id: input.customer_id ?? null,
+    p_variant: input.variant ?? null,
+    p_cod_amount: input.cod_amount,
+    p_notes: input.notes ?? null,
+    p_status: 'new',
   })
-  if (orderError) throw new Error(orderError.message)
-
-  await supabase.rpc('decrement_stock', {
-    product_id: input.product_id,
-    qty: input.quantity,
-  })
+  if (error) throw new Error(error.message)
 
   revalidatePath('/orders')
   revalidatePath('/dashboard')

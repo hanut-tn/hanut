@@ -11,7 +11,17 @@ export async function POST(req: Request) {
 
   const { slug, customer_name, customer_phone, customer_address, customer_city, product_id, variant, quantity, notes } = body
 
-  if (!slug || !customer_name || !customer_phone || !customer_address || !customer_city || !product_id || !quantity) {
+  if (
+    !slug ||
+    !customer_name ||
+    !customer_phone ||
+    !customer_address ||
+    !customer_city ||
+    !product_id ||
+    quantity === undefined ||
+    quantity === null ||
+    quantity === ''
+  ) {
     return NextResponse.json({ error: 'Champs obligatoires manquants' }, { status: 400 })
   }
 
@@ -28,87 +38,36 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Boutique introuvable' }, { status: 404 })
   }
 
-  // 2. Find product and verify stock
-  const { data: product } = await supabase
-    .from('products')
-    .select('id, name, price, stock')
-    .eq('id', product_id as string)
-    .eq('seller_id', seller.id)
-    .single()
-
-  if (!product) {
-    return NextResponse.json({ error: 'Produit introuvable' }, { status: 404 })
-  }
-
   const qty = Number(quantity)
-  if (product.stock < qty) {
-    return NextResponse.json(
-      { error: `Stock insuffisant. Il reste ${product.stock} unité(s) disponible(s).` },
-      { status: 400 }
-    )
+  if (!Number.isInteger(qty) || qty < 1) {
+    return NextResponse.json({ error: 'Quantité invalide' }, { status: 400 })
   }
 
-  // 3. Upsert customer (find by phone + seller_id or create)
-  const { data: existing } = await supabase
-    .from('customers')
-    .select('id')
-    .eq('seller_id', seller.id)
-    .eq('phone', customer_phone as string)
-    .maybeSingle()
+  const { data: orderId, error } = await supabase.rpc('create_order_with_stock', {
+    p_seller_id: seller.id,
+    p_product_id: product_id as string,
+    p_quantity: qty,
+    p_customer_name: customer_name as string,
+    p_customer_phone: customer_phone as string,
+    p_customer_address: customer_address as string,
+    p_customer_city: customer_city as string,
+    p_customer_id: null,
+    p_variant: (variant as string | undefined) || null,
+    p_cod_amount: null,
+    p_notes: (notes as string | undefined) || null,
+    p_status: 'pending',
+  })
 
-  let customerId: string
+  if (error || !orderId) {
+    const message = error?.message ?? 'Erreur lors de la création de la commande'
+    const status = message.includes('introuvable')
+      ? 404
+      : message.includes('insuffisant') || message.includes('invalide') || message.includes('obligatoire')
+        ? 400
+        : 500
 
-  if (existing) {
-    customerId = existing.id
-    await supabase.from('customers').update({
-      name: customer_name as string,
-      address: customer_address as string,
-      city: customer_city as string,
-    }).eq('id', customerId)
-  } else {
-    const { data: newCustomer, error: custErr } = await supabase
-      .from('customers')
-      .insert({
-        seller_id: seller.id,
-        name: customer_name as string,
-        phone: customer_phone as string,
-        address: customer_address as string,
-        city: customer_city as string,
-      })
-      .select('id')
-      .single()
-
-    if (custErr || !newCustomer) {
-      return NextResponse.json({ error: 'Erreur lors de la création du client' }, { status: 500 })
-    }
-    customerId = newCustomer.id
+    return NextResponse.json({ error: message }, { status })
   }
 
-  // 4. Create order with pending status
-  const { data: order, error: orderErr } = await supabase
-    .from('orders')
-    .insert({
-      seller_id: seller.id,
-      customer_id: customerId,
-      product_id: product_id as string,
-      variant: (variant as string | undefined) || null,
-      quantity: qty,
-      cod_amount: product.price * qty,
-      notes: (notes as string | undefined) || null,
-      status: 'pending',
-    })
-    .select('id')
-    .single()
-
-  if (orderErr || !order) {
-    return NextResponse.json({ error: 'Erreur lors de la création de la commande' }, { status: 500 })
-  }
-
-  // 5. Decrement stock
-  await supabase
-    .from('products')
-    .update({ stock: product.stock - qty })
-    .eq('id', product_id as string)
-
-  return NextResponse.json({ success: true, order_id: order.id })
+  return NextResponse.json({ success: true, order_id: orderId })
 }
