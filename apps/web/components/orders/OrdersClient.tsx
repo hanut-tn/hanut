@@ -84,6 +84,7 @@ function relativeDate(dateStr: string): string {
   const diffMins = Math.floor(diffMs / 60000)
   const diffHours = Math.floor(diffMs / 3600000)
   const diffDays = Math.floor(diffMs / 86400000)
+  if (diffMins < 1) return 'à l’instant'
   if (diffMins < 60) return `il y a ${diffMins}min`
   if (diffHours < 24) return `il y a ${diffHours}h`
   if (diffDays === 1) return 'hier'
@@ -278,15 +279,13 @@ export default function OrdersClient({
             }`}
           >
             {t.label}
-            {counts[t.value] ? (
-              <span className={`ml-1.5 text-xs rounded-full px-1.5 py-0.5 ${
-                t.value === 'pending'
-                  ? 'bg-amber-100 text-amber-700'
-                  : tab === t.value ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-              }`}>
-                {counts[t.value]}
-              </span>
-            ) : null}
+            <span className={`ml-1 ${
+              t.value === 'pending'
+                ? 'text-amber-600'
+                : tab === t.value ? 'text-[#16A34A]' : 'text-[#A8A29E]'
+            }`}>
+              ({counts[t.value] ?? 0})
+            </span>
           </button>
         ))}
 
@@ -301,13 +300,9 @@ export default function OrdersClient({
           >
             <Trash2 className="w-3.5 h-3.5" />
             Corbeille
-            {trashOrders.length > 0 && (
-              <span className={`text-xs rounded-full px-1.5 py-0.5 ${
-                tab === 'trash' ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'
-              }`}>
-                {trashOrders.length}
-              </span>
-            )}
+            <span className={tab === 'trash' ? 'text-red-600' : 'text-[#A8A29E]'}>
+              ({trashOrders.length})
+            </span>
           </button>
         )}
       </div>

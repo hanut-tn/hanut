@@ -100,7 +100,7 @@ export default function OrderDetail({
   const canWrite = role !== 'readonly'
   const isPendingOrder = status === 'pending'
   const ini = customer ? initials(customer.name) : '?'
-  const estimatedProfit = order.cod_amount - (product?.cost ?? 0)
+  const estimatedProfit = order.cod_amount - ((product?.cost ?? 0) * order.quantity)
   const shortId = order.id.slice(0, 8).toUpperCase()
 
   function handleAction(fn: () => Promise<void>) {
@@ -413,7 +413,7 @@ export default function OrderDetail({
                 <>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-[#78716C]">Coût produit</span>
-                    <span className="text-sm text-[#1C1917]">−{product.cost} DT</span>
+                    <span className="text-sm text-[#1C1917]">−{product.cost * order.quantity} DT</span>
                   </div>
                   <div className="pt-2 border-t border-[#E7E5E4] flex items-center justify-between">
                     <span className="text-sm font-medium text-[#1C1917]">Profit estimé</span>

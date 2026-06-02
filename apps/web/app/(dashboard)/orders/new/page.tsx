@@ -18,7 +18,7 @@ export default async function NewOrderPage({ searchParams }: Props) {
   const [productsResult, customerResult] = await Promise.all([
     supabase
       .from('products')
-      .select('id, name, price, stock, variants')
+      .select('id, name, price, stock, variants, image_url')
       .eq('seller_id', context.sellerId)
       .order('name'),
     customer_id

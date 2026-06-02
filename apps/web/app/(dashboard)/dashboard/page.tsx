@@ -47,21 +47,21 @@ export default async function DashboardPage() {
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
   const [
-    { count: _totalOrdersCount },
     { data: allDelivered },
     { data: allOrders },
     { data: lastMonthDelivered },
     { data: lastMonthOrders },
     { data: weeklyOrders },
     { data: recentOrders },
+    { data: seller },
   ] = await Promise.all([
-    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId).is('deleted_at', null),
     supabase.from('orders').select('cod_amount, created_at').eq('seller_id', context.sellerId).eq('status', 'delivered').is('deleted_at', null).gte('created_at', startOfMonth.toISOString()),
     supabase.from('orders').select('status').eq('seller_id', context.sellerId).is('deleted_at', null).gte('created_at', startOfMonth.toISOString()),
     supabase.from('orders').select('cod_amount').eq('seller_id', context.sellerId).eq('status', 'delivered').is('deleted_at', null).gte('created_at', startOfLastMonth.toISOString()).lte('created_at', endOfLastMonth.toISOString()),
     supabase.from('orders').select('status').eq('seller_id', context.sellerId).is('deleted_at', null).gte('created_at', startOfLastMonth.toISOString()).lte('created_at', endOfLastMonth.toISOString()),
     supabase.from('orders').select('cod_amount, created_at').eq('seller_id', context.sellerId).eq('status', 'delivered').is('deleted_at', null).gte('created_at', sevenDaysAgo.toISOString()),
     supabase.from('orders').select('id, cod_amount, status, variant, created_at, customer:customers(name, phone), product:products(name)').eq('seller_id', context.sellerId).is('deleted_at', null).order('created_at', { ascending: false }).limit(5),
+    supabase.from('sellers').select('slug').eq('id', context.sellerId).single(),
   ])
 
   // Current month KPIs
@@ -172,25 +172,49 @@ export default async function DashboardPage() {
             </div>
           </div>
           {hasWeeklyData ? (
-            <div className="flex items-end gap-2 h-32">
-              {chartData.map(({ day, value }) => (
-                <div key={day} className="flex-1 flex flex-col items-center gap-1.5 group">
-                  <div className="w-full relative flex flex-col justify-end" style={{ height: 104 }}>
-                    {value > 0 && (
-                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap bg-[#1C1917] text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                        {value} DT
-                      </div>
+            <svg
+              viewBox="0 0 700 132"
+              role="img"
+              aria-label="Évolution du chiffre d'affaires livré sur les 7 derniers jours"
+              className="w-full h-32"
+            >
+              <line x1="24" y1="104" x2="676" y2="104" stroke="#E7E5E4" strokeWidth="1" />
+              {chartData.map(({ day, value }, index) => {
+                const slot = 92
+                const barWidth = 44
+                const x = 24 + index * slot + (slot - barWidth) / 2
+                const height = value > 0 ? Math.max((value / chartMax) * 88, 4) : 0
+                const y = 104 - height
+
+                return (
+                  <g key={day}>
+                    {value > 0 ? (
+                      <rect
+                        x={x}
+                        y={y}
+                        width={barWidth}
+                        height={height}
+                        rx="6"
+                        fill="#16A34A"
+                      >
+                        <title>{day}: {value} DT</title>
+                      </rect>
+                    ) : (
+                      <line x1={x} y1="104" x2={x + barWidth} y2="104" stroke="#E7E5E4" strokeWidth="3" strokeLinecap="round" />
                     )}
-                    <div
-                      className="w-full bg-[#16A34A] rounded-t-md transition-all hover:bg-[#15803D]"
-                      style={{ height: `${Math.max((value / chartMax) * 104, value > 0 ? 4 : 0)}px` }}
-                    />
-                    {value === 0 && <div className="w-full h-0.5 bg-[#E7E5E4] rounded" />}
-                  </div>
-                  <span className="text-xs text-[#78716C]">{day}</span>
-                </div>
-              ))}
-            </div>
+                    <text
+                      x={x + barWidth / 2}
+                      y="124"
+                      textAnchor="middle"
+                      fontSize="11"
+                      fill="#78716C"
+                    >
+                      {day}
+                    </text>
+                  </g>
+                )
+              })}
+            </svg>
           ) : (
             <div className="h-32 flex flex-col items-center justify-center text-center gap-1">
               <TrendingUp className="w-8 h-8 text-[#E7E5E4]" />
@@ -221,7 +245,7 @@ export default async function DashboardPage() {
               </div>
               <span className="text-xs font-medium text-[#1C1917] leading-tight">Ajouter un produit</span>
             </Link>
-            <CopyLinkButton />
+            <CopyLinkButton slug={seller?.slug ?? null} />
             <Link
 
               href="/deliveries"
@@ -330,4 +354,3 @@ function RecentOrders({ orders }: { orders: any[] }) {
     </div>
   )
 }
-
