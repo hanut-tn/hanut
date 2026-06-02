@@ -38,8 +38,8 @@ type Customer = {
 
 type Props = {
   customers: Customer[]
-  updateCustomer: (id: string, input: CustomerInput) => Promise<void>
-  deleteCustomer: (id: string) => Promise<void>
+  updateCustomer: (id: string, input: CustomerInput) => Promise<{ error?: string }>
+  deleteCustomer: (id: string) => Promise<{ error?: string }>
 }
 
 function getStats(orders: Order[] | null) {
@@ -93,17 +93,17 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
     if (!editCustomer) return
     setEditMsg(null)
     startTransition(async () => {
-      try {
-        await updateCustomer(editCustomer.id, {
-          name: editName,
-          phone: editPhone,
-          address: editAddress,
-          city: editCity,
-        })
+      const result = await updateCustomer(editCustomer.id, {
+        name: editName,
+        phone: editPhone,
+        address: editAddress,
+        city: editCity,
+      })
+      if (result?.error) {
+        setEditMsg({ type: 'error', text: result.error })
+      } else {
         setEditMsg({ type: 'success', text: 'Client mis à jour.' })
         setTimeout(() => setEditCustomer(null), 800)
-      } catch (err) {
-        setEditMsg({ type: 'error', text: err instanceof Error ? err.message : 'Erreur inconnue' })
       }
     })
   }
@@ -111,11 +111,11 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
   function handleDelete(c: Customer) {
     setDeleteError(null)
     startTransition(async () => {
-      try {
-        await deleteCustomer(c.id)
+      const result = await deleteCustomer(c.id)
+      if (result?.error) {
+        setDeleteError(result.error)
+      } else {
         setConfirmDelete(null)
-      } catch (err) {
-        setDeleteError(err instanceof Error ? err.message : 'Erreur inconnue')
       }
     })
   }

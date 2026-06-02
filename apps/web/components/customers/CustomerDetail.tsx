@@ -62,7 +62,7 @@ type Props = {
   customer: CustomerData
   orders: Order[]
   stats: Stats
-  updateCustomer: (id: string, input: CustomerInput) => Promise<void>
+  updateCustomer: (id: string, input: CustomerInput) => Promise<{ error?: string }>
 }
 
 export default function CustomerDetail({ customer, orders, stats, updateCustomer }: Props) {
@@ -129,17 +129,17 @@ export default function CustomerDetail({ customer, orders, stats, updateCustomer
     e.preventDefault()
     setEditMsg(null)
     startTransition(async () => {
-      try {
-        await updateCustomer(customer.id, {
-          name: editName,
-          phone: editPhone,
-          address: editAddress,
-          city: editCity,
-        })
+      const result = await updateCustomer(customer.id, {
+        name: editName,
+        phone: editPhone,
+        address: editAddress,
+        city: editCity,
+      })
+      if (result?.error) {
+        setEditMsg({ type: 'error', text: result.error })
+      } else {
         setEditMsg({ type: 'success', text: 'Client mis à jour.' })
         setTimeout(() => setEditOpen(false), 800)
-      } catch (err) {
-        setEditMsg({ type: 'error', text: err instanceof Error ? err.message : 'Erreur inconnue' })
       }
     })
   }

@@ -10,10 +10,10 @@ export type CustomerInput = {
   city?: string
 }
 
-export async function updateCustomer(id: string, input: CustomerInput) {
+export async function updateCustomer(id: string, input: CustomerInput): Promise<{ error?: string }> {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Non autorisé')
+  if (!user) return { error: 'Non autorisé' }
 
   const { error } = await supabase
     .from('customers')
@@ -26,15 +26,16 @@ export async function updateCustomer(id: string, input: CustomerInput) {
     .eq('id', id)
     .eq('seller_id', user.id)
 
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath('/customers')
   revalidatePath(`/customers/${id}`)
+  return {}
 }
 
-export async function deleteCustomer(id: string) {
+export async function deleteCustomer(id: string): Promise<{ error?: string }> {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Non autorisé')
+  if (!user) return { error: 'Non autorisé' }
 
   const { count } = await supabase
     .from('orders')
@@ -43,9 +44,9 @@ export async function deleteCustomer(id: string) {
     .eq('seller_id', user.id)
 
   if (count && count > 0) {
-    throw new Error(
-      `Ce client a ${count} commande${count > 1 ? 's' : ''}. Supprimez d'abord ses commandes avant de supprimer le client.`
-    )
+    return {
+      error: `Ce client a ${count} commande${count > 1 ? 's' : ''}. Supprimez d'abord ses commandes avant de supprimer le client.`,
+    }
   }
 
   const { error } = await supabase
@@ -54,6 +55,7 @@ export async function deleteCustomer(id: string) {
     .eq('id', id)
     .eq('seller_id', user.id)
 
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath('/customers')
+  return {}
 }
