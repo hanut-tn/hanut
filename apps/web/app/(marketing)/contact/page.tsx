@@ -109,7 +109,7 @@ export default function ContactPage() {
 
               {/* Email */}
               <a
-                href="mailto:support@hanut.tn"
+                href="mailto:hanut.tn@gmail.com"
                 className="flex items-center gap-4 bg-white rounded-2xl border border-gray-200 shadow-sm p-5 hover:shadow-md transition-all hover:border-blue-200 group"
               >
                 <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center shrink-0">
@@ -120,7 +120,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <p className="font-bold text-[#1C1917]">Email</p>
-                  <p className="text-sm text-[#16A34A] font-medium mt-0.5">support@hanut.tn</p>
+                  <p className="text-sm text-[#16A34A] font-medium mt-0.5">hanut.tn@gmail.com</p>
                 </div>
               </a>
 

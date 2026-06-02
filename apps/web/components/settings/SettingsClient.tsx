@@ -6,9 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import type { ProfileInput } from '@/app/(dashboard)/settings/actions'
 
 const PLAN_CONFIG = {
-  starter:  { label: 'Starter',  color: 'bg-gray-100 text-gray-700',     price: 'Gratuit' },
-  pro:      { label: 'Pro',      color: 'bg-brand-100 text-brand-700',    price: '29 DT/mois' },
-  business: { label: 'Business', color: 'bg-purple-100 text-purple-800',  price: '79 DT/mois' },
+  starter:  { label: 'Starter',  color: 'bg-gray-100 text-gray-700',     price: '39 DT/mois' },
+  pro:      { label: 'Pro',      color: 'bg-brand-100 text-brand-700',    price: '79 DT/mois' },
+  business: { label: 'Business', color: 'bg-purple-100 text-purple-800',  price: '149 DT/mois' },
 }
 
 const PLANS: {
@@ -21,37 +21,42 @@ const PLANS: {
   {
     key: 'starter',
     label: 'Starter',
-    price: 'Gratuit',
+    price: '39 DT / mois',
     features: [
-      '50 commandes / mois',
-      '20 produits max',
-      'Analytiques de base',
-      'Support par email',
+      '150 commandes / mois',
+      '1 utilisateur',
+      '5 livreurs',
+      '200 SMS / mois',
+      'Lien de commande public',
+      'Support email',
     ],
   },
   {
     key: 'pro',
     label: 'Pro',
-    price: '29 DT / mois',
+    price: '79 DT / mois',
     features: [
-      '500 commandes / mois',
-      'Produits illimités',
-      'Analytiques complètes',
+      'Commandes illimitées',
+      '2 utilisateurs',
+      '15+ livreurs',
+      'SMS illimités',
+      'Analytics avancés',
       'Export CSV',
-      'Support prioritaire',
+      'Support WhatsApp prioritaire',
     ],
     recommended: true,
   },
   {
     key: 'business',
     label: 'Business',
-    price: '79 DT / mois',
+    price: '149 DT / mois',
     features: [
-      'Commandes illimitées',
-      'Produits illimités',
-      'Multi-utilisateurs (5)',
+      'Tout Pro inclus',
+      '5 utilisateurs',
+      'Multi-boutiques',
       'Accès API',
-      'Gestionnaire dédié',
+      'Rapport fiscal',
+      'Support dédié',
     ],
   },
 ]
@@ -577,8 +582,8 @@ export default function SettingsClient({ seller, stats, appUrl, updateProfile, u
 
           <p className="text-xs text-center text-gray-400">
             Pour modifier votre abonnement, contactez-nous à{' '}
-            <a href="mailto:support@hanut.tn" className="text-brand-600 hover:underline">
-              support@hanut.tn
+            <a href="mailto:hanut.tn@gmail.com" className="text-brand-600 hover:underline">
+              hanut.tn@gmail.com
             </a>
           </p>
 

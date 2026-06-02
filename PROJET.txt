@@ -1,0 +1,498 @@
+================================================================================
+HANUT — DOCUMENTATION COMPLÈTE DU PROJET
+Générée le 2 juin 2026
+================================================================================
+
+DESCRIPTION
+-----------
+Hanut est une plateforme SaaS pour vendeurs tunisiens (e-commerce, Instagram,
+WhatsApp). Elle permet de gérer commandes, clients, catalogue, livraisons et
+analytiques depuis un tableau de bord web. Les clients passent commande via
+un lien public unique (page de commande sans compte).
+
+Stack technique
+  - Framework : Next.js 15 (App Router, server components, server actions)
+  - Base de données : Supabase (PostgreSQL + RLS + Auth)
+  - UI : Tailwind CSS v3
+  - Langage : TypeScript strict
+  - Monorepo : Turborepo
+  - Tests : Vitest (18 tests)
+  - Déploiement : Vercel
+
+================================================================================
+STRUCTURE DU MONOREPO
+================================================================================
+
+hanut/
+  apps/
+    web/                    App Next.js principale
+      app/
+        (auth)/             Pages login / register
+        (dashboard)/        Tableau de bord (protégé)
+          dashboard/        Vue d'ensemble
+          orders/           Commandes (liste, détail, nouvelle)
+          customers/        Clients (liste, fiche enrichie)
+          catalog/          Catalogue produits
+          deliveries/       Livraisons
+          analytics/        Analytiques
+          settings/         Paramètres + abonnement
+          settings/team/    Gestion d'équipe (plan Business)
+        (marketing)/        Pages publiques (landing, pricing, roadmap…)
+        api/                Routes API
+        order/[slug]/       Page de commande publique
+      components/
+        dashboard/          Sidebar, TopBar
+        orders/             OrdersClient, OrderDetail, NewOrderForm
+        customers/          CustomersClient, CustomerDetail
+        catalog/            CatalogClient
+        deliveries/         DeliveriesClient
+        analytics/          AnalyticsClient
+        settings/           SettingsClient, TeamClient
+        order/              OrderForm (page publique)
+        marketing/          Navbar, Footer
+        RoleGuard.tsx       Composant de garde rôle
+      lib/
+        get-context.ts      getUserContext() — source unique d'identité
+        role-context.tsx    RoleProvider + useRole() hook
+        supabase/
+          server.ts         Client Supabase server (cookies)
+          client.ts         Client Supabase browser
+          service.ts        Client Supabase service (bypass RLS)
+      middleware.ts         Protection des routes (redirect /login)
+      __tests__/            Tests Vitest (18 tests)
+  packages/
+    types/                  Types partagés (Order, Product, Customer…)
+  supabase/
+    schema.sql              Schéma complet initial
+    migrations/
+      20260601_add_missing_app_schema.sql
+      20260601_create_order_with_stock_rpc.sql
+      20260602_add_team_members.sql
+
+================================================================================
+BASE DE DONNÉES — SCHÉMA SUPABASE
+================================================================================
+
+TABLE sellers
+  id               UUID PK
+  email            TEXT UNIQUE NOT NULL
+  name             TEXT NOT NULL
+  phone            TEXT
+  slug             TEXT UNIQUE            -- lien public boutique
+  plan             TEXT DEFAULT 'starter' -- 'starter' | 'pro' | 'business'
+  subscription_end TIMESTAMPTZ
+  created_at       TIMESTAMPTZ
+
+TABLE products
+  id              UUID PK
+  seller_id       UUID FK sellers
+  name            TEXT
+  price           DECIMAL(10,2)
+  cost            DECIMAL(10,2)           -- coût d'achat
+  stock           INTEGER DEFAULT 0
+  low_stock_alert INTEGER DEFAULT 3
+  variants        JSONB DEFAULT '[]'      -- tailles, couleurs, etc.
+  image_url       TEXT
+  created_at      TIMESTAMPTZ
+
+TABLE customers
+  id          UUID PK
+  seller_id   UUID FK sellers
+  name        TEXT
+  phone       TEXT
+  address     TEXT
+  city        TEXT
+  tags        TEXT[] DEFAULT '{}'         -- étiquettes libres
+  notes       TEXT                        -- notes internes vendeur
+  order_count INTEGER DEFAULT 0
+  created_at  TIMESTAMPTZ
+
+TABLE orders
+  id          UUID PK
+  seller_id   UUID FK sellers
+  customer_id UUID FK customers
+  product_id  UUID FK products
+  variant     TEXT
+  quantity    INTEGER DEFAULT 1
+  cod_amount  DECIMAL(10,2)              -- montant contre-remboursement
+  status      TEXT DEFAULT 'new'
+              -- 'pending'|'new'|'confirmed'|'shipped'|'delivered'|'returned'
+  notes       TEXT
+  created_at  TIMESTAMPTZ
+  updated_at  TIMESTAMPTZ
+
+TABLE deliveries
+  id           UUID PK
+  order_id     UUID FK orders
+  carrier      TEXT                       -- transporteur
+  tracking     TEXT
+  fee          DECIMAL(10,2)              -- frais livraison
+  cod_collected DECIMAL(10,2)
+  cod_reversed  DECIMAL(10,2)
+  status       TEXT
+  created_at   TIMESTAMPTZ
+
+TABLE team_members                        -- NOUVEAU (étape 6)
+  id         UUID PK
+  seller_id  UUID FK sellers ON DELETE CASCADE
+  user_id    UUID FK auth.users (nullable avant activation)
+  role       TEXT CHECK ('admin'|'operator'|'readonly')
+  email      TEXT NOT NULL
+  name       TEXT
+  status     TEXT CHECK ('pending'|'active') DEFAULT 'pending'
+  invited_at TIMESTAMPTZ
+  joined_at  TIMESTAMPTZ
+  UNIQUE (seller_id, user_id)
+  UNIQUE (seller_id, email)
+
+TABLE waitlist
+  id, email UNIQUE, created_at
+
+TABLE contact_messages
+  id, name, email, message, created_at
+
+================================================================================
+FONCTIONS SQL (SECURITY DEFINER)
+================================================================================
+
+get_seller_id() → UUID
+  Retourne le seller_id effectif de l'utilisateur courant :
+  - Si vendeur (sellers.id = auth.uid()) → retourne son propre id
+  - Si membre d'équipe actif → retourne team_members.seller_id
+  Utilisée dans les policies RLS pour l'isolation multi-tenant.
+
+get_team_role(p_seller_id UUID) → TEXT
+  Retourne le rôle de auth.uid() vis-à-vis d'un seller :
+  - 'admin' si p_seller_id = auth.uid()
+  - sinon le rôle dans team_members
+
+can_write_seller(p_seller_id UUID) → BOOLEAN
+  Retourne true si le rôle est 'admin' ou 'operator' (pas 'readonly').
+
+create_order_with_stock(...) → UUID
+  Fonction atomique (plpgsql) :
+  1. Vérifie le stock disponible (SELECT FOR UPDATE)
+  2. Crée ou trouve le client par téléphone
+  3. Insère la commande
+  4. Décrémente le stock
+  Utilisée par la page de commande publique et la création interne.
+
+================================================================================
+FONCTIONNALITÉS DÉVELOPPÉES (ÉTAPES 1 → 6)
+================================================================================
+
+ÉTAPE 1 — LIEN DE COMMANDE PUBLIC
+  Fichiers clés :
+    app/order/[slug]/page.tsx       Page publique de commande (sans auth)
+    components/order/OrderForm.tsx  Formulaire client (produit, variante, infos)
+    app/api/orders/public/route.ts  API POST création commande publique
+    app/(dashboard)/settings/       Onglet "Lien commande" avec slug personnalisé
+
+  Fonctionnement :
+    - Le vendeur choisit un slug unique (ex: "boutique-rania")
+    - URL générée : hanut.tn/order/boutique-rania
+    - Le client remplit nom, téléphone, adresse, ville, produit, quantité
+    - La commande est créée en statut "pending" via create_order_with_stock()
+    - Si le client n'existe pas, il est créé automatiquement
+    - Page responsive, footer "Propulsé par Hanut"
+
+ÉTAPE 2 — FICHE CLIENT ENRICHIE
+  Fichiers clés :
+    app/(dashboard)/customers/[id]/page.tsx
+    components/customers/CustomerDetail.tsx
+    app/(dashboard)/customers/actions.ts
+    app/api/customers/[id]/route.ts
+
+  Fonctionnalités :
+    - Historique des commandes du client
+    - Tags libres (ajout/suppression inline)
+    - Notes internes du vendeur (textarea auto-save)
+    - Statistiques : total commandes, CA, panier moyen
+    - Filtres par statut dans l'historique
+
+LANDING PAGE — app/page.tsx
+  Page d'accueil publique complète avec redirection automatique vers /dashboard
+  si l'utilisateur est déjà connecté.
+
+  Sections :
+    Hero
+      - Badge "Conçu pour les vendeurs tunisiens" avec indicateur live
+      - Titre : "Gérez toutes vos commandes WhatsApp en 30 secondes"
+      - CTA principal "Commencer gratuitement" → /register
+      - CTA secondaire "Voir une démo" → ancre #features
+      - Badges de réassurance : Sans carte bancaire / Annulable / Config 5 min
+
+    Carrier Band
+      - Bande transporteurs intégrés : IntiGo, Navex, Adex, Aramex, Best Delivery
+
+    Features Section (#features)
+      - 3 blocs alternés texte/mockup interactif :
+        1. Commandes — mockup dashboard orders avec statuts colorés
+        2. Livraisons — mockup deliveries avec COD collecté, tracking
+        3. Analytiques — mockup analytics avec graphique barres + top produit
+
+    How It Works
+      - 3 étapes visuelles avec ligne de connexion (desktop) :
+        01. Tu reçois le DM WhatsApp
+        02. Tu saisis la commande en 30 sec
+        03. Le livreur part, le client est informé
+
+    Testimonials
+      - 3 avis : Yasmine B. (mode Tunis), Karim M. (électro Sfax), Nour T. (beauté Sousse)
+      - Étoiles 5/5, avatars initiales
+
+    Pricing (#pricing)
+      - Toggle mensuel / annuel (-20%)
+      - 3 plans :
+          Starter  39 DT/mois  (31 DT annuel)
+          Pro      79 DT/mois  (63 DT annuel)  ← mis en avant (dark card)
+          Business 149 DT/mois (119 DT annuel)
+      - Tous les boutons pointent vers /register
+
+    CTA final
+      - Fond vert foncé (#0B5E46)
+      - "Commencer gratuitement" + "Demander une démo"
+
+  Composants partagés (marketing) :
+    components/marketing/Navbar.tsx   Navigation avec logo, liens, CTA login/register
+    components/marketing/Footer.tsx   Liens légaux, réseaux sociaux
+
+  Pages marketing supplémentaires :
+    /features     Détail des fonctionnalités
+    /pricing      Page dédiée tarifs
+    /about        À propos
+    /carriers     Transporteurs partenaires
+    /mobile       App mobile (roadmap)
+    /roadmap      Feuille de route publique
+    /contact      Formulaire de contact → POST /api/contact
+
+  Note : Les prix sur la landing (39/79/149 DT) diffèrent des prix dans
+  SettingsClient (Gratuit/29/79 DT). À harmoniser avant le lancement.
+
+ÉTAPE 3 — SMS AUTOMATIQUE (Twilio)
+  Intégré dans les actions de commande.
+  Dépendance : twilio dans package.json.
+  Envoi de confirmation SMS au client à la création de commande.
+
+ÉTAPE 4 — PAGE PUBLIQUE DE COMMANDE
+  (voir Étape 1 — même feature consolidée)
+
+ÉTAPE 5 — ANALYTIQUES AVANCÉES
+  Fichiers clés :
+    app/(dashboard)/analytics/page.tsx
+    components/analytics/AnalyticsClient.tsx
+
+  Métriques disponibles :
+    - Chiffre d'affaires sur 90 jours (graphique temporel)
+    - Taux de livraison vs retours
+    - Top produits par revenus
+    - Répartition géographique (par ville)
+    - COD collecté vs reversé par transporteur
+  Accès : admin + readonly (pas operator)
+
+ÉTAPE 6 — MULTI-UTILISATEURS AVEC RÔLES (plan Business)
+  Fichiers créés/modifiés :
+    lib/get-context.ts              getUserContext() — identité unifiée
+    lib/role-context.tsx            RoleProvider, useRole() hook
+    components/RoleGuard.tsx        <RoleGuard roles={[...]}>
+    app/(dashboard)/layout.tsx      Activation invitation + RoleProvider
+    components/dashboard/Sidebar.tsx  Nav filtrée par rôle
+    components/dashboard/TopBar.tsx   Badge rôle coloré
+    app/(dashboard)/settings/team/page.tsx
+    components/settings/TeamClient.tsx
+    components/settings/SettingsClient.tsx  Carte équipe dans onglet plan
+    app/api/team/route.ts           GET liste / POST invitation
+    app/api/team/[memberId]/route.ts  PATCH rôle / DELETE membre
+    supabase/migrations/20260602_add_team_members.sql
+
+  Rôles :
+    admin     → accès complet, gestion équipe, dashboard, settings
+    operator  → commandes + catalogue + livraisons, pas analytics ni settings
+    readonly  → consultation uniquement (orders, customers, analytics)
+
+  Sidebar par rôle :
+    Dashboard   → admin seulement
+    Commandes   → tous
+    Clients     → tous
+    Catalogue   → admin + operator
+    Livraisons  → admin + operator
+    Analytiques → admin + readonly
+    Paramètres  → admin seulement
+
+  Flux d'invitation :
+    1. Admin va dans /settings/team, saisit email + rôle
+    2. POST /api/team → insert team_members (status=pending)
+    3. supabase.auth.admin.inviteUserByEmail() envoie l'email
+    4. L'invité clique le lien, crée son compte Supabase
+    5. Au premier chargement du dashboard, layout.tsx active l'invitation
+       (UPDATE team_members SET status='active', user_id=user.id)
+    6. getUserContext() retourne sellerId = team_members.seller_id
+
+  Limites :
+    - Maximum 5 membres par boutique
+    - Réservé au plan Business
+    - L'admin ne peut pas modifier son propre rôle ni se supprimer
+    - readonly bloqué côté serveur sur toutes les écritures
+
+================================================================================
+SYSTÈME D'AUTHENTIFICATION ET CONTEXTE
+================================================================================
+
+getUserContext() — lib/get-context.ts
+  Fonction mise en cache par requête HTTP (React.cache avec fallback React 18).
+  Retourne : { userId, sellerId, role, isSeller, plan }
+
+  Logique :
+    1. getUser() depuis les cookies de session
+    2. Si sellers.id = user.id → role='admin', isSeller=true
+    3. Sinon cherche team_members actif → role=member.role, isSeller=false
+    4. Retourne null si non authentifié
+
+  Toutes les pages et actions server utilisent context.sellerId
+  (jamais user.id directement) pour l'isolation multi-tenant.
+
+middleware.ts
+  Protège toutes les routes sauf :
+  /, /login, /register, /features, /pricing, /about, /carriers,
+  /mobile, /roadmap, /contact, /order/*, /api/contact,
+  /api/waitlist, /api/orders/public
+
+  Redirige vers /login si pas de session Supabase.
+
+================================================================================
+API ROUTES
+================================================================================
+
+GET  /api/team                    Liste membres de l'équipe
+POST /api/team                    Inviter un membre (admin + plan Business)
+PATCH /api/team/[memberId]        Changer le rôle d'un membre
+DELETE /api/team/[memberId]       Retirer un membre
+
+GET /api/customers                Liste clients (avec recherche)
+GET /api/customers/[id]           Détail client
+PATCH /api/customers/[id]         Mise à jour tags / notes
+
+GET /api/orders/[id]              Détail commande
+PATCH /api/orders/[id]            Mise à jour statut commande
+
+POST /api/orders/public           Création commande publique (sans auth)
+
+POST /api/contact                 Formulaire de contact
+POST /api/waitlist                Inscription liste d'attente
+
+GET /api/auth/callback            Callback Supabase OAuth / magic link
+
+================================================================================
+PLANS ET FONCTIONNALITÉS
+================================================================================
+
+Starter (39 DT / mois — 31 DT / mois en annuel)
+  - 150 commandes / mois
+  - 1 utilisateur
+  - 5 livreurs
+  - 200 SMS / mois
+  - Lien de commande public
+  - Support email
+
+Pro (79 DT / mois — 63 DT / mois en annuel)
+  - Commandes illimitées
+  - 2 utilisateurs
+  - 15+ livreurs
+  - SMS illimités
+  - Analytics avancés
+  - Export CSV
+  - Support WhatsApp prioritaire
+
+Business (149 DT / mois — 119 DT / mois en annuel)
+  - Tout Pro inclus
+  - 5 utilisateurs
+  - Multi-boutiques
+  - Accès API
+  - Rapport fiscal
+  - Support dédié
+
+Note : Pour changer de plan, contacter hanut.tn@gmail.com ou exécuter :
+  UPDATE sellers SET plan = 'business' WHERE email = 'votre@email.com';
+
+================================================================================
+MIGRATIONS SQL — ORDRE D'EXÉCUTION
+================================================================================
+
+1. supabase/schema.sql
+   Schéma de base : sellers, products, customers, orders, deliveries + RLS
+
+2. supabase/migrations/20260601_add_missing_app_schema.sql
+   - Colonne slug sur sellers (lien public boutique)
+   - Colonnes tags + notes sur customers
+   - Statut 'pending' ajouté aux orders
+   - Contraintes CHECK idempotentes
+   - Tables waitlist et contact_messages
+   - Indexes de performance
+
+3. supabase/migrations/20260601_create_order_with_stock_rpc.sql
+   - Fonction create_order_with_stock() atomique
+   - Création client auto par téléphone
+   - Décrémentation stock
+   - Gestion COD automatique (prix × quantité si non fourni)
+
+4. supabase/migrations/20260602_add_team_members.sql
+   - Table team_members avec contraintes et indexes
+   - Fonctions get_seller_id(), get_team_role(), can_write_seller()
+   - Policies RLS sur team_members
+   - Nouvelles policies RLS sur orders, customers, products, deliveries
+     (accès via get_seller_id() au lieu de auth.uid() uniquement)
+
+================================================================================
+TESTS (Vitest)
+================================================================================
+
+__tests__/middleware.test.ts          Vérification protection des routes
+__tests__/public-order-route.test.ts  API création commande publique
+__tests__/customer-tags-notes.test.ts Tags et notes clients
+__tests__/dashboard-create-order.test.ts  Création commande interne
+__tests__/supabase-migrations.test.ts Cohérence des migrations SQL
+
+Résultat : 18 tests passent
+  npm run test       → 18 passed
+  npm run type-check → OK
+  npm run lint       → OK (12 warnings mineurs)
+  npm run build      → OK
+
+================================================================================
+VARIABLES D'ENVIRONNEMENT REQUISES
+================================================================================
+
+NEXT_PUBLIC_SUPABASE_URL        URL du projet Supabase
+NEXT_PUBLIC_SUPABASE_ANON_KEY   Clé anonyme Supabase
+SUPABASE_SERVICE_ROLE_KEY       Clé service (bypass RLS, invitations email)
+NEXT_PUBLIC_APP_URL             URL de l'app (ex: https://hanut.tn)
+TWILIO_ACCOUNT_SID              Compte Twilio (SMS)
+TWILIO_AUTH_TOKEN               Token Twilio
+TWILIO_PHONE_NUMBER             Numéro d'envoi SMS
+
+================================================================================
+NOTES IMPORTANTES
+================================================================================
+
+1. getUserContext() doit être utilisé dans TOUTES les pages/actions server.
+   Ne jamais utiliser user.id directement comme sellerId — les membres
+   d'équipe ont un user.id différent du sellerId de leur patron.
+
+2. Le service client (createServiceClient) bypass le RLS. À utiliser
+   uniquement quand nécessaire : listes d'équipe, activation invitations,
+   lecture du profil vendeur d'un membre.
+
+3. React.cache() est disponible en React 19+. Le fallback
+   `reactWithCache.cache ?? ((fn) => fn)` garantit la compatibilité
+   avec React 18 et les environnements de test.
+
+4. Les policies RLS sont additives (permissive). Les nouvelles policies
+   team_* s'ajoutent aux policies existantes (seller_id = auth.uid()).
+   L'accès est accordé si l'une OU l'autre est vraie.
+
+5. git push : la clé SSH n'est pas configurée dans l'environnement Claude.
+   Exécuter git push depuis le terminal du projet.
+
+================================================================================
+FIN DU DOCUMENT
+================================================================================
