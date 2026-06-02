@@ -21,6 +21,7 @@ export default async function OrderDetailPage({ params }: Props) {
     `)
     .eq('id', id)
     .eq('seller_id', context.sellerId)
+    .is('deleted_at', null)
     .single()
 
   if (!order) notFound()

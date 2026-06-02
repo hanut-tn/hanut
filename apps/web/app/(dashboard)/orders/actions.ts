@@ -19,6 +19,8 @@ export type CreateOrderInput = {
   notes?: string
 }
 
+const DELETABLE_STATUSES: OrderStatus[] = ['pending', 'new', 'returned']
+
 export async function createOrder(input: CreateOrderInput) {
   const context = await getUserContext()
   if (!context) throw new Error('Non autorisé')
@@ -153,19 +155,38 @@ export async function cancelPendingOrder(id: string) {
   revalidatePath('/dashboard')
 }
 
-export async function deleteOrder(id: string) {
+type OrderMutationResult = { error?: string }
+
+// Soft-delete : déplace la commande en corbeille
+export async function deleteOrder(id: string): Promise<OrderMutationResult> {
   const context = await getUserContext()
-  if (!context) throw new Error('Non autorisé')
-  if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role !== 'admin') return { error: 'Seuls les admins peuvent supprimer des commandes' }
 
   const supabase = await createServerClient()
 
-  const { error } = await supabase.from('orders')
-    .delete()
+  const { data: order } = await supabase
+    .from('orders')
+    .select('status, cod_amount, customer:customers(name)')
     .eq('id', id)
     .eq('seller_id', context.sellerId)
-  if (error) throw new Error(error.message)
+    .is('deleted_at', null)
+    .single()
 
+  if (!order) return { error: 'Commande introuvable' }
+
+  if (!DELETABLE_STATUSES.includes(order.status as OrderStatus)) {
+    return { error: 'Cette commande ne peut pas être supprimée car elle est en cours de traitement.' }
+  }
+
+  const { error } = await supabase.from('orders')
+    .update({ deleted_at: new Date().toISOString(), archived_by: context.userId })
+    .eq('id', id)
+    .eq('seller_id', context.sellerId)
+    .is('deleted_at', null)
+  if (error) return { error: error.message }
+
+  const customer = Array.isArray(order.customer) ? order.customer[0] : order.customer
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
   await logActivity({
@@ -175,9 +196,102 @@ export async function deleteOrder(id: string) {
     actionType: 'order_deleted',
     entityType: 'order',
     entityId: id,
-    description: 'a supprimé une commande',
+    description: `a déplacé une commande vers la corbeille${customer?.name ? ` (${customer.name}, ${order.cod_amount} DT)` : ''}`,
   })
 
   revalidatePath('/orders')
   revalidatePath('/dashboard')
+  return {}
+}
+
+// Restaurer une commande depuis la corbeille
+export async function restoreOrder(id: string): Promise<OrderMutationResult> {
+  const context = await getUserContext()
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role !== 'admin') return { error: 'Seuls les admins peuvent restaurer des commandes' }
+
+  const supabase = await createServerClient()
+
+  const { data: order } = await supabase
+    .from('orders')
+    .select('deleted_at')
+    .eq('id', id)
+    .eq('seller_id', context.sellerId)
+    .not('deleted_at', 'is', null)
+    .single()
+
+  if (!order) return { error: 'Commande introuvable dans la corbeille' }
+
+  const deletedAt = new Date(order.deleted_at as string)
+  const restoreDeadline = deletedAt.getTime() + 30 * 24 * 60 * 60 * 1000
+  if (Date.now() > restoreDeadline) {
+    return { error: 'Cette commande ne peut plus être restaurée après 30 jours dans la corbeille.' }
+  }
+
+  const { error } = await supabase.from('orders')
+    .update({ deleted_at: null, archived_by: null })
+    .eq('id', id)
+    .eq('seller_id', context.sellerId)
+    .not('deleted_at', 'is', null)
+  if (error) return { error: error.message }
+
+  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
+
+  await logActivity({
+    sellerId: context.sellerId,
+    userId: context.userId,
+    userName: seller?.name ?? context.userId,
+    actionType: 'order_restored',
+    entityType: 'order',
+    entityId: id,
+    description: 'a restauré une commande depuis la corbeille',
+  })
+
+  revalidatePath('/orders')
+  revalidatePath('/dashboard')
+  return {}
+}
+
+// Suppression définitive depuis la corbeille
+export async function permanentlyDeleteOrder(id: string): Promise<OrderMutationResult> {
+  const context = await getUserContext()
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role !== 'admin') return { error: 'Seuls les admins peuvent supprimer définitivement des commandes' }
+
+  const supabase = await createServerClient()
+
+  // S'assurer que la commande est bien en corbeille
+  const { data: order } = await supabase
+    .from('orders')
+    .select('id, cod_amount, customer:customers(name)')
+    .eq('id', id)
+    .eq('seller_id', context.sellerId)
+    .not('deleted_at', 'is', null)
+    .single()
+
+  if (!order) return { error: 'Commande introuvable dans la corbeille' }
+
+  const { error } = await supabase.from('orders')
+    .delete()
+    .eq('id', id)
+    .eq('seller_id', context.sellerId)
+    .not('deleted_at', 'is', null)
+  if (error) return { error: error.message }
+
+  const customer = Array.isArray(order.customer) ? order.customer[0] : order.customer
+  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
+
+  await logActivity({
+    sellerId: context.sellerId,
+    userId: context.userId,
+    userName: seller?.name ?? context.userId,
+    actionType: 'order_permanently_deleted',
+    entityType: 'order',
+    entityId: id,
+    description: `a supprimé définitivement une commande${customer?.name ? ` (${customer.name}, ${order.cod_amount} DT)` : ''}`,
+  })
+
+  revalidatePath('/orders')
+  revalidatePath('/dashboard')
+  return {}
 }

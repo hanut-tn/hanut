@@ -14,6 +14,7 @@ export interface Product {
   low_stock_alert: number
   variants: ProductVariant[]
   image_url?: string
+  description?: string
   created_at: string
 }
 

@@ -11,9 +11,9 @@ export default async function DashboardPage() {
 
   const supabase = await createServerClient()
   const [{ count: totalOrders }, { data: delivered }, { data: allOrders }] = await Promise.all([
-    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId),
-    supabase.from('orders').select('cod_amount').eq('seller_id', context.sellerId).eq('status', 'delivered'),
-    supabase.from('orders').select('status').eq('seller_id', context.sellerId),
+    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId).is('deleted_at', null),
+    supabase.from('orders').select('cod_amount').eq('seller_id', context.sellerId).eq('status', 'delivered').is('deleted_at', null),
+    supabase.from('orders').select('status').eq('seller_id', context.sellerId).is('deleted_at', null),
   ])
 
   const revenue = ((delivered ?? []) as { cod_amount: number }[]).reduce((s, o) => s + o.cod_amount, 0)
@@ -111,6 +111,7 @@ async function RecentOrders({ sellerId }: { sellerId: string }) {
     .from('orders')
     .select('id, cod_amount, status, variant, created_at, customer:customers(name,phone), product:products(name)')
     .eq('seller_id', sellerId)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(5)
 

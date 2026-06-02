@@ -16,6 +16,7 @@ export default async function CustomersPage() {
       orders(id, cod_amount, status, created_at)
     `)
     .eq('seller_id', context.sellerId)
+    .is('orders.deleted_at', null)
     .order('created_at', { ascending: false })
 
   return (

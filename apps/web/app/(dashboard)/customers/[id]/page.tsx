@@ -27,6 +27,7 @@ export default async function CustomerDetailPage({ params }: Props) {
     .select('id, cod_amount, status, variant, quantity, created_at, product:products(id, name)')
     .eq('customer_id', id)
     .eq('seller_id', context.sellerId)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
   const orderList = orders ?? []

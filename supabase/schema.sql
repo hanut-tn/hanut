@@ -93,6 +93,8 @@ CREATE TABLE IF NOT EXISTS orders (
   status      TEXT NOT NULL DEFAULT 'new'
               CHECK (status IN ('pending', 'new', 'confirmed', 'shipped', 'delivered', 'returned')),
   notes       TEXT,
+  deleted_at  TIMESTAMP WITH TIME ZONE,
+  archived_by UUID REFERENCES auth.users(id),
   created_at  TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at  TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
@@ -396,6 +398,7 @@ CREATE INDEX IF NOT EXISTS idx_orders_seller_id     ON orders(seller_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status        ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at    ON orders(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_orders_seller_status ON orders(seller_id, status);
+CREATE INDEX IF NOT EXISTS idx_orders_deleted_at    ON orders(seller_id, deleted_at) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_products_seller_id   ON products(seller_id);
 CREATE INDEX IF NOT EXISTS idx_customers_seller_id  ON customers(seller_id);
 CREATE INDEX IF NOT EXISTS idx_customers_phone      ON customers(phone);

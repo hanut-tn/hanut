@@ -14,6 +14,7 @@ describe('Supabase migrations', () => {
   const orderRpc = migration('20260601_create_order_with_stock_rpc.sql')
   const teamMembers = migration('20260602_add_team_members.sql')
   const activityLogs = migration('20260602_add_activity_logs.sql')
+  const orderSoftDelete = migration('20260602_add_orders_soft_delete.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -86,5 +87,17 @@ describe('Supabase migrations', () => {
     expect(activityLogs).toMatch(/CREATE POLICY "activity_logs_team_read" ON activity_logs FOR SELECT/i)
     expect(activityLogs).toMatch(/CREATE POLICY "activity_logs_team_insert" ON activity_logs FOR INSERT/i)
     expect(activityLogs).toMatch(/idx_activity_logs_seller_created/i)
+  })
+
+  it('adds soft-delete metadata for the order trash', () => {
+    expect(orderSoftDelete).toMatch(
+      /ALTER TABLE orders ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL;/i
+    )
+    expect(orderSoftDelete).toMatch(
+      /ALTER TABLE orders ADD COLUMN IF NOT EXISTS archived_by UUID REFERENCES auth\.users\(id\) DEFAULT NULL;/i
+    )
+    expect(orderSoftDelete).toMatch(
+      /CREATE INDEX IF NOT EXISTS idx_orders_deleted_at ON orders\(seller_id, deleted_at\) WHERE deleted_at IS NULL;/i
+    )
   })
 })

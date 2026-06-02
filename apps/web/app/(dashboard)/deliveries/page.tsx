@@ -17,7 +17,7 @@ export default async function DeliveriesPage() {
       id, carrier, tracking_number, carrier_status, fee,
       cod_collected, cod_reversed, created_at, delivered_at,
       order:orders(
-        id, cod_amount,
+        id, cod_amount, deleted_at,
         customer:customers(name, phone),
         product:products(name)
       )
@@ -36,13 +36,18 @@ export default async function DeliveriesPage() {
     .select(`id, cod_amount, customer:customers(name, phone), product:products(name)`)
     .eq('seller_id', context.sellerId)
     .eq('status', 'shipped')
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
+  const activeDeliveries = (deliveries ?? []).filter(d => {
+    const o = Array.isArray(d.order) ? d.order[0] : d.order
+    return o?.deleted_at === null
+  })
   const shippableOrders = (allShipped ?? []).filter(o => !linkedOrderIds.has(o.id))
 
   return (
     <DeliveriesClient
-      deliveries={(deliveries ?? []) as any[]}
+      deliveries={activeDeliveries as any[]}
       shippableOrders={shippableOrders as any[]}
       createDelivery={createDelivery}
       updateDelivery={updateDelivery}

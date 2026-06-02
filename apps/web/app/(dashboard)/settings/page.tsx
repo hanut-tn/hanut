@@ -30,7 +30,7 @@ export default async function SettingsPage({ searchParams }: Props) {
   const [{ count: productCount }, { count: customerCount }, { count: orderCount }, { count: memberCount }] = await Promise.all([
     serviceClient.from('products').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId),
     serviceClient.from('customers').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId),
-    serviceClient.from('orders').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId),
+    serviceClient.from('orders').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId).is('deleted_at', null),
     serviceClient.from('team_members').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId).eq('status', 'active'),
   ])
 

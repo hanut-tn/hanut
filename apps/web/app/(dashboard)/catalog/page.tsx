@@ -20,6 +20,7 @@ export default async function CatalogPage() {
 
   return (
     <CatalogClient
+      role={context.role}
       products={(products ?? []) as Product[]}
       upsertProduct={upsertProduct}
       deleteProduct={deleteProduct}

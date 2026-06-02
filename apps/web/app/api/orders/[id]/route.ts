@@ -27,6 +27,7 @@ export async function PUT(req: Request, { params }: Params) {
     .update(update)
     .eq('id', id)
     .eq('seller_id', context.sellerId)
+    .is('deleted_at', null)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
