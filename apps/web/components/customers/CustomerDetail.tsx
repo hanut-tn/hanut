@@ -6,23 +6,23 @@ import type { OrderStatus } from '@hanut/types'
 import type { CustomerInput } from '@/app/(dashboard)/customers/actions'
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; cls: string }> = {
-  pending:   { label: 'En attente', cls: 'bg-orange-100 text-orange-700' },
-  new:       { label: 'Nouvelle',   cls: 'bg-blue-100 text-blue-700' },
-  confirmed: { label: 'Confirmée',  cls: 'bg-yellow-100 text-yellow-700' },
-  shipped:   { label: 'Expédiée',   cls: 'bg-purple-100 text-purple-700' },
-  delivered: { label: 'Livrée',     cls: 'bg-green-100 text-green-700' },
-  returned:  { label: 'Retournée',  cls: 'bg-red-100 text-red-700' },
+  pending:   { label: 'En attente', cls: 'bg-amber-50 text-amber-700 border border-amber-200' },
+  new:       { label: 'Nouvelle',   cls: 'bg-blue-50 text-blue-700 border border-blue-200' },
+  confirmed: { label: 'Confirmée',  cls: 'bg-violet-50 text-violet-700 border border-violet-200' },
+  shipped:   { label: 'Expédiée',   cls: 'bg-orange-50 text-orange-700 border border-orange-200' },
+  delivered: { label: 'Livrée',     cls: 'bg-green-50 text-green-700 border border-green-200' },
+  returned:  { label: 'Retournée',  cls: 'bg-red-50 text-red-700 border border-red-200' },
 }
 
 const TAG_SUGGESTIONS = ['VIP', 'Fidèle', 'Retours fréquents', 'À risque', 'Nouveau']
 
 const TAG_COLORS = [
-  'bg-purple-100 text-purple-700',
   'bg-blue-100 text-blue-700',
   'bg-green-100 text-green-700',
   'bg-orange-100 text-orange-700',
-  'bg-pink-100 text-pink-700',
   'bg-teal-100 text-teal-700',
+  'bg-sky-100 text-sky-700',
+  'bg-amber-100 text-amber-700',
 ]
 
 function tagColor(tag: string) {
@@ -160,7 +160,7 @@ export default function CustomerDetail({ customer, orders, stats, updateCustomer
       {/* ── INFOS PRINCIPALES ── */}
       <div className="card p-6">
         <div className="flex items-start gap-5">
-          <div className="w-14 h-14 bg-brand-100 text-brand-700 rounded-2xl flex items-center justify-center text-xl font-bold shrink-0 select-none">
+          <div className="w-14 h-14 bg-[#F0FDF4] text-[#166534] rounded-2xl flex items-center justify-center text-xl font-bold shrink-0 select-none">
             {initials}
           </div>
           <div className="flex-1 min-w-0">
@@ -304,8 +304,8 @@ export default function CustomerDetail({ customer, orders, stats, updateCustomer
         </div>
         {orders.length === 0 ? (
           <div className="p-12 text-center text-gray-400">
-            <p className="text-3xl mb-3">📦</p>
-            <p>Aucune commande pour ce client.</p>
+            <svg className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            <p className="font-medium text-[#1C1917]">Aucune commande pour ce client.</p>
           </div>
         ) : (
           <table className="w-full text-sm">

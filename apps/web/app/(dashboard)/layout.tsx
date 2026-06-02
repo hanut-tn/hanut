@@ -63,8 +63,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <RoleProvider role={context.role} sellerId={context.sellerId} isSeller={context.isSeller}>
-      <div className="flex h-screen bg-gray-50">
-        <Sidebar role={context.role} />
+      <div className="flex h-screen bg-[#FAFAF9]">
+        <Sidebar role={context.role} sellerName={displayName} plan={context.plan} />
         <div className="flex-1 flex flex-col overflow-hidden">
           <TopBar sellerName={displayName} role={context.role} isSeller={context.isSeller} />
           <main className="flex-1 overflow-y-auto p-6">{children}</main>

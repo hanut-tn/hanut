@@ -6,9 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import type { ProfileInput } from '@/app/(dashboard)/settings/actions'
 
 const PLAN_CONFIG = {
-  starter:  { label: 'Starter',  color: 'bg-gray-100 text-gray-700',     price: '39 DT/mois' },
-  pro:      { label: 'Pro',      color: 'bg-brand-100 text-brand-700',    price: '79 DT/mois' },
-  business: { label: 'Business', color: 'bg-purple-100 text-purple-800',  price: '149 DT/mois' },
+  starter:  { label: 'Starter',  color: 'bg-gray-100 text-gray-700',         price: '39 DT/mois' },
+  pro:      { label: 'Pro',      color: 'bg-blue-100 text-blue-700',          price: '79 DT/mois' },
+  business: { label: 'Business', color: 'bg-[#0B5E46] text-white',            price: '149 DT/mois' },
 }
 
 const PLANS: {
@@ -242,15 +242,15 @@ export default function SettingsClient({ seller, stats, appUrl, updateProfile, u
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit flex-wrap">
+      <div className="flex gap-0 border-b border-[#E7E5E4]">
         {TABS.map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2.5 text-sm font-medium transition-colors ${
               tab === t.key
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'text-[#166534] border-b-2 border-[#16A34A] -mb-px'
+                : 'text-[#78716C] hover:text-[#1C1917]'
             }`}
           >
             {t.label}
@@ -590,8 +590,8 @@ export default function SettingsClient({ seller, stats, appUrl, updateProfile, u
           {/* Gestion d'équipe */}
           <div className="card p-5 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-purple-100 text-purple-700 rounded-xl flex items-center justify-center text-xl">
-                👥
+              <div className="w-10 h-10 bg-[#F0FDF4] text-[#166534] rounded-xl flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               </div>
               <div>
                 <p className="font-semibold text-gray-900">Gestion de l&apos;équipe</p>
@@ -610,8 +610,8 @@ export default function SettingsClient({ seller, stats, appUrl, updateProfile, u
                 Gérer l&apos;équipe →
               </a>
             ) : (
-              <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700 text-xs font-medium whitespace-nowrap">
-                Plan Business
+              <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#F0FDF4] text-[#166534] border border-green-200 text-xs font-medium whitespace-nowrap">
+                Plan Business requis
               </span>
             )}
           </div>

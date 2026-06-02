@@ -9,16 +9,19 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          50: '#fdf4ff',
-          100: '#fae8ff',
-          500: '#a855f7',
-          600: '#9333ea',
-          700: '#7e22ce',
-          900: '#581c87',
+          50:  '#F0FDF4',
+          100: '#DCFCE7',
+          200: '#BBF7D0',
+          300: '#86EFAC',
+          400: '#4ADE80',
+          500: '#22C55E',
+          600: '#16A34A',
+          700: '#15803D',
+          900: '#14532D',
         },
       },
       fontFamily: {
-        sans: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
       },
     },
   },

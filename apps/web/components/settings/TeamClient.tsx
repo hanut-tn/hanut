@@ -48,7 +48,7 @@ export default function TeamClient({ plan, currentUserId, members: initialMember
           <Link href="/settings" className="text-sm text-gray-500 hover:text-gray-700">← Paramètres</Link>
         </div>
         <div className="card p-12 text-center max-w-lg mx-auto">
-          <p className="text-4xl mb-4">👥</p>
+          <svg className="w-12 h-12 mx-auto mb-4 text-[#78716C] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Gestion d&apos;équipe</h2>
           <p className="text-gray-500 mb-6">
             Invitez jusqu&apos;à 4 collaborateurs avec des rôles personnalisés.
@@ -148,7 +148,7 @@ export default function TeamClient({ plan, currentUserId, members: initialMember
             {memberCount} / {MAX_MEMBERS} membre{memberCount !== 1 ? 's' : ''}
           </p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-50 text-brand-700 text-sm font-medium">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#F0FDF4] text-[#166534] border border-green-200 text-sm font-medium">
           <span>{spotsLeft} place{spotsLeft !== 1 ? 's' : ''} disponible{spotsLeft !== 1 ? 's' : ''}</span>
         </div>
       </div>
@@ -167,7 +167,7 @@ export default function TeamClient({ plan, currentUserId, members: initialMember
 
         {members.length === 0 ? (
           <div className="p-10 text-center text-gray-400">
-            <p className="text-3xl mb-3">👥</p>
+            <svg className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             <p className="text-sm">Aucun membre pour l&apos;instant. Invitez votre premier collaborateur ci-dessous.</p>
           </div>
         ) : (
@@ -190,7 +190,7 @@ export default function TeamClient({ plan, currentUserId, members: initialMember
                   <tr key={m.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-brand-100 text-brand-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
+                        <div className="w-8 h-8 bg-[#F0FDF4] text-[#166534] rounded-full flex items-center justify-center text-xs font-bold shrink-0">
                           {initials(m)}
                         </div>
                         <div>

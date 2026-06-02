@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import { Banknote, TrendingUp, ShoppingBag, Truck, Clock } from 'lucide-react'
 
 type Product = { id: string; name: string }
 type Customer = { id: string; name: string; city?: string }
@@ -36,11 +37,11 @@ type ChartMode = 'orders' | 'ca'
 const PERIOD_LABELS: Record<Period, string> = { 7: '7 jours', 30: '30 jours', 90: '90 jours' }
 
 const STATUS_COLOR: Record<string, string> = {
-  pending:   'bg-orange-300',
+  pending:   'bg-amber-400',
   new:       'bg-blue-400',
-  confirmed: 'bg-yellow-400',
-  shipped:   'bg-purple-400',
-  delivered: 'bg-green-400',
+  confirmed: 'bg-violet-400',
+  shipped:   'bg-orange-400',
+  delivered: 'bg-green-500',
   returned:  'bg-red-400',
 }
 const STATUS_LABEL: Record<string, string> = {
@@ -95,7 +96,6 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
     [deliveries, cutoff]
   )
 
-  // ── KPIs ────────────────────────────────────────────────────────────────────
   const delivered    = filtered.filter(o => o.status === 'delivered')
   const revenue      = delivered.reduce((s, o) => s + o.cod_amount, 0)
   const totalOrders  = filtered.length
@@ -114,12 +114,10 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
   }, 0)
   const profit = revenue - totalFees
 
-  // ── Status distribution ──────────────────────────────────────────────────────
   const statusCounts: Record<string, number> = {}
   for (const o of filtered) statusCounts[o.status] = (statusCounts[o.status] ?? 0) + 1
   const maxStatusCount = Math.max(...Object.values(statusCounts), 1)
 
-  // ── Top products (by delivered revenue) ──────────────────────────────────────
   const productMap: Record<string, { name: string; revenue: number; count: number }> = {}
   for (const o of filtered) {
     const p = getProduct(o)
@@ -132,7 +130,6 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
   const topProducts = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5)
   const maxProductRevenue = Math.max(...topProducts.map(p => p.revenue), 1)
 
-  // ── Top customers (by delivered revenue) ─────────────────────────────────────
   const customerMap: Record<string, { name: string; revenue: number; count: number }> = {}
   for (const o of filtered) {
     const c = getCustomer(o)
@@ -145,7 +142,6 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
   const topCustomers = Object.values(customerMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5)
   const maxCustomerRevenue = Math.max(...topCustomers.map(c => c.revenue), 1)
 
-  // ── Top cities ────────────────────────────────────────────────────────────────
   const cityMap: Record<string, number> = {}
   for (const o of filtered) {
     const c = getCustomer(o)
@@ -154,7 +150,6 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
   const topCities = Object.entries(cityMap).sort((a, b) => b[1] - a[1]).slice(0, 5)
   const maxCityCount = Math.max(...topCities.map(c => c[1]), 1)
 
-  // ── Carrier breakdown ─────────────────────────────────────────────────────────
   type CarrierStats = {
     shipped: number; delivered: number
     codToReverse: number; codPending: number; fees: number
@@ -178,7 +173,6 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
     rate: stats.shipped > 0 ? Math.round((stats.delivered / stats.shipped) * 100) : 0,
   })).sort((a, b) => b.shipped - a.shipped)
 
-  // ── Daily chart ────────────────────────────────────────────────────────────────
   const dailyData = useMemo(() => {
     const days: { label: string; orders: number; revenue: number }[] = []
     for (let i = period - 1; i >= 0; i--) {
@@ -198,23 +192,32 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
   const maxDailyOrders  = Math.max(...dailyData.map(d => d.orders), 1)
   const maxDailyRevenue = Math.max(...dailyData.map(d => d.revenue), 1)
 
-  // ── Render ─────────────────────────────────────────────────────────────────────
+  const KPI_ITEMS = [
+    { label: 'CA encaissé',    value: `${revenue.toFixed(0)} DT`,   sub: `${delivered.length} livrée${delivered.length !== 1 ? 's' : ''}`, icon: Banknote,    valueClass: 'text-[#16A34A]' },
+    { label: 'Profit net',     value: `${profit.toFixed(0)} DT`,    sub: `Frais: ${totalFees.toFixed(0)} DT`,                              icon: TrendingUp,  valueClass: 'text-[#0B5E46]' },
+    { label: 'Commandes',      value: String(totalOrders),           sub: 'sur la période',                                                 icon: ShoppingBag, valueClass: 'text-[#1C1917]' },
+    { label: 'Taux livraison', value: `${deliveryRate}%`,            sub: `Retours: ${returnRate}%`,                                        icon: Truck,       valueClass: 'text-[#1C1917]' },
+    { label: 'COD en attente', value: `${codPending.toFixed(0)} DT`, sub: 'non encore livré',                                              icon: Clock,       valueClass: 'text-amber-600' },
+  ]
+
   return (
     <div className="space-y-6">
 
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Analytiques</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Basé sur les {period} derniers jours</p>
+          <h1 className="text-2xl font-bold text-[#1C1917]">Analytiques</h1>
+          <p className="text-sm text-[#78716C] mt-0.5">Basé sur les {period} derniers jours</p>
         </div>
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+        <div className="flex gap-1">
           {([7, 30, 90] as Period[]).map(p => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                period === p ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                period === p
+                  ? 'bg-[#0B5E46] text-white'
+                  : 'border border-[#E7E5E4] text-[#78716C] hover:bg-[#F5F5F4]'
               }`}
             >
               {PERIOD_LABELS[p]}
@@ -223,41 +226,38 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
         </div>
       </div>
 
-      {/* KPI cards — 5 en grille */}
+      {/* KPI cards */}
       <div className="grid grid-cols-2 xl:grid-cols-5 gap-3">
-        {[
-          { label: 'CA encaissé',    value: `${revenue.toFixed(0)} DT`,  sub: `${delivered.length} livrée${delivered.length !== 1 ? 's' : ''}`, icon: '💰', bg: 'bg-green-50',   text: 'text-green-600' },
-          { label: 'Profit net',     value: `${profit.toFixed(0)} DT`,   sub: `Frais: ${totalFees.toFixed(0)} DT`,                               icon: '📈', bg: 'bg-emerald-50', text: 'text-emerald-600' },
-          { label: 'Commandes',      value: String(totalOrders),          sub: 'sur la période',                                                   icon: '📦', bg: 'bg-blue-50',    text: 'text-blue-600' },
-          { label: 'Taux livraison', value: `${deliveryRate}%`,           sub: `Retours: ${returnRate}%`,                                          icon: '🚚', bg: 'bg-purple-50',  text: 'text-purple-600' },
-          { label: 'COD en attente', value: `${codPending.toFixed(0)} DT`, sub: 'non encore livré',                                               icon: '⏳', bg: 'bg-orange-50',  text: 'text-orange-500' },
-        ].map(s => (
-          <div key={s.label} className="card p-4">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-gray-500 truncate">{s.label}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{s.value}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{s.sub}</p>
-              </div>
-              <div className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center text-base ${s.bg} ${s.text}`}>
-                {s.icon}
+        {KPI_ITEMS.map(s => {
+          const Icon = s.icon
+          return (
+            <div key={s.label} className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-[#78716C] truncate">{s.label}</p>
+                  <p className={`text-2xl font-bold mt-1 ${s.valueClass}`}>{s.value}</p>
+                  <p className="text-xs text-[#78716C] mt-0.5">{s.sub}</p>
+                </div>
+                <Icon className="w-5 h-5 text-[#78716C] shrink-0 mt-0.5" />
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Chart commandes / CA */}
-      <div className="card p-5">
+      <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-5">
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-          <h2 className="font-semibold text-gray-900">Évolution sur la période</h2>
-          <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+          <h2 className="font-semibold text-[#1C1917]">Évolution sur la période</h2>
+          <div className="flex gap-1 rounded-lg p-0.5 bg-gray-100">
             {(['orders', 'ca'] as ChartMode[]).map(m => (
               <button
                 key={m}
                 onClick={() => setChartMode(m)}
                 className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                  chartMode === m ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  chartMode === m
+                    ? 'bg-[#0B5E46] text-white'
+                    : 'text-[#78716C] hover:text-[#1C1917]'
                 }`}
               >
                 {m === 'orders' ? 'Commandes' : 'CA livré'}
@@ -267,8 +267,8 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
         </div>
 
         {totalOrders === 0 ? (
-          <div className="h-28 flex items-center justify-center text-gray-400 text-sm">
-            Aucune commande sur cette période
+          <div className="h-28 flex items-center justify-center text-[#78716C] text-sm">
+            Aucune donnée sur cette période
           </div>
         ) : (
           <>
@@ -281,11 +281,11 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
                   <div key={i} className="flex-1 relative group" style={{ height: '100%', display: 'flex', alignItems: 'flex-end' }}>
                     <div
                       className={`w-full rounded-t-sm transition-colors cursor-default ${
-                        chartMode === 'orders' ? 'bg-brand-200 hover:bg-brand-400' : 'bg-green-200 hover:bg-green-400'
+                        chartMode === 'orders' ? 'bg-green-200 hover:bg-green-400' : 'bg-[#BBF7D0] hover:bg-[#16A34A]'
                       }`}
                       style={{ height: `${pct}%` }}
                     />
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 bg-gray-900 text-white text-[11px] rounded-md px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 bg-[#1C1917] text-white text-[11px] rounded-md px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
                       {d.label}: {chartMode === 'orders' ? `${d.orders} cmd` : `${d.revenue.toFixed(0)} DT`}
                     </div>
                   </div>
@@ -298,7 +298,7 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
                   const show = period <= 7 || i % Math.ceil(period / 7) === 0
                   return (
                     <div key={i} className="flex-1 text-center">
-                      {show && <span className="text-[9px] text-gray-400">{d.label}</span>}
+                      {show && <span className="text-[9px] text-[#78716C]">{d.label}</span>}
                     </div>
                   )
                 })}
@@ -310,10 +310,10 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
 
       {/* Statuts + Top produits */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <div className="card p-5">
-          <h2 className="font-semibold text-gray-900 mb-4">Répartition des statuts</h2>
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-5">
+          <h2 className="font-semibold text-[#1C1917] mb-4">Répartition des statuts</h2>
           {totalOrders === 0 ? (
-            <p className="text-sm text-gray-400 py-4 text-center">Aucune donnée</p>
+            <p className="text-sm text-[#78716C] py-4 text-center">Aucune donnée sur cette période</p>
           ) : (
             <div className="space-y-3">
               {(['pending', 'new', 'confirmed', 'shipped', 'delivered', 'returned'] as const)
@@ -323,8 +323,8 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
                   return (
                     <div key={s}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm text-gray-600">{STATUS_LABEL[s]}</span>
-                        <span className="text-sm font-medium text-gray-900">{count}</span>
+                        <span className="text-sm text-[#78716C]">{STATUS_LABEL[s]}</span>
+                        <span className="text-sm font-medium text-[#1C1917]">{count}</span>
                       </div>
                       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div
@@ -339,24 +339,24 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
           )}
         </div>
 
-        <div className="card p-5">
-          <h2 className="font-semibold text-gray-900 mb-4">Top produits</h2>
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-5">
+          <h2 className="font-semibold text-[#1C1917] mb-4">Top produits</h2>
           {topProducts.length === 0 ? (
-            <p className="text-sm text-gray-400 py-4 text-center">Aucune donnée</p>
+            <p className="text-sm text-[#78716C] py-4 text-center">Aucune donnée sur cette période</p>
           ) : (
             <div className="space-y-3">
               {topProducts.map((p, i) => (
                 <div key={i}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-gray-700 truncate max-w-[60%]">{p.name}</span>
-                    <span className="text-sm font-medium text-gray-900 ml-2 shrink-0">
+                    <span className="text-sm text-[#78716C] truncate max-w-[60%]">{p.name}</span>
+                    <span className="text-sm font-medium text-[#1C1917] ml-2 shrink-0">
                       {p.revenue.toFixed(0)} DT
-                      <span className="text-xs text-gray-400 font-normal ml-1">({p.count})</span>
+                      <span className="text-xs text-[#78716C] font-normal ml-1">({p.count})</span>
                     </span>
                   </div>
                   <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-brand-400 transition-all"
+                      className="h-full rounded-full bg-[#16A34A] transition-all"
                       style={{ width: `${Math.round((p.revenue / maxProductRevenue) * 100)}%` }}
                     />
                   </div>
@@ -369,31 +369,31 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
 
       {/* Tableau par livreur */}
       {carrierList.length > 0 && (
-        <div className="card overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-900">Par livreur</h2>
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-[#E7E5E4]">
+            <h2 className="font-semibold text-[#1C1917]">Par livreur</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-[#FAFAF9] border-b border-[#E7E5E4]">
                 <tr>
                   {['Livreur', 'Expédiées', 'Livrées', 'Taux', 'COD à reverser', 'COD en attente', 'Frais'].map((h, i) => (
-                    <th key={i} className="text-left text-xs font-medium text-gray-500 uppercase tracking-wide px-5 py-3">
+                    <th key={i} className="text-left text-xs font-medium text-[#78716C] uppercase tracking-wide px-5 py-3">
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-[#E7E5E4]">
                 {carrierList.map(c => (
-                  <tr key={c.key} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-4 font-semibold text-gray-900">{c.label}</td>
-                    <td className="px-5 py-4 text-gray-600">{c.shipped}</td>
-                    <td className="px-5 py-4 text-gray-600">{c.delivered}</td>
+                  <tr key={c.key} className="hover:bg-[#FAFAF9] transition-colors">
+                    <td className="px-5 py-4 font-semibold text-[#1C1917]">{c.label}</td>
+                    <td className="px-5 py-4 text-[#78716C]">{c.shipped}</td>
+                    <td className="px-5 py-4 text-[#78716C]">{c.delivered}</td>
                     <td className="px-5 py-4">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                         c.rate >= 80 ? 'bg-green-100 text-green-700'
-                        : c.rate >= 60 ? 'bg-yellow-100 text-yellow-700'
+                        : c.rate >= 60 ? 'bg-amber-100 text-amber-700'
                         : 'bg-red-100 text-red-700'
                       }`}>
                         {c.rate}%
@@ -406,10 +406,10 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
                     </td>
                     <td className="px-5 py-4">
                       {c.codPending > 0
-                        ? <span className="text-gray-700">{c.codPending.toFixed(0)} DT</span>
+                        ? <span className="text-[#78716C]">{c.codPending.toFixed(0)} DT</span>
                         : <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-5 py-4 text-gray-500">
+                    <td className="px-5 py-4 text-[#78716C]">
                       {c.fees > 0 ? `${c.fees.toFixed(0)} DT` : <span className="text-gray-300">—</span>}
                     </td>
                   </tr>
@@ -422,32 +422,32 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
 
       {/* Top clients + Top villes */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <div className="card p-5">
-          <h2 className="font-semibold text-gray-900 mb-4">Top clients</h2>
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-5">
+          <h2 className="font-semibold text-[#1C1917] mb-4">Top clients</h2>
           {topCustomers.length === 0 ? (
-            <p className="text-sm text-gray-400 py-4 text-center">Aucune donnée</p>
+            <p className="text-sm text-[#78716C] py-4 text-center">Aucune donnée sur cette période</p>
           ) : (
             <div className="space-y-3">
               {topCustomers.map((c, i) => (
                 <div key={i}>
                   <div className="flex items-center gap-3 mb-1">
-                    <div className="w-6 h-6 bg-brand-100 text-brand-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
+                    <div className="w-6 h-6 bg-[#F0FDF4] text-[#166534] rounded-full flex items-center justify-center text-xs font-bold shrink-0">
                       {c.name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()}
                     </div>
                     <Link
-                      href={`/customers`}
-                      className="text-sm text-gray-700 truncate flex-1 hover:text-brand-600 transition-colors"
+                      href="/customers"
+                      className="text-sm text-[#78716C] truncate flex-1 hover:text-[#16A34A] transition-colors"
                     >
                       {c.name}
                     </Link>
-                    <span className="text-sm font-semibold text-gray-900 shrink-0">
+                    <span className="text-sm font-semibold text-[#1C1917] shrink-0">
                       {c.revenue.toFixed(0)} DT
-                      <span className="text-xs text-gray-400 font-normal ml-1">({c.count})</span>
+                      <span className="text-xs text-[#78716C] font-normal ml-1">({c.count})</span>
                     </span>
                   </div>
                   <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden ml-9">
                     <div
-                      className="h-full rounded-full bg-brand-300 transition-all"
+                      className="h-full rounded-full bg-[#86EFAC] transition-all"
                       style={{ width: `${Math.round((c.revenue / maxCustomerRevenue) * 100)}%` }}
                     />
                   </div>
@@ -457,20 +457,20 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
           )}
         </div>
 
-        <div className="card p-5">
-          <h2 className="font-semibold text-gray-900 mb-4">Top villes</h2>
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-5">
+          <h2 className="font-semibold text-[#1C1917] mb-4">Top villes</h2>
           {topCities.length === 0 ? (
-            <p className="text-sm text-gray-400 py-4 text-center">Aucune donnée (villes non renseignées)</p>
+            <p className="text-sm text-[#78716C] py-4 text-center">Aucune donnée (villes non renseignées)</p>
           ) : (
             <div className="space-y-3">
               {topCities.map(([city, count], i) => (
                 <div key={city}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-gray-700 flex items-center gap-2">
-                      <span className="text-xs font-bold text-gray-400">#{i + 1}</span>
+                    <span className="text-sm text-[#78716C] flex items-center gap-2">
+                      <span className="text-xs font-bold text-[#78716C]">#{i + 1}</span>
                       {city}
                     </span>
-                    <span className="text-sm font-medium text-gray-900">{count} cmd</span>
+                    <span className="text-sm font-medium text-[#1C1917]">{count} cmd</span>
                   </div>
                   <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div

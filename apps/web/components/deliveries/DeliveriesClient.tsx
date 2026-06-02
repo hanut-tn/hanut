@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { Truck } from 'lucide-react'
 import type { CarrierName } from '@hanut/types'
 import type { CreateDeliveryInput, UpdateDeliveryInput } from '@/app/(dashboard)/deliveries/actions'
 
@@ -17,7 +18,7 @@ const CARRIER_STYLE: Record<CarrierName, string> = {
   navex:        'bg-green-100 text-green-700',
   adex:         'bg-orange-100 text-orange-700',
   aramex:       'bg-red-100 text-red-700',
-  bestdelivery: 'bg-purple-100 text-purple-700',
+  bestdelivery: 'bg-sky-100 text-sky-700',
 }
 
 type OrderInfo = {
@@ -66,7 +67,6 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
   const [tab, setTab] = useState<Tab>('all')
   const [isPending, startTransition] = useTransition()
 
-  // Add modal
   const [showAdd, setShowAdd] = useState(false)
   const [addOrderId, setAddOrderId] = useState('')
   const [addCarrier, setAddCarrier] = useState<CarrierName>('intigo')
@@ -74,13 +74,11 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
   const [addFee, setAddFee] = useState<number | ''>('')
   const [addError, setAddError] = useState<string | null>(null)
 
-  // Edit modal
   const [editDelivery, setEditDelivery] = useState<Delivery | null>(null)
   const [editTracking, setEditTracking] = useState('')
   const [editStatus, setEditStatus] = useState('')
   const [editFee, setEditFee] = useState<number | ''>('')
 
-  // Delete confirm
   const [confirmDelete, setConfirmDelete] = useState<Delivery | null>(null)
 
   const filtered = deliveries.filter(d => {
@@ -163,13 +161,13 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Livraisons</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{deliveries.length} livraison{deliveries.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-2xl font-bold text-[#1C1917]">Livraisons</h1>
+          <p className="text-sm text-[#78716C] mt-0.5">{deliveries.length} livraison{deliveries.length !== 1 ? 's' : ''}</p>
         </div>
         <button
           onClick={() => setShowAdd(true)}
           disabled={shippableOrders.length === 0}
-          className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           title={shippableOrders.length === 0 ? 'Aucune commande expédiée sans livraison' : ''}
         >
           + Ajouter livraison
@@ -179,32 +177,34 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: 'COD collecté',  value: `${totalCollected.toFixed(0)} DT`, sub: `${counts.collected} en attente de reversal`, color: 'text-green-600' },
-          { label: 'COD reversé',   value: `${totalReversed.toFixed(0)} DT`,  sub: `${counts.reversed} livraisons soldées`,      color: 'text-brand-600' },
-          { label: 'Frais livreurs',value: `${totalFees.toFixed(0)} DT`,       sub: 'total transporteurs',                        color: 'text-gray-700' },
+          { label: 'COD collecté',   value: `${totalCollected.toFixed(0)} DT`, sub: `${counts.collected} en attente de reversal`, color: 'text-[#16A34A]' },
+          { label: 'COD reversé',    value: `${totalReversed.toFixed(0)} DT`,  sub: `${counts.reversed} livraisons soldées`,      color: 'text-[#0B5E46]' },
+          { label: 'Frais livreurs', value: `${totalFees.toFixed(0)} DT`,      sub: 'total transporteurs',                        color: 'text-[#1C1917]' },
         ].map(s => (
-          <div key={s.label} className="card p-4">
-            <p className="text-sm text-gray-500">{s.label}</p>
+          <div key={s.label} className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4">
+            <p className="text-sm font-medium text-[#78716C]">{s.label}</p>
             <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{s.sub}</p>
+            <p className="text-xs text-[#78716C] mt-0.5">{s.sub}</p>
           </div>
         ))}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit flex-wrap">
+      {/* Tabs — underline style */}
+      <div className="flex gap-0 border-b border-[#E7E5E4]">
         {TABS.map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              tab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            className={`px-4 py-2.5 text-sm font-medium transition-colors ${
+              tab === t.key
+                ? 'text-[#166534] border-b-2 border-[#16A34A] -mb-px'
+                : 'text-[#78716C] hover:text-[#1C1917]'
             }`}
           >
             {t.label}
             {counts[t.key] > 0 && (
               <span className={`ml-1.5 text-xs rounded-full px-1.5 py-0.5 ${
-                tab === t.key ? 'bg-gray-100 text-gray-600' : 'bg-gray-200 text-gray-500'
+                tab === t.key ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
               }`}>{counts[t.key]}</span>
             )}
           </button>
@@ -213,57 +213,57 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
 
       {/* Empty */}
       {filtered.length === 0 ? (
-        <div className="card p-16 text-center text-gray-400">
-          <p className="text-5xl mb-4">🚚</p>
-          <p className="font-medium text-gray-600">
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-16 text-center">
+          <Truck className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-40" />
+          <p className="font-medium text-[#1C1917]">
             {tab === 'all' ? 'Aucune livraison enregistrée' : 'Aucune livraison dans cette catégorie'}
           </p>
           {tab === 'all' && shippableOrders.length > 0 && (
-            <button onClick={() => setShowAdd(true)} className="mt-3 text-sm text-brand-600 hover:text-brand-700 font-medium">
+            <button onClick={() => setShowAdd(true)} className="mt-3 text-sm text-[#16A34A] hover:text-[#15803D] font-medium">
               Ajouter la première →
             </button>
           )}
         </div>
       ) : (
-        <div className="card overflow-x-auto">
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-x-auto">
           <table className="w-full text-sm min-w-[760px]">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-[#FAFAF9] border-b border-[#E7E5E4]">
               <tr>
                 {['Client / Produit', 'Transporteur', 'N° suivi / Statut', 'COD collecté', 'COD reversé', 'Frais', ''].map((h, i) => (
-                  <th key={i} className="text-left text-xs font-medium text-gray-500 uppercase tracking-wide px-4 py-3">{h}</th>
+                  <th key={i} className="text-left text-xs font-medium text-[#78716C] uppercase tracking-wide px-4 py-3">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-[#E7E5E4]">
               {filtered.map(d => {
                 const order = getOrder(d)
                 const cStyle = CARRIER_STYLE[d.carrier]
                 const cLabel = CARRIERS.find(c => c.value === d.carrier)?.label ?? d.carrier
                 return (
-                  <tr key={d.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={d.id} className="hover:bg-[#FAFAF9] transition-colors">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-gray-900">{order?.customer?.name ?? '—'}</p>
-                      <p className="text-xs text-gray-400">{order?.customer?.phone}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{order?.product?.name} — <span className="font-medium">{order?.cod_amount} DT</span></p>
+                      <p className="font-medium text-[#1C1917]">{order?.customer?.name ?? '—'}</p>
+                      <p className="text-xs text-[#78716C]">{order?.customer?.phone}</p>
+                      <p className="text-xs text-[#78716C] mt-0.5">{order?.product?.name} — <span className="font-medium">{order?.cod_amount} DT</span></p>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${cStyle}`}>
                         {cLabel}
                       </span>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-[#78716C] mt-1">
                         {new Date(d.created_at).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' })}
                       </p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-mono text-xs text-gray-700">{d.tracking_number || <span className="text-gray-400 font-sans">—</span>}</p>
-                      {d.carrier_status && <p className="text-xs text-gray-400 mt-0.5">{d.carrier_status}</p>}
+                      <p className="font-mono text-xs text-[#1C1917]">{d.tracking_number || <span className="text-[#78716C] font-sans">—</span>}</p>
+                      {d.carrier_status && <p className="text-xs text-[#78716C] mt-0.5">{d.carrier_status}</p>}
                     </td>
                     <td className="px-4 py-3">
                       <button
                         onClick={() => handleToggle(d, 'cod_collected')}
                         disabled={isPending}
                         className={`w-9 h-5 rounded-full transition-colors relative disabled:opacity-60 ${
-                          d.cod_collected ? 'bg-green-500' : 'bg-gray-200'
+                          d.cod_collected ? 'bg-[#16A34A]' : 'bg-gray-200'
                         }`}
                       >
                         <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
@@ -276,7 +276,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
                         onClick={() => handleToggle(d, 'cod_reversed')}
                         disabled={isPending || !d.cod_collected}
                         className={`w-9 h-5 rounded-full transition-colors relative disabled:opacity-40 ${
-                          d.cod_reversed ? 'bg-brand-500' : 'bg-gray-200'
+                          d.cod_reversed ? 'bg-[#0B5E46]' : 'bg-gray-200'
                         }`}
                       >
                         <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
@@ -284,12 +284,12 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
                         }`} />
                       </button>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 text-sm">
+                    <td className="px-4 py-3 text-[#78716C] text-sm">
                       {d.fee != null ? `${d.fee} DT` : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
-                        <button onClick={() => openEdit(d)} className="text-xs text-brand-600 hover:text-brand-800 font-medium">
+                        <button onClick={() => openEdit(d)} className="text-xs text-[#16A34A] hover:text-[#15803D] font-medium">
                           Éditer
                         </button>
                         <button onClick={() => setConfirmDelete(d)} className="text-xs text-red-400 hover:text-red-600 font-medium">
@@ -308,11 +308,11 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
       {/* ── ADD MODAL ── */}
       {showAdd && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="card p-6 max-w-md w-full shadow-xl space-y-4">
-            <h3 className="font-semibold text-gray-900 text-lg">Nouvelle livraison</h3>
+          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-xl p-6 max-w-md w-full space-y-4">
+            <h3 className="font-semibold text-[#1C1917] text-lg">Nouvelle livraison</h3>
             <form onSubmit={handleAdd} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Commande expédiée *</label>
+                <label className="block text-sm font-medium text-[#1C1917] mb-1">Commande expédiée *</label>
                 <select className="input" value={addOrderId} onChange={e => setAddOrderId(e.target.value)} required>
                   <option value="">Sélectionner une commande…</option>
                   {shippableOrders.map(o => {
@@ -327,7 +327,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Transporteur *</label>
+                <label className="block text-sm font-medium text-[#1C1917] mb-1">Transporteur *</label>
                 <select className="input" value={addCarrier} onChange={e => setAddCarrier(e.target.value as CarrierName)} required>
                   {CARRIERS.map(c => (
                     <option key={c.value} value={c.value}>{c.label}</option>
@@ -336,11 +336,11 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">N° de suivi</label>
+                  <label className="block text-sm font-medium text-[#1C1917] mb-1">N° de suivi</label>
                   <input className="input" value={addTracking} onChange={e => setAddTracking(e.target.value)} placeholder="Optionnel" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Frais (DT)</label>
+                  <label className="block text-sm font-medium text-[#1C1917] mb-1">Frais (DT)</label>
                   <input
                     className="input"
                     type="number"
@@ -369,19 +369,19 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
       {/* ── EDIT MODAL ── */}
       {editDelivery && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="card p-6 max-w-sm w-full shadow-xl space-y-4">
-            <h3 className="font-semibold text-gray-900 text-lg">Modifier la livraison</h3>
+          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-xl p-6 max-w-sm w-full space-y-4">
+            <h3 className="font-semibold text-[#1C1917] text-lg">Modifier la livraison</h3>
             <form onSubmit={handleEditSave} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">N° de suivi</label>
+                <label className="block text-sm font-medium text-[#1C1917] mb-1">N° de suivi</label>
                 <input className="input font-mono" value={editTracking} onChange={e => setEditTracking(e.target.value)} placeholder="EX123456789TN" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Statut transporteur</label>
+                <label className="block text-sm font-medium text-[#1C1917] mb-1">Statut transporteur</label>
                 <input className="input" value={editStatus} onChange={e => setEditStatus(e.target.value)} placeholder="En transit, Livré…" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Frais de livraison (DT)</label>
+                <label className="block text-sm font-medium text-[#1C1917] mb-1">Frais de livraison (DT)</label>
                 <input
                   className="input"
                   type="number"
@@ -406,9 +406,9 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
       {/* ── DELETE CONFIRM ── */}
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="card p-6 max-w-sm w-full shadow-xl">
-            <h3 className="font-semibold text-gray-900 mb-1">Supprimer cette livraison ?</h3>
-            <p className="text-sm text-gray-500 mb-5">
+          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-xl p-6 max-w-sm w-full">
+            <h3 className="font-semibold text-[#1C1917] mb-1">Supprimer cette livraison ?</h3>
+            <p className="text-sm text-[#78716C] mb-5">
               {getOrder(confirmDelete)?.customer?.name} — {CARRIERS.find(c => c.value === confirmDelete.carrier)?.label}
             </p>
             <div className="flex gap-3">

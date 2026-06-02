@@ -6,12 +6,12 @@ import { useRouter } from 'next/navigation'
 import type { OrderStatus } from '@hanut/types'
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; cls: string; dot: string }> = {
-  pending:   { label: 'En attente',  cls: 'bg-orange-100 text-orange-700',  dot: 'bg-orange-400' },
-  new:       { label: 'Nouvelle',    cls: 'bg-blue-100 text-blue-700',      dot: 'bg-blue-400' },
-  confirmed: { label: 'Confirmée',   cls: 'bg-yellow-100 text-yellow-700',  dot: 'bg-yellow-400' },
-  shipped:   { label: 'Expédiée',    cls: 'bg-purple-100 text-purple-700',  dot: 'bg-purple-400' },
-  delivered: { label: 'Livrée',      cls: 'bg-green-100 text-green-700',    dot: 'bg-green-400' },
-  returned:  { label: 'Retournée',   cls: 'bg-red-100 text-red-700',        dot: 'bg-red-400' },
+  pending:   { label: 'En attente',  cls: 'bg-amber-50 text-amber-700 border border-amber-200',    dot: 'bg-amber-400' },
+  new:       { label: 'Nouvelle',    cls: 'bg-blue-50 text-blue-700 border border-blue-200',        dot: 'bg-blue-400' },
+  confirmed: { label: 'Confirmée',   cls: 'bg-violet-50 text-violet-700 border border-violet-200',  dot: 'bg-violet-400' },
+  shipped:   { label: 'Expédiée',    cls: 'bg-orange-50 text-orange-700 border border-orange-200',  dot: 'bg-orange-400' },
+  delivered: { label: 'Livrée',      cls: 'bg-green-50 text-green-700 border border-green-200',     dot: 'bg-green-400' },
+  returned:  { label: 'Retournée',   cls: 'bg-red-50 text-red-700 border border-red-200',           dot: 'bg-red-400' },
 }
 
 type Props = {
@@ -194,7 +194,7 @@ export default function OrderDetail({ order, customer, product, linkedCustomer, 
             </Link>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-brand-100 text-brand-700 rounded-full flex items-center justify-center text-sm font-bold shrink-0 select-none">
+            <div className="w-9 h-9 bg-[#F0FDF4] text-[#166534] rounded-full flex items-center justify-center text-sm font-bold shrink-0 select-none">
               {customer.name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()}
             </div>
             <div>

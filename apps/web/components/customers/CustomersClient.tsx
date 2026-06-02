@@ -3,15 +3,16 @@
 import { useState, useTransition, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Users, Search } from 'lucide-react'
 import type { CustomerInput } from '@/app/(dashboard)/customers/actions'
 
 const TAG_COLORS = [
-  'bg-purple-100 text-purple-700',
   'bg-blue-100 text-blue-700',
   'bg-green-100 text-green-700',
   'bg-orange-100 text-orange-700',
-  'bg-pink-100 text-pink-700',
   'bg-teal-100 text-teal-700',
+  'bg-sky-100 text-sky-700',
+  'bg-amber-100 text-amber-700',
 ]
 function tagColor(tag: string) {
   const hash = tag.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
@@ -55,7 +56,6 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
   const [search, setSearch] = useState('')
   const [isPending, startTransition] = useTransition()
 
-  // Edit modal
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null)
   const [editName, setEditName] = useState('')
   const [editPhone, setEditPhone] = useState('')
@@ -63,7 +63,6 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
   const [editCity, setEditCity] = useState('')
   const [editMsg, setEditMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  // Delete modal
   const [confirmDelete, setConfirmDelete] = useState<Customer | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
@@ -125,64 +124,67 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{customers.length} client{customers.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-2xl font-bold text-[#1C1917]">Clients</h1>
+          <p className="text-sm text-[#78716C] mt-0.5">{customers.length} client{customers.length !== 1 ? 's' : ''}</p>
         </div>
-        <Link href="/orders/new" className="btn-primary">+ Nouvelle commande</Link>
+        <Link href="/orders/new" className="btn-primary text-sm">+ Nouvelle commande</Link>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="card p-4">
-          <p className="text-sm text-gray-500">Total clients</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{customers.length}</p>
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4">
+          <p className="text-sm font-medium text-[#78716C]">Total clients</p>
+          <p className="text-2xl font-bold text-[#1C1917] mt-1">{customers.length}</p>
         </div>
-        <div className="card p-4">
-          <p className="text-sm text-gray-500">CA encaissé (clients)</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">{totalCA.toFixed(0)} DT</p>
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4">
+          <p className="text-sm font-medium text-[#78716C]">CA encaissé</p>
+          <p className="text-2xl font-bold text-[#16A34A] mt-1">{totalCA.toFixed(0)} DT</p>
         </div>
-        <div className="card p-4">
-          <p className="text-sm text-gray-500">Commandes totales</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4">
+          <p className="text-sm font-medium text-[#78716C]">Commandes totales</p>
+          <p className="text-2xl font-bold text-[#1C1917] mt-1">
             {customers.reduce((s, c) => s + (c.orders?.length ?? 0), 0)}
           </p>
         </div>
       </div>
 
       {/* Search */}
-      <input
-        className="input max-w-sm"
-        placeholder="Rechercher par nom, téléphone ou ville…"
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-      />
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
+        <input
+          className="input pl-9"
+          placeholder="Rechercher par nom, téléphone ou ville…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+      </div>
 
       {/* Empty */}
       {filtered.length === 0 ? (
-        <div className="card p-16 text-center text-gray-400">
-          <p className="text-5xl mb-4">👤</p>
-          <p className="font-medium text-gray-600">
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-16 text-center">
+          <Users className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-40" />
+          <p className="font-medium text-[#1C1917]">
             {search ? 'Aucun client trouvé pour cette recherche' : 'Aucun client pour l\'instant'}
           </p>
           {!search && (
-            <p className="text-sm mt-1 text-gray-400">
+            <p className="text-sm mt-1 text-[#78716C]">
               Les clients sont créés automatiquement lors de vos commandes.
             </p>
           )}
         </div>
       ) : (
-        <div className="card overflow-x-auto">
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-[#FAFAF9] border-b border-[#E7E5E4]">
               <tr>
                 {['Client', 'Téléphone', 'Ville', 'Commandes', 'CA livré', 'Dernière commande', ''].map((h, i) => (
-                  <th key={i} className="text-left text-xs font-medium text-gray-500 uppercase tracking-wide px-5 py-3">
+                  <th key={i} className="text-left text-xs font-medium text-[#78716C] uppercase tracking-wide px-5 py-3">
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-[#E7E5E4]">
               {filtered.map(c => {
                 const stats = getStats(c.orders)
                 const tags = c.tags ?? []
@@ -190,15 +192,15 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
                   <tr
                     key={c.id}
                     onClick={() => router.push(`/customers/${c.id}`)}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    className="hover:bg-[#FAFAF9] transition-colors cursor-pointer"
                   >
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-brand-100 text-brand-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
+                        <div className="w-8 h-8 bg-[#F0FDF4] text-[#166534] rounded-full flex items-center justify-center text-xs font-bold shrink-0">
                           {c.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{c.name}</p>
+                          <p className="font-medium text-[#1C1917]">{c.name}</p>
                           {tags.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1">
                               {tags.map(tag => (
@@ -214,17 +216,17 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-gray-600 font-mono text-xs">{c.phone}</td>
-                    <td className="px-5 py-4 text-gray-500">{c.city || <span className="text-gray-300">—</span>}</td>
+                    <td className="px-5 py-4 text-[#78716C] font-mono text-xs">{c.phone}</td>
+                    <td className="px-5 py-4 text-[#78716C]">{c.city || <span className="text-gray-300">—</span>}</td>
                     <td className="px-5 py-4">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
                         {stats.count} cmd{stats.count !== 1 ? 's' : ''}
                       </span>
                     </td>
-                    <td className="px-5 py-4 font-semibold text-gray-900">
+                    <td className="px-5 py-4 font-semibold text-[#1C1917]">
                       {stats.delivered > 0 ? `${stats.delivered.toFixed(0)} DT` : <span className="text-gray-300 font-normal">—</span>}
                     </td>
-                    <td className="px-5 py-4 text-xs text-gray-400">
+                    <td className="px-5 py-4 text-xs text-[#78716C]">
                       {stats.last
                         ? new Date(stats.last.created_at).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short', year: '2-digit' })
                         : <span className="text-gray-300">—</span>}
@@ -233,13 +235,13 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
                       <div className="flex gap-3 items-center">
                         <Link
                           href={`/orders/new?customer_id=${c.id}`}
-                          className="text-xs text-brand-600 hover:text-brand-800 font-medium whitespace-nowrap"
+                          className="text-xs text-[#16A34A] hover:text-[#15803D] font-medium whitespace-nowrap"
                         >
                           + Commande
                         </Link>
                         <button
                           onClick={() => openEdit(c)}
-                          className="text-xs text-gray-500 hover:text-gray-800 font-medium"
+                          className="text-xs text-[#78716C] hover:text-[#1C1917] font-medium"
                         >
                           Éditer
                         </button>
@@ -262,11 +264,11 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
       {/* ── EDIT MODAL ── */}
       {editCustomer && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="card p-6 max-w-sm w-full shadow-xl space-y-4">
-            <h3 className="font-semibold text-gray-900 text-lg">Modifier le client</h3>
+          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-xl p-6 max-w-sm w-full space-y-4">
+            <h3 className="font-semibold text-[#1C1917] text-lg">Modifier le client</h3>
             <form onSubmit={handleEditSave} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet *</label>
+                <label className="block text-sm font-medium text-[#1C1917] mb-1">Nom complet *</label>
                 <input
                   className="input"
                   value={editName}
@@ -275,7 +277,7 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone *</label>
+                <label className="block text-sm font-medium text-[#1C1917] mb-1">Téléphone *</label>
                 <input
                   className="input"
                   type="tel"
@@ -286,7 +288,7 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
+                  <label className="block text-sm font-medium text-[#1C1917] mb-1">Adresse</label>
                   <input
                     className="input"
                     value={editAddress}
@@ -295,7 +297,7 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Ville</label>
+                  <label className="block text-sm font-medium text-[#1C1917] mb-1">Ville</label>
                   <input
                     className="input"
                     value={editCity}
@@ -329,9 +331,9 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
       {/* ── DELETE MODAL ── */}
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="card p-6 max-w-sm w-full shadow-xl">
-            <h3 className="font-semibold text-gray-900 mb-1">Supprimer ce client ?</h3>
-            <p className="text-sm text-gray-500 mb-1">{confirmDelete.name} — {confirmDelete.phone}</p>
+          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-xl p-6 max-w-sm w-full">
+            <h3 className="font-semibold text-[#1C1917] mb-1">Supprimer ce client ?</h3>
+            <p className="text-sm text-[#78716C] mb-1">{confirmDelete.name} — {confirmDelete.phone}</p>
             {getStats(confirmDelete.orders).count > 0 && !deleteError && (
               <p className="text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 mb-4">
                 Ce client a {getStats(confirmDelete.orders).count} commande{getStats(confirmDelete.orders).count > 1 ? 's' : ''}.
@@ -344,7 +346,7 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
               </p>
             )}
             {!deleteError && (
-              <p className="text-sm text-gray-400 mb-5">Cette action est irréversible.</p>
+              <p className="text-sm text-[#78716C] mb-5">Cette action est irréversible.</p>
             )}
             <div className="flex gap-3">
               <button onClick={() => { setConfirmDelete(null); setDeleteError(null) }} className="btn-secondary flex-1">

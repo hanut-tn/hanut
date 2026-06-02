@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { ShoppingBag } from 'lucide-react'
 import type { Product } from '@hanut/types'
 import type { ProductInput, ProductVariant } from '@/app/(dashboard)/catalog/actions'
 
@@ -38,61 +39,61 @@ export default function CatalogClient({ products, upsertProduct, deleteProduct }
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Catalogue</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-[#1C1917]">Catalogue</h1>
+          <p className="text-sm text-[#78716C] mt-0.5">
             {products.length} produit{products.length !== 1 ? 's' : ''}
             {lowStockCount > 0 && (
               <span className="ml-2 text-orange-600 font-medium">· {lowStockCount} stock bas</span>
             )}
           </p>
         </div>
-        <button onClick={() => setModal('new')} className="btn-primary">
+        <button onClick={() => setModal('new')} className="btn-primary text-sm">
           + Nouveau produit
         </button>
       </div>
 
       {/* Empty state */}
       {products.length === 0 ? (
-        <div className="card p-16 text-center text-gray-400">
-          <p className="text-5xl mb-4">🛍️</p>
-          <p className="font-medium text-gray-600">Aucun produit pour l&apos;instant</p>
-          <p className="text-sm mt-1">Ajoutez votre premier produit ci-dessus</p>
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-16 text-center">
+          <ShoppingBag className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-40" />
+          <p className="font-medium text-[#1C1917]">Aucun produit pour l&apos;instant</p>
+          <p className="text-sm text-[#78716C] mt-1">Ajoutez votre premier produit ci-dessus</p>
         </div>
       ) : (
-        <div className="card overflow-hidden">
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-[#FAFAF9] border-b border-[#E7E5E4]">
               <tr>
                 {['Produit', 'Prix vente', 'Coût / Marge', 'Stock', 'Actions'].map(h => (
-                  <th key={h} className="text-left text-xs font-medium text-gray-500 uppercase tracking-wide px-5 py-3">
+                  <th key={h} className="text-left text-xs font-medium text-[#78716C] uppercase tracking-wide px-5 py-3">
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-[#E7E5E4]">
               {products.map(p => {
                 const lowStock = p.stock <= p.low_stock_alert
                 const margin = p.cost && p.price > 0
                   ? Math.round(((p.price - p.cost) / p.price) * 100)
                   : null
                 return (
-                  <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={p.id} className="hover:bg-[#FAFAF9] transition-colors">
                     <td className="px-5 py-4">
-                      <p className="font-medium text-gray-900">{p.name}</p>
+                      <p className="font-medium text-[#1C1917]">{p.name}</p>
                       {p.variants.length > 0 && (
-                        <p className="text-xs text-gray-400 mt-0.5">
+                        <p className="text-xs text-[#78716C] mt-0.5">
                           {p.variants.length} variante{p.variants.length > 1 ? 's' : ''}
                         </p>
                       )}
                     </td>
-                    <td className="px-5 py-4 font-semibold text-gray-900">{p.price} DT</td>
-                    <td className="px-5 py-4 text-gray-500">
+                    <td className="px-5 py-4 font-semibold text-[#1C1917]">{p.price} DT</td>
+                    <td className="px-5 py-4 text-[#78716C]">
                       {p.cost ? (
                         <span>
                           {p.cost} DT
                           {margin !== null && (
-                            <span className="ml-1.5 text-xs font-medium text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">
+                            <span className="ml-1.5 text-xs font-medium text-[#16A34A] bg-green-50 px-1.5 py-0.5 rounded-full">
                               {margin}%
                             </span>
                           )}
@@ -104,21 +105,21 @@ export default function CatalogClient({ products, upsertProduct, deleteProduct }
                     <td className="px-5 py-4">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
                         lowStock
-                          ? 'bg-orange-100 text-orange-700'
-                          : 'bg-green-100 text-green-700'
+                          ? 'bg-red-50 text-red-700 border border-red-200'
+                          : 'bg-green-50 text-green-700 border border-green-200'
                       }`}>
-                        {lowStock ? '⚠ ' : ''}{p.stock} unités
+                        {p.stock} unités
                       </span>
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => setModal(p)}
-                          className="text-sm text-brand-600 hover:text-brand-700 font-medium"
+                          className="text-sm text-[#16A34A] hover:text-[#15803D] font-medium"
                         >
                           Modifier
                         </button>
-                        <span className="text-gray-200">|</span>
+                        <span className="text-[#E7E5E4]">|</span>
                         <button
                           onClick={() => setConfirmDelete(p)}
                           className="text-sm text-red-500 hover:text-red-700 font-medium"
@@ -138,9 +139,9 @@ export default function CatalogClient({ products, upsertProduct, deleteProduct }
       {/* Confirm delete */}
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="card p-6 max-w-sm w-full shadow-xl">
-            <h3 className="font-semibold text-gray-900 mb-1">Supprimer ce produit ?</h3>
-            <p className="text-sm text-gray-500 mb-5">
+          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-xl p-6 max-w-sm w-full">
+            <h3 className="font-semibold text-[#1C1917] mb-1">Supprimer ce produit ?</h3>
+            <p className="text-sm text-[#78716C] mb-5">
               &quot;{confirmDelete.name}&quot; sera supprimé définitivement.
             </p>
             <div className="flex gap-3">
@@ -235,21 +236,20 @@ function ProductModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl">
+      <div className="bg-white border border-[#E7E5E4] rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
-          <h2 className="font-semibold text-gray-900">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E7E5E4] sticky top-0 bg-white z-10">
+          <h2 className="font-semibold text-[#1C1917]">
             {product ? 'Modifier le produit' : 'Nouveau produit'}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">
+          <button onClick={onClose} className="text-[#78716C] hover:text-[#1C1917] text-2xl leading-none w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] transition-colors">
             ×
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Nom */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[#1C1917] mb-1">
               Nom du produit <span className="text-red-500">*</span>
             </label>
             <input
@@ -261,10 +261,9 @@ function ProductModal({
             />
           </div>
 
-          {/* Prix + Coût */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#1C1917] mb-1">
                 Prix de vente (DT) <span className="text-red-500">*</span>
               </label>
               <input
@@ -279,7 +278,7 @@ function ProductModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#1C1917] mb-1">
                 Coût de revient (DT)
               </label>
               <input
@@ -294,18 +293,17 @@ function ProductModal({
             </div>
           </div>
 
-          {/* Marge calculée */}
           {margin !== null && (
             <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2.5 text-sm text-green-700 flex items-center gap-2">
-              <span>💰</span>
-              <span>Marge : <strong>{margin}%</strong> ({(form.price - (form.cost ?? 0)).toFixed(2)} DT par vente)</span>
+              <span className="font-medium">Marge :</span>
+              <strong>{margin}%</strong>
+              <span className="text-green-600">({(form.price - (form.cost ?? 0)).toFixed(2)} DT par vente)</span>
             </div>
           )}
 
-          {/* Stock + Alerte */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#1C1917] mb-1">
                 Stock <span className="text-red-500">*</span>
               </label>
               <input
@@ -319,7 +317,7 @@ function ProductModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#1C1917] mb-1">
                 Alerte stock bas
               </label>
               <input
@@ -333,14 +331,13 @@ function ProductModal({
             </div>
           </div>
 
-          {/* Variantes */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-gray-700">Variantes</label>
+              <label className="text-sm font-medium text-[#1C1917]">Variantes</label>
               <button
                 type="button"
                 onClick={addVariant}
-                className="text-xs text-brand-600 hover:text-brand-700 font-medium"
+                className="text-xs text-[#16A34A] hover:text-[#15803D] font-medium"
               >
                 + Ajouter une variante
               </button>
@@ -348,9 +345,9 @@ function ProductModal({
             {form.variants.length > 0 && (
               <div className="space-y-2">
                 <div className="grid grid-cols-[1fr_1fr_64px_28px] gap-2 px-1">
-                  <span className="text-xs text-gray-400">Taille</span>
-                  <span className="text-xs text-gray-400">Couleur</span>
-                  <span className="text-xs text-gray-400">Qté</span>
+                  <span className="text-xs text-[#78716C]">Taille</span>
+                  <span className="text-xs text-[#78716C]">Couleur</span>
+                  <span className="text-xs text-[#78716C]">Qté</span>
                   <span />
                 </div>
                 {form.variants.map((v, i) => (
@@ -377,7 +374,7 @@ function ProductModal({
                     <button
                       type="button"
                       onClick={() => removeVariant(i)}
-                      className="text-gray-400 hover:text-red-500 text-xl leading-none flex items-center justify-center"
+                      className="text-[#78716C] hover:text-red-500 text-xl leading-none flex items-center justify-center"
                     >
                       ×
                     </button>

@@ -29,12 +29,12 @@ export default function TopBar({ sellerName, role, isSeller }: TopBarProps) {
   const badge = ROLE_BADGE[role]
 
   return (
-    <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0">
+    <header className="h-14 bg-white border-b border-[#E7E5E4] flex items-center justify-between px-6 shrink-0">
       <div />
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">
-            Bonjour, <span className="font-medium text-gray-900">{sellerName}</span>
+          <span className="text-sm text-[#78716C]">
+            Bonjour, <span className="font-medium text-[#1C1917]">{sellerName}</span>
           </span>
           {!isSeller && (
             <span
@@ -47,7 +47,7 @@ export default function TopBar({ sellerName, role, isSeller }: TopBarProps) {
         </div>
         <button
           onClick={handleLogout}
-          className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          className="border border-[#E7E5E4] hover:bg-[#F5F5F4] text-[#1C1917] rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
         >
           Déconnexion
         </button>

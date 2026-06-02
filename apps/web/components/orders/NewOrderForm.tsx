@@ -126,8 +126,8 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
       <div className="space-y-6 max-w-2xl">
         <h1 className="text-2xl font-bold text-gray-900">Nouvelle commande</h1>
         <div className="card p-12 text-center text-gray-400">
-          <p className="text-4xl mb-3">🛍️</p>
-          <p className="font-medium text-gray-600">Aucun produit dans votre catalogue</p>
+          <svg className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          <p className="font-medium text-[#1C1917]">Aucun produit dans votre catalogue</p>
           <p className="text-sm mt-1 mb-5">Ajoutez d&apos;abord un produit avant de créer une commande.</p>
           <a href="/catalog" className="btn-primary inline-block">Aller au catalogue →</a>
         </div>
@@ -156,14 +156,14 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
         {/* ── 1. CLIENT ── */}
         <div className="card p-5 space-y-4">
           <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-            <span className="w-6 h-6 bg-brand-100 text-brand-700 rounded-full text-xs flex items-center justify-center font-bold">1</span>
+            <span className="w-6 h-6 bg-[#F0FDF4] text-[#166534] rounded-full text-xs flex items-center justify-center font-bold">1</span>
             Client
           </h2>
 
           {/* Selected customer badge OR search input */}
           {selectedCustomer ? (
             <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl">
-              <div className="w-8 h-8 bg-brand-100 text-brand-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0 select-none">
+              <div className="w-8 h-8 bg-[#F0FDF4] text-[#166534] rounded-full flex items-center justify-center text-xs font-bold shrink-0 select-none">
                 {initials}
               </div>
               <div className="flex-1 min-w-0">
@@ -210,7 +210,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
                             onMouseDown={() => selectCustomer(c)}
                             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-0"
                           >
-                            <div className="w-8 h-8 bg-brand-100 text-brand-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
+                            <div className="w-8 h-8 bg-[#F0FDF4] text-[#166534] rounded-full flex items-center justify-center text-xs font-bold shrink-0">
                               {ini}
                             </div>
                             <div className="min-w-0">
@@ -223,7 +223,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
                       <button
                         type="button"
                         onMouseDown={() => { setDropdownOpen(false); setSearch('') }}
-                        className="w-full px-4 py-2.5 text-sm text-brand-600 hover:bg-brand-50 transition-colors text-left font-medium border-t border-gray-100"
+                        className="w-full px-4 py-2.5 text-sm text-[#16A34A] hover:bg-[#F0FDF4] transition-colors text-left font-medium border-t border-gray-100"
                       >
                         + Créer un nouveau client
                       </button>
@@ -235,7 +235,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
                         <button
                           type="button"
                           onMouseDown={() => { setDropdownOpen(false) }}
-                          className="text-brand-600 font-medium hover:underline"
+                          className="text-[#16A34A] font-medium hover:underline"
                         >
                           Créer un nouveau client
                         </button>
@@ -296,7 +296,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
         {/* ── 2. PRODUIT ── */}
         <div className="card p-5 space-y-4">
           <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-            <span className="w-6 h-6 bg-brand-100 text-brand-700 rounded-full text-xs flex items-center justify-center font-bold">2</span>
+            <span className="w-6 h-6 bg-[#F0FDF4] text-[#166534] rounded-full text-xs flex items-center justify-center font-bold">2</span>
             Produit
           </h2>
 
@@ -366,7 +366,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
         {/* ── 3. NOTES ── */}
         <div className="card p-5">
           <h2 className="font-semibold text-gray-900 flex items-center gap-2 mb-3">
-            <span className="w-6 h-6 bg-brand-100 text-brand-700 rounded-full text-xs flex items-center justify-center font-bold">3</span>
+            <span className="w-6 h-6 bg-[#F0FDF4] text-[#166534] rounded-full text-xs flex items-center justify-center font-bold">3</span>
             Notes <span className="text-sm font-normal text-gray-400">(optionnel)</span>
           </h2>
           <textarea
