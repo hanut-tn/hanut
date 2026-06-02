@@ -27,10 +27,11 @@ export default async function SettingsPage({ searchParams }: Props) {
     .eq('id', context.sellerId)
     .single()
 
-  const [{ count: productCount }, { count: customerCount }, { count: orderCount }] = await Promise.all([
+  const [{ count: productCount }, { count: customerCount }, { count: orderCount }, { count: memberCount }] = await Promise.all([
     serviceClient.from('products').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId),
     serviceClient.from('customers').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId),
     serviceClient.from('orders').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId),
+    serviceClient.from('team_members').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId).eq('status', 'active'),
   ])
 
   return (
@@ -48,6 +49,7 @@ export default async function SettingsPage({ searchParams }: Props) {
         products: productCount ?? 0,
         customers: customerCount ?? 0,
         orders: orderCount ?? 0,
+        members: memberCount ?? 0,
       }}
       appUrl={appUrl}
       initialTab={tab === 'abonnement' ? 'plan' : tab}

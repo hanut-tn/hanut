@@ -73,7 +73,7 @@ type Seller = {
 
 type Props = {
   seller: Seller
-  stats: { products: number; customers: number; orders: number }
+  stats: { products: number; customers: number; orders: number; members: number }
   appUrl: string
   initialTab?: string
   updateProfile: (input: ProfileInput) => Promise<void>
@@ -231,11 +231,12 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
           </span>
         </div>
         <div className="ml-auto flex gap-5 text-center flex-shrink-0">
-          {([
+          {[
             { label: 'Produits',   val: stats.products },
             { label: 'Clients',    val: stats.customers },
             { label: 'Commandes',  val: stats.orders },
-          ] as const).map(s => (
+            ...(seller.plan === 'business' ? [{ label: 'Membres', val: stats.members }] : []),
+          ].map(s => (
             <div key={s.label}>
               <p className="text-xl font-bold text-gray-900">{s.val}</p>
               <p className="text-xs text-gray-400">{s.label}</p>
