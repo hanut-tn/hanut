@@ -36,7 +36,7 @@ export default async function ProductDetailPage({ params }: Props) {
     { data: thisMonthOrders },
     { count: returnedCount },
     { data: rawRecentOrders },
-    { count: activeOrdersCount },
+    { count: linkedOrdersCount },
   ] = await Promise.all([
     supabase
       .from('orders')
@@ -84,8 +84,6 @@ export default async function ProductDetailPage({ params }: Props) {
       .select('id', { count: 'exact', head: true })
       .eq('product_id', id)
       .eq('seller_id', context.sellerId)
-      .in('status', ['new', 'confirmed', 'shipped'])
-      .is('deleted_at', null),
   ])
 
   const totalRevenue = deliveredOrders?.reduce((sum, o) => sum + (o.cod_amount ?? 0), 0) ?? 0
@@ -120,7 +118,7 @@ export default async function ProductDetailPage({ params }: Props) {
         returnRate,
       }}
       recentOrders={recentOrders}
-      hasActiveOrders={(activeOrdersCount ?? 0) > 0}
+      hasBlockingOrders={(linkedOrdersCount ?? 0) > 0}
       upsertProduct={upsertProduct}
       deleteProduct={deleteProduct}
       adjustStock={adjustStock}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import type { Product } from '@hanut/types'
 import type { CreateOrderInput } from '@/app/(dashboard)/orders/actions'
 
@@ -129,7 +130,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
           <svg className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
           <p className="font-medium text-[#1C1917]">Aucun produit dans votre catalogue</p>
           <p className="text-sm mt-1 mb-5">Ajoutez d&apos;abord un produit avant de créer une commande.</p>
-          <a href="/catalog" className="btn-primary inline-block">Aller au catalogue →</a>
+          <Link href="/catalog" className="btn-primary inline-block">Aller au catalogue →</Link>
         </div>
       </div>
     )

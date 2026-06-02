@@ -33,8 +33,8 @@ type Props = {
   role: string
   stats: ProductStats
   recentOrders: RecentOrder[]
-  hasActiveOrders: boolean
-  upsertProduct: (input: ProductInput) => Promise<void>
+  hasBlockingOrders: boolean
+  upsertProduct: (input: ProductInput) => Promise<{ error?: string }>
   deleteProduct: (id: string) => Promise<{ error?: string }>
   adjustStock: (id: string, newStock: number, reason: string) => Promise<{ error?: string }>
 }
@@ -59,7 +59,7 @@ export default function ProductDetailClient({
   role,
   stats,
   recentOrders,
-  hasActiveOrders,
+  hasBlockingOrders,
   upsertProduct,
   deleteProduct,
   adjustStock,
@@ -73,6 +73,7 @@ export default function ProductDetailClient({
   const [stockError, setStockError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const canWrite = role !== 'readonly'
 
   const margin =
     product.cost && product.price > 0
@@ -129,24 +130,26 @@ export default function ProductDetailClient({
           <ArrowLeft className="w-4 h-4" />
           Catalogue
         </Link>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowEditModal(true)}
-            className="btn-primary text-sm flex items-center gap-2"
-          >
-            <Pencil className="w-4 h-4" />
-            Modifier
-          </button>
-          <button
-            onClick={() => { setDeleteError(null); setShowDeleteModal(true) }}
-            disabled={hasActiveOrders}
-            title={hasActiveOrders ? 'Ce produit a des commandes actives' : 'Supprimer ce produit'}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-            Supprimer
-          </button>
-        </div>
+        {canWrite && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="btn-primary text-sm flex items-center gap-2"
+            >
+              <Pencil className="w-4 h-4" />
+              Modifier
+            </button>
+              <button
+                onClick={() => { setDeleteError(null); setShowDeleteModal(true) }}
+                disabled={hasBlockingOrders}
+                title={hasBlockingOrders ? 'Ce produit est lié à des commandes' : 'Supprimer ce produit'}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+              <Trash2 className="w-4 h-4" />
+              Supprimer
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Product name */}
@@ -170,12 +173,14 @@ export default function ProductDetailClient({
               </div>
             )}
           </div>
-          <button
-            onClick={() => setShowEditModal(true)}
-            className="btn-secondary text-sm w-full"
-          >
-            {product.image_url ? 'Changer la photo' : 'Ajouter une photo'}
-          </button>
+          {canWrite && (
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="btn-secondary text-sm w-full"
+            >
+              {product.image_url ? 'Changer la photo' : 'Ajouter une photo'}
+            </button>
+          )}
         </div>
 
         {/* Right — Info (60%) */}
@@ -211,13 +216,15 @@ export default function ProductDetailClient({
           <div className="bg-white border border-[#E7E5E4] rounded-xl p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-[#78716C] uppercase tracking-wide">Stock</h2>
-              <button
-                onClick={() => { setStockValue(String(product.stock)); setShowStockModal(true) }}
-                className="text-xs text-[#16A34A] hover:text-[#15803D] font-medium flex items-center gap-1"
-              >
-                <Settings className="w-3.5 h-3.5" />
-                Ajuster le stock
-              </button>
+              {canWrite && (
+                <button
+                  onClick={() => { setStockValue(String(product.stock)); setShowStockModal(true) }}
+                  className="text-xs text-[#16A34A] hover:text-[#15803D] font-medium flex items-center gap-1"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  Ajuster le stock
+                </button>
+              )}
             </div>
             <div className="text-3xl font-bold text-[#1C1917]">
               {product.stock}
@@ -227,7 +234,7 @@ export default function ProductDetailClient({
               <div className={`h-2 rounded-full ${barColor}`} style={{ width: `${stockPct}%` }} />
             </div>
             <p className="text-xs text-[#78716C]">
-              Seuil d'alerte : {product.low_stock_alert} unités
+              Seuil d&apos;alerte : {product.low_stock_alert} unités
               {product.stock <= product.low_stock_alert && product.stock > 0 && (
                 <span className="ml-2 text-amber-600 font-medium flex items-center gap-1 inline-flex">
                   <AlertTriangle className="w-3 h-3" />
@@ -419,9 +426,11 @@ export default function ProductDetailClient({
           product={product}
           onClose={() => setShowEditModal(false)}
           onSave={async input => {
-            await upsertProduct(input)
+            const result = await upsertProduct(input)
+            if (result?.error) return result
             setShowEditModal(false)
             router.refresh()
+            return {}
           }}
         />
       )}

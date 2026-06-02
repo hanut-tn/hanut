@@ -9,21 +9,22 @@ export interface Product {
   seller_id: string
   name: string
   price: number
-  cost?: number
+  cost?: number | null
   stock: number
   low_stock_alert: number
   variants: ProductVariant[]
-  image_url?: string
-  description?: string
+  image_url?: string | null
+  description?: string | null
   created_at: string
 }
 
 export interface CreateProductInput {
   name: string
   price: number
-  cost?: number
+  cost?: number | null
   stock: number
   low_stock_alert?: number
   variants?: ProductVariant[]
-  image_url?: string
+  image_url?: string | null
+  description?: string | null
 }

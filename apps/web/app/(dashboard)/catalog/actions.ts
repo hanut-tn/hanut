@@ -20,10 +20,10 @@ export type ProductInput = {
   description?: string | null
 }
 
-export async function upsertProduct(input: ProductInput) {
+export async function upsertProduct(input: ProductInput): Promise<{ error?: string }> {
   const context = await getUserContext()
-  if (!context) throw new Error('Non autorisé')
-  if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
 
   const supabase = await createServerClient()
 
@@ -39,17 +39,21 @@ export async function upsertProduct(input: ProductInput) {
   }
 
   const isUpdate = !!input.id
+  let productId = input.id
 
   if (isUpdate) {
     const { error } = await supabase.from('products')
       .update(payload)
       .eq('id', input.id!)
       .eq('seller_id', context.sellerId)
-    if (error) throw new Error(error.message)
+    if (error) return { error: error.message }
   } else {
-    const { error } = await supabase.from('products')
+    const { data, error } = await supabase.from('products')
       .insert({ ...payload, seller_id: context.sellerId })
-    if (error) throw new Error(error.message)
+      .select('id')
+      .single()
+    if (error) return { error: error.message }
+    productId = data.id
   }
 
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
@@ -60,7 +64,7 @@ export async function upsertProduct(input: ProductInput) {
     userName: seller?.name ?? context.userId,
     actionType: isUpdate ? 'product_updated' : 'product_created',
     entityType: 'product',
-    entityId: input.id,
+    entityId: productId,
     description: isUpdate
       ? `a modifié le produit ${input.name}`
       : `a ajouté le produit ${input.name}`,
@@ -68,6 +72,8 @@ export async function upsertProduct(input: ProductInput) {
   })
 
   revalidatePath('/catalog')
+  if (productId) revalidatePath(`/catalog/${productId}`)
+  return {}
 }
 
 export async function deleteProduct(id: string): Promise<{ error?: string }> {
@@ -86,6 +92,15 @@ export async function deleteProduct(id: string): Promise<{ error?: string }> {
 
   if (activeCount && activeCount > 0) {
     return { error: 'Ce produit a des commandes actives (nouvelles, confirmées ou expédiées) et ne peut pas être supprimé.' }
+  }
+
+  const { count: linkedOrdersCount } = await supabase.from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('product_id', id)
+    .eq('seller_id', context.sellerId)
+
+  if (linkedOrdersCount && linkedOrdersCount > 0) {
+    return { error: 'Ce produit est lié à des commandes existantes et ne peut pas être supprimé définitivement.' }
   }
 
   const { data: product } = await supabase.from('products')
@@ -119,6 +134,7 @@ export async function deleteProduct(id: string): Promise<{ error?: string }> {
 export async function uploadProductImage(formData: FormData): Promise<{ url?: string; error?: string }> {
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
+  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
 
   const file = formData.get('file') as File
   if (!file || !file.size) return { error: 'Aucun fichier fourni' }
@@ -147,7 +163,9 @@ export async function uploadProductImage(formData: FormData): Promise<{ url?: st
 export async function adjustStock(id: string, newStock: number, reason: string): Promise<{ error?: string }> {
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
-  if (context.role === 'readonly') return { error: 'Non autorisé' }
+  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  if (!Number.isInteger(newStock) || newStock < 0) return { error: 'Stock invalide' }
+  if (!reason.trim()) return { error: 'La raison est obligatoire' }
 
   const supabase = await createServerClient()
 

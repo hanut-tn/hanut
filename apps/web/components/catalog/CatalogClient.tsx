@@ -17,7 +17,7 @@ type StockFilter = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock'
 type Props = {
   products: Product[]
   role: string
-  upsertProduct: (input: ProductInput) => Promise<void>
+  upsertProduct: (input: ProductInput) => Promise<{ error?: string }>
   deleteProduct: (id: string) => Promise<{ error?: string }>
 }
 
@@ -43,11 +43,11 @@ function StockBar({ stock, low_stock_alert }: { stock: number; low_stock_alert: 
 function ProductCard({
   product,
   onEdit,
-  onDelete,
+  canWrite,
 }: {
   product: Product
   onEdit: (p: Product) => void
-  onDelete: (p: Product) => void
+  canWrite: boolean
 }) {
   const badge = getStockBadge(product)
   const margin =
@@ -77,14 +77,16 @@ function ProductCard({
           </div>
         )}
         {/* Hover overlay */}
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <button
-            onClick={() => onEdit(product)}
-            className="bg-white text-[#1C1917] text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-[#FAFAF9] transition-colors"
-          >
-            Changer la photo
-          </button>
-        </div>
+        {canWrite && (
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <button
+              onClick={() => onEdit(product)}
+              className="bg-white text-[#1C1917] text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-[#FAFAF9] transition-colors"
+            >
+              Changer la photo
+            </button>
+          </div>
+        )}
         {/* Badge */}
         {badge && (
           <span
@@ -139,12 +141,14 @@ function ProductCard({
 
         {/* Actions — visible on hover */}
         <div className="flex gap-2 pt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={() => onEdit(product)}
-            className="btn-secondary flex-1 text-sm py-1.5"
-          >
-            Modifier
-          </button>
+          {canWrite && (
+            <button
+              onClick={() => onEdit(product)}
+              className="btn-secondary flex-1 text-sm py-1.5"
+            >
+              Modifier
+            </button>
+          )}
           <Link
             href={`/catalog/${product.id}`}
             className="btn-secondary flex-1 text-sm py-1.5 text-center"
@@ -166,6 +170,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
   const [confirmDelete, setConfirmDelete] = useState<Product | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const canWrite = role !== 'readonly'
 
   const filtered = useMemo(() => {
     let result = [...products]
@@ -220,10 +225,12 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
             )}
           </p>
         </div>
-        <button onClick={() => setModal('new')} className="btn-primary text-sm flex items-center gap-2 self-start sm:self-auto">
-          <Plus className="w-4 h-4" />
-          Nouveau produit
-        </button>
+        {canWrite && (
+          <button onClick={() => setModal('new')} className="btn-primary text-sm flex items-center gap-2 self-start sm:self-auto">
+            <Plus className="w-4 h-4" />
+            Nouveau produit
+          </button>
+        )}
       </div>
 
       {/* Toolbar: search + view + sort + filter */}
@@ -302,10 +309,12 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
           <p className="text-sm text-[#78716C] mb-6">
             Ajoutez votre premier produit pour commencer à recevoir des commandes
           </p>
-          <button onClick={() => setModal('new')} className="btn-primary text-sm inline-flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Ajouter un produit
-          </button>
+          {canWrite && (
+            <button onClick={() => setModal('new')} className="btn-primary text-sm inline-flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Ajouter un produit
+            </button>
+          )}
         </div>
       ) : filtered.length === 0 ? (
         /* Empty state — search/filter has no results */
@@ -314,7 +323,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
           <p className="font-semibold text-[#1C1917] mb-1">
             Aucun produit ne correspond à votre recherche
           </p>
-          <p className="text-sm text-[#78716C] mb-4">Essayez d'autres termes ou réinitialisez les filtres</p>
+          <p className="text-sm text-[#78716C] mb-4">Essayez d&apos;autres termes ou réinitialisez les filtres</p>
           <button
             onClick={() => { setSearch(''); setStockFilter('all') }}
             className="btn-secondary text-sm"
@@ -330,7 +339,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
               key={p.id}
               product={p}
               onEdit={setModal}
-              onDelete={setConfirmDelete}
+              canWrite={canWrite}
             />
           ))}
         </div>
@@ -420,13 +429,15 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setModal(p)}
-                          className="p-1.5 text-[#78716C] hover:text-[#16A34A] hover:bg-green-50 rounded-lg transition-colors"
-                          title="Modifier"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
+                        {canWrite && (
+                          <button
+                            onClick={() => setModal(p)}
+                            className="p-1.5 text-[#78716C] hover:text-[#16A34A] hover:bg-green-50 rounded-lg transition-colors"
+                            title="Modifier"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        )}
                         <Link
                           href={`/catalog/${p.id}`}
                           className="p-1.5 text-[#78716C] hover:text-[#0B5E46] hover:bg-green-50 rounded-lg transition-colors"
@@ -434,13 +445,15 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
                         >
                           <Eye className="w-4 h-4" />
                         </Link>
-                        <button
-                          onClick={() => { setDeleteError(null); setConfirmDelete(p) }}
-                          className="p-1.5 text-[#78716C] hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Supprimer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canWrite && (
+                          <button
+                            onClick={() => { setDeleteError(null); setConfirmDelete(p) }}
+                            className="p-1.5 text-[#78716C] hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -460,7 +473,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
               &quot;{confirmDelete.name}&quot; sera supprimé définitivement.
             </p>
             <p className="text-xs text-[#78716C] mb-4">
-              Les commandes contenant ce produit ne seront pas affectées.
+              La suppression sera refusée si des commandes sont liées à ce produit.
             </p>
             {deleteError && (
               <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
@@ -487,13 +500,15 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
       )}
 
       {/* Product modal */}
-      {modal !== null && (
+      {canWrite && modal !== null && (
         <ProductModal
           product={modal === 'new' ? null : modal}
           onClose={() => setModal(null)}
           onSave={async input => {
-            await upsertProduct(input)
+            const result = await upsertProduct(input)
+            if (result?.error) return result
             setModal(null)
+            return {}
           }}
         />
       )}

@@ -15,6 +15,7 @@ describe('Supabase migrations', () => {
   const teamMembers = migration('20260602_add_team_members.sql')
   const activityLogs = migration('20260602_add_activity_logs.sql')
   const orderSoftDelete = migration('20260602_add_orders_soft_delete.sql')
+  const productsDescription = migration('20260602_add_products_description.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -99,5 +100,17 @@ describe('Supabase migrations', () => {
     expect(orderSoftDelete).toMatch(
       /CREATE INDEX IF NOT EXISTS idx_orders_deleted_at ON orders\(seller_id, deleted_at\) WHERE deleted_at IS NULL;/i
     )
+  })
+
+  it('adds product descriptions and image storage policies', () => {
+    expect(productsDescription).toMatch(
+      /ALTER TABLE products ADD COLUMN IF NOT EXISTS description TEXT DEFAULT NULL;/i
+    )
+    expect(productsDescription).toMatch(/INSERT INTO storage\.buckets/i)
+    expect(productsDescription).toMatch(/'product-images'/i)
+    expect(productsDescription).toMatch(/CREATE POLICY "product_images_public_read"/i)
+    expect(productsDescription).toMatch(/CREATE POLICY "product_images_authenticated_upload"/i)
+    expect(productsDescription).toMatch(/CREATE POLICY "product_images_authenticated_update"/i)
+    expect(productsDescription).toMatch(/CREATE POLICY "product_images_authenticated_delete"/i)
   })
 })

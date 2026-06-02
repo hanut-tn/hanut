@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS products (
   low_stock_alert INTEGER NOT NULL DEFAULT 3 CHECK (low_stock_alert >= 0),
   variants        JSONB NOT NULL DEFAULT '[]',
   image_url       TEXT,
+  description     TEXT,
   created_at      TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 

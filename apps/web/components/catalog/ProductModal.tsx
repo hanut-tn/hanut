@@ -9,7 +9,7 @@ import { uploadProductImage } from '@/app/(dashboard)/catalog/actions'
 type Props = {
   product: Product | null
   onClose: () => void
-  onSave: (input: ProductInput) => Promise<void>
+  onSave: (input: ProductInput) => Promise<{ error?: string }>
 }
 
 const EMPTY: ProductInput = {
@@ -90,7 +90,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
     setSaving(true)
     setError(null)
     try {
-      let finalForm = { ...form }
+      const finalForm = { ...form }
       if (imageFile) {
         const fd = new FormData()
         fd.append('file', imageFile)
@@ -98,7 +98,8 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
         if (uploadError) throw new Error(uploadError)
         finalForm.image_url = url ?? null
       }
-      await onSave(finalForm)
+      const result = await onSave(finalForm)
+      if (result?.error) throw new Error(result.error)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue')
       setSaving(false)
