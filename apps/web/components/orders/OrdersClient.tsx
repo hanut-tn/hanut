@@ -347,6 +347,17 @@ export default function OrdersClient({
           )
         ) : (
           <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-hidden">
+            {/* En-têtes colonnes */}
+            <div className="grid grid-cols-[40px_1fr_1fr_120px_100px_140px] gap-4 items-center px-5 py-3 bg-[#FAFAF9] border-b border-[#E7E5E4]">
+              <div />
+              <p className="text-xs font-medium text-[#78716C] uppercase tracking-wider">Client</p>
+              <p className="text-xs font-medium text-[#78716C] uppercase tracking-wider">Produit</p>
+              <p className="text-xs font-medium text-[#78716C] uppercase tracking-wider">Statut</p>
+              <p className="text-xs font-medium text-[#78716C] uppercase tracking-wider text-right">Montant</p>
+              <p className="text-xs font-medium text-[#78716C] uppercase tracking-wider text-right">Actions</p>
+            </div>
+
+            {/* Lignes */}
             <div className="divide-y divide-[#E7E5E4]">
               {filteredOrders.map(order => {
                 const st = STATUS_CONFIG[order.status]
@@ -354,109 +365,118 @@ export default function OrdersClient({
                 const product = getProduct(order)
                 const isPendingOrder = order.status === 'pending'
                 const isNew = order.status === 'new'
+                const isConfirmed = order.status === 'confirmed'
+                const isShipped = order.status === 'shipped'
                 const canDelete = isAdmin && DELETABLE_STATUSES.includes(order.status)
                 const ini = customer?.name ? initials(customer.name) : '?'
 
                 return (
                   <div
                     key={order.id}
-                    className={`group flex items-start gap-4 px-5 py-4 transition-colors cursor-pointer ${
-                      isPendingOrder ? 'bg-amber-50/30 hover:bg-amber-50/60' : 'hover:bg-[#FAFAF9]'
+                    className={`group grid grid-cols-[40px_1fr_1fr_120px_100px_140px] gap-4 items-center px-5 py-4 transition-colors cursor-pointer ${
+                      isPendingOrder ? 'bg-amber-50/20 hover:bg-amber-50/50' : 'hover:bg-[#FAFAF9]'
                     }`}
                     onClick={() => window.location.href = `/orders/${order.id}`}
                   >
-                    {/* Avatar */}
-                    <div className="w-10 h-10 rounded-full bg-[#F0FDF4] text-[#166534] flex items-center justify-center font-semibold text-sm shrink-0 select-none mt-0.5">
+                    {/* Col 1 — Avatar */}
+                    <div className="w-9 h-9 rounded-full bg-[#F0FDF4] text-[#166534] flex items-center justify-center font-semibold text-sm shrink-0 select-none">
                       {ini}
                     </div>
 
-                    {/* Client */}
-                    <div className="w-36 shrink-0">
+                    {/* Col 2 — Client */}
+                    <div className="min-w-0">
                       {isPendingOrder && (
                         <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 font-semibold mb-0.5">
                           <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
                           Via lien public
                         </span>
                       )}
-                      <p className="font-semibold text-[#1C1917] text-sm leading-tight">{customer?.name ?? '—'}</p>
-                      <p className="text-xs text-[#78716C] mt-0.5">{customer?.phone ?? ''}</p>
-                      {customer?.city && <p className="text-xs text-[#78716C]">{customer.city}</p>}
-                    </div>
-
-                    {/* Produit + badge */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-[#1C1917] truncate">
-                        {product?.name ?? '—'}
-                        {order.variant && <span className="text-[#78716C]"> · {order.variant}</span>}
+                      <p className="text-sm font-semibold text-[#1C1917] truncate">{customer?.name ?? '—'}</p>
+                      <p className="text-xs text-[#78716C] truncate">
+                        {customer?.phone ?? ''}
+                        {customer?.city ? ` · ${customer.city}` : ''}
                       </p>
-                      {order.quantity > 1 && (
-                        <p className="text-xs text-[#78716C]">× {order.quantity}</p>
-                      )}
-                      <div className="mt-1.5">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${st.cls}`}>
-                          {isPendingOrder && <span className={`w-1.5 h-1.5 rounded-full ${st.dot} animate-pulse`} />}
-                          {st.label}
-                        </span>
-                      </div>
+                      <p className="text-xs text-[#A8A29E]">{relativeDate(order.created_at)}</p>
                     </div>
 
-                    {/* Montant + date + actions */}
-                    <div className="text-right shrink-0">
-                      <p className="text-base font-bold text-[#16A34A]">{order.cod_amount} DT</p>
-                      <p className="text-xs text-[#78716C]">COD</p>
-                      <p className="text-xs text-[#A8A29E] mt-1">{relativeDate(order.created_at)}</p>
+                    {/* Col 3 — Produit */}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[#1C1917] truncate">{product?.name ?? '—'}</p>
+                      <p className="text-xs text-[#78716C] truncate">
+                        {[order.variant, order.quantity > 1 ? `× ${order.quantity}` : ''].filter(Boolean).join(' · ')}
+                      </p>
+                    </div>
 
-                      {/* Actions rapides (hover) */}
-                      <div
-                        className="opacity-0 group-hover:opacity-100 transition-opacity mt-2 flex items-center gap-1.5 justify-end"
+                    {/* Col 4 — Statut */}
+                    <div>
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap ${st.cls}`}>
+                        {isPendingOrder && <span className={`w-1.5 h-1.5 rounded-full ${st.dot} animate-pulse shrink-0`} />}
+                        {st.label}
+                      </span>
+                    </div>
+
+                    {/* Col 5 — Montant */}
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-[#16A34A]">{order.cod_amount} DT</p>
+                      <p className="text-xs text-[#78716C]">COD</p>
+                    </div>
+
+                    {/* Col 6 — Actions */}
+                    <div
+                      className="flex items-center justify-end gap-1.5"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      {(isPendingOrder || isNew) && (
+                        <button
+                          onClick={() => isPendingOrder ? handleConfirm(order.id) : handleStatus(order.id, 'confirmed')}
+                          disabled={isPending}
+                          className="text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                        >
+                          Confirmer
+                        </button>
+                      )}
+                      {isPendingOrder && (
+                        <button
+                          onClick={() => handleCancel(order.id)}
+                          disabled={isPending}
+                          className="text-xs font-semibold text-red-600 border border-red-200 hover:border-red-300 disabled:opacity-50 px-2 py-1.5 rounded-lg transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {isConfirmed && (
+                        <button
+                          onClick={() => handleStatus(order.id, 'shipped')}
+                          disabled={isPending}
+                          className="text-xs font-semibold text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                        >
+                          Expédier
+                        </button>
+                      )}
+                      {isShipped && (
+                        <button
+                          onClick={() => handleStatus(order.id, 'delivered')}
+                          disabled={isPending}
+                          className="text-xs font-semibold text-white bg-[#0B5E46] hover:bg-[#0a5240] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                        >
+                          Livré
+                        </button>
+                      )}
+                      {canDelete && !isPendingOrder && (
+                        <button
+                          onClick={() => { setConfirmDelete(order); setActionError(null) }}
+                          className="text-xs font-medium text-[#A8A29E] hover:text-red-500 px-1.5 py-1.5 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <Link
+                        href={`/orders/${order.id}`}
+                        className="flex items-center justify-center w-7 h-7 rounded-lg text-[#78716C] hover:text-[#1C1917] hover:bg-[#F0F0EF] transition-colors shrink-0"
                         onClick={e => e.stopPropagation()}
                       >
-                        {isPendingOrder && (
-                          <>
-                            <button
-                              onClick={() => handleConfirm(order.id)}
-                              disabled={isPending}
-                              className="flex items-center gap-1 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 px-2 py-1 rounded-lg transition-colors"
-                            >
-                              <Check className="w-3 h-3" />
-                              Confirmer
-                            </button>
-                            <button
-                              onClick={() => handleCancel(order.id)}
-                              disabled={isPending}
-                              className="flex items-center gap-1 text-xs font-semibold text-red-600 border border-red-200 hover:border-red-300 disabled:opacity-50 px-2 py-1 rounded-lg transition-colors"
-                            >
-                              <X className="w-3 h-3" />
-                              Annuler
-                            </button>
-                          </>
-                        )}
-                        {isNew && (
-                          <button
-                            onClick={() => handleStatus(order.id, 'confirmed')}
-                            disabled={isPending}
-                            className="flex items-center gap-1 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 px-2 py-1 rounded-lg transition-colors"
-                          >
-                            <Check className="w-3 h-3" />
-                            Confirmer
-                          </button>
-                        )}
-                        {canDelete && (
-                          <button
-                            onClick={() => { setConfirmDelete(order); setActionError(null) }}
-                            className="text-xs font-medium text-red-400 hover:text-red-600 px-2 py-1 rounded-lg transition-colors"
-                          >
-                            Suppr.
-                          </button>
-                        )}
-                        <Link
-                          href={`/orders/${order.id}`}
-                          className="flex items-center justify-center w-6 h-6 rounded-lg text-[#78716C] hover:text-[#1C1917] hover:bg-[#F0F0EF] transition-colors"
-                          onClick={e => e.stopPropagation()}
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </Link>
-                      </div>
+                        <ChevronRight className="w-4 h-4" />
+                      </Link>
                     </div>
                   </div>
                 )
