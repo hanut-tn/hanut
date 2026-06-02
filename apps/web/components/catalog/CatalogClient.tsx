@@ -63,15 +63,15 @@ function ProductCard({
   return (
     <div className="bg-white border border-[#E7E5E4] rounded-xl overflow-hidden group hover:shadow-md transition-shadow">
       {/* Image */}
-      <div className="relative h-[220px] bg-[#F0FDF4]">
+      <div className="relative aspect-square bg-[#F0FDF4]">
         {product.image_url ? (
           <img
             src={product.image_url}
             alt={product.name}
-            className="w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-[#78716C]">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[#78716C]">
             <ImageOff className="w-8 h-8 opacity-30" />
             <span className="text-xs">Ajouter une photo</span>
           </div>
