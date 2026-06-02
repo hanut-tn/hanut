@@ -6,8 +6,16 @@ const serverMock = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
 }))
 
+const contextMock = vi.hoisted(() => ({
+  getUserContext: vi.fn(),
+}))
+
 vi.mock('@/lib/supabase/server', () => ({
   createServerClient: serverMock.createServerClient,
+}))
+
+vi.mock('@/lib/get-context', () => ({
+  getUserContext: contextMock.getUserContext,
 }))
 
 vi.mock('next/cache', () => ({
@@ -28,20 +36,22 @@ const input: CreateOrderInput = {
   notes: 'Client VIP',
 }
 
-function mockServerClient(userId: string | null, error: { message: string } | null = null) {
+function mockContext(sellerId: string | null, role: 'admin' | 'operator' | 'readonly' = 'admin') {
+  contextMock.getUserContext.mockResolvedValue(
+    sellerId
+      ? { userId: 'user-1', sellerId, role, isSeller: role === 'admin', plan: 'business' }
+      : null
+  )
+}
+
+function mockServerClient(error: { message: string } | null = null) {
   const rpc = vi.fn().mockResolvedValue({ error })
-  const getUser = vi.fn().mockResolvedValue({
-    data: {
-      user: userId ? { id: userId } : null,
-    },
-  })
 
   serverMock.createServerClient.mockResolvedValue({
-    auth: { getUser },
     rpc,
   })
 
-  return { getUser, rpc }
+  return { rpc }
 }
 
 describe('createOrder dashboard action', () => {
@@ -50,16 +60,17 @@ describe('createOrder dashboard action', () => {
   })
 
   it('requires an authenticated seller', async () => {
-    const { rpc } = mockServerClient(null)
+    mockContext(null)
 
     await expect(createOrder(input)).rejects.toThrow('Non autorisé')
 
-    expect(rpc).not.toHaveBeenCalled()
+    expect(serverMock.createServerClient).not.toHaveBeenCalled()
     expect(serverMock.revalidatePath).not.toHaveBeenCalled()
   })
 
-  it('creates a new order through the transactional RPC using the session seller id', async () => {
-    const { rpc } = mockServerClient('seller-1')
+  it('creates a new order through the transactional RPC using the effective seller id', async () => {
+    mockContext('seller-1', 'operator')
+    const { rpc } = mockServerClient()
 
     await createOrder(input)
 
@@ -85,7 +96,8 @@ describe('createOrder dashboard action', () => {
   })
 
   it('surfaces RPC errors and skips revalidation', async () => {
-    mockServerClient('seller-1', { message: 'Stock insuffisant' })
+    mockContext('seller-1')
+    mockServerClient({ message: 'Stock insuffisant' })
 
     await expect(createOrder(input)).rejects.toThrow('Stock insuffisant')
 

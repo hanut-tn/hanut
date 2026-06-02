@@ -1,6 +1,7 @@
 'use server'
 
 import { createServerClient } from '@/lib/supabase/server'
+import { getUserContext } from '@/lib/get-context'
 import { revalidatePath } from 'next/cache'
 import type { CarrierName } from '@hanut/types'
 
@@ -20,9 +21,11 @@ export type UpdateDeliveryInput = {
 }
 
 export async function createDelivery(input: CreateDeliveryInput) {
+  const context = await getUserContext()
+  if (!context) throw new Error('Non autorisé')
+  if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
+
   const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Non autorisé')
 
   const { error } = await supabase.from('deliveries').insert({
     order_id: input.order_id,
@@ -37,9 +40,11 @@ export async function createDelivery(input: CreateDeliveryInput) {
 }
 
 export async function updateDelivery(id: string, input: UpdateDeliveryInput) {
+  const context = await getUserContext()
+  if (!context) throw new Error('Non autorisé')
+  if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
+
   const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Non autorisé')
 
   const patch: Record<string, unknown> = { ...input }
 
@@ -58,9 +63,11 @@ export async function updateDelivery(id: string, input: UpdateDeliveryInput) {
 }
 
 export async function deleteDelivery(id: string) {
+  const context = await getUserContext()
+  if (!context) throw new Error('Non autorisé')
+  if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
+
   const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Non autorisé')
 
   const { error } = await supabase.from('deliveries').delete().eq('id', id)
   if (error) throw new Error(error.message)

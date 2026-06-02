@@ -1,15 +1,18 @@
 import { createServerClient } from '@/lib/supabase/server'
+import { getUserContext } from '@/lib/get-context'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
 export default async function DashboardPage() {
-  const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const context = await getUserContext()
+  if (!context) return null
+  if (context.role !== 'admin') redirect('/orders')
 
+  const supabase = await createServerClient()
   const [{ count: totalOrders }, { data: delivered }, { data: allOrders }] = await Promise.all([
-    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('seller_id', user.id),
-    supabase.from('orders').select('cod_amount').eq('seller_id', user.id).eq('status', 'delivered'),
-    supabase.from('orders').select('status').eq('seller_id', user.id),
+    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId),
+    supabase.from('orders').select('cod_amount').eq('seller_id', context.sellerId).eq('status', 'delivered'),
+    supabase.from('orders').select('status').eq('seller_id', context.sellerId),
   ])
 
   const revenue = ((delivered ?? []) as { cod_amount: number }[]).reduce((s, o) => s + o.cod_amount, 0)
@@ -56,7 +59,7 @@ export default async function DashboardPage() {
           <h2 className="text-lg font-semibold text-gray-900">Commandes récentes</h2>
           <Link href="/orders" className="text-sm text-brand-600 hover:text-brand-700 font-medium">Voir tout →</Link>
         </div>
-        <RecentOrders sellerId={user.id} />
+        <RecentOrders sellerId={context.sellerId} />
       </div>
     </div>
   )

@@ -1,6 +1,7 @@
 'use server'
 
 import { createServerClient } from '@/lib/supabase/server'
+import { getUserContext } from '@/lib/get-context'
 import { revalidatePath } from 'next/cache'
 import type { OrderStatus } from '@hanut/types'
 
@@ -18,12 +19,14 @@ export type CreateOrderInput = {
 }
 
 export async function createOrder(input: CreateOrderInput) {
+  const context = await getUserContext()
+  if (!context) throw new Error('Non autorisé')
+  if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
+
   const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Non autorisé')
 
   const { error } = await supabase.rpc('create_order_with_stock', {
-    p_seller_id: user.id,
+    p_seller_id: context.sellerId,
     p_product_id: input.product_id,
     p_quantity: input.quantity,
     p_customer_name: input.customer_name,
@@ -43,14 +46,16 @@ export async function createOrder(input: CreateOrderInput) {
 }
 
 export async function updateOrderStatus(id: string, status: OrderStatus) {
+  const context = await getUserContext()
+  if (!context) throw new Error('Non autorisé')
+  if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
+
   const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Non autorisé')
 
   const { error } = await supabase.from('orders')
     .update({ status })
     .eq('id', id)
-    .eq('seller_id', user.id)
+    .eq('seller_id', context.sellerId)
   if (error) throw new Error(error.message)
 
   revalidatePath('/orders')
@@ -62,15 +67,17 @@ export async function confirmPendingOrder(id: string) {
 }
 
 export async function cancelPendingOrder(id: string) {
+  const context = await getUserContext()
+  if (!context) throw new Error('Non autorisé')
+  if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
+
   const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Non autorisé')
 
   const { data: order } = await supabase
     .from('orders')
     .select('product_id, quantity, status')
     .eq('id', id)
-    .eq('seller_id', user.id)
+    .eq('seller_id', context.sellerId)
     .single()
 
   if (!order) throw new Error('Commande introuvable')
@@ -87,12 +94,13 @@ export async function cancelPendingOrder(id: string) {
     await supabase.from('products')
       .update({ stock: product.stock + order.quantity })
       .eq('id', order.product_id)
+      .eq('seller_id', context.sellerId)
   }
 
   const { error } = await supabase.from('orders')
     .update({ status: 'returned' })
     .eq('id', id)
-    .eq('seller_id', user.id)
+    .eq('seller_id', context.sellerId)
   if (error) throw new Error(error.message)
 
   revalidatePath('/orders')
@@ -100,14 +108,16 @@ export async function cancelPendingOrder(id: string) {
 }
 
 export async function deleteOrder(id: string) {
+  const context = await getUserContext()
+  if (!context) throw new Error('Non autorisé')
+  if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
+
   const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Non autorisé')
 
   const { error } = await supabase.from('orders')
     .delete()
     .eq('id', id)
-    .eq('seller_id', user.id)
+    .eq('seller_id', context.sellerId)
   if (error) throw new Error(error.message)
 
   revalidatePath('/orders')

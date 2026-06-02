@@ -1,11 +1,13 @@
 import { createServerClient } from '@/lib/supabase/server'
+import { getUserContext } from '@/lib/get-context'
 import OrdersClient from '@/components/orders/OrdersClient'
 import { updateOrderStatus, deleteOrder, confirmPendingOrder, cancelPendingOrder } from './actions'
 
 export default async function OrdersPage() {
+  const context = await getUserContext()
+  if (!context) return null
+
   const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
 
   const { data: orders } = await supabase
     .from('orders')
@@ -14,7 +16,7 @@ export default async function OrdersPage() {
       customer:customers(id, name, phone, city),
       product:products(id, name, price)
     `)
-    .eq('seller_id', user.id)
+    .eq('seller_id', context.sellerId)
     .order('created_at', { ascending: false })
 
   return (

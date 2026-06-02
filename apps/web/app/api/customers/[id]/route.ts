@@ -1,19 +1,21 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { getUserContext } from '@/lib/get-context'
 
 type Params = { params: Promise<{ id: string }> }
 
 export async function GET(_req: Request, { params }: Params) {
   const { id } = await params
+  const context = await getUserContext()
+  if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+
   const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
   const { data: customer } = await supabase
     .from('customers')
     .select('id, name, phone, address, city, created_at, tags, notes')
     .eq('id', id)
-    .eq('seller_id', user.id)
+    .eq('seller_id', context.sellerId)
     .single()
 
   if (!customer) return NextResponse.json({ error: 'Client introuvable' }, { status: 404 })
@@ -22,7 +24,7 @@ export async function GET(_req: Request, { params }: Params) {
     .from('orders')
     .select('id, cod_amount, status, variant, quantity, created_at, product:products(id, name)')
     .eq('customer_id', id)
-    .eq('seller_id', user.id)
+    .eq('seller_id', context.sellerId)
     .order('created_at', { ascending: false })
 
   const orderList = orders ?? []
@@ -50,9 +52,13 @@ export async function GET(_req: Request, { params }: Params) {
 
 export async function PUT(req: Request, { params }: Params) {
   const { id } = await params
+  const context = await getUserContext()
+  if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+  if (context.role === 'readonly') {
+    return NextResponse.json({ error: 'Action réservée aux admins et opérateurs' }, { status: 403 })
+  }
+
   const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
   const body = await req.json()
   const update: Record<string, unknown> = {}
@@ -67,7 +73,7 @@ export async function PUT(req: Request, { params }: Params) {
     .from('customers')
     .update(update)
     .eq('id', id)
-    .eq('seller_id', user.id)
+    .eq('seller_id', context.sellerId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })

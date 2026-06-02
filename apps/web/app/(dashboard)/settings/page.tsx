@@ -1,34 +1,38 @@
 import { headers } from 'next/headers'
-import { createServerClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { createServiceClient } from '@/lib/supabase/service'
+import { getUserContext } from '@/lib/get-context'
 import SettingsClient from '@/components/settings/SettingsClient'
 import { updateProfile, updateSlug, checkSlugAvailability } from './actions'
 
 export default async function SettingsPage() {
-  const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const context = await getUserContext()
+  if (!context) return null
+  if (context.role !== 'admin') redirect('/orders')
+
+  const serviceClient = createServiceClient()
 
   const headersList = await headers()
   const host = headersList.get('host') ?? 'hanut.tn'
   const appUrl = host.startsWith('localhost') ? `http://${host}` : `https://${host}`
 
-  const { data: seller } = await supabase
+  const { data: seller } = await serviceClient
     .from('sellers')
     .select('name, email, phone, plan, subscription_end, created_at, slug')
-    .eq('id', user.id)
+    .eq('id', context.sellerId)
     .single()
 
   const [{ count: productCount }, { count: customerCount }, { count: orderCount }] = await Promise.all([
-    supabase.from('products').select('id', { count: 'exact', head: true }).eq('seller_id', user.id),
-    supabase.from('customers').select('id', { count: 'exact', head: true }).eq('seller_id', user.id),
-    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('seller_id', user.id),
+    serviceClient.from('products').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId),
+    serviceClient.from('customers').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId),
+    serviceClient.from('orders').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId),
   ])
 
   return (
     <SettingsClient
       seller={{
         name: seller?.name ?? '',
-        email: seller?.email ?? user.email ?? '',
+        email: seller?.email ?? '',
         phone: seller?.phone ?? '',
         plan: (seller?.plan ?? 'starter') as 'starter' | 'pro' | 'business',
         subscription_end: seller?.subscription_end ?? null,

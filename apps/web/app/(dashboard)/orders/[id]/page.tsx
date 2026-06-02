@@ -1,4 +1,5 @@
 import { createServerClient } from '@/lib/supabase/server'
+import { getUserContext } from '@/lib/get-context'
 import OrderDetail from '@/components/orders/OrderDetail'
 import { notFound } from 'next/navigation'
 
@@ -6,9 +7,10 @@ type Props = { params: Promise<{ id: string }> }
 
 export default async function OrderDetailPage({ params }: Props) {
   const { id } = await params
+  const context = await getUserContext()
+  if (!context) return null
+
   const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
 
   const { data: order } = await supabase
     .from('orders')
@@ -18,7 +20,7 @@ export default async function OrderDetailPage({ params }: Props) {
       product:products(id, name, price)
     `)
     .eq('id', id)
-    .eq('seller_id', user.id)
+    .eq('seller_id', context.sellerId)
     .single()
 
   if (!order) notFound()
@@ -33,7 +35,7 @@ export default async function OrderDetailPage({ params }: Props) {
     const { data: match } = await supabase
       .from('customers')
       .select('id, name')
-      .eq('seller_id', user.id)
+      .eq('seller_id', context.sellerId)
       .eq('phone', customer.phone)
       .neq('id', customer.id)
       .maybeSingle()

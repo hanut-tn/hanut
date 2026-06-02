@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import type { UserRole } from '@/lib/get-context'
 
 const NAV_ITEMS = [
-  { href: '/dashboard',  label: 'Dashboard',   icon: '📊', roles: ['admin', 'operator', 'readonly'] as UserRole[] },
+  { href: '/dashboard',  label: 'Dashboard',   icon: '📊', roles: ['admin'] as UserRole[] },
   { href: '/orders',     label: 'Commandes',   icon: '📦', roles: ['admin', 'operator', 'readonly'] as UserRole[] },
   { href: '/customers',  label: 'Clients',     icon: '👤', roles: ['admin', 'operator', 'readonly'] as UserRole[] },
   { href: '/catalog',    label: 'Catalogue',   icon: '🛍️', roles: ['admin', 'operator'] as UserRole[] },

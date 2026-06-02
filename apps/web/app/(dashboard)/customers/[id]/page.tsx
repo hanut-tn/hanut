@@ -1,4 +1,5 @@
 import { createServerClient } from '@/lib/supabase/server'
+import { getUserContext } from '@/lib/get-context'
 import CustomerDetail from '@/components/customers/CustomerDetail'
 import { updateCustomer } from '../actions'
 import { notFound } from 'next/navigation'
@@ -7,15 +8,16 @@ type Props = { params: Promise<{ id: string }> }
 
 export default async function CustomerDetailPage({ params }: Props) {
   const { id } = await params
+  const context = await getUserContext()
+  if (!context) return null
+
   const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
 
   const { data: customer } = await supabase
     .from('customers')
     .select('id, name, phone, address, city, created_at, tags, notes')
     .eq('id', id)
-    .eq('seller_id', user.id)
+    .eq('seller_id', context.sellerId)
     .single()
 
   if (!customer) notFound()
@@ -24,7 +26,7 @@ export default async function CustomerDetailPage({ params }: Props) {
     .from('orders')
     .select('id, cod_amount, status, variant, quantity, created_at, product:products(id, name)')
     .eq('customer_id', id)
-    .eq('seller_id', user.id)
+    .eq('seller_id', context.sellerId)
     .order('created_at', { ascending: false })
 
   const orderList = orders ?? []

@@ -12,6 +12,7 @@ function migration(pathname: string) {
 describe('Supabase migrations', () => {
   const appSchema = migration('20260601_add_missing_app_schema.sql')
   const orderRpc = migration('20260601_create_order_with_stock_rpc.sql')
+  const teamMembers = migration('20260602_add_team_members.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -59,5 +60,19 @@ describe('Supabase migrations', () => {
     expect(orderRpc).toMatch(
       /GRANT EXECUTE ON FUNCTION create_order_with_stock[\s\S]+TO authenticated, service_role;/i
     )
+  })
+
+  it('adds team members with role-aware RLS helpers and policies', () => {
+    expect(teamMembers).toMatch(/CREATE TABLE IF NOT EXISTS team_members/i)
+    expect(teamMembers).toMatch(/role\s+TEXT NOT NULL CHECK \(role IN \('admin', 'operator', 'readonly'\)\)/i)
+    expect(teamMembers).toMatch(/CREATE OR REPLACE FUNCTION get_seller_id\(\)/i)
+    expect(teamMembers).toMatch(/CREATE OR REPLACE FUNCTION get_team_role\(p_seller_id UUID\)/i)
+    expect(teamMembers).toMatch(/CREATE OR REPLACE FUNCTION can_write_seller\(p_seller_id UUID\)/i)
+    expect(teamMembers).toMatch(/DROP POLICY IF EXISTS "orders_team_read" ON orders;/i)
+    expect(teamMembers).toMatch(/CREATE POLICY "orders_team_insert" ON orders FOR INSERT/i)
+    expect(teamMembers).toMatch(/CREATE POLICY "customers_team_delete" ON customers FOR DELETE/i)
+    expect(teamMembers).toMatch(/CREATE POLICY "products_team_delete" ON products FOR DELETE/i)
+    expect(teamMembers).toMatch(/CREATE POLICY "deliveries_team_update" ON deliveries FOR UPDATE/i)
+    expect(teamMembers).toMatch(/CREATE POLICY "deliveries_team_delete" ON deliveries FOR DELETE/i)
   })
 })

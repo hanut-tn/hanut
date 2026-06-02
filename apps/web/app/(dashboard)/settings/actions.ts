@@ -1,6 +1,7 @@
 'use server'
 
-import { createServerClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { getUserContext } from '@/lib/get-context'
 import { revalidatePath } from 'next/cache'
 
 export type ProfileInput = {
@@ -9,17 +10,18 @@ export type ProfileInput = {
 }
 
 export async function updateProfile(input: ProfileInput) {
-  const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Non autorisé')
+  const context = await getUserContext()
+  if (!context) throw new Error('Non autorisé')
+  if (context.role !== 'admin') throw new Error('Réservé aux admins')
 
-  const { error } = await supabase
+  const serviceClient = createServiceClient()
+  const { error } = await serviceClient
     .from('sellers')
     .update({
       name: input.name.trim(),
       phone: input.phone.trim() || null,
     })
-    .eq('id', user.id)
+    .eq('id', context.sellerId)
 
   if (error) throw new Error(error.message)
   revalidatePath('/settings')
@@ -27,9 +29,9 @@ export async function updateProfile(input: ProfileInput) {
 }
 
 export async function updateSlug(slug: string) {
-  const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Non autorisé')
+  const context = await getUserContext()
+  if (!context) throw new Error('Non autorisé')
+  if (context.role !== 'admin') throw new Error('Réservé aux admins')
 
   const cleaned = slug
     .toLowerCase()
@@ -41,10 +43,11 @@ export async function updateSlug(slug: string) {
   if (!cleaned || cleaned.length < 3) throw new Error('Le slug doit contenir au moins 3 caractères.')
   if (cleaned.length > 50) throw new Error('Le slug est trop long (50 caractères max).')
 
-  const { error } = await supabase
+  const serviceClient = createServiceClient()
+  const { error } = await serviceClient
     .from('sellers')
     .update({ slug: cleaned })
-    .eq('id', user.id)
+    .eq('id', context.sellerId)
 
   if (error) {
     if (error.code === '23505') throw new Error('Ce slug est déjà pris. Essayez-en un autre.')
@@ -55,9 +58,9 @@ export async function updateSlug(slug: string) {
 }
 
 export async function checkSlugAvailability(slug: string): Promise<boolean> {
-  const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return false
+  const context = await getUserContext()
+  if (!context) return false
+  if (context.role !== 'admin') return false
 
   const cleaned = slug
     .toLowerCase()
@@ -68,11 +71,12 @@ export async function checkSlugAvailability(slug: string): Promise<boolean> {
 
   if (!cleaned || cleaned.length < 3) return false
 
-  const { data } = await supabase
+  const serviceClient = createServiceClient()
+  const { data } = await serviceClient
     .from('sellers')
     .select('id')
     .eq('slug', cleaned)
-    .neq('id', user.id)
+    .neq('id', context.sellerId)
     .maybeSingle()
 
   return data === null

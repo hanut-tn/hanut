@@ -1,4 +1,4 @@
-import { cache } from 'react'
+import * as React from 'react'
 import { createServerClient } from './supabase/server'
 import { createServiceClient } from './supabase/service'
 
@@ -12,8 +12,13 @@ export type UserContext = {
   plan: 'starter' | 'pro' | 'business'
 }
 
-// React.cache() déduplique les appels dans la même requête HTTP
-export const getUserContext = cache(async (): Promise<UserContext | null> => {
+type CacheFn = <T extends (...args: never[]) => unknown>(fn: T) => T
+
+const reactWithCache = React as typeof React & { cache?: CacheFn }
+const cacheFn: CacheFn = reactWithCache.cache ?? ((fn) => fn)
+
+// React.cache() déduplique les appels dans la même requête HTTP quand il est disponible.
+export const getUserContext = cacheFn(async (): Promise<UserContext | null> => {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null

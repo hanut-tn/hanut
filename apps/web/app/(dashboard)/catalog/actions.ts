@@ -1,6 +1,7 @@
 'use server'
 
 import { createServerClient } from '@/lib/supabase/server'
+import { getUserContext } from '@/lib/get-context'
 import { revalidatePath } from 'next/cache'
 
 export type ProductVariant = { size?: string; color?: string; qty: number }
@@ -16,9 +17,11 @@ export type ProductInput = {
 }
 
 export async function upsertProduct(input: ProductInput) {
+  const context = await getUserContext()
+  if (!context) throw new Error('Non autorisé')
+  if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
+
   const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Non autorisé')
 
   const payload = {
     name: input.name,
@@ -33,11 +36,11 @@ export async function upsertProduct(input: ProductInput) {
     const { error } = await supabase.from('products')
       .update(payload)
       .eq('id', input.id)
-      .eq('seller_id', user.id)
+      .eq('seller_id', context.sellerId)
     if (error) throw new Error(error.message)
   } else {
     const { error } = await supabase.from('products')
-      .insert({ ...payload, seller_id: user.id })
+      .insert({ ...payload, seller_id: context.sellerId })
     if (error) throw new Error(error.message)
   }
 
@@ -45,14 +48,16 @@ export async function upsertProduct(input: ProductInput) {
 }
 
 export async function deleteProduct(id: string) {
+  const context = await getUserContext()
+  if (!context) throw new Error('Non autorisé')
+  if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
+
   const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Non autorisé')
 
   const { error } = await supabase.from('products')
     .delete()
     .eq('id', id)
-    .eq('seller_id', user.id)
+    .eq('seller_id', context.sellerId)
   if (error) throw new Error(error.message)
 
   revalidatePath('/catalog')

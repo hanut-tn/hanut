@@ -5,8 +5,16 @@ const serverMock = vi.hoisted(() => ({
   createServerClient: vi.fn(),
 }))
 
+const contextMock = vi.hoisted(() => ({
+  getUserContext: vi.fn(),
+}))
+
 vi.mock('@/lib/supabase/server', () => ({
   createServerClient: serverMock.createServerClient,
+}))
+
+vi.mock('@/lib/get-context', () => ({
+  getUserContext: contextMock.getUserContext,
 }))
 
 import { PUT } from '../app/api/customers/[id]/route'
@@ -33,23 +41,25 @@ function createUpdateChain(error: { message: string } | null = null): UpdateChai
   return chain
 }
 
-function mockServerClient(userId: string | null, chain = createUpdateChain()) {
-  const getUser = vi.fn().mockResolvedValue({
-    data: {
-      user: userId ? { id: userId } : null,
-    },
-  })
+function mockContext(sellerId: string | null, role: 'admin' | 'operator' | 'readonly' = 'admin') {
+  contextMock.getUserContext.mockResolvedValue(
+    sellerId
+      ? { userId: 'user-1', sellerId, role, isSeller: role === 'admin', plan: 'business' }
+      : null
+  )
+}
+
+function mockServerClient(chain = createUpdateChain()) {
   const from = vi.fn((table: string) => {
     if (table !== 'customers') throw new Error(`Unexpected table: ${table}`)
     return chain
   })
 
   serverMock.createServerClient.mockResolvedValue({
-    auth: { getUser },
     from,
   })
 
-  return { chain, from, getUser }
+  return { chain, from }
 }
 
 describe('customer tags and notes API', () => {
@@ -58,7 +68,8 @@ describe('customer tags and notes API', () => {
   })
 
   it('requires auth before updating customer metadata', async () => {
-    const { from } = mockServerClient(null)
+    mockContext(null)
+    const { from } = mockServerClient()
 
     const response = await PUT(jsonRequest({ tags: ['VIP'] }), {
       params: Promise.resolve({ id: 'customer-1' }),
@@ -69,7 +80,8 @@ describe('customer tags and notes API', () => {
   })
 
   it('updates tags and notes scoped to the current seller', async () => {
-    const { chain } = mockServerClient('seller-1')
+    mockContext('seller-1', 'operator')
+    const { chain } = mockServerClient()
 
     const response = await PUT(jsonRequest({
       tags: ['VIP', 'retour rapide'],
@@ -89,7 +101,8 @@ describe('customer tags and notes API', () => {
   })
 
   it('rejects empty customer metadata updates', async () => {
-    const { chain } = mockServerClient('seller-1')
+    mockContext('seller-1')
+    const { chain } = mockServerClient()
 
     const response = await PUT(jsonRequest({ name: 'Ignored' }), {
       params: Promise.resolve({ id: 'customer-1' }),

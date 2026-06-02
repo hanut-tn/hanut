@@ -1,11 +1,15 @@
 import { createServerClient } from '@/lib/supabase/server'
+import { getUserContext } from '@/lib/get-context'
+import { redirect } from 'next/navigation'
 import DeliveriesClient from '@/components/deliveries/DeliveriesClient'
 import { createDelivery, updateDelivery, deleteDelivery } from './actions'
 
 export default async function DeliveriesPage() {
+  const context = await getUserContext()
+  if (!context) return null
+  if (context.role === 'readonly') redirect('/orders')
+
   const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
 
   const { data: deliveries } = await supabase
     .from('deliveries')
@@ -30,7 +34,7 @@ export default async function DeliveriesPage() {
   const { data: allShipped } = await supabase
     .from('orders')
     .select(`id, cod_amount, customer:customers(name, phone), product:products(name)`)
-    .eq('seller_id', user.id)
+    .eq('seller_id', context.sellerId)
     .eq('status', 'shipped')
     .order('created_at', { ascending: false })
 

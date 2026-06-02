@@ -1,10 +1,14 @@
 import { createServerClient } from '@/lib/supabase/server'
+import { getUserContext } from '@/lib/get-context'
+import { redirect } from 'next/navigation'
 import AnalyticsClient from '@/components/analytics/AnalyticsClient'
 
 export default async function AnalyticsPage() {
+  const context = await getUserContext()
+  if (!context) return null
+  if (context.role === 'operator') redirect('/orders')
+
   const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
 
   const ninetyDaysAgo = new Date()
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
@@ -14,7 +18,7 @@ export default async function AnalyticsPage() {
     supabase
       .from('orders')
       .select('id, cod_amount, status, created_at, product:products(id, name), customer:customers(id, name, city)')
-      .eq('seller_id', user.id)
+      .eq('seller_id', context.sellerId)
       .gte('created_at', iso)
       .order('created_at', { ascending: true }),
     supabase
@@ -26,7 +30,7 @@ export default async function AnalyticsPage() {
   // Filter deliveries to only this seller (RLS should handle it, but double-check)
   const sellerDeliveries = (deliveries ?? []).filter(d => {
     const o = Array.isArray(d.order) ? d.order[0] : d.order
-    return (o as any)?.seller_id === user.id
+    return (o as any)?.seller_id === context.sellerId
   })
 
   return (

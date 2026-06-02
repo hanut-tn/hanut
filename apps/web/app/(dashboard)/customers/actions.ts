@@ -1,6 +1,7 @@
 'use server'
 
 import { createServerClient } from '@/lib/supabase/server'
+import { getUserContext } from '@/lib/get-context'
 import { revalidatePath } from 'next/cache'
 
 export type CustomerInput = {
@@ -11,9 +12,11 @@ export type CustomerInput = {
 }
 
 export async function updateCustomer(id: string, input: CustomerInput): Promise<{ error?: string }> {
+  const context = await getUserContext()
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+
   const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Non autorisé' }
 
   const { error } = await supabase
     .from('customers')
@@ -24,7 +27,7 @@ export async function updateCustomer(id: string, input: CustomerInput): Promise<
       city: input.city?.trim() || null,
     })
     .eq('id', id)
-    .eq('seller_id', user.id)
+    .eq('seller_id', context.sellerId)
 
   if (error) return { error: error.message }
   revalidatePath('/customers')
@@ -33,15 +36,17 @@ export async function updateCustomer(id: string, input: CustomerInput): Promise<
 }
 
 export async function deleteCustomer(id: string): Promise<{ error?: string }> {
+  const context = await getUserContext()
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+
   const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Non autorisé' }
 
   const { count } = await supabase
     .from('orders')
     .select('id', { count: 'exact', head: true })
     .eq('customer_id', id)
-    .eq('seller_id', user.id)
+    .eq('seller_id', context.sellerId)
 
   if (count && count > 0) {
     return {
@@ -53,7 +58,7 @@ export async function deleteCustomer(id: string): Promise<{ error?: string }> {
     .from('customers')
     .delete()
     .eq('id', id)
-    .eq('seller_id', user.id)
+    .eq('seller_id', context.sellerId)
 
   if (error) return { error: error.message }
   revalidatePath('/customers')
