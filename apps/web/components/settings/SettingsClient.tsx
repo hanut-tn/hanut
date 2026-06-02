@@ -581,6 +581,35 @@ export default function SettingsClient({ seller, stats, appUrl, updateProfile, u
               support@hanut.tn
             </a>
           </p>
+
+          {/* Gestion d'équipe */}
+          <div className="card p-5 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-purple-100 text-purple-700 rounded-xl flex items-center justify-center text-xl">
+                👥
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900">Gestion de l&apos;équipe</p>
+                <p className="text-sm text-gray-500">
+                  {seller.plan === 'business'
+                    ? 'Invitez des collaborateurs avec des rôles personnalisés'
+                    : 'Disponible dans le plan Business — invitez jusqu\'à 4 collaborateurs'}
+                </p>
+              </div>
+            </div>
+            {seller.plan === 'business' ? (
+              <a
+                href="/settings/team"
+                className="btn-secondary text-sm whitespace-nowrap"
+              >
+                Gérer l&apos;équipe →
+              </a>
+            ) : (
+              <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700 text-xs font-medium whitespace-nowrap">
+                Plan Business
+              </span>
+            )}
+          </div>
         </div>
       )}
     </div>
