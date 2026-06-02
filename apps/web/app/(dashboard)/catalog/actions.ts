@@ -98,6 +98,7 @@ export async function deleteProduct(id: string): Promise<{ error?: string }> {
     .select('id', { count: 'exact', head: true })
     .eq('product_id', id)
     .eq('seller_id', context.sellerId)
+    .is('deleted_at', null)
 
   if (linkedOrdersCount && linkedOrdersCount > 0) {
     return { error: 'Ce produit est lié à des commandes existantes et ne peut pas être supprimé définitivement.' }

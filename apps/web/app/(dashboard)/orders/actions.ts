@@ -19,7 +19,7 @@ export type CreateOrderInput = {
   notes?: string
 }
 
-const DELETABLE_STATUSES: OrderStatus[] = ['pending', 'new', 'returned']
+const DELETABLE_STATUSES: OrderStatus[] = ['pending', 'new', 'confirmed', 'delivered', 'returned']
 
 export async function createOrder(input: CreateOrderInput) {
   const context = await getUserContext()
@@ -176,7 +176,7 @@ export async function deleteOrder(id: string): Promise<OrderMutationResult> {
   if (!order) return { error: 'Commande introuvable' }
 
   if (!DELETABLE_STATUSES.includes(order.status as OrderStatus)) {
-    return { error: 'Cette commande ne peut pas être supprimée car elle est en cours de traitement.' }
+    return { error: 'Une commande expédiée ne peut pas être supprimée. Attendez la livraison ou le retour.' }
   }
 
   const { error } = await supabase.from('orders')

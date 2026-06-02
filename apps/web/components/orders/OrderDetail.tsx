@@ -74,6 +74,7 @@ type Props = {
   updateStatus: (id: string, status: OrderStatus) => Promise<void>
   confirmOrder: (id: string) => Promise<void>
   cancelOrder: (id: string) => Promise<void>
+  deleteOrder?: (id: string) => Promise<{ error?: string }>
 }
 
 export default function OrderDetail({
@@ -87,6 +88,7 @@ export default function OrderDetail({
   updateStatus,
   confirmOrder,
   cancelOrder,
+  deleteOrder,
 }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -94,11 +96,13 @@ export default function OrderDetail({
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [bannerLoading, setBannerLoading] = useState(false)
   const [bannerDone, setBannerDone] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const status = order.status as OrderStatus
   const st = STATUS_CONFIG[status]
   const canWrite = role !== 'readonly'
   const isPendingOrder = status === 'pending'
+  const canDelete = role === 'admin' && deleteOrder && ['pending', 'new', 'confirmed', 'delivered', 'returned'].includes(status)
   const ini = customer ? initials(customer.name) : '?'
   const estimatedProfit = order.cod_amount - ((product?.cost ?? 0) * order.quantity)
   const shortId = order.id.slice(0, 8).toUpperCase()
@@ -383,20 +387,40 @@ export default function OrderDetail({
               )}
 
               {status === 'delivered' && (
-                <div className="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-lg">
-                  <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
-                  <p className="text-sm font-medium text-green-700">Commande terminée</p>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-lg">
+                    <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+                    <p className="text-sm font-medium text-green-700">Commande terminée</p>
+                  </div>
+                  {canDelete && (
+                    <button
+                      onClick={() => setConfirmDelete(true)}
+                      className="w-full px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                    >
+                      Supprimer cette commande
+                    </button>
+                  )}
                 </div>
               )}
 
               {status === 'returned' && (
-                <button
-                  onClick={() => handleAction(() => updateStatus(order.id, 'new'))}
-                  disabled={isPending}
-                  className="w-full px-4 py-2 text-sm font-medium text-[#78716C] border border-[#E7E5E4] rounded-lg hover:bg-[#FAFAF9] disabled:opacity-50 transition-colors"
-                >
-                  {isPending ? 'Traitement...' : 'Remettre en nouvelle'}
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => handleAction(() => updateStatus(order.id, 'new'))}
+                    disabled={isPending}
+                    className="w-full px-4 py-2 text-sm font-medium text-[#78716C] border border-[#E7E5E4] rounded-lg hover:bg-[#FAFAF9] disabled:opacity-50 transition-colors"
+                  >
+                    {isPending ? 'Traitement...' : 'Remettre en nouvelle'}
+                  </button>
+                  {canDelete && (
+                    <button
+                      onClick={() => setConfirmDelete(true)}
+                      className="w-full px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                    >
+                      Supprimer cette commande
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -454,6 +478,48 @@ export default function OrderDetail({
           </div>
         </div>
       </div>
+
+      {/* Modal suppression depuis le détail */}
+      {confirmDelete && deleteOrder && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-xl p-6 max-w-sm w-full">
+            <h3 className="font-semibold text-[#1C1917] mb-1">Supprimer cette commande ?</h3>
+            <p className="text-sm text-[#78716C] mb-3">
+              {status === 'delivered'
+                ? 'Cette commande livrée sera déplacée dans la corbeille. Les statistiques seront mises à jour.'
+                : 'La commande sera déplacée dans la corbeille. Restaurable pendant 30 jours.'}
+            </p>
+            <div className="bg-[#FAFAF9] rounded-lg px-4 py-3 mb-5 space-y-0.5 text-sm">
+              <p className="font-medium text-[#1C1917]">{customer?.name ?? '—'}</p>
+              <p className="text-[#78716C]">{product?.name ?? '—'}</p>
+              <p className="font-semibold text-[#1C1917]">{order.cod_amount} DT</p>
+            </div>
+            {actionError && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{actionError}</p>
+            )}
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDelete(false)} className="btn-secondary flex-1">Annuler</button>
+              <button
+                disabled={isPending}
+                onClick={() => {
+                  setActionError(null)
+                  startTransition(async () => {
+                    const result = await deleteOrder(order.id)
+                    if (result?.error) {
+                      setActionError(result.error)
+                      return
+                    }
+                    router.push('/orders')
+                  })
+                }}
+                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+              >
+                {isPending ? 'Déplacement...' : 'Déplacer vers la corbeille'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

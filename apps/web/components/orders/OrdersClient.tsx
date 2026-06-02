@@ -18,7 +18,7 @@ const STATUS_CONFIG: Record<OrderStatus, { label: string; cls: string; dot: stri
   returned:  { label: 'Retournée',   cls: 'bg-red-50 text-red-700 border border-red-200',          dot: 'bg-red-400' },
 }
 
-const DELETABLE_STATUSES: OrderStatus[] = ['pending', 'new', 'returned']
+const DELETABLE_STATUSES: OrderStatus[] = ['pending', 'new', 'confirmed', 'delivered', 'returned']
 
 const TABS: { label: string; value: OrderStatus | 'all' }[] = [
   { label: 'Toutes',     value: 'all' },
@@ -565,7 +565,9 @@ export default function OrdersClient({
           <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-xl p-6 max-w-sm w-full">
             <h3 className="font-semibold text-[#1C1917] mb-1">Supprimer cette commande ?</h3>
             <p className="text-sm text-[#78716C] mb-3">
-              La commande sera déplacée dans la corbeille. Restaurable pendant 30 jours.
+              {confirmDelete.status === 'delivered'
+                ? 'Cette commande livrée sera déplacée dans la corbeille. Les statistiques seront mises à jour.'
+                : 'La commande sera déplacée dans la corbeille. Restaurable pendant 30 jours.'}
             </p>
             <div className="bg-[#FAFAF9] rounded-lg px-4 py-3 mb-5 space-y-0.5 text-sm">
               <p className="font-medium text-[#1C1917]">{getCustomer(confirmDelete)?.name ?? '—'}</p>

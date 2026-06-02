@@ -61,6 +61,7 @@ export async function deleteCustomer(id: string): Promise<{ error?: string }> {
     .select('id', { count: 'exact', head: true })
     .eq('customer_id', id)
     .eq('seller_id', context.sellerId)
+    .is('deleted_at', null)
 
   if (count && count > 0) {
     return {

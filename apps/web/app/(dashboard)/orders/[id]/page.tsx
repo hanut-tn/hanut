@@ -2,7 +2,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import OrderDetail from '@/components/orders/OrderDetail'
 import { notFound } from 'next/navigation'
-import { updateOrderStatus, confirmPendingOrder, cancelPendingOrder } from '../actions'
+import { updateOrderStatus, confirmPendingOrder, cancelPendingOrder, deleteOrder } from '../actions'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -93,6 +93,7 @@ export default async function OrderDetailPage({ params }: Props) {
       updateStatus={updateOrderStatus}
       confirmOrder={confirmPendingOrder}
       cancelOrder={cancelPendingOrder}
+      deleteOrder={deleteOrder}
     />
   )
 }
