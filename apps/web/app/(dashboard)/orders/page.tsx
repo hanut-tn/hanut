@@ -38,6 +38,7 @@ export default async function OrdersPage() {
   return (
     <OrdersClient
       role={context.role}
+      plan={context.plan}
       orders={(orders ?? []) as any[]}
       trashOrders={(trashOrders ?? []) as any[]}
       updateStatus={updateOrderStatus}

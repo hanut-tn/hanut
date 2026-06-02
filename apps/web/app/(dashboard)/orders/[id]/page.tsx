@@ -2,6 +2,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import OrderDetail from '@/components/orders/OrderDetail'
 import { notFound } from 'next/navigation'
+import { updateOrderStatus, confirmPendingOrder, cancelPendingOrder } from '../actions'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -17,7 +18,7 @@ export default async function OrderDetailPage({ params }: Props) {
     .select(`
       id, status, cod_amount, variant, quantity, notes, created_at,
       customer:customers(id, name, phone, address, city),
-      product:products(id, name, price)
+      product:products(id, name, price, cost, image_url)
     `)
     .eq('id', id)
     .eq('seller_id', context.sellerId)
@@ -27,30 +28,54 @@ export default async function OrderDetailPage({ params }: Props) {
   if (!order) notFound()
 
   const customer = Array.isArray(order.customer) ? order.customer[0] : order.customer
+  const product = Array.isArray(order.product) ? order.product[0] : order.product
 
-  // For pending orders: check if a DIFFERENT customer exists with the same phone
+  // Customer stats + pending-order linking logic
   let linkedCustomer: { id: string; name: string } | null = null
   let hasExistingCustomer = false
+  let customerStats = { orderCount: 0, totalSpent: 0 }
 
-  if (order.status === 'pending' && customer?.phone) {
-    const { data: match } = await supabase
-      .from('customers')
-      .select('id, name')
-      .eq('seller_id', context.sellerId)
-      .eq('phone', customer.phone)
-      .neq('id', customer.id)
-      .maybeSingle()
+  const [linkedResult, statsResult] = await Promise.all([
+    // Check for duplicate customer by phone (pending orders only)
+    order.status === 'pending' && customer?.phone
+      ? supabase
+          .from('customers')
+          .select('id, name')
+          .eq('seller_id', context.sellerId)
+          .eq('phone', customer.phone)
+          .neq('id', customer.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
 
-    if (match) {
-      linkedCustomer = match
-      hasExistingCustomer = true
+    // Customer's order history (excluding the current order)
+    customer?.id
+      ? supabase
+          .from('orders')
+          .select('cod_amount, status')
+          .eq('seller_id', context.sellerId)
+          .eq('customer_id', customer.id)
+          .neq('id', id)
+          .is('deleted_at', null)
+          .eq('status', 'delivered')
+      : Promise.resolve({ data: null }),
+  ])
+
+  if (linkedResult.data) {
+    linkedCustomer = linkedResult.data
+    hasExistingCustomer = true
+  }
+
+  if (statsResult.data) {
+    const delivered = statsResult.data as { cod_amount: number; status: string }[]
+    customerStats = {
+      orderCount: delivered.length,
+      totalSpent: delivered.reduce((s, o) => s + o.cod_amount, 0),
     }
   }
 
-  const product = Array.isArray(order.product) ? order.product[0] : order.product
-
   return (
     <OrderDetail
+      role={context.role}
       order={{
         id: order.id,
         status: order.status,
@@ -62,8 +87,12 @@ export default async function OrderDetailPage({ params }: Props) {
       }}
       customer={customer ?? null}
       product={product ?? null}
+      customerStats={customerStats}
       linkedCustomer={linkedCustomer}
       hasExistingCustomer={hasExistingCustomer}
+      updateStatus={updateOrderStatus}
+      confirmOrder={confirmPendingOrder}
+      cancelOrder={cancelPendingOrder}
     />
   )
 }

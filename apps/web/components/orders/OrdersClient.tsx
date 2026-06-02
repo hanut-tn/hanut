@@ -1,32 +1,33 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useMemo, useTransition } from 'react'
 import Link from 'next/link'
-import { Package, Trash2 } from 'lucide-react'
+import {
+  Search, Download, Trash2, ChevronRight, ShoppingBag, Filter,
+  Check, X,
+} from 'lucide-react'
 import type { OrderStatus } from '@hanut/types'
 import type { UserRole } from '@/lib/get-context'
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; cls: string; dot: string }> = {
-  pending:  { label: 'En attente',  cls: 'bg-amber-50 text-amber-700 border border-amber-200',    dot: 'bg-amber-400' },
-  new:      { label: 'Nouvelle',    cls: 'bg-blue-50 text-blue-700 border border-blue-200',        dot: 'bg-blue-400' },
-  confirmed:{ label: 'Confirmée',   cls: 'bg-violet-50 text-violet-700 border border-violet-200',  dot: 'bg-violet-400' },
-  shipped:  { label: 'Expédiée',    cls: 'bg-orange-50 text-orange-700 border border-orange-200',  dot: 'bg-orange-400' },
-  delivered:{ label: 'Livrée',      cls: 'bg-green-50 text-green-700 border border-green-200',     dot: 'bg-green-400' },
-  returned: { label: 'Retournée',   cls: 'bg-red-50 text-red-700 border border-red-200',           dot: 'bg-red-400' },
+  pending:   { label: 'En attente',  cls: 'bg-amber-50 text-amber-700 border border-amber-200',   dot: 'bg-amber-400' },
+  new:       { label: 'Nouvelle',    cls: 'bg-blue-50 text-blue-700 border border-blue-200',       dot: 'bg-blue-400' },
+  confirmed: { label: 'Confirmée',   cls: 'bg-violet-50 text-violet-700 border border-violet-200', dot: 'bg-violet-400' },
+  shipped:   { label: 'Expédiée',    cls: 'bg-orange-50 text-orange-700 border border-orange-200', dot: 'bg-orange-400' },
+  delivered: { label: 'Livrée',      cls: 'bg-green-50 text-green-700 border border-green-200',    dot: 'bg-green-400' },
+  returned:  { label: 'Retournée',   cls: 'bg-red-50 text-red-700 border border-red-200',          dot: 'bg-red-400' },
 }
 
 const DELETABLE_STATUSES: OrderStatus[] = ['pending', 'new', 'returned']
 
-const STATUS_FLOW: OrderStatus[] = ['new', 'confirmed', 'shipped', 'delivered', 'returned']
-
 const TABS: { label: string; value: OrderStatus | 'all' }[] = [
-  { label: 'Toutes',      value: 'all' },
-  { label: 'En attente',  value: 'pending' },
-  { label: 'Nouvelles',   value: 'new' },
-  { label: 'Confirmées',  value: 'confirmed' },
-  { label: 'Expédiées',   value: 'shipped' },
-  { label: 'Livrées',     value: 'delivered' },
-  { label: 'Retournées',  value: 'returned' },
+  { label: 'Toutes',     value: 'all' },
+  { label: 'En attente', value: 'pending' },
+  { label: 'Nouvelles',  value: 'new' },
+  { label: 'Confirmées', value: 'confirmed' },
+  { label: 'Expédiées',  value: 'shipped' },
+  { label: 'Livrées',    value: 'delivered' },
+  { label: 'Retournées', value: 'returned' },
 ]
 
 type Order = {
@@ -54,6 +55,7 @@ type TrashOrder = {
 
 type Props = {
   role: UserRole
+  plan: 'starter' | 'pro' | 'business'
   orders: Order[]
   trashOrders: TrashOrder[]
   updateStatus: (id: string, status: OrderStatus) => Promise<void>
@@ -64,8 +66,65 @@ type Props = {
   permanentlyDeleteOrder: (id: string) => Promise<{ error?: string }>
 }
 
+function getCustomer(order: Order | TrashOrder) {
+  return Array.isArray(order.customer) ? order.customer[0] : order.customer
+}
+
+function getProduct(order: Order | TrashOrder) {
+  return Array.isArray(order.product) ? order.product[0] : order.product
+}
+
+function initials(name: string): string {
+  return name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()
+}
+
+function relativeDate(dateStr: string): string {
+  const date = new Date(dateStr)
+  const diffMs = Date.now() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+  if (diffMins < 60) return `il y a ${diffMins}min`
+  if (diffHours < 24) return `il y a ${diffHours}h`
+  if (diffDays === 1) return 'hier'
+  return date.toLocaleDateString('fr-TN', { day: 'numeric', month: 'short' })
+}
+
+function daysUntilExpiry(deletedAt: string) {
+  const expiryDate = new Date(new Date(deletedAt).getTime() + 30 * 24 * 60 * 60 * 1000)
+  return Math.max(0, Math.ceil((expiryDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+}
+
+function exportCSV(orders: Order[]) {
+  const rows = orders.map(o => {
+    const customer = getCustomer(o)
+    const product = getProduct(o)
+    return [
+      o.id.slice(0, 8),
+      customer?.name ?? '',
+      customer?.phone ?? '',
+      customer?.city ?? '',
+      product?.name ?? '',
+      o.variant ?? '',
+      o.quantity,
+      o.cod_amount,
+      STATUS_CONFIG[o.status].label,
+      new Date(o.created_at).toLocaleDateString('fr-TN'),
+    ].join(';')
+  })
+  const csv = ['ID;Client;Téléphone;Ville;Produit;Variante;Qté;COD (DT);Statut;Date', ...rows].join('\n')
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `commandes-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export default function OrdersClient({
   role,
+  plan,
   orders,
   trashOrders,
   updateStatus,
@@ -76,29 +135,41 @@ export default function OrdersClient({
   permanentlyDeleteOrder,
 }: Props) {
   const [tab, setTab] = useState<OrderStatus | 'all' | 'trash'>('all')
+  const [search, setSearch] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<Order | null>(null)
   const [confirmPermDelete, setConfirmPermDelete] = useState<TrashOrder | null>(null)
   const [permDeleteInput, setPermDeleteInput] = useState('')
   const [actionError, setActionError] = useState<string | null>(null)
-  const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const isAdmin = role === 'admin'
+  const canExport = plan === 'pro' || plan === 'business'
 
-  const filtered = tab === 'all' || tab === 'trash'
-    ? orders
-    : orders.filter(o => o.status === tab)
-  const displayedOrders = tab === 'trash' ? [] : (tab === 'all' ? orders : filtered)
-  const displayedTrash = tab === 'trash' ? trashOrders : []
+  const counts = useMemo(() => {
+    const c: Partial<Record<OrderStatus | 'all', number>> = { all: orders.length }
+    for (const o of orders) c[o.status] = (c[o.status] ?? 0) + 1
+    return c
+  }, [orders])
 
-  const counts: Partial<Record<OrderStatus | 'all', number>> = { all: orders.length }
-  for (const o of orders) counts[o.status] = (counts[o.status] ?? 0) + 1
+  const filteredOrders = useMemo(() => {
+    const base = tab === 'all' || tab === 'trash'
+      ? orders
+      : orders.filter(o => o.status === tab)
+    if (!search.trim()) return base
+    const q = search.toLowerCase()
+    return base.filter(o => {
+      const customer = getCustomer(o)
+      const product = getProduct(o)
+      return (
+        customer?.name?.toLowerCase().includes(q) ||
+        customer?.phone?.includes(q) ||
+        product?.name?.toLowerCase().includes(q)
+      )
+    })
+  }, [orders, tab, search])
 
   function handleStatus(orderId: string, status: OrderStatus) {
-    startTransition(async () => {
-      await updateStatus(orderId, status)
-      setOpenMenu(null)
-    })
+    startTransition(async () => { await updateStatus(orderId, status) })
   }
 
   function handleConfirm(orderId: string) {
@@ -113,10 +184,7 @@ export default function OrdersClient({
     setActionError(null)
     startTransition(async () => {
       const result = await deleteOrder(id)
-      if (result?.error) {
-        setActionError(result.error)
-        return
-      }
+      if (result?.error) { setActionError(result.error); return }
       setConfirmDelete(null)
     })
   }
@@ -133,56 +201,77 @@ export default function OrdersClient({
     setActionError(null)
     startTransition(async () => {
       const result = await permanentlyDeleteOrder(id)
-      if (result?.error) {
-        setActionError(result.error)
-        return
-      }
+      if (result?.error) { setActionError(result.error); return }
       setConfirmPermDelete(null)
       setPermDeleteInput('')
     })
   }
 
+  const displayedTrash = tab === 'trash' ? trashOrders : []
   const pendingCount = counts['pending'] ?? 0
-
-  function getCustomer(order: Order | TrashOrder) {
-    return Array.isArray(order.customer) ? order.customer[0] : order.customer
-  }
-
-  function getProduct(order: Order | TrashOrder) {
-    return Array.isArray(order.product) ? order.product[0] : order.product
-  }
-
-  function daysUntilExpiry(deletedAt: string) {
-    const deleteDate = new Date(deletedAt)
-    const expiryDate = new Date(deleteDate.getTime() + 30 * 24 * 60 * 60 * 1000)
-    return Math.max(0, Math.ceil((expiryDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
-  }
 
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+        <div className="flex-1">
           <h1 className="text-2xl font-bold text-[#1C1917]">Commandes</h1>
           <p className="text-sm text-[#78716C] mt-0.5">
-            {orders.length} commande{orders.length !== 1 ? 's' : ''}
+            {orders.length} commande{orders.length !== 1 ? 's' : ''} au total
             {pendingCount > 0 && (
-              <span className="ml-2 inline-flex items-center gap-1 text-amber-600 font-semibold">
-                · {pendingCount} en attente de confirmation
+              <span className="ml-2 text-amber-600 font-semibold">
+                · {pendingCount} en attente
               </span>
             )}
           </p>
         </div>
-        <Link href="/orders/new" className="btn-primary text-sm">+ Nouvelle commande</Link>
+
+        <div className="flex items-center gap-2">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
+            <input
+              className="pl-9 pr-3 py-2 text-sm bg-white border border-[#E7E5E4] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#16A34A]/30 focus:border-[#16A34A] w-52 transition-all placeholder:text-[#A8A29E]"
+              placeholder="Rechercher…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+
+          {/* Export CSV */}
+          <div className="relative group">
+            <button
+              onClick={() => canExport && exportCSV(filteredOrders)}
+              disabled={!canExport}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                canExport
+                  ? 'border-[#E7E5E4] text-[#78716C] hover:text-[#1C1917] hover:border-[#D6D3D1] bg-white'
+                  : 'border-[#E7E5E4] text-[#A8A29E] bg-[#FAFAF9] cursor-not-allowed'
+              }`}
+            >
+              <Download className="w-4 h-4" />
+              Exporter
+            </button>
+            {!canExport && (
+              <div className="absolute bottom-full mb-1.5 right-0 whitespace-nowrap bg-[#1C1917] text-white text-xs px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                Disponible en plan Pro
+              </div>
+            )}
+          </div>
+
+          <Link href="/orders/new" className="btn-primary text-sm whitespace-nowrap">
+            + Nouvelle commande
+          </Link>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-0 border-b border-[#E7E5E4]">
+      <div className="flex gap-0 border-b border-[#E7E5E4] overflow-x-auto">
         {TABS.map(t => (
           <button
             key={t.value}
             onClick={() => setTab(t.value)}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
+            className={`px-4 py-2.5 text-sm font-medium transition-colors relative whitespace-nowrap ${
               tab === t.value
                 ? 'text-[#166534] border-b-2 border-[#16A34A] -mb-px'
                 : 'text-[#78716C] hover:text-[#1C1917]'
@@ -201,11 +290,10 @@ export default function OrdersClient({
           </button>
         ))}
 
-        {/* Onglet Corbeille — admins uniquement */}
         {isAdmin && (
           <button
             onClick={() => setTab('trash')}
-            className={`ml-auto flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors relative ${
+            className={`ml-auto flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors relative whitespace-nowrap ${
               tab === 'trash'
                 ? 'text-red-600 border-b-2 border-red-400 -mb-px'
                 : 'text-[#78716C] hover:text-red-500'
@@ -230,146 +318,155 @@ export default function OrdersClient({
         </div>
       )}
 
-      {/* Vue normale */}
+      {/* Liste commandes */}
       {tab !== 'trash' && (
-        displayedOrders.length === 0 ? (
-          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-16 text-center">
-            <Package className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-40" />
-            <p className="font-medium text-[#1C1917]">Aucune commande{tab !== 'all' ? ' dans cette catégorie' : ''}</p>
-            {tab === 'all' && (
-              <Link href="/orders/new" className="mt-3 inline-block text-sm text-[#16A34A] hover:text-[#15803D] font-medium">
-                Créer la première →
-              </Link>
-            )}
-          </div>
+        filteredOrders.length === 0 ? (
+          tab === 'all' && orders.length === 0 ? (
+            /* État vide — aucune commande du tout */
+            <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-16 text-center">
+              <ShoppingBag className="w-12 h-12 mx-auto mb-4 text-[#78716C] opacity-30" />
+              <p className="font-semibold text-[#1C1917] mb-1">Aucune commande pour l&apos;instant</p>
+              <p className="text-sm text-[#78716C] mb-6">
+                Partagez votre lien de commande ou créez votre première commande
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <Link href="/orders/new" className="btn-primary text-sm">
+                  + Nouvelle commande
+                </Link>
+              </div>
+            </div>
+          ) : (
+            /* État vide — filtre sans résultats */
+            <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-16 text-center">
+              <Filter className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-30" />
+              <p className="font-medium text-[#1C1917]">
+                {search ? 'Aucune commande ne correspond à votre recherche' : 'Aucune commande avec ce statut'}
+              </p>
+              <button
+                onClick={() => { setTab('all'); setSearch('') }}
+                className="mt-3 text-sm text-[#16A34A] hover:text-[#15803D] font-medium transition-colors"
+              >
+                Voir toutes les commandes
+              </button>
+            </div>
+          )
         ) : (
-          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-visible">
-            <table className="w-full text-sm">
-              <thead className="bg-[#FAFAF9] border-b border-[#E7E5E4]">
-                <tr>
-                  {['Client', 'Produit', 'Montant', 'Statut', 'Date', ''].map((h, i) => (
-                    <th key={i} className="text-left text-xs font-medium text-[#78716C] uppercase tracking-wide px-5 py-3">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E7E5E4]">
-                {displayedOrders.map(order => {
-                  const st = STATUS_CONFIG[order.status]
-                  const customer = getCustomer(order)
-                  const product = getProduct(order)
-                  const isPendingOrder = order.status === 'pending'
-                  const canDelete = isAdmin && DELETABLE_STATUSES.includes(order.status)
+          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-hidden">
+            <div className="divide-y divide-[#E7E5E4]">
+              {filteredOrders.map(order => {
+                const st = STATUS_CONFIG[order.status]
+                const customer = getCustomer(order)
+                const product = getProduct(order)
+                const isPendingOrder = order.status === 'pending'
+                const isNew = order.status === 'new'
+                const canDelete = isAdmin && DELETABLE_STATUSES.includes(order.status)
+                const ini = customer?.name ? initials(customer.name) : '?'
 
-                  return (
-                    <tr
-                      key={order.id}
-                      className={`transition-colors ${isPendingOrder ? 'bg-amber-50/30 hover:bg-amber-50/60' : 'hover:bg-[#FAFAF9]'}`}
-                    >
-                      <td className="px-5 py-4">
+                return (
+                  <div
+                    key={order.id}
+                    className={`group flex items-start gap-4 px-5 py-4 transition-colors cursor-pointer ${
+                      isPendingOrder ? 'bg-amber-50/30 hover:bg-amber-50/60' : 'hover:bg-[#FAFAF9]'
+                    }`}
+                    onClick={() => window.location.href = `/orders/${order.id}`}
+                  >
+                    {/* Avatar */}
+                    <div className="w-10 h-10 rounded-full bg-[#F0FDF4] text-[#166534] flex items-center justify-center font-semibold text-sm shrink-0 select-none mt-0.5">
+                      {ini}
+                    </div>
+
+                    {/* Client */}
+                    <div className="w-36 shrink-0">
+                      {isPendingOrder && (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 font-semibold mb-0.5">
+                          <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+                          Via lien public
+                        </span>
+                      )}
+                      <p className="font-semibold text-[#1C1917] text-sm leading-tight">{customer?.name ?? '—'}</p>
+                      <p className="text-xs text-[#78716C] mt-0.5">{customer?.phone ?? ''}</p>
+                      {customer?.city && <p className="text-xs text-[#78716C]">{customer.city}</p>}
+                    </div>
+
+                    {/* Produit + badge */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-[#1C1917] truncate">
+                        {product?.name ?? '—'}
+                        {order.variant && <span className="text-[#78716C]"> · {order.variant}</span>}
+                      </p>
+                      {order.quantity > 1 && (
+                        <p className="text-xs text-[#78716C]">× {order.quantity}</p>
+                      )}
+                      <div className="mt-1.5">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${st.cls}`}>
+                          {isPendingOrder && <span className={`w-1.5 h-1.5 rounded-full ${st.dot} animate-pulse`} />}
+                          {st.label}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Montant + date + actions */}
+                    <div className="text-right shrink-0">
+                      <p className="text-base font-bold text-[#16A34A]">{order.cod_amount} DT</p>
+                      <p className="text-xs text-[#78716C]">COD</p>
+                      <p className="text-xs text-[#A8A29E] mt-1">{relativeDate(order.created_at)}</p>
+
+                      {/* Actions rapides (hover) */}
+                      <div
+                        className="opacity-0 group-hover:opacity-100 transition-opacity mt-2 flex items-center gap-1.5 justify-end"
+                        onClick={e => e.stopPropagation()}
+                      >
                         {isPendingOrder && (
-                          <span className="inline-flex items-center gap-1 text-xs text-amber-600 font-semibold mb-0.5">
-                            <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
-                            Via lien public
-                          </span>
-                        )}
-                        <p className="font-medium text-[#1C1917]">{customer?.name ?? '—'}</p>
-                        <p className="text-xs text-[#78716C]">{customer?.phone}</p>
-                        {customer?.city && <p className="text-xs text-[#78716C]">{customer.city}</p>}
-                      </td>
-                      <td className="px-5 py-4">
-                        <p className="text-[#1C1917]">{product?.name ?? '—'}</p>
-                        {order.variant && <p className="text-xs text-[#78716C]">{order.variant}</p>}
-                        {order.quantity > 1 && <p className="text-xs text-[#78716C]">× {order.quantity}</p>}
-                      </td>
-                      <td className="px-5 py-4 font-semibold text-[#1C1917]">{order.cod_amount} DT</td>
-                      <td className="px-5 py-4 relative">
-                        {isPendingOrder ? (
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${st.cls}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${st.dot} animate-pulse`} />
-                            {st.label}
-                          </span>
-                        ) : (
                           <>
-                            <button
-                              onClick={() => setOpenMenu(openMenu === order.id ? null : order.id)}
-                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity ${st.cls}`}
-                            >
-                              {st.label}
-                              <span className="text-[10px]">▾</span>
-                            </button>
-                            {openMenu === order.id && (
-                              <div className="absolute left-5 top-12 z-50 bg-white rounded-xl shadow-xl border border-[#E7E5E4] py-1.5 min-w-[170px]">
-                                {STATUS_FLOW.map(s => {
-                                  const sc = STATUS_CONFIG[s]
-                                  return (
-                                    <button
-                                      key={s}
-                                      disabled={s === order.status || isPending}
-                                      onClick={() => handleStatus(order.id, s)}
-                                      className="w-full text-left px-4 py-2 text-sm flex items-center gap-2.5 hover:bg-[#F5F5F4] disabled:opacity-40 disabled:cursor-default transition-colors"
-                                    >
-                                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${sc.dot}`} />
-                                      <span className={s === order.status ? 'font-semibold text-[#1C1917]' : 'text-[#78716C]'}>
-                                        {sc.label}
-                                      </span>
-                                      {s === order.status && <span className="ml-auto text-xs text-[#78716C]">actuel</span>}
-                                    </button>
-                                  )
-                                })}
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </td>
-                      <td className="px-5 py-4 text-xs text-[#78716C] whitespace-nowrap">
-                        {new Date(order.created_at).toLocaleDateString('fr-TN', {
-                          day: '2-digit', month: 'short', year: '2-digit',
-                        })}
-                      </td>
-                      <td className="px-5 py-4">
-                        {isPendingOrder ? (
-                          <div className="flex gap-2">
                             <button
                               onClick={() => handleConfirm(order.id)}
                               disabled={isPending}
-                              className="text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 px-2.5 py-1.5 rounded-lg transition-colors"
+                              className="flex items-center gap-1 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 px-2 py-1 rounded-lg transition-colors"
                             >
+                              <Check className="w-3 h-3" />
                               Confirmer
                             </button>
                             <button
                               onClick={() => handleCancel(order.id)}
                               disabled={isPending}
-                              className="text-xs font-semibold text-red-600 hover:text-red-800 border border-red-200 hover:border-red-300 disabled:opacity-50 px-2.5 py-1.5 rounded-lg transition-colors"
+                              className="flex items-center gap-1 text-xs font-semibold text-red-600 border border-red-200 hover:border-red-300 disabled:opacity-50 px-2 py-1 rounded-lg transition-colors"
                             >
+                              <X className="w-3 h-3" />
                               Annuler
                             </button>
-                            {canDelete && (
-                              <button
-                                onClick={() => { setConfirmDelete(order); setActionError(null) }}
-                                className="text-xs font-semibold text-red-500 hover:text-red-700 border border-red-200 hover:border-red-300 px-2.5 py-1.5 rounded-lg transition-colors"
-                              >
-                                Supprimer
-                              </button>
-                            )}
-                          </div>
-                        ) : canDelete ? (
+                          </>
+                        )}
+                        {isNew && (
+                          <button
+                            onClick={() => handleStatus(order.id, 'confirmed')}
+                            disabled={isPending}
+                            className="flex items-center gap-1 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 px-2 py-1 rounded-lg transition-colors"
+                          >
+                            <Check className="w-3 h-3" />
+                            Confirmer
+                          </button>
+                        )}
+                        {canDelete && (
                           <button
                             onClick={() => { setConfirmDelete(order); setActionError(null) }}
-                            className="text-sm text-red-400 hover:text-red-600 font-medium transition-colors"
+                            className="text-xs font-medium text-red-400 hover:text-red-600 px-2 py-1 rounded-lg transition-colors"
                           >
-                            Supprimer
+                            Suppr.
                           </button>
-                        ) : (
-                          <Link href={`/orders/${order.id}`} className="text-sm text-[#78716C] hover:text-[#1C1917] transition-colors">
-                            Voir →
-                          </Link>
                         )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                        <Link
+                          href={`/orders/${order.id}`}
+                          className="flex items-center justify-center w-6 h-6 rounded-lg text-[#78716C] hover:text-[#1C1917] hover:bg-[#F0F0EF] transition-colors"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )
       )}
@@ -389,90 +486,79 @@ export default function OrdersClient({
                 Les commandes en corbeille sont restaurables pendant 30 jours.
               </p>
             </div>
-            <table className="w-full text-sm">
-              <thead className="bg-[#FAFAF9] border-b border-[#E7E5E4]">
-                <tr>
-                  {['Client', 'Produit', 'Montant', 'Statut', 'Supprimé le', ''].map((h, i) => (
-                    <th key={i} className="text-left text-xs font-medium text-[#78716C] uppercase tracking-wide px-5 py-3">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E7E5E4]">
-                {displayedTrash.map(order => {
-                  const st = STATUS_CONFIG[order.status]
-                  const customer = getCustomer(order)
-                  const product = getProduct(order)
-                  const daysLeft = daysUntilExpiry(order.deleted_at)
+            <div className="divide-y divide-[#E7E5E4]">
+              {displayedTrash.map(order => {
+                const st = STATUS_CONFIG[order.status]
+                const customer = getCustomer(order)
+                const product = getProduct(order)
+                const daysLeft = daysUntilExpiry(order.deleted_at)
+                const ini = customer?.name ? initials(customer.name) : '?'
 
-                  return (
-                    <tr key={order.id} className="hover:bg-red-50/30 transition-colors opacity-80">
-                      <td className="px-5 py-4">
-                        <p className="font-medium text-[#1C1917]">{customer?.name ?? '—'}</p>
-                        <p className="text-xs text-[#78716C]">{customer?.phone}</p>
-                      </td>
-                      <td className="px-5 py-4">
-                        <p className="text-[#1C1917]">{product?.name ?? '—'}</p>
-                        {order.variant && <p className="text-xs text-[#78716C]">{order.variant}</p>}
-                      </td>
-                      <td className="px-5 py-4 font-semibold text-[#1C1917]">{order.cod_amount} DT</td>
-                      <td className="px-5 py-4">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${st.cls}`}>
+                return (
+                  <div key={order.id} className="flex items-start gap-4 px-5 py-4 hover:bg-red-50/30 transition-colors opacity-80">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-semibold text-sm shrink-0 mt-0.5">
+                      {ini}
+                    </div>
+                    <div className="w-36 shrink-0">
+                      <p className="font-semibold text-[#1C1917] text-sm">{customer?.name ?? '—'}</p>
+                      <p className="text-xs text-[#78716C]">{customer?.phone}</p>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-[#1C1917]">{product?.name ?? '—'}</p>
+                      {order.variant && <p className="text-xs text-[#78716C]">{order.variant}</p>}
+                      <div className="mt-1.5">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${st.cls}`}>
                           {st.label}
                         </span>
-                      </td>
-                      <td className="px-5 py-4 text-xs text-[#78716C]">
-                        <p>{new Date(order.deleted_at).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short', year: '2-digit' })}</p>
-                        {daysLeft <= 7 && (
-                          <span className="text-red-500 font-medium">Expire dans {daysLeft}j</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => handleRestore(order.id)}
-                            disabled={isPending}
-                            className="text-xs font-semibold text-[#16A34A] hover:text-[#15803D] disabled:opacity-50 transition-colors"
-                          >
-                            Restaurer
-                          </button>
-                          <button
-                            onClick={() => { setConfirmPermDelete(order); setPermDeleteInput(''); setActionError(null) }}
-                            className="text-xs font-semibold text-red-400 hover:text-red-600 transition-colors"
-                          >
-                            Supprimer définitivement
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="font-bold text-[#1C1917]">{order.cod_amount} DT</p>
+                      <p className="text-xs text-[#78716C]">
+                        {new Date(order.deleted_at).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' })}
+                      </p>
+                      {daysLeft <= 7 && (
+                        <p className="text-xs text-red-500 font-medium">Expire dans {daysLeft}j</p>
+                      )}
+                      <div className="flex gap-2 justify-end mt-2">
+                        <button
+                          onClick={() => handleRestore(order.id)}
+                          disabled={isPending}
+                          className="text-xs font-semibold text-[#16A34A] hover:text-[#15803D] disabled:opacity-50 transition-colors"
+                        >
+                          Restaurer
+                        </button>
+                        <button
+                          onClick={() => { setConfirmPermDelete(order); setPermDeleteInput(''); setActionError(null) }}
+                          className="text-xs font-semibold text-red-400 hover:text-red-600 transition-colors"
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )
       )}
 
-      {openMenu && (
-        <div className="fixed inset-0 z-40" onClick={() => setOpenMenu(null)} />
-      )}
-
-      {/* Modale — déplacer vers la corbeille */}
+      {/* Modal — corbeille */}
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-xl p-6 max-w-sm w-full">
             <h3 className="font-semibold text-[#1C1917] mb-1">Supprimer cette commande ?</h3>
             <p className="text-sm text-[#78716C] mb-3">
-              Cette commande sera déplacée dans la corbeille. Vous pourrez la restaurer pendant 30 jours.
+              La commande sera déplacée dans la corbeille. Restaurable pendant 30 jours.
             </p>
-            <div className="bg-gray-50 rounded-lg px-4 py-3 mb-5 space-y-0.5 text-sm">
+            <div className="bg-[#FAFAF9] rounded-lg px-4 py-3 mb-5 space-y-0.5 text-sm">
               <p className="font-medium text-[#1C1917]">{getCustomer(confirmDelete)?.name ?? '—'}</p>
               <p className="text-[#78716C]">{getProduct(confirmDelete)?.name ?? '—'}</p>
               <p className="font-semibold text-[#1C1917]">{confirmDelete.cod_amount} DT</p>
             </div>
             {actionError && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">
-                {actionError}
-              </p>
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{actionError}</p>
             )}
             <div className="flex gap-3">
               <button onClick={() => setConfirmDelete(null)} className="btn-secondary flex-1">Annuler</button>
@@ -488,7 +574,7 @@ export default function OrdersClient({
         </div>
       )}
 
-      {/* Modale — suppression définitive */}
+      {/* Modal — suppression définitive */}
       {confirmPermDelete && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-xl p-6 max-w-sm w-full">
@@ -496,7 +582,7 @@ export default function OrdersClient({
             <p className="text-sm text-[#78716C] mb-3">
               Cette action est irréversible. La commande sera définitivement perdue.
             </p>
-            <div className="bg-gray-50 rounded-lg px-4 py-3 mb-4 space-y-0.5 text-sm">
+            <div className="bg-[#FAFAF9] rounded-lg px-4 py-3 mb-4 space-y-0.5 text-sm">
               <p className="font-medium text-[#1C1917]">{getCustomer(confirmPermDelete)?.name ?? '—'}</p>
               <p className="text-[#78716C]">{getProduct(confirmPermDelete)?.name ?? '—'}</p>
               <p className="font-semibold text-[#1C1917]">{confirmPermDelete.cod_amount} DT</p>
@@ -514,9 +600,7 @@ export default function OrdersClient({
               />
             </div>
             {actionError && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">
-                {actionError}
-              </p>
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{actionError}</p>
             )}
             <div className="flex gap-3">
               <button

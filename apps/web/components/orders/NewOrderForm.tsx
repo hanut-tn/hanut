@@ -3,6 +3,7 @@
 import { useState, useEffect, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Check, ChevronRight, Package, User, ClipboardList } from 'lucide-react'
 import type { Product } from '@hanut/types'
 import type { CreateOrderInput } from '@/app/(dashboard)/orders/actions'
 
@@ -20,35 +21,45 @@ type Props = {
   initialCustomer?: CustomerSuggestion
 }
 
+const STEPS = [
+  { label: 'Client',       icon: User },
+  { label: 'Produit',      icon: Package },
+  { label: 'Récapitulatif',icon: ClipboardList },
+]
+
 export default function NewOrderForm({ products, createOrder, initialCustomer }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [step, setStep] = useState(initialCustomer ? 1 : 0)
 
-  // ── Customer section ──
-  const [selectedCustomer, setSelectedCustomer] = useState<CustomerSuggestion | null>(
-    initialCustomer ?? null
-  )
+  // ── Customer ──
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerSuggestion | null>(initialCustomer ?? null)
   const [customerName, setCustomerName] = useState(initialCustomer?.name ?? '')
   const [phone, setPhone] = useState(initialCustomer?.phone ?? '')
   const [customerAddress, setCustomerAddress] = useState(initialCustomer?.address ?? '')
   const [customerCity, setCustomerCity] = useState(initialCustomer?.city ?? '')
-
-  // Search dropdown
   const [search, setSearch] = useState('')
   const [suggestions, setSuggestions] = useState<CustomerSuggestion[]>([])
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [searching, setSearching] = useState(false)
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // ── Product section ──
+  // ── Product ──
   const [productId, setProductId] = useState('')
   const [variant, setVariant] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [codAmount, setCodAmount] = useState<number | ''>('')
+  const [productSearch, setProductSearch] = useState('')
+
+  // ── Notes ──
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const selectedProduct = products.find(p => p.id === productId)
+
+  const filteredProducts = productSearch
+    ? products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+    : products
 
   useEffect(() => {
     if (selectedProduct && codAmount === '') setCodAmount(selectedProduct.price * quantity)
@@ -94,11 +105,22 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
     setSearch('')
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  function goToStep(n: number) {
+    setError(null)
+    if (n === 1) {
+      if (!phone.trim()) return setError('Le téléphone est obligatoire.')
+      if (!customerName.trim()) return setError('Le nom du client est obligatoire.')
+    }
+    if (n === 2) {
+      if (!productId) return setError('Sélectionnez un produit.')
+    }
+    setStep(n)
+  }
+
+  function handleSubmit() {
     if (!productId) return setError('Sélectionnez un produit.')
-    if (!customerName.trim()) return setError('Entrez le nom du client.')
-    if (!phone.trim()) return setError('Entrez le téléphone du client.')
+    if (!customerName.trim()) return setError('Le nom du client est obligatoire.')
+    if (!phone.trim()) return setError('Le téléphone est obligatoire.')
     setError(null)
     startTransition(async () => {
       try {
@@ -118,6 +140,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
         router.refresh()
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Erreur inconnue')
+        setStep(0)
       }
     })
   }
@@ -125,98 +148,136 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
   if (products.length === 0) {
     return (
       <div className="space-y-6 max-w-2xl">
-        <h1 className="text-2xl font-bold text-gray-900">Nouvelle commande</h1>
-        <div className="card p-12 text-center text-gray-400">
-          <svg className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <h1 className="text-2xl font-bold text-[#1C1917]">Nouvelle commande</h1>
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-12 text-center">
+          <Package className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-40" />
           <p className="font-medium text-[#1C1917]">Aucun produit dans votre catalogue</p>
-          <p className="text-sm mt-1 mb-5">Ajoutez d&apos;abord un produit avant de créer une commande.</p>
+          <p className="text-sm text-[#78716C] mt-1 mb-5">Ajoutez d&apos;abord un produit avant de créer une commande.</p>
           <Link href="/catalog" className="btn-primary inline-block">Aller au catalogue →</Link>
         </div>
       </div>
     )
   }
 
-  const initials = selectedCustomer
+  const ini = selectedCustomer
     ? selectedCustomer.name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()
     : ''
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="max-w-2xl space-y-6">
+      {/* Header */}
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.back()}
-          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C] hover:text-[#1C1917] transition-colors"
         >
           ←
         </button>
-        <h1 className="text-2xl font-bold text-gray-900">Nouvelle commande</h1>
+        <h1 className="text-2xl font-bold text-[#1C1917]">Nouvelle commande</h1>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Progress steps */}
+      <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm px-6 py-4">
+        <div className="flex items-center gap-0">
+          {STEPS.map((s, i) => {
+            const done = i < step
+            const active = i === step
+            const Icon = s.icon
+            return (
+              <div key={i} className="flex items-center flex-1 last:flex-none">
+                <button
+                  onClick={() => { if (done) setStep(i) }}
+                  disabled={!done}
+                  className="flex items-center gap-2 shrink-0"
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                    done
+                      ? 'bg-[#16A34A] text-white'
+                      : active
+                        ? 'bg-[#F0FDF4] text-[#16A34A] border-2 border-[#16A34A]'
+                        : 'bg-[#F5F5F4] text-[#A8A29E]'
+                  }`}>
+                    {done ? <Check className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
+                  </div>
+                  <span className={`text-sm font-medium hidden sm:block ${
+                    done ? 'text-[#16A34A]' : active ? 'text-[#1C1917]' : 'text-[#A8A29E]'
+                  }`}>
+                    {s.label}
+                  </span>
+                </button>
+                {i < STEPS.length - 1 && (
+                  <div className={`flex-1 h-px mx-3 ${i < step ? 'bg-[#16A34A]' : 'bg-[#E7E5E4]'}`} />
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
 
-        {/* ── 1. CLIENT ── */}
-        <div className="card p-5 space-y-4">
-          <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+      {error && (
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {/* STEP 0 — Client */}
+      {step === 0 && (
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-6 space-y-4">
+          <h2 className="font-semibold text-[#1C1917] flex items-center gap-2">
             <span className="w-6 h-6 bg-[#F0FDF4] text-[#166534] rounded-full text-xs flex items-center justify-center font-bold">1</span>
             Client
           </h2>
 
-          {/* Selected customer badge OR search input */}
+          {/* Selected customer badge */}
           {selectedCustomer ? (
             <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl">
               <div className="w-8 h-8 bg-[#F0FDF4] text-[#166534] rounded-full flex items-center justify-center text-xs font-bold shrink-0 select-none">
-                {initials}
+                {ini}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm text-gray-900">{selectedCustomer.name}</p>
-                <p className="text-xs text-gray-500 font-mono">{selectedCustomer.phone}</p>
-                {selectedCustomer.city && <p className="text-xs text-gray-400">{selectedCustomer.city}</p>}
+                <p className="font-semibold text-sm text-[#1C1917]">{selectedCustomer.name}</p>
+                <p className="text-xs text-[#78716C] font-mono">{selectedCustomer.phone}</p>
+                {selectedCustomer.city && <p className="text-xs text-[#78716C]">{selectedCustomer.city}</p>}
               </div>
               <button
                 type="button"
                 onClick={clearCustomer}
-                className="text-gray-400 hover:text-gray-600 text-lg leading-none px-1 shrink-0"
-                title="Désélectionner ce client"
+                className="text-[#78716C] hover:text-[#1C1917] text-lg leading-none px-1 shrink-0"
               >
                 ×
               </button>
             </div>
           ) : (
             <div className="relative">
-              <div className="relative">
-                <input
-                  className="input pr-8"
-                  placeholder="Rechercher par nom ou téléphone…"
-                  value={search}
-                  onChange={e => onSearchChange(e.target.value)}
-                  onFocus={() => { if (suggestions.length > 0) setDropdownOpen(true) }}
-                  onBlur={() => setTimeout(() => setDropdownOpen(false), 150)}
-                  autoComplete="off"
-                />
-                {searching && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">…</span>
-                )}
-              </div>
-
+              <input
+                className="input pr-8"
+                placeholder="Rechercher un client existant…"
+                value={search}
+                onChange={e => onSearchChange(e.target.value)}
+                onFocus={() => { if (suggestions.length > 0) setDropdownOpen(true) }}
+                onBlur={() => setTimeout(() => setDropdownOpen(false), 150)}
+                autoComplete="off"
+              />
+              {searching && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#78716C]">…</span>}
               {dropdownOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-[#E7E5E4] z-50 overflow-hidden">
                   {suggestions.length > 0 ? (
                     <>
                       {suggestions.map(c => {
-                        const ini = c.name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()
+                        const cIni = c.name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()
                         return (
                           <button
                             key={c.id}
                             type="button"
                             onMouseDown={() => selectCustomer(c)}
-                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-0"
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#FAFAF9] transition-colors text-left border-b border-[#E7E5E4] last:border-0"
                           >
                             <div className="w-8 h-8 bg-[#F0FDF4] text-[#166534] rounded-full flex items-center justify-center text-xs font-bold shrink-0">
-                              {ini}
+                              {cIni}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-medium text-sm text-gray-900 truncate">{c.name}</p>
-                              <p className="text-xs text-gray-400 font-mono">{c.phone}{c.city ? ` · ${c.city}` : ''}</p>
+                              <p className="font-medium text-sm text-[#1C1917] truncate">{c.name}</p>
+                              <p className="text-xs text-[#78716C] font-mono">{c.phone}{c.city ? ` · ${c.city}` : ''}</p>
                             </div>
                           </button>
                         )
@@ -224,120 +285,138 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
                       <button
                         type="button"
                         onMouseDown={() => { setDropdownOpen(false); setSearch('') }}
-                        className="w-full px-4 py-2.5 text-sm text-[#16A34A] hover:bg-[#F0FDF4] transition-colors text-left font-medium border-t border-gray-100"
+                        className="w-full px-4 py-2.5 text-sm text-[#16A34A] hover:bg-[#F0FDF4] transition-colors text-left font-medium border-t border-[#E7E5E4]"
                       >
                         + Créer un nouveau client
                       </button>
                     </>
-                  ) : (
-                    search.length >= 2 && !searching && (
-                      <div className="px-4 py-3 text-sm text-gray-500">
-                        Aucun client trouvé.{' '}
-                        <button
-                          type="button"
-                          onMouseDown={() => { setDropdownOpen(false) }}
-                          className="text-[#16A34A] font-medium hover:underline"
-                        >
-                          Créer un nouveau client
-                        </button>
-                      </div>
-                    )
+                  ) : search.length >= 2 && !searching && (
+                    <div className="px-4 py-3 text-sm text-[#78716C]">
+                      Aucun client trouvé.{' '}
+                      <button type="button" onMouseDown={() => setDropdownOpen(false)} className="text-[#16A34A] font-medium hover:underline">
+                        Saisir manuellement
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
             </div>
           )}
 
-          {/* Fields — always visible, pre-filled when customer selected */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone *</label>
-            <input
-              className="input"
-              type="tel"
-              value={phone}
-              onChange={e => setPhone(e.target.value)}
-              placeholder="+216 XX XXX XXX"
-              required
-            />
+            <label className="block text-sm font-medium text-[#1C1917] mb-1">Téléphone <span className="text-red-500">*</span></label>
+            <input className="input" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+216 XX XXX XXX" />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet *</label>
-            <input
-              className="input"
-              value={customerName}
-              onChange={e => setCustomerName(e.target.value)}
-              placeholder="Prénom Nom"
-              required
-            />
+            <label className="block text-sm font-medium text-[#1C1917] mb-1">Nom complet <span className="text-red-500">*</span></label>
+            <input className="input" value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Prénom Nom" />
           </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
-              <input
-                className="input"
-                value={customerAddress}
-                onChange={e => setCustomerAddress(e.target.value)}
-                placeholder="Rue, numéro…"
-              />
+              <label className="block text-sm font-medium text-[#1C1917] mb-1">Adresse</label>
+              <input className="input" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} placeholder="Rue, numéro…" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ville</label>
-              <input
-                className="input"
-                value={customerCity}
-                onChange={e => setCustomerCity(e.target.value)}
-                placeholder="Tunis, Sfax…"
-              />
+              <label className="block text-sm font-medium text-[#1C1917] mb-1">Ville</label>
+              <input className="input" value={customerCity} onChange={e => setCustomerCity(e.target.value)} placeholder="Tunis, Sfax…" />
             </div>
           </div>
-        </div>
 
-        {/* ── 2. PRODUIT ── */}
-        <div className="card p-5 space-y-4">
-          <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+          <div className="flex justify-end pt-2">
+            <button onClick={() => goToStep(1)} className="btn-primary flex items-center gap-2">
+              Produit
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* STEP 1 — Produit */}
+      {step === 1 && (
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-6 space-y-4">
+          <h2 className="font-semibold text-[#1C1917] flex items-center gap-2">
             <span className="w-6 h-6 bg-[#F0FDF4] text-[#166534] rounded-full text-xs flex items-center justify-center font-bold">2</span>
             Produit
           </h2>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Produit *</label>
-            <select
+            <input
               className="input"
-              value={productId}
-              onChange={e => { setProductId(e.target.value); setCodAmount('') }}
-              required
-            >
-              <option value="">Sélectionner un produit…</option>
-              {products.map(p => (
-                <option key={p.id} value={p.id} disabled={p.stock === 0}>
-                  {p.name} — {p.price} DT{p.stock === 0 ? ' (rupture)' : ` (stock: ${p.stock})`}
-                </option>
-              ))}
-            </select>
+              placeholder="Rechercher un produit…"
+              value={productSearch}
+              onChange={e => setProductSearch(e.target.value)}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-64 overflow-y-auto pr-1">
+            {filteredProducts.map(p => (
+              <button
+                key={p.id}
+                type="button"
+                disabled={p.stock === 0}
+                onClick={() => { setProductId(p.id); setCodAmount('') }}
+                className={`relative text-left p-3 rounded-xl border-2 transition-all ${
+                  productId === p.id
+                    ? 'border-[#16A34A] bg-green-50'
+                    : p.stock === 0
+                      ? 'border-[#E7E5E4] opacity-50 cursor-not-allowed'
+                      : 'border-[#E7E5E4] hover:border-[#D6D3D1] hover:bg-[#FAFAF9]'
+                }`}
+              >
+                {p.image_url ? (
+                  <img src={p.image_url} alt={p.name} className="w-full aspect-square object-cover rounded-lg mb-2" />
+                ) : (
+                  <div className="w-full aspect-square bg-[#F5F5F4] rounded-lg mb-2 flex items-center justify-center">
+                    <Package className="w-6 h-6 text-[#A8A29E]" />
+                  </div>
+                )}
+                <p className="text-xs font-semibold text-[#1C1917] truncate">{p.name}</p>
+                <p className="text-xs text-[#16A34A] font-medium">{p.price} DT</p>
+                {p.stock === 0 && <p className="text-xs text-red-500">Rupture</p>}
+                {productId === p.id && (
+                  <div className="absolute top-2 right-2 w-5 h-5 bg-[#16A34A] rounded-full flex items-center justify-center">
+                    <Check className="w-3 h-3 text-white" />
+                  </div>
+                )}
+              </button>
+            ))}
           </div>
 
           {selectedProduct && selectedProduct.variants.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Variante</label>
-              <select className="input" value={variant} onChange={e => setVariant(e.target.value)}>
-                <option value="">Aucune variante spécifique</option>
+              <label className="block text-sm font-medium text-[#1C1917] mb-1">Variante</label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setVariant('')}
+                  className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+                    !variant ? 'bg-[#16A34A] text-white border-[#16A34A]' : 'border-[#E7E5E4] text-[#78716C] hover:border-[#D6D3D1]'
+                  }`}
+                >
+                  Aucune
+                </button>
                 {selectedProduct.variants.map((v, i) => {
                   const label = [v.size, v.color].filter(Boolean).join(' / ') || `Variante ${i + 1}`
                   return (
-                    <option key={i} value={label}>
-                      {label} (qté: {v.qty})
-                    </option>
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setVariant(label)}
+                      className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+                        variant === label ? 'bg-[#16A34A] text-white border-[#16A34A]' : 'border-[#E7E5E4] text-[#78716C] hover:border-[#D6D3D1]'
+                      }`}
+                    >
+                      {label}
+                    </button>
                   )
                 })}
-              </select>
+              </div>
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Quantité *</label>
+              <label className="block text-sm font-medium text-[#1C1917] mb-1">Quantité <span className="text-red-500">*</span></label>
               <input
                 className="input"
                 type="number"
@@ -345,11 +424,10 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
                 max={selectedProduct?.stock ?? 99}
                 value={quantity}
                 onChange={e => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Montant COD (DT) *</label>
+              <label className="block text-sm font-medium text-[#1C1917] mb-1">Montant COD (DT) <span className="text-red-500">*</span></label>
               <input
                 className="input"
                 type="number"
@@ -358,42 +436,71 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
                 value={codAmount}
                 onChange={e => setCodAmount(e.target.value === '' ? '' : parseFloat(e.target.value))}
                 placeholder="0.00"
-                required
               />
             </div>
           </div>
-        </div>
 
-        {/* ── 3. NOTES ── */}
-        <div className="card p-5">
-          <h2 className="font-semibold text-gray-900 flex items-center gap-2 mb-3">
-            <span className="w-6 h-6 bg-[#F0FDF4] text-[#166534] rounded-full text-xs flex items-center justify-center font-bold">3</span>
-            Notes <span className="text-sm font-normal text-gray-400">(optionnel)</span>
-          </h2>
-          <textarea
-            className="input resize-none"
-            rows={3}
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-            placeholder="Instructions de livraison, couleur exacte, remarques…"
-          />
-        </div>
-
-        {error && (
-          <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-            {error}
+          <div className="flex gap-3 pt-2">
+            <button onClick={() => setStep(0)} className="btn-secondary flex-1">Retour</button>
+            <button onClick={() => goToStep(2)} className="btn-primary flex-1 flex items-center justify-center gap-2">
+              Récapitulatif
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
-        )}
-
-        <div className="flex gap-3">
-          <button type="button" onClick={() => router.back()} className="btn-secondary flex-1">
-            Annuler
-          </button>
-          <button type="submit" disabled={isPending} className="btn-primary flex-1">
-            {isPending ? 'Création...' : 'Créer la commande'}
-          </button>
         </div>
-      </form>
+      )}
+
+      {/* STEP 2 — Récapitulatif */}
+      {step === 2 && (
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-6 space-y-5">
+          <h2 className="font-semibold text-[#1C1917] flex items-center gap-2">
+            <span className="w-6 h-6 bg-[#F0FDF4] text-[#166534] rounded-full text-xs flex items-center justify-center font-bold">3</span>
+            Récapitulatif
+          </h2>
+
+          {/* Client summary */}
+          <div className="bg-[#F0FDF4] border border-green-200 rounded-xl p-4 space-y-1">
+            <p className="text-xs font-medium text-[#78716C] uppercase tracking-wide">Client</p>
+            <p className="font-semibold text-[#1C1917]">{customerName}</p>
+            <p className="text-sm text-[#78716C]">{phone}</p>
+            {customerCity && <p className="text-sm text-[#78716C]">{customerCity}</p>}
+          </div>
+
+          {/* Product summary */}
+          <div className="bg-[#FAFAF9] border border-[#E7E5E4] rounded-xl p-4 space-y-1">
+            <p className="text-xs font-medium text-[#78716C] uppercase tracking-wide">Produit</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-[#1C1917]">{selectedProduct?.name ?? '—'}</p>
+                {variant && <p className="text-sm text-[#78716C]">{variant}</p>}
+                {quantity > 1 && <p className="text-sm text-[#78716C]">× {quantity}</p>}
+              </div>
+              <p className="text-xl font-bold text-[#16A34A]">{codAmount === '' ? '0' : codAmount} DT</p>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-[#1C1917] mb-1">
+              Notes <span className="text-xs font-normal text-[#78716C]">(optionnel)</span>
+            </label>
+            <textarea
+              className="input resize-none"
+              rows={3}
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Instructions de livraison, couleur exacte, remarques…"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button onClick={() => setStep(1)} className="btn-secondary flex-1">Retour</button>
+            <button onClick={handleSubmit} disabled={isPending} className="btn-primary flex-1">
+              {isPending ? 'Création...' : 'Créer la commande'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
