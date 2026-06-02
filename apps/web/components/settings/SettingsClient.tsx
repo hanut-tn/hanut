@@ -75,6 +75,7 @@ type Props = {
   seller: Seller
   stats: { products: number; customers: number; orders: number }
   appUrl: string
+  initialTab?: string
   updateProfile: (input: ProfileInput) => Promise<void>
   updateSlug: (slug: string) => Promise<void>
   checkSlugAvailability: (slug: string) => Promise<boolean>
@@ -83,11 +84,13 @@ type Props = {
 type Tab = 'profile' | 'security' | 'plan' | 'link'
 type Msg = { type: 'success' | 'error'; text: string }
 
-export default function SettingsClient({ seller, stats, appUrl, updateProfile, updateSlug, checkSlugAvailability }: Props) {
+const TAB_KEYS: Tab[] = ['profile', 'link', 'security', 'plan']
+
+export default function SettingsClient({ seller, stats, appUrl, initialTab, updateProfile, updateSlug, checkSlugAvailability }: Props) {
   const BASE_URL = appUrl.replace(/\/$/, '')
   const router = useRouter()
   const supabase = createClient()
-  const [tab, setTab] = useState<Tab>('profile')
+  const [tab, setTab] = useState<Tab>(TAB_KEYS.includes(initialTab as Tab) ? initialTab as Tab : 'profile')
   const [isPending, startTransition] = useTransition()
 
   // Profile
@@ -604,7 +607,7 @@ export default function SettingsClient({ seller, stats, appUrl, updateProfile, u
             </div>
             {seller.plan === 'business' ? (
               <a
-                href="/settings/team"
+                href="/team"
                 className="btn-secondary text-sm whitespace-nowrap"
               >
                 Gérer l&apos;équipe →

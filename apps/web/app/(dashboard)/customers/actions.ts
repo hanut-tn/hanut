@@ -2,6 +2,7 @@
 
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
+import { logActivity } from '@/lib/activity'
 import { revalidatePath } from 'next/cache'
 
 export type CustomerInput = {
@@ -30,6 +31,19 @@ export async function updateCustomer(id: string, input: CustomerInput): Promise<
     .eq('seller_id', context.sellerId)
 
   if (error) return { error: error.message }
+
+  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
+
+  await logActivity({
+    sellerId: context.sellerId,
+    userId: context.userId,
+    userName: seller?.name ?? context.userId,
+    actionType: 'customer_updated',
+    entityType: 'customer',
+    entityId: id,
+    description: `a modifié le client ${input.name.trim()}`,
+  })
+
   revalidatePath('/customers')
   revalidatePath(`/customers/${id}`)
   return {}

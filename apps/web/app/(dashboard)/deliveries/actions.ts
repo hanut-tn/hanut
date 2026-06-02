@@ -2,6 +2,7 @@
 
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
+import { logActivity } from '@/lib/activity'
 import { revalidatePath } from 'next/cache'
 import type { CarrierName } from '@hanut/types'
 
@@ -34,6 +35,18 @@ export async function createDelivery(input: CreateDeliveryInput) {
     fee: input.fee ?? null,
   })
   if (error) throw new Error(error.message)
+
+  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
+
+  await logActivity({
+    sellerId: context.sellerId,
+    userId: context.userId,
+    userName: seller?.name ?? context.userId,
+    actionType: 'delivery_created',
+    entityType: 'delivery',
+    description: `a créé une livraison via ${input.carrier}`,
+    metadata: { carrier: input.carrier, tracking: input.tracking_number },
+  })
 
   revalidatePath('/deliveries')
   revalidatePath('/dashboard')

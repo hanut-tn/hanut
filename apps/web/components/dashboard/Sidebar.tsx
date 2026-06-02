@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { LayoutDashboard, ShoppingBag, Users, Package, Truck, BarChart2, Settings } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { LayoutDashboard, ShoppingBag, Users, Package, Truck, BarChart2, Settings, Users2 } from 'lucide-react'
 import type { UserRole } from '@/lib/get-context'
 
 const NAV_ITEMS = [
@@ -29,10 +29,21 @@ type Props = {
 
 export default function Sidebar({ role, sellerName, plan = 'starter' }: Props) {
   const pathname = usePathname()
+  const router = useRouter()
   const visible = NAV_ITEMS.filter(item => item.roles.includes(role))
   const initials = sellerName
     ? sellerName.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()
     : '?'
+
+  const isBusiness = plan === 'business'
+  const teamActive = pathname.startsWith('/team')
+
+  function handleTeamClick(e: React.MouseEvent) {
+    if (!isBusiness) {
+      e.preventDefault()
+      router.push('/settings?tab=abonnement')
+    }
+  }
 
   return (
     <aside className="w-56 bg-white border-r border-[#E7E5E4] flex flex-col h-screen sticky top-0">
@@ -51,19 +62,46 @@ export default function Sidebar({ role, sellerName, plan = 'starter' }: Props) {
               ? pathname === '/'
               : pathname.startsWith(item.href)
             const Icon = item.icon
+            const insertTeamAfter = item.href === '/analytics' && role === 'admin'
+
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-[#F0FDF4] text-[#166534]'
-                    : 'text-[#78716C] hover:bg-[#F5F5F4] hover:text-[#1C1917]'
-                }`}
-              >
-                <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[#166534]' : 'text-[#78716C]'}`} />
-                {item.label}
-              </Link>
+              <span key={item.href}>
+                <Link
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-[#F0FDF4] text-[#166534]'
+                      : 'text-[#78716C] hover:bg-[#F5F5F4] hover:text-[#1C1917]'
+                  }`}
+                >
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[#166534]' : 'text-[#78716C]'}`} />
+                  {item.label}
+                </Link>
+
+                {insertTeamAfter && (
+                  <Link
+                    href={isBusiness ? '/team' : '/settings?tab=abonnement'}
+                    onClick={handleTeamClick}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      teamActive && isBusiness
+                        ? 'bg-[#F0FDF4] text-[#166534]'
+                        : isBusiness
+                          ? 'text-[#78716C] hover:bg-[#F5F5F4] hover:text-[#1C1917]'
+                          : 'text-[#A8A29E] cursor-pointer'
+                    }`}
+                  >
+                    <Users2 className={`w-5 h-5 flex-shrink-0 ${
+                      teamActive && isBusiness ? 'text-[#166534]' : isBusiness ? 'text-[#78716C]' : 'text-[#A8A29E]'
+                    }`} />
+                    Équipe
+                    {!isBusiness && (
+                      <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[#F0FDF4] text-[#166534] border border-green-200">
+                        Business
+                      </span>
+                    )}
+                  </Link>
+                )}
+              </span>
             )
           })}
         </div>

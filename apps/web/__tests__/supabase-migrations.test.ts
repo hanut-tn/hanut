@@ -13,6 +13,7 @@ describe('Supabase migrations', () => {
   const appSchema = migration('20260601_add_missing_app_schema.sql')
   const orderRpc = migration('20260601_create_order_with_stock_rpc.sql')
   const teamMembers = migration('20260602_add_team_members.sql')
+  const activityLogs = migration('20260602_add_activity_logs.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -74,5 +75,16 @@ describe('Supabase migrations', () => {
     expect(teamMembers).toMatch(/CREATE POLICY "products_team_delete" ON products FOR DELETE/i)
     expect(teamMembers).toMatch(/CREATE POLICY "deliveries_team_update" ON deliveries FOR UPDATE/i)
     expect(teamMembers).toMatch(/CREATE POLICY "deliveries_team_delete" ON deliveries FOR DELETE/i)
+  })
+
+  it('adds activity logs for team audit history', () => {
+    expect(activityLogs).toMatch(/CREATE TABLE IF NOT EXISTS activity_logs/i)
+    expect(activityLogs).toMatch(/seller_id\s+UUID NOT NULL REFERENCES sellers\(id\) ON DELETE CASCADE/i)
+    expect(activityLogs).toMatch(/action_type TEXT NOT NULL/i)
+    expect(activityLogs).toMatch(/metadata\s+JSONB NOT NULL DEFAULT '\{\}'/i)
+    expect(activityLogs).toMatch(/ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY/i)
+    expect(activityLogs).toMatch(/CREATE POLICY "activity_logs_team_read" ON activity_logs FOR SELECT/i)
+    expect(activityLogs).toMatch(/CREATE POLICY "activity_logs_team_insert" ON activity_logs FOR INSERT/i)
+    expect(activityLogs).toMatch(/idx_activity_logs_seller_created/i)
   })
 })

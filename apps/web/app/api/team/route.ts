@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
+import { logActivity } from '@/lib/activity'
 
 const MAX_MEMBERS = 5
 
@@ -10,11 +11,12 @@ const MAX_MEMBERS = 5
 export async function GET() {
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+  if (context.plan !== 'business') return NextResponse.json({ error: 'Disponible dans le plan Business' }, { status: 403 })
 
   const serviceClient = createServiceClient()
   const { data: members, error } = await serviceClient
     .from('team_members')
-    .select('id, email, name, role, status, invited_at, joined_at')
+    .select('id, email, name, role, status, invited_at, joined_at, user_id')
     .eq('seller_id', context.sellerId)
     .order('invited_at', { ascending: true })
 
@@ -28,7 +30,7 @@ export async function POST(request: NextRequest) {
   if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   if (context.role !== 'admin') return NextResponse.json({ error: 'Réservé aux admins' }, { status: 403 })
   if (context.plan !== 'business') {
-    return NextResponse.json({ error: 'La gestion d\'équipe est disponible dans le plan Business' }, { status: 403 })
+    return NextResponse.json({ error: "La gestion d'équipe est disponible dans le plan Business" }, { status: 403 })
   }
 
   const body = await request.json()
@@ -44,7 +46,6 @@ export async function POST(request: NextRequest) {
 
   const serviceClient = createServiceClient()
 
-  // Vérifie si l'email est déjà un vendeur Hanut
   const { data: existingSeller } = await serviceClient
     .from('sellers')
     .select('id')
@@ -58,7 +59,6 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Compte les membres actuels (actifs + en attente)
   const { count } = await serviceClient
     .from('team_members')
     .select('id', { count: 'exact', head: true })
@@ -71,7 +71,6 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Vérifie si cet email est déjà membre
   const { data: existing } = await serviceClient
     .from('team_members')
     .select('id, status')
@@ -82,11 +81,10 @@ export async function POST(request: NextRequest) {
   if (existing) {
     const msg = existing.status === 'pending'
       ? 'Une invitation est déjà en attente pour cet email'
-      : 'Cet email est déjà membre de l\'équipe'
+      : "Cet email est déjà membre de l'équipe"
     return NextResponse.json({ error: msg }, { status: 400 })
   }
 
-  // Crée l'entrée team_members
   const { data: member, error: insertError } = await serviceClient
     .from('team_members')
     .insert({ seller_id: context.sellerId, email, role, status: 'pending' })
@@ -95,24 +93,33 @@ export async function POST(request: NextRequest) {
 
   if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
 
-  // Envoie l'invitation par email via Supabase Auth
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const { data: seller } = await serviceClient.from('sellers').select('name').eq('id', context.sellerId).single()
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://hanut.tn'
   const { error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(email, {
     redirectTo: `${appUrl}/api/auth/callback`,
-    data: {
-      invited_by: user?.email,
-      team_role: role,
-    },
+    data: { invited_by: user?.email, team_role: role },
   })
 
   if (inviteError) {
-    // Rollback : supprime l'entrée si l'email d'invitation échoue
     await serviceClient.from('team_members').delete().eq('id', member.id)
     return NextResponse.json({ error: `Erreur d'invitation : ${inviteError.message}` }, { status: 500 })
   }
+
+  const ROLE_LABELS: Record<string, string> = { operator: 'Opérateur', readonly: 'Lecture seule' }
+
+  await logActivity({
+    sellerId: context.sellerId,
+    userId: context.userId,
+    userName: seller?.name ?? context.userId,
+    actionType: 'member_invited',
+    entityType: 'team_member',
+    entityId: member.id,
+    description: `a invité ${email} comme ${ROLE_LABELS[role] ?? role}`,
+    metadata: { email, role },
+  })
 
   return NextResponse.json({ success: true })
 }

@@ -2,6 +2,7 @@
 
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
+import { logActivity } from '@/lib/activity'
 import { revalidatePath } from 'next/cache'
 import type { OrderStatus } from '@hanut/types'
 
@@ -25,6 +26,12 @@ export async function createOrder(input: CreateOrderInput) {
 
   const supabase = await createServerClient()
 
+  const { data: product } = await supabase
+    .from('products')
+    .select('name')
+    .eq('id', input.product_id)
+    .single()
+
   const { error } = await supabase.rpc('create_order_with_stock', {
     p_seller_id: context.sellerId,
     p_product_id: input.product_id,
@@ -40,6 +47,18 @@ export async function createOrder(input: CreateOrderInput) {
     p_status: 'new',
   })
   if (error) throw new Error(error.message)
+
+  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
+
+  await logActivity({
+    sellerId: context.sellerId,
+    userId: context.userId,
+    userName: seller?.name ?? context.userId,
+    actionType: 'order_created',
+    entityType: 'order',
+    description: `a créé une commande pour ${input.customer_name} (${input.cod_amount} DT)`,
+    metadata: { product: product?.name, quantity: input.quantity },
+  })
 
   revalidatePath('/orders')
   revalidatePath('/dashboard')
@@ -57,6 +76,22 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
     .eq('id', id)
     .eq('seller_id', context.sellerId)
   if (error) throw new Error(error.message)
+
+  const STATUS_LABELS: Record<string, string> = {
+    new: 'Nouvelle', confirmed: 'Confirmée', shipped: 'Expédiée',
+    delivered: 'Livrée', returned: 'Retournée', pending: 'En attente',
+  }
+  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
+
+  await logActivity({
+    sellerId: context.sellerId,
+    userId: context.userId,
+    userName: seller?.name ?? context.userId,
+    actionType: 'order_status_changed',
+    entityType: 'order',
+    entityId: id,
+    description: `a changé le statut d'une commande en ${STATUS_LABELS[status] ?? status}`,
+  })
 
   revalidatePath('/orders')
   revalidatePath('/dashboard')
@@ -83,7 +118,6 @@ export async function cancelPendingOrder(id: string) {
   if (!order) throw new Error('Commande introuvable')
   if (order.status !== 'pending') throw new Error('Seules les commandes en attente peuvent être annulées ici')
 
-  // Restore stock
   const { data: product } = await supabase
     .from('products')
     .select('stock')
@@ -103,6 +137,18 @@ export async function cancelPendingOrder(id: string) {
     .eq('seller_id', context.sellerId)
   if (error) throw new Error(error.message)
 
+  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
+
+  await logActivity({
+    sellerId: context.sellerId,
+    userId: context.userId,
+    userName: seller?.name ?? context.userId,
+    actionType: 'order_status_changed',
+    entityType: 'order',
+    entityId: id,
+    description: `a annulé une commande en attente (statut → Retournée)`,
+  })
+
   revalidatePath('/orders')
   revalidatePath('/dashboard')
 }
@@ -119,6 +165,18 @@ export async function deleteOrder(id: string) {
     .eq('id', id)
     .eq('seller_id', context.sellerId)
   if (error) throw new Error(error.message)
+
+  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
+
+  await logActivity({
+    sellerId: context.sellerId,
+    userId: context.userId,
+    userName: seller?.name ?? context.userId,
+    actionType: 'order_deleted',
+    entityType: 'order',
+    entityId: id,
+    description: 'a supprimé une commande',
+  })
 
   revalidatePath('/orders')
   revalidatePath('/dashboard')

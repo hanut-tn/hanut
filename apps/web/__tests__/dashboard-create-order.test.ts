@@ -44,14 +44,32 @@ function mockContext(sellerId: string | null, role: 'admin' | 'operator' | 'read
   )
 }
 
+function createSingleQuery(data: unknown) {
+  const query = {
+    select: vi.fn(() => query),
+    eq: vi.fn(() => query),
+    single: vi.fn().mockResolvedValue({ data }),
+    maybeSingle: vi.fn().mockResolvedValue({ data }),
+  }
+  return query
+}
+
 function mockServerClient(error: { message: string } | null = null) {
   const rpc = vi.fn().mockResolvedValue({ error })
+  const productQuery = createSingleQuery({ name: 'Produit test' })
+  const sellerQuery = createSingleQuery({ name: 'Boutique test' })
+  const from = vi.fn((table: string) => {
+    if (table === 'products') return productQuery
+    if (table === 'sellers') return sellerQuery
+    throw new Error(`Unexpected table: ${table}`)
+  })
 
   serverMock.createServerClient.mockResolvedValue({
+    from,
     rpc,
   })
 
-  return { rpc }
+  return { from, rpc }
 }
 
 describe('createOrder dashboard action', () => {

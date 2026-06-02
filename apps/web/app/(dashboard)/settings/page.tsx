@@ -5,7 +5,12 @@ import { getUserContext } from '@/lib/get-context'
 import SettingsClient from '@/components/settings/SettingsClient'
 import { updateProfile, updateSlug, checkSlugAvailability } from './actions'
 
-export default async function SettingsPage() {
+type Props = {
+  searchParams: Promise<{ tab?: string }>
+}
+
+export default async function SettingsPage({ searchParams }: Props) {
+  const { tab } = await searchParams
   const context = await getUserContext()
   if (!context) return null
   if (context.role !== 'admin') redirect('/orders')
@@ -45,6 +50,7 @@ export default async function SettingsPage() {
         orders: orderCount ?? 0,
       }}
       appUrl={appUrl}
+      initialTab={tab === 'abonnement' ? 'plan' : tab}
       updateProfile={updateProfile}
       updateSlug={updateSlug}
       checkSlugAvailability={checkSlugAvailability}

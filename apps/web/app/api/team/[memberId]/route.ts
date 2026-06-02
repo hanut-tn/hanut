@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
+import { logActivity } from '@/lib/activity'
 
 // PATCH /api/team/[memberId] — changer le rôle
 export async function PATCH(
@@ -22,17 +23,15 @@ export async function PATCH(
 
   const serviceClient = createServiceClient()
 
-  // Vérifie que le membre appartient bien à cette boutique
   const { data: member } = await serviceClient
     .from('team_members')
-    .select('id, user_id')
+    .select('id, user_id, email, name')
     .eq('id', memberId)
     .eq('seller_id', context.sellerId)
     .single()
 
   if (!member) return NextResponse.json({ error: 'Membre introuvable' }, { status: 404 })
 
-  // On ne peut pas se modifier soi-même
   if (member.user_id === context.userId) {
     return NextResponse.json({ error: 'Vous ne pouvez pas modifier votre propre rôle' }, { status: 400 })
   }
@@ -43,6 +42,22 @@ export async function PATCH(
     .eq('id', memberId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const { data: seller } = await serviceClient.from('sellers').select('name').eq('id', context.sellerId).single()
+  const ROLE_LABELS: Record<string, string> = { operator: 'Opérateur', readonly: 'Lecture seule', admin: 'Admin' }
+  const memberName = member.name ?? member.email
+
+  await logActivity({
+    sellerId: context.sellerId,
+    userId: context.userId,
+    userName: seller?.name ?? context.userId,
+    actionType: 'member_role_changed',
+    entityType: 'team_member',
+    entityId: memberId,
+    description: `a changé le rôle de ${memberName} en ${ROLE_LABELS[role] ?? role}`,
+    metadata: { email: member.email, newRole: role },
+  })
+
   return NextResponse.json({ success: true })
 }
 
@@ -58,10 +73,9 @@ export async function DELETE(
   const { memberId } = await params
   const serviceClient = createServiceClient()
 
-  // Vérifie appartenance et empêche l'auto-suppression
   const { data: member } = await serviceClient
     .from('team_members')
-    .select('id, user_id')
+    .select('id, user_id, email, name')
     .eq('id', memberId)
     .eq('seller_id', context.sellerId)
     .single()
@@ -78,5 +92,20 @@ export async function DELETE(
     .eq('id', memberId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const { data: seller } = await serviceClient.from('sellers').select('name').eq('id', context.sellerId).single()
+  const memberName = member.name ?? member.email
+
+  await logActivity({
+    sellerId: context.sellerId,
+    userId: context.userId,
+    userName: seller?.name ?? context.userId,
+    actionType: 'member_removed',
+    entityType: 'team_member',
+    entityId: memberId,
+    description: `a retiré ${memberName} de l'équipe`,
+    metadata: { email: member.email },
+  })
+
   return NextResponse.json({ success: true })
 }
