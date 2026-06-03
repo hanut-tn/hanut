@@ -4,7 +4,7 @@ import { useState, useMemo, useTransition } from 'react'
 import Link from 'next/link'
 import {
   Search, Download, Trash2, ChevronRight, ShoppingBag, Filter,
-  Check, X,
+  X,
 } from 'lucide-react'
 import type { OrderStatus } from '@hanut/types'
 import type { UserRole } from '@/lib/get-context'
