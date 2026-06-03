@@ -18,6 +18,7 @@ describe('Supabase migrations', () => {
   const productsDescription = migration('20260602_add_products_description.sql')
   const onboarding = migration('20260603_add_onboarding.sql')
   const rateLimits = migration('20260603_add_rate_limits.sql')
+  const orderSearch = migration('20260603_search_orders_rpc.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -133,5 +134,15 @@ describe('Supabase migrations', () => {
     expect(rateLimits).toMatch(/FOR UPDATE/i)
     expect(rateLimits).toMatch(/REVOKE ALL ON FUNCTION check_rate_limit\(TEXT, TEXT, INTEGER, INTEGER\) FROM PUBLIC;/i)
     expect(rateLimits).toMatch(/GRANT EXECUTE ON FUNCTION check_rate_limit\(TEXT, TEXT, INTEGER, INTEGER\) TO service_role;/i)
+  })
+
+  it('adds an order search RPC that safely matches UUID prefixes as text', () => {
+    expect(orderSearch).toMatch(/CREATE OR REPLACE FUNCTION search_orders/i)
+    expect(orderSearch).toMatch(/SECURITY INVOKER/i)
+    expect(orderSearch).toMatch(/o\.id::text ILIKE btrim\(p_search\) \|\| '%'/i)
+    expect(orderSearch).toMatch(/o\.customer_id = ANY\(p_customer_ids\)/i)
+    expect(orderSearch).toMatch(
+      /GRANT EXECUTE ON FUNCTION search_orders\(UUID, TEXT, UUID\[\], INTEGER\) TO authenticated, service_role;/i
+    )
   })
 })

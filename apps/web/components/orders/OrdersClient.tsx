@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useMemo, useTransition } from 'react'
+import { useState, useMemo, useTransition, useEffect } from 'react'
 import Link from 'next/link'
 import {
-  Search, Download, Trash2, ChevronRight, ShoppingBag, Filter,
-  X,
+  Search, SearchX, Download, Trash2, ChevronRight, ShoppingBag, Filter,
+  X, Loader2,
 } from 'lucide-react'
 import type { OrderStatus } from '@hanut/types'
 import type { UserRole } from '@/lib/get-context'
@@ -95,6 +95,20 @@ function daysUntilExpiry(deletedAt: string) {
   return Math.max(0, Math.ceil((expiryDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
 }
 
+function Highlight({ text, query }: { text: string; query: string }) {
+  if (!query || !text) return <>{text}</>
+  const lower = text.toLowerCase()
+  const idx = lower.indexOf(query.toLowerCase())
+  if (idx === -1) return <>{text}</>
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-yellow-100 not-italic rounded-sm px-0.5">{text.slice(idx, idx + query.length)}</mark>
+      {text.slice(idx + query.length)}
+    </>
+  )
+}
+
 function exportCSV(orders: Order[]) {
   const rows = orders.map(o => {
     const customer = getCustomer(o)
@@ -136,11 +150,39 @@ export default function OrdersClient({
 }: Props) {
   const [tab, setTab] = useState<OrderStatus | 'all' | 'trash'>('all')
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [isSearching, setIsSearching] = useState(false)
+  const [searchResults, setSearchResults] = useState<Order[] | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<Order | null>(null)
   const [confirmPermDelete, setConfirmPermDelete] = useState<TrashOrder | null>(null)
   const [permDeleteInput, setPermDeleteInput] = useState('')
   const [actionError, setActionError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  // Debounce : met à jour debouncedSearch 300ms après la frappe
+  useEffect(() => {
+    const q = search.trim()
+    if (q.length < 2) {
+      setDebouncedSearch('')
+      setSearchResults(null)
+      setIsSearching(false)
+      return
+    }
+    setIsSearching(true)
+    const timer = setTimeout(() => setDebouncedSearch(q), 300)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  // Fetch côté serveur quand debouncedSearch change
+  useEffect(() => {
+    if (!debouncedSearch || debouncedSearch.length < 2) return
+    const controller = new AbortController()
+    fetch(`/api/orders?search=${encodeURIComponent(debouncedSearch)}`, { signal: controller.signal })
+      .then(r => r.json())
+      .then(data => { setSearchResults(data.orders ?? []); setIsSearching(false) })
+      .catch(() => { setIsSearching(false) })
+    return () => controller.abort()
+  }, [debouncedSearch])
 
   const isAdmin = role === 'admin'
   const canExport = plan === 'pro' || plan === 'business'
@@ -152,21 +194,10 @@ export default function OrdersClient({
   }, [orders])
 
   const filteredOrders = useMemo(() => {
-    const base = tab === 'all' || tab === 'trash'
-      ? orders
-      : orders.filter(o => o.status === tab)
-    if (!search.trim()) return base
-    const q = search.toLowerCase()
-    return base.filter(o => {
-      const customer = getCustomer(o)
-      const product = getProduct(o)
-      return (
-        customer?.name?.toLowerCase().includes(q) ||
-        customer?.phone?.includes(q) ||
-        product?.name?.toLowerCase().includes(q)
-      )
-    })
-  }, [orders, tab, search])
+    const base = searchResults !== null ? searchResults : orders
+    if (tab === 'all' || tab === 'trash') return base
+    return base.filter(o => o.status === tab)
+  }, [orders, searchResults, tab])
 
   function handleStatus(orderId: string, status: OrderStatus) {
     startTransition(async () => { await updateStatus(orderId, status) })
@@ -229,13 +260,25 @@ export default function OrdersClient({
         <div className="flex items-center gap-2">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
+            {isSearching ? (
+              <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C] animate-spin" />
+            ) : (
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
+            )}
             <input
-              className="pl-9 pr-3 py-2 text-sm bg-white border border-[#E7E5E4] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#16A34A]/30 focus:border-[#16A34A] w-52 transition-all placeholder:text-[#A8A29E]"
-              placeholder="Rechercher…"
+              className="pl-9 pr-8 py-2 text-sm bg-white border border-[#E7E5E4] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#16A34A]/30 focus:border-[#16A34A] w-52 transition-all placeholder:text-[#A8A29E]"
+              placeholder="Rechercher par nom, téléphone..."
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
+            {search && (
+              <button
+                onClick={() => { setSearch(''); setDebouncedSearch(''); setSearchResults(null); setIsSearching(false) }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#A8A29E] hover:text-[#78716C] transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           {/* Export CSV */}
@@ -264,6 +307,26 @@ export default function OrdersClient({
           </Link>
         </div>
       </div>
+
+      {/* Badge recherche active */}
+      {debouncedSearch && (
+        <div className="flex items-center gap-2.5">
+          <span className="inline-flex items-center gap-1.5 text-xs bg-[#F0FDF4] text-[#166534] border border-[#BBF7D0] px-2.5 py-1 rounded-full">
+            Recherche&nbsp;: <strong>{debouncedSearch}</strong>
+            <button
+              onClick={() => { setSearch(''); setDebouncedSearch(''); setSearchResults(null) }}
+              className="ml-0.5 hover:text-[#0B5E46] transition-colors"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+          {searchResults !== null && !isSearching && (
+            <span className="text-xs text-[#78716C]">
+              {searchResults.length} résultat{searchResults.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-0 border-b border-[#E7E5E4] overflow-x-auto">
@@ -315,7 +378,21 @@ export default function OrdersClient({
       {/* Liste commandes */}
       {tab !== 'trash' && (
         filteredOrders.length === 0 ? (
-          tab === 'all' && orders.length === 0 ? (
+          debouncedSearch ? (
+            /* État vide — recherche sans résultats */
+            <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-16 text-center">
+              <SearchX className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-30" />
+              <p className="font-medium text-[#1C1917]">
+                Aucune commande pour <strong>&ldquo;{debouncedSearch}&rdquo;</strong>
+              </p>
+              <button
+                onClick={() => { setSearch(''); setDebouncedSearch(''); setSearchResults(null) }}
+                className="mt-3 text-sm text-[#16A34A] hover:text-[#15803D] font-medium transition-colors"
+              >
+                Effacer la recherche
+              </button>
+            </div>
+          ) : tab === 'all' && orders.length === 0 ? (
             /* État vide — aucune commande du tout */
             <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-16 text-center">
               <ShoppingBag className="w-12 h-12 mx-auto mb-4 text-[#78716C] opacity-30" />
@@ -330,14 +407,12 @@ export default function OrdersClient({
               </div>
             </div>
           ) : (
-            /* État vide — filtre sans résultats */
+            /* État vide — filtre statut sans résultats */
             <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-16 text-center">
               <Filter className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-30" />
-              <p className="font-medium text-[#1C1917]">
-                {search ? 'Aucune commande ne correspond à votre recherche' : 'Aucune commande avec ce statut'}
-              </p>
+              <p className="font-medium text-[#1C1917]">Aucune commande avec ce statut</p>
               <button
-                onClick={() => { setTab('all'); setSearch('') }}
+                onClick={() => setTab('all')}
                 className="mt-3 text-sm text-[#16A34A] hover:text-[#15803D] font-medium transition-colors"
               >
                 Voir toutes les commandes
@@ -390,9 +465,15 @@ export default function OrdersClient({
                           Via lien public
                         </span>
                       )}
-                      <p className="text-sm font-semibold text-[#1C1917] truncate">{customer?.name ?? '—'}</p>
+                      <p className="text-sm font-semibold text-[#1C1917] truncate">
+                        {customer?.name
+                          ? <Highlight text={customer.name} query={debouncedSearch} />
+                          : '—'}
+                      </p>
                       <p className="text-xs text-[#78716C] truncate">
-                        {customer?.phone ?? ''}
+                        {customer?.phone
+                          ? <Highlight text={customer.phone} query={debouncedSearch} />
+                          : ''}
                         {customer?.city ? ` · ${customer.city}` : ''}
                       </p>
                       <p className="text-xs text-[#A8A29E]">{relativeDate(order.created_at)}</p>
