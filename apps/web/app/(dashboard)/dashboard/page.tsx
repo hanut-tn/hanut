@@ -8,15 +8,7 @@ import {
 } from 'lucide-react'
 import CopyLinkButton from '@/components/dashboard/CopyLinkButton'
 import OnboardingChecklist from '@/components/dashboard/OnboardingChecklist'
-
-const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
-  pending:   { label: 'En attente', cls: 'bg-amber-50 text-amber-700 border border-amber-200' },
-  new:       { label: 'Nouvelle',   cls: 'bg-blue-50 text-blue-700 border border-blue-200' },
-  confirmed: { label: 'Confirmée',  cls: 'bg-violet-50 text-violet-700 border border-violet-200' },
-  shipped:   { label: 'Expédiée',   cls: 'bg-orange-50 text-orange-700 border border-orange-200' },
-  delivered: { label: 'Livrée',     cls: 'bg-green-50 text-green-700 border border-green-200' },
-  returned:  { label: 'Retournée',  cls: 'bg-red-50 text-red-700 border border-red-200' },
-}
+import { StatusBadge } from '@/components/ui/StatusBadge'
 
 function relativeDate(dateStr: string): string {
   const date = new Date(dateStr)
@@ -340,7 +332,6 @@ function RecentOrders({ orders }: { orders: any[] }) {
       {orders.map((order: any) => {
         const customer = Array.isArray(order.customer) ? order.customer[0] : order.customer
         const product = Array.isArray(order.product) ? order.product[0] : order.product
-        const st = STATUS_CONFIG[order.status] ?? { label: order.status, cls: 'bg-gray-100 text-gray-600' }
         const ini = customer?.name ? initials(customer.name) : '?'
 
         return (
@@ -360,8 +351,8 @@ function RecentOrders({ orders }: { orders: any[] }) {
               <p className="text-sm font-bold text-[#16A34A]">{order.cod_amount} DT</p>
               <p className="text-xs text-[#78716C] mt-0.5">{relativeDate(order.created_at)}</p>
             </div>
-            <span className={`hidden sm:inline-flex px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${st.cls}`}>
-              {st.label}
+            <span className="hidden sm:inline-flex">
+              <StatusBadge status={order.status} />
             </span>
           </Link>
         )

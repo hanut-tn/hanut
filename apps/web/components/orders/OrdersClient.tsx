@@ -8,16 +8,8 @@ import {
 } from 'lucide-react'
 import type { OrderStatus } from '@hanut/types'
 import type { UserRole } from '@/lib/get-context'
-import { DELETABLE_STATUSES } from '@/lib/constants'
-
-const STATUS_CONFIG: Record<OrderStatus, { label: string; cls: string; dot: string }> = {
-  pending:   { label: 'En attente',  cls: 'bg-amber-50 text-amber-700 border border-amber-200',   dot: 'bg-amber-400' },
-  new:       { label: 'Nouvelle',    cls: 'bg-blue-50 text-blue-700 border border-blue-200',       dot: 'bg-blue-400' },
-  confirmed: { label: 'Confirmée',   cls: 'bg-violet-50 text-violet-700 border border-violet-200', dot: 'bg-violet-400' },
-  shipped:   { label: 'Expédiée',    cls: 'bg-orange-50 text-orange-700 border border-orange-200', dot: 'bg-orange-400' },
-  delivered: { label: 'Livrée',      cls: 'bg-green-50 text-green-700 border border-green-200',    dot: 'bg-green-400' },
-  returned:  { label: 'Retournée',   cls: 'bg-red-50 text-red-700 border border-red-200',          dot: 'bg-red-400' },
-}
+import { DELETABLE_STATUSES, ORDER_STATUS_LABELS } from '@/lib/constants'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 
 const TABS: { label: string; value: OrderStatus | 'all' }[] = [
   { label: 'Toutes',     value: 'all' },
@@ -122,7 +114,7 @@ function exportCSV(orders: Order[]) {
       o.variant ?? '',
       o.quantity,
       o.cod_amount,
-      STATUS_CONFIG[o.status].label,
+      ORDER_STATUS_LABELS[o.status],
       new Date(o.created_at).toLocaleDateString('fr-TN'),
     ].join(';')
   })
@@ -434,7 +426,6 @@ export default function OrdersClient({
             {/* Lignes */}
             <div className="divide-y divide-[#E7E5E4]">
               {filteredOrders.map(order => {
-                const st = STATUS_CONFIG[order.status]
                 const customer = getCustomer(order)
                 const product = getProduct(order)
                 const isPendingOrder = order.status === 'pending'
@@ -489,10 +480,7 @@ export default function OrdersClient({
 
                     {/* Col 4 — Statut */}
                     <div>
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap ${st.cls}`}>
-                        {isPendingOrder && <span className={`w-1.5 h-1.5 rounded-full ${st.dot} animate-pulse shrink-0`} />}
-                        {st.label}
-                      </span>
+                      <StatusBadge status={order.status} pulseDot={isPendingOrder} />
                     </div>
 
                     {/* Col 5 — Montant */}
@@ -583,7 +571,6 @@ export default function OrdersClient({
             </div>
             <div className="divide-y divide-[#E7E5E4]">
               {displayedTrash.map(order => {
-                const st = STATUS_CONFIG[order.status]
                 const customer = getCustomer(order)
                 const product = getProduct(order)
                 const daysLeft = daysUntilExpiry(order.deleted_at)
@@ -602,9 +589,7 @@ export default function OrdersClient({
                       <p className="text-sm text-[#1C1917]">{product?.name ?? '—'}</p>
                       {order.variant && <p className="text-xs text-[#78716C]">{order.variant}</p>}
                       <div className="mt-1.5">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${st.cls}`}>
-                          {st.label}
-                        </span>
+                        <StatusBadge status={order.status} />
                       </div>
                     </div>
                     <div className="text-right shrink-0">

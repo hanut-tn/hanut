@@ -11,6 +11,7 @@ import {
 import type { Product } from '@hanut/types'
 import type { ProductInput } from '@/app/(dashboard)/catalog/actions'
 import ProductModal from './ProductModal'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 
 type RecentOrder = {
   id: string
@@ -38,15 +39,6 @@ type Props = {
   upsertProduct: (input: ProductInput) => Promise<{ error?: string }>
   deleteProduct: (id: string) => Promise<{ error?: string }>
   adjustStock: (id: string, newStock: number, reason: string) => Promise<{ error?: string }>
-}
-
-const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  new: { label: 'Nouvelle', className: 'bg-blue-50 text-blue-700 border border-blue-200' },
-  confirmed: { label: 'Confirmée', className: 'bg-purple-50 text-purple-700 border border-purple-200' },
-  shipped: { label: 'Expédiée', className: 'bg-orange-50 text-orange-700 border border-orange-200' },
-  delivered: { label: 'Livrée', className: 'bg-green-50 text-green-700 border border-green-200' },
-  returned: { label: 'Retournée', className: 'bg-red-50 text-red-700 border border-red-200' },
-  pending: { label: 'En attente', className: 'bg-gray-50 text-gray-600 border border-gray-200' },
 }
 
 const ADJUST_REASONS = [
@@ -315,24 +307,19 @@ export default function ProductDetailClient({
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E7E5E4]">
-              {recentOrders.map(order => {
-                const statusInfo = STATUS_LABELS[order.status] ?? { label: order.status, className: 'bg-gray-50 text-gray-600' }
-                return (
-                  <tr key={order.id} className="hover:bg-[#FAFAF9] transition-colors">
-                    <td className="px-5 py-3 font-medium text-[#1C1917]">
-                      {order.customer_name ?? '—'}
-                    </td>
-                    <td className="px-5 py-3 text-[#78716C]">{formatDate(order.created_at)}</td>
-                    <td className="px-5 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusInfo.className}`}>
-                        {statusInfo.label}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 text-[#78716C]">{order.quantity}</td>
-                    <td className="px-5 py-3 font-semibold text-[#1C1917]">{order.cod_amount} DT</td>
-                  </tr>
-                )
-              })}
+              {recentOrders.map(order => (
+                <tr key={order.id} className="hover:bg-[#FAFAF9] transition-colors">
+                  <td className="px-5 py-3 font-medium text-[#1C1917]">
+                    {order.customer_name ?? '—'}
+                  </td>
+                  <td className="px-5 py-3 text-[#78716C]">{formatDate(order.created_at)}</td>
+                  <td className="px-5 py-3">
+                    <StatusBadge status={order.status} />
+                  </td>
+                  <td className="px-5 py-3 text-[#78716C]">{order.quantity}</td>
+                  <td className="px-5 py-3 font-semibold text-[#1C1917]">{order.cod_amount} DT</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

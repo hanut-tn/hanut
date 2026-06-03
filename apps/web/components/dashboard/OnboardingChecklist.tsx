@@ -65,7 +65,7 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
   if (celebrating) {
     return (
       <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl p-5 flex items-center gap-4">
-        <span className="text-2xl">🎉</span>
+        <CheckCircle2 className="w-8 h-8 text-[#16A34A] shrink-0" />
         <div>
           <p className="font-bold text-[#0B5E46]">Vous êtes prêt ! Bonne vente !</p>
           <p className="text-sm text-[#16A34A] mt-0.5">Votre boutique est configurée. Les commandes peuvent arriver.</p>
@@ -104,7 +104,7 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
   return (
     <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl p-5">
       <div className="mb-4">
-        <h2 className="font-bold text-[#0B5E46] text-base">Bienvenue sur Hanut 👋</h2>
+        <h2 className="font-bold text-[#0B5E46] text-base">Bienvenue sur Hanut</h2>
         <p className="text-sm text-[#16A34A] mt-0.5">Suivez ces 3 étapes pour commencer à recevoir des commandes</p>
       </div>
 

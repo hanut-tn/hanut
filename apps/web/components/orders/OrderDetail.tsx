@@ -9,15 +9,8 @@ import {
   MapPin, Phone, ShoppingBag,
 } from 'lucide-react'
 import type { OrderStatus } from '@hanut/types'
-
-const STATUS_CONFIG: Record<OrderStatus, { label: string; cls: string; dot: string }> = {
-  pending:   { label: 'En attente',  cls: 'bg-amber-50 text-amber-700 border border-amber-200',   dot: 'bg-amber-400' },
-  new:       { label: 'Nouvelle',    cls: 'bg-blue-50 text-blue-700 border border-blue-200',       dot: 'bg-blue-400' },
-  confirmed: { label: 'Confirmée',   cls: 'bg-violet-50 text-violet-700 border border-violet-200', dot: 'bg-violet-400' },
-  shipped:   { label: 'Expédiée',    cls: 'bg-orange-50 text-orange-700 border border-orange-200', dot: 'bg-orange-400' },
-  delivered: { label: 'Livrée',      cls: 'bg-green-50 text-green-700 border border-green-200',    dot: 'bg-green-400' },
-  returned:  { label: 'Retournée',   cls: 'bg-red-50 text-red-700 border border-red-200',          dot: 'bg-red-400' },
-}
+import { DELETABLE_STATUSES, ORDER_STATUS_LABELS } from '@/lib/constants'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 
 const STATUS_FLOW: OrderStatus[] = ['new', 'confirmed', 'shipped', 'delivered']
 
@@ -100,10 +93,9 @@ export default function OrderDetail({
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const status = order.status as OrderStatus
-  const st = STATUS_CONFIG[status]
   const canWrite = role !== 'readonly'
   const isPendingOrder = status === 'pending'
-  const canDelete = role === 'admin' && deleteOrder && ['pending', 'new', 'confirmed', 'delivered', 'returned'].includes(status)
+  const canDelete = role === 'admin' && deleteOrder && DELETABLE_STATUSES.includes(status)
   const ini = customer ? initials(customer.name) : '?'
   const estimatedProfit = order.cod_amount - ((product?.cost ?? 0) * order.quantity)
   const shortId = order.id.slice(0, 8).toUpperCase()
@@ -144,7 +136,7 @@ export default function OrderDetail({
         const Icon = TIMELINE_ICONS[s] ?? CheckCircle
         timelineItems.push({
           icon: Icon,
-          label: STATUS_CONFIG[s].label,
+          label: ORDER_STATUS_LABELS[s],
           active: i === flowIdx,
         })
       }
@@ -225,10 +217,7 @@ export default function OrderDetail({
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <p className="text-xs text-[#78716C] font-mono mb-1">#{shortId}</p>
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${st.cls}`}>
-                  <span className={`w-2 h-2 rounded-full ${st.dot}${isPendingOrder ? ' animate-pulse' : ''}`} />
-                  {st.label}
-                </span>
+                <StatusBadge status={status} size="md" pulseDot={isPendingOrder} />
               </div>
               <div className="text-right">
                 <p className="text-xs text-[#78716C]">Créée le</p>

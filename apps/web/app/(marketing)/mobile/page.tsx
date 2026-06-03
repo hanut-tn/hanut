@@ -112,7 +112,7 @@ export default function MobilePage() {
                 <div className="absolute inset-0 bg-[#FAFAF9] pt-8">
                   <div className="px-4 pt-2 pb-3 border-b border-gray-100">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11px] font-bold text-gray-900">Bonjour Yasmine 👋</span>
+                      <span className="text-[11px] font-bold text-gray-900">Bonjour Yasmine</span>
                       <div className="w-6 h-6 bg-green-50 rounded-full flex items-center justify-center">
                         <span className="text-[#0B5E46] text-[8px] font-bold">H</span>
                       </div>

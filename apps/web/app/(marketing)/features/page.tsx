@@ -182,7 +182,7 @@ function CustomerMockup() {
             <p className="font-bold text-gray-900 text-sm">Fatima Khalil</p>
             <p className="text-xs text-gray-400 font-mono">+216 55 123 456</p>
             <div className="flex gap-1 mt-1">
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">VIP</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 font-medium">VIP</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">Fidèle</span>
             </div>
           </div>

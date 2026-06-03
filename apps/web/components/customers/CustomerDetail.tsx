@@ -2,17 +2,8 @@
 
 import { useState, useTransition, useRef } from 'react'
 import Link from 'next/link'
-import type { OrderStatus } from '@hanut/types'
 import type { CustomerInput } from '@/app/(dashboard)/customers/actions'
-
-const STATUS_CONFIG: Record<OrderStatus, { label: string; cls: string }> = {
-  pending:   { label: 'En attente', cls: 'bg-amber-50 text-amber-700 border border-amber-200' },
-  new:       { label: 'Nouvelle',   cls: 'bg-blue-50 text-blue-700 border border-blue-200' },
-  confirmed: { label: 'Confirmée',  cls: 'bg-violet-50 text-violet-700 border border-violet-200' },
-  shipped:   { label: 'Expédiée',   cls: 'bg-orange-50 text-orange-700 border border-orange-200' },
-  delivered: { label: 'Livrée',     cls: 'bg-green-50 text-green-700 border border-green-200' },
-  returned:  { label: 'Retournée',  cls: 'bg-red-50 text-red-700 border border-red-200' },
-}
+import { StatusBadge } from '@/components/ui/StatusBadge'
 
 const TAG_SUGGESTIONS = ['VIP', 'Fidèle', 'Retours fréquents', 'À risque', 'Nouveau']
 
@@ -320,7 +311,6 @@ export default function CustomerDetail({ customer, orders, stats, updateCustomer
             </thead>
             <tbody className="divide-y divide-gray-100">
               {orders.map(order => {
-                const st = STATUS_CONFIG[order.status as OrderStatus]
                 const product = Array.isArray(order.product) ? order.product[0] : order.product
                 return (
                   <tr key={order.id} className="hover:bg-gray-50 transition-colors">
@@ -336,13 +326,7 @@ export default function CustomerDetail({ customer, orders, stats, updateCustomer
                     </td>
                     <td className="px-5 py-3.5 font-semibold text-gray-900">{order.cod_amount} DT</td>
                     <td className="px-5 py-3.5">
-                      {st ? (
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${st.cls}`}>
-                          {st.label}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400">{order.status}</span>
-                      )}
+                      <StatusBadge status={order.status} />
                     </td>
                   </tr>
                 )

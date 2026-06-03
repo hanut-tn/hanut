@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Banknote, TrendingUp, ShoppingBag, Truck, Clock } from 'lucide-react'
+import { getCarrierConfig, ORDER_STATUS_CONFIG, ORDER_STATUSES } from '@/lib/constants'
 
 type Product = { id: string; name: string }
 type Customer = { id: string; name: string; city?: string }
@@ -35,27 +36,6 @@ type Period = 7 | 30 | 90
 type ChartMode = 'orders' | 'ca'
 
 const PERIOD_LABELS: Record<Period, string> = { 7: '7 jours', 30: '30 jours', 90: '90 jours' }
-
-const STATUS_COLOR: Record<string, string> = {
-  pending:   'bg-amber-400',
-  new:       'bg-blue-400',
-  confirmed: 'bg-violet-400',
-  shipped:   'bg-orange-400',
-  delivered: 'bg-green-500',
-  returned:  'bg-red-400',
-}
-const STATUS_LABEL: Record<string, string> = {
-  pending: 'En attente', new: 'Nouvelles', confirmed: 'Confirmées',
-  shipped: 'Expédiées', delivered: 'Livrées', returned: 'Retournées',
-}
-
-const CARRIER_LABELS: Record<string, string> = {
-  intigo: 'IntiGo',
-  navex: 'Navex',
-  adex: 'Adex',
-  aramex: 'Aramex',
-  bestdelivery: 'Best Delivery',
-}
 
 function getProduct(o: Order): Product | null {
   const p = Array.isArray(o.product) ? o.product[0] : o.product
@@ -168,7 +148,7 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
   }
   const carrierList = Object.entries(carrierMap).map(([key, stats]) => ({
     key,
-    label: CARRIER_LABELS[key] ?? key,
+    label: getCarrierConfig(key).label,
     ...stats,
     rate: stats.shipped > 0 ? Math.round((stats.delivered / stats.shipped) * 100) : 0,
   })).sort((a, b) => b.shipped - a.shipped)
@@ -320,19 +300,19 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
             <p className="text-sm text-[#78716C] py-4 text-center">Aucune donnée sur cette période</p>
           ) : (
             <div className="space-y-3">
-              {(['pending', 'new', 'confirmed', 'shipped', 'delivered', 'returned'] as const)
+              {ORDER_STATUSES
                 .filter(s => statusCounts[s])
                 .map(s => {
                   const count = statusCounts[s] ?? 0
                   return (
                     <div key={s}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm text-[#78716C]">{STATUS_LABEL[s]}</span>
+                        <span className="text-sm text-[#78716C]">{ORDER_STATUS_CONFIG[s].label}</span>
                         <span className="text-sm font-medium text-[#1C1917]">{count}</span>
                       </div>
                       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div
-                          className={`h-full rounded-full transition-all ${STATUS_COLOR[s]}`}
+                          className={`h-full rounded-full transition-all ${ORDER_STATUS_CONFIG[s].dot}`}
                           style={{ width: `${Math.round((count / maxStatusCount) * 100)}%` }}
                         />
                       </div>

@@ -25,7 +25,7 @@ const ACTION_ICONS: Record<string, { Icon: React.ElementType; cls: string; group
   product_created:      { Icon: Package,     cls: 'text-orange-600', group: 'Produits' },
   product_updated:      { Icon: Package,     cls: 'text-orange-600', group: 'Produits' },
   product_deleted:      { Icon: Package,     cls: 'text-orange-600', group: 'Produits' },
-  customer_updated:     { Icon: User,        cls: 'text-purple-600', group: 'Clients' },
+  customer_updated:     { Icon: User,        cls: 'text-[#78716C]', group: 'Clients' },
   delivery_created:     { Icon: Truck,       cls: 'text-green-600',  group: 'Livraisons' },
   member_invited:       { Icon: Users2,      cls: 'text-red-600',    group: 'Équipe' },
   member_removed:       { Icon: Users2,      cls: 'text-red-600',    group: 'Équipe' },

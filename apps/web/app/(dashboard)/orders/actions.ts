@@ -5,7 +5,7 @@ import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { revalidatePath } from 'next/cache'
 import type { OrderStatus } from '@hanut/types'
-import { DELETABLE_STATUSES } from '@/lib/constants'
+import { DELETABLE_STATUSES, ORDER_STATUS_LABELS } from '@/lib/constants'
 
 export type CreateOrderInput = {
   customer_id?: string
@@ -78,10 +78,6 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
     .eq('seller_id', context.sellerId)
   if (error) throw new Error(error.message)
 
-  const STATUS_LABELS: Record<string, string> = {
-    new: 'Nouvelle', confirmed: 'Confirmée', shipped: 'Expédiée',
-    delivered: 'Livrée', returned: 'Retournée', pending: 'En attente',
-  }
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
   await logActivity({
@@ -91,7 +87,7 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
     actionType: 'order_status_changed',
     entityType: 'order',
     entityId: id,
-    description: `a changé le statut d'une commande en ${STATUS_LABELS[status] ?? status}`,
+    description: `a changé le statut d'une commande en ${ORDER_STATUS_LABELS[status]}`,
   })
 
   revalidatePath('/orders')

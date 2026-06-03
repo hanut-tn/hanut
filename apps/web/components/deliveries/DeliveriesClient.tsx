@@ -4,22 +4,7 @@ import { useState, useTransition } from 'react'
 import { Truck } from 'lucide-react'
 import type { CarrierName } from '@hanut/types'
 import type { CreateDeliveryInput, UpdateDeliveryInput } from '@/app/(dashboard)/deliveries/actions'
-
-const CARRIERS: { value: CarrierName; label: string }[] = [
-  { value: 'intigo',       label: 'IntiGo' },
-  { value: 'navex',        label: 'Navex' },
-  { value: 'adex',         label: 'Adex' },
-  { value: 'aramex',       label: 'Aramex' },
-  { value: 'bestdelivery', label: 'BestDelivery' },
-]
-
-const CARRIER_STYLE: Record<CarrierName, string> = {
-  intigo:       'bg-blue-100 text-blue-700',
-  navex:        'bg-green-100 text-green-700',
-  adex:         'bg-orange-100 text-orange-700',
-  aramex:       'bg-red-100 text-red-700',
-  bestdelivery: 'bg-sky-100 text-sky-700',
-}
+import { CARRIER_OPTIONS, getCarrierConfig } from '@/lib/constants'
 
 type OrderInfo = {
   id: string
@@ -237,8 +222,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
             <tbody className="divide-y divide-[#E7E5E4]">
               {filtered.map(d => {
                 const order = getOrder(d)
-                const cStyle = CARRIER_STYLE[d.carrier]
-                const cLabel = CARRIERS.find(c => c.value === d.carrier)?.label ?? d.carrier
+                const carrier = getCarrierConfig(d.carrier)
                 return (
                   <tr key={d.id} className="hover:bg-[#FAFAF9] transition-colors">
                     <td className="px-4 py-3">
@@ -247,8 +231,8 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
                       <p className="text-xs text-[#78716C] mt-0.5">{order?.product?.name} — <span className="font-medium">{order?.cod_amount} DT</span></p>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${cStyle}`}>
-                        {cLabel}
+                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${carrier.bg} ${carrier.color}`}>
+                        {carrier.label}
                       </span>
                       <p className="text-xs text-[#78716C] mt-1">
                         {new Date(d.created_at).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' })}
@@ -329,7 +313,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
               <div>
                 <label className="block text-sm font-medium text-[#1C1917] mb-1">Transporteur *</label>
                 <select className="input" value={addCarrier} onChange={e => setAddCarrier(e.target.value as CarrierName)} required>
-                  {CARRIERS.map(c => (
+                  {CARRIER_OPTIONS.map(c => (
                     <option key={c.value} value={c.value}>{c.label}</option>
                   ))}
                 </select>
@@ -409,7 +393,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
           <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-xl p-6 max-w-sm w-full">
             <h3 className="font-semibold text-[#1C1917] mb-1">Supprimer cette livraison ?</h3>
             <p className="text-sm text-[#78716C] mb-5">
-              {getOrder(confirmDelete)?.customer?.name} — {CARRIERS.find(c => c.value === confirmDelete.carrier)?.label}
+              {getOrder(confirmDelete)?.customer?.name} — {getCarrierConfig(confirmDelete.carrier).label}
             </p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDelete(null)} className="btn-secondary flex-1">Annuler</button>
