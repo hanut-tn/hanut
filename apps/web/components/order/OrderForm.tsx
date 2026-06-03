@@ -61,6 +61,8 @@ export default function OrderForm({ sellerSlug, sellerName, products }: Props) {
       return
     }
 
+    const phoneDigits = phone.replace(/\D/g, '')
+
     setLoading(true)
     try {
       const res = await fetch('/api/orders/public', {
@@ -69,7 +71,7 @@ export default function OrderForm({ sellerSlug, sellerName, products }: Props) {
         body: JSON.stringify({
           slug: sellerSlug,
           customer_name: name.trim(),
-          customer_phone: phone.trim(),
+          customer_phone: phoneDigits,
           customer_address: address.trim(),
           customer_city: city,
           product_id: productId,

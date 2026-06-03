@@ -5,8 +5,18 @@ const serviceMock = vi.hoisted(() => ({
   createServiceClient: vi.fn(),
 }))
 
+const rateLimitMock = vi.hoisted(() => ({
+  checkRateLimit: vi.fn(),
+  getClientIp: vi.fn(() => '127.0.0.1'),
+}))
+
 vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: serviceMock.createServiceClient,
+}))
+
+vi.mock('@/lib/rate-limit', () => ({
+  checkRateLimit: rateLimitMock.checkRateLimit,
+  getClientIp: rateLimitMock.getClientIp,
 }))
 
 import { POST } from '../app/api/orders/public/route'
@@ -16,7 +26,7 @@ type Seller = {
   name: string
 }
 
-type SellerQuery = {
+type SingleQuery = {
   select: Mock
   eq: Mock
   single: Mock
@@ -39,7 +49,7 @@ function validBody(overrides: Record<string, unknown> = {}) {
   return {
     slug: 'demo-shop',
     customer_name: 'Fatima',
-    customer_phone: '+21611111111',
+    customer_phone: '11111111',
     customer_address: 'Rue 1',
     customer_city: 'Tunis',
     product_id: 'product-1',
@@ -49,34 +59,41 @@ function validBody(overrides: Record<string, unknown> = {}) {
   }
 }
 
-function createSellerQuery(seller: Seller | null): SellerQuery {
-  const query = {} as SellerQuery
+function createSingleQuery(data: unknown): SingleQuery {
+  const query = {} as SingleQuery
   query.select = vi.fn(() => query)
   query.eq = vi.fn(() => query)
-  query.single = vi.fn().mockResolvedValue({ data: seller })
+  query.single = vi.fn().mockResolvedValue({ data })
   return query
 }
 
-function mockSupabase(seller: Seller | null, rpcResult: RpcResult) {
-  const sellerQuery = createSellerQuery(seller)
+function mockSupabase(
+  seller: Seller | null,
+  rpcResult: RpcResult,
+  product: { id: string } | null = { id: 'product-1' }
+) {
+  const sellerQuery = createSingleQuery(seller)
+  const productQuery = createSingleQuery(product)
   const rpc = vi.fn().mockResolvedValue(rpcResult)
   const from = vi.fn((table: string) => {
-    if (table !== 'sellers') throw new Error(`Unexpected table: ${table}`)
-    return sellerQuery
+    if (table === 'sellers') return sellerQuery
+    if (table === 'products') return productQuery
+    throw new Error(`Unexpected table: ${table}`)
   })
 
   serviceMock.createServiceClient.mockReturnValue({ from, rpc })
 
-  return { from, rpc, sellerQuery }
+  return { from, rpc, sellerQuery, productQuery }
 }
 
 describe('POST /api/orders/public', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    rateLimitMock.checkRateLimit.mockResolvedValue({ allowed: true, remaining: 9, resetIn: 3600 })
   })
 
   it('creates a pending order through the transactional RPC', async () => {
-    const { rpc, sellerQuery } = mockSupabase(
+    const { rpc, sellerQuery, productQuery } = mockSupabase(
       { id: 'seller-1', name: 'Demo Shop' },
       { data: 'order-1', error: null }
     )
@@ -85,7 +102,10 @@ describe('POST /api/orders/public', () => {
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ success: true, order_id: 'order-1' })
+    expect(rateLimitMock.checkRateLimit).toHaveBeenCalledWith('127.0.0.1', 'orders_public', 10, 60)
     expect(sellerQuery.eq).toHaveBeenCalledWith('slug', 'demo-shop')
+    expect(productQuery.eq).toHaveBeenCalledWith('id', 'product-1')
+    expect(productQuery.eq).toHaveBeenCalledWith('seller_id', 'seller-1')
     expect(rpc).toHaveBeenCalledWith(
       'create_order_with_stock',
       expect.objectContaining({
@@ -93,7 +113,7 @@ describe('POST /api/orders/public', () => {
         p_product_id: 'product-1',
         p_quantity: 2,
         p_customer_name: 'Fatima',
-        p_customer_phone: '+21611111111',
+        p_customer_phone: '11111111',
         p_customer_address: 'Rue 1',
         p_customer_city: 'Tunis',
         p_customer_id: null,
@@ -102,6 +122,32 @@ describe('POST /api/orders/public', () => {
         p_status: 'pending',
       })
     )
+  })
+
+  it('normalizes formatted Tunisian phone numbers before calling the RPC', async () => {
+    const { rpc } = mockSupabase(
+      { id: 'seller-1', name: 'Demo Shop' },
+      { data: 'order-1', error: null }
+    )
+
+    const response = await POST(jsonRequest(validBody({ customer_phone: '11 111 111' })))
+
+    expect(response.status).toBe(200)
+    expect(rpc).toHaveBeenCalledWith(
+      'create_order_with_stock',
+      expect.objectContaining({ p_customer_phone: '11111111' })
+    )
+  })
+
+  it('returns 429 when the IP exceeds the public order rate limit', async () => {
+    rateLimitMock.checkRateLimit.mockResolvedValue({ allowed: false, remaining: 0, resetIn: 120 })
+
+    const response = await POST(jsonRequest(validBody()))
+
+    expect(response.status).toBe(429)
+    expect(response.headers.get('Retry-After')).toBe('120')
+    expect(response.headers.get('X-RateLimit-Remaining')).toBe('0')
+    expect(serviceMock.createServiceClient).not.toHaveBeenCalled()
   })
 
   it('returns 404 when the seller slug does not exist', async () => {
@@ -123,7 +169,21 @@ describe('POST /api/orders/public', () => {
     const response = await POST(jsonRequest(validBody({ quantity: 0 })))
 
     expect(response.status).toBe(400)
-    await expect(response.json()).resolves.toEqual({ error: 'Quantité invalide' })
+    await expect(response.json()).resolves.toEqual({ error: 'Quantité invalide (entre 1 et 99)' })
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('rejects products that do not belong to the seller', async () => {
+    const { rpc } = mockSupabase(
+      { id: 'seller-1', name: 'Demo Shop' },
+      { data: 'order-1', error: null },
+      null
+    )
+
+    const response = await POST(jsonRequest(validBody()))
+
+    expect(response.status).toBe(404)
+    await expect(response.json()).resolves.toEqual({ error: 'Produit introuvable' })
     expect(rpc).not.toHaveBeenCalled()
   })
 

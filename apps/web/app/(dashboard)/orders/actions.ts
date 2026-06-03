@@ -5,6 +5,7 @@ import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { revalidatePath } from 'next/cache'
 import type { OrderStatus } from '@hanut/types'
+import { DELETABLE_STATUSES } from '@/lib/constants'
 
 export type CreateOrderInput = {
   customer_id?: string
@@ -18,8 +19,6 @@ export type CreateOrderInput = {
   cod_amount: number
   notes?: string
 }
-
-const DELETABLE_STATUSES: OrderStatus[] = ['pending', 'new', 'confirmed', 'delivered', 'returned']
 
 export async function createOrder(input: CreateOrderInput) {
   const context = await getUserContext()

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import type { OrderStatus } from '@hanut/types'
 import type { UserRole } from '@/lib/get-context'
+import { DELETABLE_STATUSES } from '@/lib/constants'
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; cls: string; dot: string }> = {
   pending:   { label: 'En attente',  cls: 'bg-amber-50 text-amber-700 border border-amber-200',   dot: 'bg-amber-400' },
@@ -17,8 +18,6 @@ const STATUS_CONFIG: Record<OrderStatus, { label: string; cls: string; dot: stri
   delivered: { label: 'Livrée',      cls: 'bg-green-50 text-green-700 border border-green-200',    dot: 'bg-green-400' },
   returned:  { label: 'Retournée',   cls: 'bg-red-50 text-red-700 border border-red-200',          dot: 'bg-red-400' },
 }
-
-const DELETABLE_STATUSES: OrderStatus[] = ['pending', 'new', 'confirmed', 'delivered', 'returned']
 
 const TABS: { label: string; value: OrderStatus | 'all' }[] = [
   { label: 'Toutes',     value: 'all' },

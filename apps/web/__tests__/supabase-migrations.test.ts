@@ -17,6 +17,7 @@ describe('Supabase migrations', () => {
   const orderSoftDelete = migration('20260602_add_orders_soft_delete.sql')
   const productsDescription = migration('20260602_add_products_description.sql')
   const onboarding = migration('20260603_add_onboarding.sql')
+  const rateLimits = migration('20260603_add_rate_limits.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -122,5 +123,15 @@ describe('Supabase migrations', () => {
     expect(onboarding).toMatch(
       /ALTER TABLE sellers ADD COLUMN IF NOT EXISTS onboarding_steps JSONB NOT NULL DEFAULT '\{"product_added": false, "link_copied": false, "first_order": false\}'::jsonb;/i
     )
+  })
+
+  it('adds atomic service-role rate limiting', () => {
+    expect(rateLimits).toMatch(/CREATE TABLE IF NOT EXISTS rate_limits/i)
+    expect(rateLimits).toMatch(/UNIQUE\(identifier, endpoint\)/i)
+    expect(rateLimits).toMatch(/ALTER TABLE rate_limits ENABLE ROW LEVEL SECURITY/i)
+    expect(rateLimits).toMatch(/CREATE OR REPLACE FUNCTION check_rate_limit/i)
+    expect(rateLimits).toMatch(/FOR UPDATE/i)
+    expect(rateLimits).toMatch(/REVOKE ALL ON FUNCTION check_rate_limit\(TEXT, TEXT, INTEGER, INTEGER\) FROM PUBLIC;/i)
+    expect(rateLimits).toMatch(/GRANT EXECUTE ON FUNCTION check_rate_limit\(TEXT, TEXT, INTEGER, INTEGER\) TO service_role;/i)
   })
 })
