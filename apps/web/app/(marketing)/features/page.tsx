@@ -3,7 +3,14 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'Fonctionnalités — Hanut',
-  description: '6 modules pensés pour les vendeurs tunisiens qui vendent via WhatsApp et Instagram.',
+  description: 'Commandes WhatsApp, catalogue, livraisons COD, clients et analytics — tout ce dont les vendeurs tunisiens ont besoin dans un seul outil.',
+  openGraph: {
+    title: 'Fonctionnalités Hanut — Commandes, Catalogue, Livraisons COD',
+    description: 'Commandes WhatsApp, catalogue, livraisons COD, clients et analytics — tout dans un seul outil.',
+    siteName: 'Hanut',
+    locale: 'fr_TN',
+    type: 'website',
+  },
 }
 
 function MockupShell({ url, children }: { url: string; children: React.ReactNode }) {
@@ -22,9 +29,9 @@ function MockupShell({ url, children }: { url: string; children: React.ReactNode
 
 function OrdersMockup() {
   const orders = [
-    { name: 'Fatima K.', product: 'Robe fleurie S', amount: 85, status: 'Confirmée', cls: 'bg-yellow-100 text-yellow-700' },
+    { name: 'Fatima K.', product: 'Robe fleurie S', amount: 85, status: 'Confirmée', cls: 'bg-sky-50 text-sky-700 border border-sky-200' },
     { name: 'Sara A.', product: 'Crème hydratante', amount: 45, status: 'Livrée', cls: 'bg-green-100 text-green-700' },
-    { name: 'Hamza T.', product: 'Nike Air Force 42', amount: 185, status: 'En route', cls: 'bg-purple-100 text-purple-700' },
+    { name: 'Hamza T.', product: 'Nike Air Force 42', amount: 185, status: 'Expédiée', cls: 'bg-orange-50 text-orange-700 border border-orange-200' },
     { name: 'Inès B.', product: 'Parfum Oud Rose', amount: 120, status: 'En attente', cls: 'bg-orange-100 text-orange-700' },
   ]
   return (
@@ -214,12 +221,12 @@ function AnalyticsMockup() {
           <div>
             <p className="text-2xl font-extrabold text-gray-900">12,450</p>
             <p className="text-xs text-gray-400 mt-0.5">CA ce mois (DT)</p>
-            <span className="text-xs text-green-600 font-semibold mt-1 block">↑ +23%</span>
+            <span className="text-xs text-green-600 font-semibold mt-1 block">+23%</span>
           </div>
           <div>
             <p className="text-2xl font-extrabold text-gray-900">87%</p>
             <p className="text-xs text-gray-400 mt-0.5">Taux livraison</p>
-            <span className="text-xs text-green-600 font-semibold mt-1 block">↑ +5pts</span>
+            <span className="text-xs text-green-600 font-semibold mt-1 block">+5pts</span>
           </div>
         </div>
         <div>
@@ -237,7 +244,11 @@ function AnalyticsMockup() {
         <div className="border-t border-gray-50 pt-3">
           <p className="text-xs font-semibold text-gray-400 mb-2">Top produit</p>
           <div className="flex items-center gap-2.5">
-            <span className="text-sm">🥇</span>
+            <div className="w-6 h-6 bg-[#16A34A] rounded-full flex items-center justify-center shrink-0">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+            </div>
             <div className="flex-1">
               <p className="text-xs font-semibold text-gray-900">Robe fleurie</p>
               <div className="w-full bg-gray-100 rounded-full h-1.5 mt-1">
@@ -265,9 +276,9 @@ const SECTIONS = [
   {
     tag: 'Commandes',
     title: 'Toutes vos commandes en un seul endroit',
-    desc: 'Saisissez une commande en 30 secondes. Suivez chaque statut — confirmé, en cours, livré — en temps réel. Fini les carnets et les commandes oubliées.',
+    desc: 'Saisissez une commande en 30 secondes. Suivez chaque statut — confirmée, expédiée, livrée — en temps réel. Fini les carnets et les commandes oubliées.',
     points: [
-      'Statuts : En attente, Confirmé, En route, Livré, Retour',
+      'Statuts : En attente, Confirmée, Expédiée, Livrée, Retournée',
       'Saisie manuelle ou via formulaire public',
       'Confirmation en 1 clic',
     ],

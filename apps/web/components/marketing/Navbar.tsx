@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { label: 'Tarifs', href: '/pricing' },
   { label: 'Livreurs', href: '/carriers' },
   { label: 'À propos', href: '/about' },
+  { label: 'Contact', href: '/contact' },
 ]
 
 export default function Navbar() {

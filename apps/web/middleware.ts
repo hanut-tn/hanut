@@ -26,7 +26,10 @@ export async function middleware(req: NextRequest) {
     pathname === p || pathname.startsWith(p + '/')
   )
 
-  if (isPublic) return NextResponse.next()
+  // Pour la homepage uniquement, vérifier la session pour rediriger les users connectés
+  const isHomepage = pathname === '/'
+
+  if (isPublic && !isHomepage) return NextResponse.next()
 
   let res = NextResponse.next({ request: req })
 
@@ -49,6 +52,14 @@ export async function middleware(req: NextRequest) {
   })
 
   const { data: { user } } = await supabase.auth.getUser()
+
+  // Utilisateur connecté sur la homepage → dashboard
+  if (user && isHomepage) {
+    return NextResponse.redirect(new URL('/dashboard', req.url))
+  }
+
+  // Homepage sans session → landing page
+  if (isHomepage) return res
 
   if (!user) {
     return NextResponse.redirect(new URL('/login', req.url))

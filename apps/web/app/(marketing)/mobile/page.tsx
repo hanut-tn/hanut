@@ -138,7 +138,7 @@ export default function MobilePage() {
                       {[
                         { name: 'Fatima K.', status: 'Confirmée', amount: 85 },
                         { name: 'Sara A.', status: 'Livrée', amount: 45 },
-                        { name: 'Hamza T.', status: 'En route', amount: 185 },
+                        { name: 'Hamza T.', status: 'Expédiée', amount: 185 },
                       ].map((o, i) => (
                         <div key={i} className="flex items-center justify-between py-1 border-b border-gray-50 last:border-0">
                           <p className="text-[8px] font-medium text-gray-700">{o.name}</p>
@@ -178,8 +178,11 @@ export default function MobilePage() {
       <section className="py-20 px-4 sm:px-6">
         <div className="max-w-md mx-auto text-center">
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
-            <div className="w-12 h-12 bg-[#0B5E46] rounded-2xl mx-auto mb-5 flex items-center justify-center">
-              <span className="text-2xl">📱</span>
+            <div className="w-12 h-12 bg-[#0B5E46] rounded-2xl mx-auto mb-5 flex items-center justify-center text-white">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="7" y="2" width="10" height="20" rx="2" />
+                <path d="M11 18h2" />
+              </svg>
             </div>
             <h2 className="text-xl font-bold text-[#1C1917] mb-2">Soyez prévenu au lancement</h2>
             <p className="text-sm text-gray-500 mb-6">

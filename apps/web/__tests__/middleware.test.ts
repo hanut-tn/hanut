@@ -50,6 +50,31 @@ describe('middleware auth boundaries', () => {
     expect(supabaseSsrMock.createServerClient).not.toHaveBeenCalled()
   })
 
+  it('redirects authenticated homepage visitors to the dashboard', async () => {
+    supabaseSsrMock.createServerClient.mockReturnValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1' } } }),
+      },
+    })
+
+    const response = await middleware(requestFor('/'))
+
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe('https://hanut.test/dashboard')
+  })
+
+  it('keeps unauthenticated homepage visitors on the landing page', async () => {
+    supabaseSsrMock.createServerClient.mockReturnValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
+      },
+    })
+
+    const response = await middleware(requestFor('/'))
+
+    expect(response.headers.get('location')).toBeNull()
+  })
+
   it('redirects protected routes to login when there is no user', async () => {
     supabaseSsrMock.createServerClient.mockReturnValue({
       auth: {

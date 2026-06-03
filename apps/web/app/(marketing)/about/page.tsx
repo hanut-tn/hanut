@@ -3,7 +3,14 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'À propos — Hanut',
-  description: "Hanut, l'outil de gestion fait par des Tunisiens pour des Tunisiens qui vendent en ligne.",
+  description: "Hanut est un outil de gestion fait en Tunisie pour les vendeurs tunisiens. Notre mission : simplifier la vente COD via WhatsApp et Instagram.",
+  openGraph: {
+    title: 'À propos de Hanut — Fait en Tunisie pour les vendeurs tunisiens',
+    description: "Hanut est un outil de gestion fait en Tunisie pour les vendeurs tunisiens.",
+    siteName: 'Hanut',
+    locale: 'fr_TN',
+    type: 'website',
+  },
 }
 
 const STATS = [
@@ -12,6 +19,43 @@ const STATS = [
   { value: '15+', label: 'livreurs locaux actifs intégrés dans Hanut', source: '' },
   { value: '2-5h', label: 'perdues par jour sans outil adapté de gestion', source: 'Enquête vendeurs 2025' },
 ]
+
+const PROBLEMS = [
+  { icon: 'phone', text: 'Commandes reçues par WhatsApp, Instagram, TikTok' },
+  { icon: 'notes', text: 'Saisie manuelle dans des carnets ou des groupes WhatsApp' },
+  { icon: 'alert', text: 'Commandes oubliées, doublons, stock incohérent' },
+  { icon: 'truck', text: 'Suivi livraison manuel sur chaque site livreur' },
+  { icon: 'chart', text: 'Impossible de savoir exactement ce qu\'on gagne' },
+] as const
+
+type ProblemIconType = (typeof PROBLEMS)[number]['icon']
+
+function ProblemIcon({ type }: { type: ProblemIconType }) {
+  const common = {
+    width: 18,
+    height: 18,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  }
+
+  if (type === 'phone') {
+    return <svg {...common}><rect x="7" y="2" width="10" height="20" rx="2" /><path d="M11 18h2" /></svg>
+  }
+  if (type === 'notes') {
+    return <svg {...common}><path d="M4 4h16v16H4z" /><path d="M8 8h8M8 12h8M8 16h5" /></svg>
+  }
+  if (type === 'alert') {
+    return <svg {...common}><path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" /></svg>
+  }
+  if (type === 'truck') {
+    return <svg {...common}><path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></svg>
+  }
+  return <svg {...common}><path d="M3 3v18h18" /><path d="m7 15 4-4 3 3 5-7" /></svg>
+}
 
 export default function AboutPage() {
   return (
@@ -37,7 +81,13 @@ export default function AboutPage() {
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-col md:flex-row gap-12 items-center">
             <div className="flex-1">
-              <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-2xl mb-5">😩</div>
+              <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-5">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 9v4" />
+                  <path d="M12 17h.01" />
+                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                </svg>
+              </div>
               <h2 className="text-2xl font-extrabold text-[#1C1917] mb-4">Le problème qu&apos;on résout</h2>
               <p className="text-gray-500 leading-relaxed mb-4">
                 En Tunisie, des dizaines de milliers de vendeurs gèrent leur business via WhatsApp et Instagram.
@@ -49,15 +99,11 @@ export default function AboutPage() {
             </div>
             <div className="flex-1">
               <div className="bg-[#F5F5F4] rounded-2xl p-6 space-y-4">
-                {[
-                  { emoji: '📱', text: 'Commandes reçues par WhatsApp, Instagram, TikTok' },
-                  { emoji: '📓', text: 'Saisie manuelle dans des carnets ou des groupes WhatsApp' },
-                  { emoji: '😰', text: 'Commandes oubliées, doublons, stock incohérent' },
-                  { emoji: '🚚', text: 'Suivi livraison manuel sur chaque site livreur' },
-                  { emoji: '❓', text: 'Impossible de savoir exactement ce qu\'on gagne' },
-                ].map((item, i) => (
+                {PROBLEMS.map((item, i) => (
                   <div key={i} className="flex items-start gap-3">
-                    <span className="text-xl">{item.emoji}</span>
+                    <span className="mt-0.5 text-[#78716C] shrink-0">
+                      <ProblemIcon type={item.icon} />
+                    </span>
                     <p className="text-sm text-gray-600 leading-relaxed">{item.text}</p>
                   </div>
                 ))}
@@ -72,7 +118,13 @@ export default function AboutPage() {
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-col md:flex-row-reverse gap-12 items-center">
             <div className="flex-1">
-              <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-2xl mb-5">🎯</div>
+              <div className="w-12 h-12 bg-green-50 text-[#16A34A] rounded-2xl flex items-center justify-center mb-5">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="8" />
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+                </svg>
+              </div>
               <h2 className="text-2xl font-extrabold text-[#1C1917] mb-4">Notre mission</h2>
               <p className="text-gray-500 leading-relaxed mb-4">
                 Donner à chaque vendeur tunisien les outils d&apos;un grand e-commerce, sans la complexité. Un seul tableau de bord pour tout gérer.

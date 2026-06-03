@@ -2,8 +2,15 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Livreurs — Hanut',
-  description: '15+ livreurs tunisiens intégrés. Créez une expédition en 1 clic depuis Hanut.',
+  title: 'Livreurs intégrés — Hanut',
+  description: 'IntiGo, Navex, Adex, Aramex, BestDelivery et plus — créez une expédition COD en 1 clic depuis votre tableau de bord Hanut.',
+  openGraph: {
+    title: 'Livreurs intégrés — IntiGo, Navex, Adex, Aramex',
+    description: 'IntiGo, Navex, Adex, Aramex, BestDelivery et plus — créez une expédition COD en 1 clic.',
+    siteName: 'Hanut',
+    locale: 'fr_TN',
+    type: 'website',
+  },
 }
 
 type Carrier = {

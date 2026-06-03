@@ -1,11 +1,8 @@
-'use client'
-
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import MarketingNavbar from '@/components/marketing/Navbar'
 import MarketingFooter from '@/components/marketing/Footer'
+import PricingToggle from '@/components/marketing/PricingToggle'
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -56,63 +53,6 @@ const TESTIMONIALS = [
   },
 ]
 
-type Plan = {
-  name: string
-  monthly: number
-  annual: number
-  desc: string
-  badge?: string
-  features: string[]
-  cta: string
-  highlighted: boolean
-}
-
-const PLANS: Plan[] = [
-  {
-    name: 'Starter',
-    monthly: 39,
-    annual: 31,
-    desc: 'Pour débuter et tester',
-    features: ['150 commandes / mois', '1 utilisateur', '5 livreurs', '200 SMS / mois', 'Lien de commande public', 'Support email'],
-    cta: 'Commencer gratuitement',
-    highlighted: false,
-  },
-  {
-    name: 'Pro',
-    monthly: 79,
-    annual: 63,
-    desc: 'Pour les vendeurs actifs',
-    badge: 'Le plus populaire',
-    features: [
-      'Commandes illimitées',
-      '2 utilisateurs',
-      '15+ livreurs',
-      'SMS illimités',
-      'Analytics avancés',
-      'Export CSV',
-      'Support WhatsApp prioritaire',
-    ],
-    cta: 'Choisir Pro',
-    highlighted: true,
-  },
-  {
-    name: 'Business',
-    monthly: 149,
-    annual: 119,
-    desc: 'Pour les équipes qui scalent',
-    features: [
-      'Tout Pro inclus',
-      '5 utilisateurs',
-      'Multi-boutiques',
-      'Accès API',
-      'Rapport fiscal',
-      'Support dédié',
-    ],
-    cta: 'Choisir Business',
-    highlighted: false,
-  },
-]
-
 // ─── Mockups ──────────────────────────────────────────────────────────────────
 
 function MockupShell({ url, children }: { url: string; children: React.ReactNode }) {
@@ -133,8 +73,8 @@ function OrdersMockup() {
   const orders = [
     { name: 'Fatima K.', product: 'iPhone 14 Pro', amount: 580, status: 'En cours', cls: 'bg-blue-100 text-blue-700' },
     { name: 'Mehdi B.', product: 'Air Force 1 Blanc', amount: 185, status: 'Livré', cls: 'bg-green-100 text-green-700' },
-    { name: 'Sara A.', product: 'MAC Lipstick Ruby', amount: 45, status: 'Confirmé', cls: 'bg-yellow-100 text-yellow-700' },
-    { name: 'Hamza T.', product: 'Nike Hoodie XL', amount: 120, status: 'En transit', cls: 'bg-purple-100 text-purple-700' },
+    { name: 'Sara A.', product: 'MAC Lipstick Ruby', amount: 45, status: 'Confirmée', cls: 'bg-sky-50 text-sky-700 border border-sky-200' },
+    { name: 'Hamza T.', product: 'Nike Hoodie XL', amount: 120, status: 'Expédiée', cls: 'bg-orange-50 text-orange-700 border border-orange-200' },
   ]
   return (
     <MockupShell url="hanut.tn/orders">
@@ -177,7 +117,7 @@ function DeliveriesMockup() {
           </div>
           <div className="bg-blue-50 rounded-xl p-3 text-center">
             <p className="text-lg font-extrabold text-blue-700">12</p>
-            <p className="text-xs text-blue-600 mt-0.5">En transit</p>
+            <p className="text-xs text-blue-600 mt-0.5">Expédiées</p>
           </div>
           <div className="bg-gray-50 rounded-xl p-3 text-center">
             <p className="text-lg font-extrabold text-gray-700">98</p>
@@ -185,11 +125,15 @@ function DeliveriesMockup() {
           </div>
         </div>
         {[
-          { carrier: 'IntiGo', code: 'TN-8821', status: 'En transit', cod: 580, active: true },
+          { carrier: 'IntiGo', code: 'TN-8821', status: 'Expédiée', cod: 580, active: true },
           { carrier: 'Navex', code: 'NX-4402', status: 'COD collecté', cod: 185, active: false },
         ].map((d, i) => (
           <div key={i} className="border border-gray-100 rounded-xl p-3.5 flex items-center gap-3">
-            <div className="w-8 h-8 bg-[#0B5E46] rounded-lg flex items-center justify-center shrink-0 text-base">🚚</div>
+            <div className="w-8 h-8 bg-[#0B5E46] rounded-lg flex items-center justify-center shrink-0">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+              </svg>
+            </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <p className="text-xs font-bold text-gray-900">{d.carrier}</p>
@@ -217,12 +161,12 @@ function AnalyticsMockup() {
           <div>
             <p className="text-2xl font-extrabold text-gray-900">12,450</p>
             <p className="text-xs text-gray-400 mt-0.5">CA ce mois (DT)</p>
-            <span className="text-xs text-green-600 font-semibold mt-1 block">↑ +23% vs dernier mois</span>
+            <span className="text-xs text-green-600 font-semibold mt-1 block">+23% vs dernier mois</span>
           </div>
           <div>
             <p className="text-2xl font-extrabold text-gray-900">87%</p>
             <p className="text-xs text-gray-400 mt-0.5">Taux livraison</p>
-            <span className="text-xs text-green-600 font-semibold mt-1 block">↑ +5pts</span>
+            <span className="text-xs text-green-600 font-semibold mt-1 block">+5pts</span>
           </div>
         </div>
         <div>
@@ -243,7 +187,9 @@ function AnalyticsMockup() {
         <div className="border-t border-gray-50 pt-3">
           <p className="text-xs font-semibold text-gray-400 mb-2">Top produit</p>
           <div className="flex items-center gap-2.5">
-            <span className="text-base">🥇</span>
+            <div className="w-6 h-6 bg-[#16A34A] rounded-full flex items-center justify-center shrink-0">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            </div>
             <div className="flex-1">
               <p className="text-xs font-semibold text-gray-900">iPhone 14 Pro</p>
               <div className="w-full bg-gray-100 rounded-full h-1.5 mt-1">
@@ -260,20 +206,30 @@ function AnalyticsMockup() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+export const metadata: Metadata = {
+  title: 'Hanut — Gérez vos commandes WhatsApp en 30 secondes',
+  description: "L'outil de gestion pour vendeurs tunisiens. Commandes, stock, livraisons COD et clients — tout dans un seul tableau de bord. Sans site e-commerce.",
+  keywords: 'gestion commandes tunisie, whatsapp vendeur, COD tunisie, livraison tunisie, intigo navex',
+  openGraph: {
+    title: 'Hanut — Gérez vos commandes WhatsApp en 30 secondes',
+    description: "L'outil fait pour les vendeurs tunisiens qui vendent via WhatsApp et Instagram.",
+    url: 'https://hanut.tn',
+    siteName: 'Hanut',
+    locale: 'fr_TN',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Hanut — Gérez vos commandes WhatsApp en 30 secondes',
+    description: "L'outil fait pour les vendeurs tunisiens qui vendent via WhatsApp et Instagram.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+}
+
 export default function LandingPage() {
-  const router = useRouter()
-  const [checking, setChecking] = useState(true)
-
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) router.replace('/dashboard')
-      else setChecking(false)
-    })
-  }, [router])
-
-  if (checking) return null
-
   return (
     <div className="min-h-screen bg-[#FAFAF9] text-[#1C1917]">
       <MarketingNavbar />
@@ -282,8 +238,9 @@ export default function LandingPage() {
         <CarrierBand />
         <FeaturesSection />
         <HowItWorks />
+        <DemoSection />
         <TestimonialsSection />
-        <PricingSection />
+        <PricingToggle />
         <CtaSection />
       </main>
       <MarketingFooter />
@@ -323,7 +280,7 @@ function Hero() {
             href="/register"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#16A34A] hover:bg-green-700 text-white text-base font-semibold px-8 py-3.5 rounded-xl transition-colors shadow-lg shadow-green-200"
           >
-            Commencer gratuitement
+            Essai gratuit — Sans carte bancaire
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
               <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
@@ -337,7 +294,7 @@ function Hero() {
         </div>
 
         <div className="flex items-center justify-center gap-5 mt-8 flex-wrap">
-          {['Sans carte bancaire', 'Annulable à tout moment', 'Config en 5 min'].map((t, i) => (
+          {['Sans carte bancaire', 'Annulable à tout moment', 'Support en français'].map((t, i) => (
             <span key={i} className="flex items-center gap-1.5 text-sm text-gray-400">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <circle cx="7" cy="7" r="6" stroke="#4ADE80" strokeWidth="1.5"/>
@@ -483,6 +440,32 @@ function HowItWorks() {
   )
 }
 
+// ─── Demo Section ─────────────────────────────────────────────────────────────
+
+function DemoSection() {
+  return (
+    <section className="py-16 sm:py-24 px-4 sm:px-6 bg-white">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-10">
+          <p className="text-sm font-semibold text-[#16A34A] uppercase tracking-widest mb-3">Démo</p>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1C1917] tracking-tight">
+            Voyez Hanut en action
+          </h2>
+          <p className="mt-4 text-lg text-gray-500">30 secondes pour créer une commande, de A à Z</p>
+        </div>
+        <div className="relative aspect-video bg-[#0B5E46] rounded-2xl shadow-2xl overflow-hidden flex flex-col items-center justify-center gap-4">
+          <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <path d="M11 8L25 16L11 24V8Z" fill="white" />
+            </svg>
+          </div>
+          <p className="text-white/70 text-sm font-medium">Vidéo démo disponible bientôt</p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 // ─── Testimonials ─────────────────────────────────────────────────────────────
 
 function TestimonialsSection() {
@@ -525,103 +508,6 @@ function TestimonialsSection() {
   )
 }
 
-// ─── Pricing ──────────────────────────────────────────────────────────────────
-
-function PricingSection() {
-  const [annual, setAnnual] = useState(false)
-
-  return (
-    <section id="pricing" className="py-24 sm:py-32 px-4 sm:px-6 bg-[#F5F5F4]">
-      <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-12">
-          <p className="text-sm font-semibold text-[#16A34A] uppercase tracking-widest mb-3">Tarifs</p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1C1917] tracking-tight">
-            Des tarifs simples et transparents
-          </h2>
-          <p className="mt-4 text-lg text-gray-500">Sans engagement. Changez de plan quand vous voulez.</p>
-
-          <div className="flex items-center justify-center gap-3 mt-8">
-            <span className={`text-sm font-medium ${!annual ? 'text-[#1C1917]' : 'text-gray-400'}`}>Mensuel</span>
-            <button
-              onClick={() => setAnnual(v => !v)}
-              className={`relative w-12 h-6 rounded-full transition-colors ${annual ? 'bg-[#16A34A]' : 'bg-gray-200'}`}
-              aria-label="Basculer annuel/mensuel"
-            >
-              <span
-                className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${
-                  annual ? 'translate-x-7' : 'translate-x-1'
-                }`}
-              />
-            </button>
-            <span className={`text-sm font-medium ${annual ? 'text-[#1C1917]' : 'text-gray-400'}`}>
-              Annuel
-              <span className="ml-1.5 text-xs font-bold text-[#16A34A] bg-green-50 px-2 py-0.5 rounded-full">-20%</span>
-            </span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-          {PLANS.map((plan, i) => (
-            <div
-              key={i}
-              className={`relative rounded-2xl p-7 flex flex-col transition-all ${
-                plan.highlighted
-                  ? 'bg-[#0B5E46] text-white shadow-2xl md:scale-105'
-                  : 'bg-white border border-gray-200 shadow-sm hover:shadow-md'
-              }`}
-            >
-              {plan.badge && (
-                <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-bold px-4 py-1 rounded-full whitespace-nowrap bg-[#16A34A] text-white">
-                  {plan.badge}
-                </span>
-              )}
-
-              <div className="mb-6">
-                <p className={`font-bold text-sm mb-0.5 ${plan.highlighted ? 'text-green-300' : 'text-gray-500'}`}>
-                  {plan.name}
-                </p>
-                <p className={`text-xs mb-3 ${plan.highlighted ? 'text-green-200' : 'text-gray-400'}`}>{plan.desc}</p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-black">{annual ? plan.annual : plan.monthly}</span>
-                  <span className={`text-sm ${plan.highlighted ? 'text-green-200' : 'text-gray-400'}`}>DT / mois</span>
-                </div>
-                {annual && (
-                  <p className={`text-xs mt-1 ${plan.highlighted ? 'text-green-300' : 'text-green-600'}`}>
-                    Facturé annuellement
-                  </p>
-                )}
-              </div>
-
-              <ul className="space-y-2.5 flex-1 mb-7">
-                {plan.features.map(f => (
-                  <li key={f} className="flex items-start gap-2.5 text-sm">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 mt-0.5">
-                      <circle cx="8" cy="8" r="7" fill={plan.highlighted ? 'rgba(74,222,128,0.15)' : '#DCFCE7'} />
-                      <path d="M5 8L7 10L11 6" stroke={plan.highlighted ? '#4ADE80' : '#16A34A'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    <span className={plan.highlighted ? 'text-green-50' : 'text-gray-600'}>{f}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <Link
-                href="/register"
-                className={`w-full text-center py-3 rounded-xl font-semibold text-sm transition-colors ${
-                  plan.highlighted
-                    ? 'bg-[#16A34A] hover:bg-green-500 text-white'
-                    : 'bg-[#0B5E46] hover:bg-green-900 text-white'
-                }`}
-              >
-                {plan.cta}
-              </Link>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
 // ─── CTA Section ─────────────────────────────────────────────────────────────
 
 function CtaSection() {
@@ -654,4 +540,3 @@ function CtaSection() {
     </section>
   )
 }
-

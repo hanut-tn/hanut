@@ -70,12 +70,39 @@ export default function Footer() {
 
         <div className="border-t border-white/5 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-gray-600">
-            © 2026 Hanut. Tous droits réservés. Fait avec ❤️ en Tunisie.
+            © 2026 Hanut. Tous droits réservés. Fait en Tunisie.
           </p>
           <div className="flex items-center gap-5">
-            <a href="#" className="text-sm text-gray-500 hover:text-white transition-colors">Instagram</a>
-            <a href="#" className="text-sm text-gray-500 hover:text-white transition-colors">Facebook</a>
-            <a href="#" className="text-sm text-gray-500 hover:text-white transition-colors">LinkedIn</a>
+            <a
+              href="https://instagram.com/hanut.tn"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Hanut sur Instagram"
+              title="Hanut sur Instagram"
+              className="text-sm text-gray-500 hover:text-white transition-colors"
+            >
+              Instagram
+            </a>
+            <a
+              href="https://facebook.com/hanut.tn"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Hanut sur Facebook"
+              title="Hanut sur Facebook"
+              className="text-sm text-gray-500 hover:text-white transition-colors"
+            >
+              Facebook
+            </a>
+            <a
+              href="https://linkedin.com/company/hanut"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Hanut sur LinkedIn"
+              title="Hanut sur LinkedIn"
+              className="text-sm text-gray-500 hover:text-white transition-colors"
+            >
+              LinkedIn
+            </a>
           </div>
         </div>
       </div>
