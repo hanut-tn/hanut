@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Users, Search, Tag } from 'lucide-react'
+import { Users, Search, Tag, ArrowUpDown } from 'lucide-react'
 import type { CustomerInput } from '@/app/(dashboard)/customers/actions'
 
 const TAG_COLORS = [
@@ -55,6 +55,7 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState<'name' | 'total_spent' | 'order_count' | 'last_order'>('name')
   const [isPending, startTransition] = useTransition()
 
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null)
@@ -76,14 +77,30 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
   const filtered = useMemo(() => {
     let result = customers
     if (selectedTag) result = result.filter(c => c.tags?.includes(selectedTag))
-    if (!search.trim()) return result
-    const q = search.toLowerCase()
-    return result.filter(c =>
-      c.name.toLowerCase().includes(q) ||
-      c.phone.includes(q) ||
-      (c.city ?? '').toLowerCase().includes(q)
-    )
-  }, [customers, search, selectedTag])
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(q) ||
+        c.phone.includes(q) ||
+        (c.city ?? '').toLowerCase().includes(q)
+      )
+    }
+    const arr = [...result]
+    if (sortBy === 'name') return arr.sort((a, b) => a.name.localeCompare(b.name))
+    if (sortBy === 'total_spent') return arr.sort((a, b) => getStats(b.orders).delivered - getStats(a.orders).delivered)
+    if (sortBy === 'order_count') return arr.sort((a, b) => getStats(b.orders).count - getStats(a.orders).count)
+    if (sortBy === 'last_order') {
+      return arr.sort((a, b) => {
+        const aLast = getStats(a.orders).last
+        const bLast = getStats(b.orders).last
+        if (!aLast && !bLast) return 0
+        if (!aLast) return 1
+        if (!bLast) return -1
+        return new Date(bLast.created_at).getTime() - new Date(aLast.created_at).getTime()
+      })
+    }
+    return arr
+  }, [customers, search, selectedTag, sortBy])
 
   const totalCA = customers.reduce((s, c) => s + getStats(c.orders).delivered, 0)
 
@@ -131,16 +148,16 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[#1C1917]">Clients</h1>
           <p className="text-sm text-[#78716C] mt-0.5">{customers.length} client{customers.length !== 1 ? 's' : ''}</p>
         </div>
-        <Link href="/orders/new" className="btn-primary text-sm">+ Nouvelle commande</Link>
+        <Link href="/orders/new" className="btn-primary w-full text-center text-sm sm:w-auto">+ Nouvelle commande</Link>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4">
           <p className="text-sm font-medium text-[#78716C]">Total clients</p>
           <p className="text-2xl font-bold text-[#1C1917] mt-1">{customers.length}</p>
@@ -157,15 +174,30 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
-        <input
-          className="input pl-9"
-          placeholder="Rechercher par nom, téléphone ou ville…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
+      {/* Search + Sort */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative w-full sm:max-w-sm sm:flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
+          <input
+            className="input pl-9"
+            placeholder="Rechercher par nom, téléphone ou ville…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="flex w-full items-center gap-1.5 border border-[#E7E5E4] rounded-lg px-3 py-2 text-sm text-[#78716C] bg-white hover:bg-[#F5F5F4] transition-colors sm:w-auto sm:shrink-0">
+          <ArrowUpDown className="w-4 h-4 shrink-0" />
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value as typeof sortBy)}
+            className="min-w-0 flex-1 bg-transparent appearance-none outline-none cursor-pointer text-sm text-[#78716C]"
+          >
+            <option value="name">Nom (A-Z)</option>
+            <option value="total_spent">CA le plus élevé</option>
+            <option value="order_count">Plus de commandes</option>
+            <option value="last_order">Dernière commande récente</option>
+          </select>
+        </div>
       </div>
 
       {/* Filtres par tag */}
@@ -227,7 +259,7 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
         </div>
       ) : (
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[760px] text-sm">
             <thead className="bg-[#FAFAF9] border-b border-[#E7E5E4]">
               <tr>
                 {['Client', 'Téléphone', 'Ville', 'Commandes', 'CA livré', 'Dernière commande', ''].map((h, i) => (

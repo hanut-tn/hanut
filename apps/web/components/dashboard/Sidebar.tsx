@@ -4,9 +4,10 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { LayoutDashboard, ShoppingBag, Users, Package, Truck, BarChart2, Settings, Users2 } from 'lucide-react'
 import type { UserRole } from '@/lib/get-context'
+import { usePendingOrdersCount } from './usePendingOrdersCount'
 
 const NAV_ITEMS = [
-  { href: '/dashboard',  label: 'Dashboard',   icon: LayoutDashboard, roles: ['admin'] as UserRole[] },
+  { href: '/dashboard',  label: 'Dashboard',   icon: LayoutDashboard, roles: ['admin', 'operator', 'readonly'] as UserRole[] },
   { href: '/orders',     label: 'Commandes',   icon: ShoppingBag,     roles: ['admin', 'operator', 'readonly'] as UserRole[] },
   { href: '/customers',  label: 'Clients',     icon: Users,           roles: ['admin', 'operator', 'readonly'] as UserRole[] },
   { href: '/catalog',    label: 'Catalogue',   icon: Package,         roles: ['admin', 'operator'] as UserRole[] },
@@ -31,6 +32,7 @@ export default function Sidebar({ role, sellerName, plan = 'starter' }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const visible = NAV_ITEMS.filter(item => item.roles.includes(role))
+  const pendingCount = usePendingOrdersCount()
   const initials = sellerName
     ? sellerName.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()
     : '?'
@@ -76,6 +78,11 @@ export default function Sidebar({ role, sellerName, plan = 'starter' }: Props) {
                 >
                   <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[#166534]' : 'text-[#78716C]'}`} />
                   {item.label}
+                  {item.href === '/orders' && pendingCount > 0 && (
+                    <span className="ml-auto w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shrink-0">
+                      {pendingCount > 9 ? '9+' : pendingCount}
+                    </span>
+                  )}
                 </Link>
 
                 {insertTeamAfter && (

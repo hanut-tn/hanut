@@ -7,6 +7,9 @@ import { getUserContext } from '@/lib/get-context'
 import { RoleProvider } from '@/lib/role-context'
 import Sidebar from '@/components/dashboard/Sidebar'
 import TopBar from '@/components/dashboard/TopBar'
+import BottomNav from '@/components/dashboard/BottomNav'
+import MobileSidebar from '@/components/dashboard/MobileSidebar'
+import { MobileSidebarProvider } from '@/components/dashboard/MobileSidebarContext'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createServerClient()
@@ -63,13 +66,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <RoleProvider role={context.role} sellerId={context.sellerId} isSeller={context.isSeller}>
-      <div className="flex h-screen bg-[#FAFAF9]">
-        <Sidebar role={context.role} sellerName={displayName} plan={context.plan} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <TopBar sellerName={displayName} role={context.role} isSeller={context.isSeller} />
-          <main className="flex-1 overflow-y-auto p-6">{children}</main>
+      <MobileSidebarProvider>
+        <div className="flex h-screen bg-[#FAFAF9]">
+          <div className="hidden shrink-0 md:flex">
+            <Sidebar role={context.role} sellerName={displayName} plan={context.plan} />
+          </div>
+          <MobileSidebar role={context.role} sellerName={displayName} plan={context.plan} />
+          <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+            <TopBar sellerName={displayName} role={context.role} isSeller={context.isSeller} />
+            <main className="flex-1 overflow-y-auto p-4 pb-20 sm:p-6 md:pb-6">{children}</main>
+          </div>
+          <BottomNav role={context.role} plan={context.plan} />
         </div>
-      </div>
+      </MobileSidebarProvider>
     </RoleProvider>
   )
 }
