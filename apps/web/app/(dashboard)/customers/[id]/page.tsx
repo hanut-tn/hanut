@@ -58,7 +58,8 @@ export default async function CustomerDetailPage({ params }: Props) {
         tags: (customer.tags as string[] | null) ?? [],
         notes: customer.notes ?? '',
       }}
-      orders={orderList as any[]}
+      orders={orderList.slice(0, 10) as any[]}
+      totalOrders={order_count}
       stats={{ total_spent, order_count, delivery_rate, favorite_product }}
       updateCustomer={updateCustomer}
     />
