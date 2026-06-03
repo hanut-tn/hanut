@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useTransition, useRef } from 'react'
+import { useState, useTransition, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import type { CustomerInput } from '@/app/(dashboard)/customers/actions'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { X } from 'lucide-react'
 
 const TAG_SUGGESTIONS = ['VIP', 'Fidèle', 'Retours fréquents', 'À risque', 'Nouveau']
 
@@ -52,11 +53,12 @@ type Stats = {
 type Props = {
   customer: CustomerData
   orders: Order[]
+  totalOrders: number
   stats: Stats
   updateCustomer: (id: string, input: CustomerInput) => Promise<{ error?: string }>
 }
 
-export default function CustomerDetail({ customer, orders, stats, updateCustomer }: Props) {
+export default function CustomerDetail({ customer, orders: initialOrders, totalOrders, stats, updateCustomer }: Props) {
   const [isPending, startTransition] = useTransition()
 
   // Edit modal
@@ -71,11 +73,30 @@ export default function CustomerDetail({ customer, orders, stats, updateCustomer
   const [tags, setTags] = useState<string[]>(customer.tags)
   const [showTagInput, setShowTagInput] = useState(false)
   const [tagInput, setTagInput] = useState('')
+  const [pendingDeleteTag, setPendingDeleteTag] = useState<string | null>(null)
+  const pendingDeleteTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const tagsContainerRef = useRef<HTMLDivElement>(null)
 
   // Notes
   const [notes, setNotes] = useState(customer.notes)
   const [notesSaved, setNotesSaved] = useState(false)
   const notesTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Paginated orders
+  const [displayedOrders, setDisplayedOrders] = useState<Order[]>(initialOrders)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const hasMore = displayedOrders.length < totalOrders
+
+  useEffect(() => {
+    function handleDocClick(e: MouseEvent) {
+      if (tagsContainerRef.current && !tagsContainerRef.current.contains(e.target as Node)) {
+        clearPendingDelete()
+      }
+    }
+    document.addEventListener('mousedown', handleDocClick)
+    return () => document.removeEventListener('mousedown', handleDocClick)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function persistTags(newTags: string[]) {
     await fetch(`/api/customers/${customer.id}`, {
@@ -99,6 +120,40 @@ export default function CustomerDetail({ customer, orders, stats, updateCustomer
     const next = tags.filter(t => t !== tag)
     setTags(next)
     persistTags(next)
+  }
+
+  function clearPendingDelete() {
+    setPendingDeleteTag(null)
+    if (pendingDeleteTimeout.current) {
+      clearTimeout(pendingDeleteTimeout.current)
+      pendingDeleteTimeout.current = null
+    }
+  }
+
+  function onTagClick(tag: string) {
+    if (pendingDeleteTag === tag) return
+    clearPendingDelete()
+    setPendingDeleteTag(tag)
+    pendingDeleteTimeout.current = setTimeout(clearPendingDelete, 3000)
+  }
+
+  function onTagDeleteConfirm(tag: string) {
+    clearPendingDelete()
+    removeTag(tag)
+  }
+
+  async function loadMoreOrders() {
+    if (loadingMore || !hasMore) return
+    setLoadingMore(true)
+    try {
+      const nextPage = Math.floor(displayedOrders.length / 10) + 1
+      const res = await fetch(`/api/customers/${customer.id}?page=${nextPage}&limit=10`)
+      if (!res.ok) return
+      const data = await res.json()
+      setDisplayedOrders(prev => [...prev, ...(data.orders ?? [])])
+    } finally {
+      setLoadingMore(false)
+    }
   }
 
   function onNotesChange(value: string) {
@@ -207,21 +262,35 @@ export default function CustomerDetail({ customer, orders, stats, updateCustomer
         {/* Tags */}
         <div className="card p-5">
           <h2 className="font-semibold text-gray-900 mb-3">Tags</h2>
-          <div className="flex flex-wrap gap-2 mb-3 min-h-[28px]">
+          <div ref={tagsContainerRef} className="flex flex-wrap gap-2 mb-3 min-h-[28px]">
             {tags.length === 0 && !showTagInput && (
               <span className="text-sm text-gray-400">Aucun tag.</span>
             )}
-            {tags.map(tag => (
-              <button
-                key={tag}
-                onClick={() => removeTag(tag)}
-                title="Cliquer pour supprimer"
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-opacity hover:opacity-70 ${tagColor(tag)}`}
-              >
-                {tag}
-                <span className="text-[10px] opacity-60">×</span>
-              </button>
-            ))}
+            {tags.map(tag => {
+              const isPending = pendingDeleteTag === tag
+              return (
+                <button
+                  key={tag}
+                  onClick={() => !isPending && onTagClick(tag)}
+                  title={isPending ? 'Cliquer sur × pour confirmer' : 'Cliquer pour supprimer'}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                    isPending
+                      ? 'border border-red-300 bg-red-50 text-red-700'
+                      : `${tagColor(tag)} hover:opacity-70`
+                  }`}
+                >
+                  {tag}
+                  {isPending ? (
+                    <X
+                      className="w-3 h-3 cursor-pointer shrink-0"
+                      onClick={e => { e.stopPropagation(); onTagDeleteConfirm(tag) }}
+                    />
+                  ) : (
+                    <span className="text-[10px] opacity-60">×</span>
+                  )}
+                </button>
+              )
+            })}
           </div>
 
           {showTagInput ? (
@@ -285,54 +354,73 @@ export default function CustomerDetail({ customer, orders, stats, updateCustomer
 
       {/* ── HISTORIQUE COMMANDES ── */}
       <div className="card overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900">
             Historique des commandes
-            {orders.length > 0 && (
-              <span className="ml-2 text-sm font-normal text-gray-400">{orders.length}</span>
-            )}
           </h2>
+          {totalOrders > 0 && (
+            <span className="text-xs text-[#78716C]">
+              Affichage de {displayedOrders.length} sur {totalOrders} commande{totalOrders !== 1 ? 's' : ''}
+            </span>
+          )}
         </div>
-        {orders.length === 0 ? (
+        {totalOrders === 0 ? (
           <div className="p-12 text-center text-gray-400">
             <svg className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
             <p className="font-medium text-[#1C1917]">Aucune commande pour ce client.</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                {['Date', 'Produit', 'Montant', 'Statut'].map((h, i) => (
-                  <th key={i} className="text-left text-xs font-medium text-gray-500 uppercase tracking-wide px-5 py-3">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {orders.map(order => {
-                const product = Array.isArray(order.product) ? order.product[0] : order.product
-                return (
-                  <tr key={order.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-3.5 text-xs text-gray-500 whitespace-nowrap">
-                      {new Date(order.created_at).toLocaleDateString('fr-TN', {
-                        day: '2-digit', month: 'short', year: '2-digit',
-                      })}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <p className="text-gray-700">{product?.name ?? '—'}</p>
-                      {order.variant && <p className="text-xs text-gray-400">{order.variant}</p>}
-                      {order.quantity > 1 && <p className="text-xs text-gray-400">× {order.quantity}</p>}
-                    </td>
-                    <td className="px-5 py-3.5 font-semibold text-gray-900">{order.cod_amount} DT</td>
-                    <td className="px-5 py-3.5">
-                      <StatusBadge status={order.status} />
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          <>
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  {['Date', 'Produit', 'Montant', 'Statut'].map((h, i) => (
+                    <th key={i} className="text-left text-xs font-medium text-gray-500 uppercase tracking-wide px-5 py-3">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {displayedOrders.map(order => {
+                  const product = Array.isArray(order.product) ? order.product[0] : order.product
+                  return (
+                    <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-5 py-3.5 text-xs text-gray-500 whitespace-nowrap">
+                        {new Date(order.created_at).toLocaleDateString('fr-TN', {
+                          day: '2-digit', month: 'short', year: '2-digit',
+                        })}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <p className="text-gray-700">{product?.name ?? '—'}</p>
+                        {order.variant && <p className="text-xs text-gray-400">{order.variant}</p>}
+                        {order.quantity > 1 && <p className="text-xs text-gray-400">× {order.quantity}</p>}
+                      </td>
+                      <td className="px-5 py-3.5 font-semibold text-gray-900">{order.cod_amount} DT</td>
+                      <td className="px-5 py-3.5">
+                        <StatusBadge status={order.status} />
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+            {hasMore && (
+              <div className="px-5 py-4 border-t border-gray-100">
+                <button
+                  onClick={loadMoreOrders}
+                  disabled={loadingMore}
+                  className="border border-[#E7E5E4] rounded-lg text-sm text-[#78716C] px-4 py-2 hover:bg-[#F5F5F4] w-full transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {loadingMore ? (
+                    <span className="w-4 h-4 border-2 border-[#78716C] border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    `Charger plus (${totalOrders - displayedOrders.length} restantes)`
+                  )}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Banknote, TrendingUp, ShoppingBag, Truck, Clock } from 'lucide-react'
+import { Banknote, TrendingUp, TrendingDown, Minus, ShoppingBag, Truck, Clock, Download } from 'lucide-react'
 import { getCarrierConfig, ORDER_STATUS_CONFIG, ORDER_STATUSES } from '@/lib/constants'
 
 type Product = { id: string; name: string }
@@ -30,6 +30,7 @@ type Delivery = {
 type Props = {
   orders: Order[]
   deliveries: Delivery[]
+  plan: 'starter' | 'pro' | 'business'
 }
 
 type Period = 7 | 30 | 90
@@ -52,9 +53,11 @@ function getDeliveryOrder(d: Delivery): DeliveryOrder | null {
   return o ?? null
 }
 
-export default function AnalyticsClient({ orders, deliveries }: Props) {
+export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
   const [period, setPeriod] = useState<Period>(30)
   const [chartMode, setChartMode] = useState<ChartMode>('orders')
+  const [selectedCarrier, setSelectedCarrier] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
 
   const cutoff = useMemo(() => {
     const d = new Date()
@@ -63,9 +66,24 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
     return d
   }, [period])
 
+  const prevCutoff = useMemo(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - period * 2)
+    d.setHours(0, 0, 0, 0)
+    return d
+  }, [period])
+
   const filtered = useMemo(
     () => orders.filter(o => new Date(o.created_at) >= cutoff),
     [orders, cutoff]
+  )
+
+  const prevFiltered = useMemo(
+    () => orders.filter(o => {
+      const d = new Date(o.created_at)
+      return d >= prevCutoff && d < cutoff
+    }),
+    [orders, prevCutoff, cutoff]
   )
 
   const filteredDeliveries = useMemo(
@@ -93,6 +111,49 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
     return o?.status === 'delivered' ? s + (d.fee ?? 0) : s
   }, 0)
   const profit = revenue - totalFees
+
+  // Previous period metrics
+  const prevDelivered    = prevFiltered.filter(o => o.status === 'delivered')
+  const prevRevenue      = prevDelivered.reduce((s, o) => s + o.cod_amount, 0)
+  const prevTotalOrders  = prevFiltered.length
+  const prevClosedOrders = prevFiltered.filter(o => ['shipped', 'delivered', 'returned'].includes(o.status))
+  const prevDeliveryRate = prevClosedOrders.length > 0
+    ? Math.round(prevDelivered.length / prevClosedOrders.length * 100) : 0
+  const prevProfit = prevRevenue // fees not included in prev period (simplified)
+
+  function trendDir(current: number, prev: number): 'up' | 'down' | 'stable' {
+    if (prev === 0) return current > 0 ? 'up' : 'stable'
+    const pct = ((current - prev) / prev) * 100
+    if (Math.abs(pct) < 2) return 'stable'
+    return pct > 0 ? 'up' : 'down'
+  }
+  function trendLabel(current: number, prev: number): string {
+    if (prev === 0) return ''
+    const pct = Math.round(((current - prev) / prev) * 100)
+    if (Math.abs(pct) < 2) return 'stable'
+    return `${pct > 0 ? '+' : ''}${pct}%`
+  }
+
+  async function handleExport() {
+    if (exporting || plan === 'starter') return
+    setExporting(true)
+    try {
+      const res = await fetch(`/api/analytics/export?period=${period}`)
+      if (!res.ok) return
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const today = new Date().toISOString().split('T')[0]
+      a.download = `hanut-analytics-${period}j-${today}.csv`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const statusCounts: Record<string, number> = {}
   for (const o of filtered) statusCounts[o.status] = (statusCounts[o.status] ?? 0) + 1
@@ -153,6 +214,10 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
     rate: stats.shipped > 0 ? Math.round((stats.delivered / stats.shipped) * 100) : 0,
   })).sort((a, b) => b.shipped - a.shipped)
 
+  const displayedCarriers = selectedCarrier
+    ? carrierList.filter(c => c.key === selectedCarrier)
+    : carrierList
+
   const dailyData = useMemo(() => {
     const days: { label: string; fullLabel: string; orders: number; revenue: number }[] = []
     for (let i = period - 1; i >= 0; i--) {
@@ -174,11 +239,11 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
   const maxDailyRevenue = Math.max(...dailyData.map(d => d.revenue), 1)
 
   const KPI_ITEMS = [
-    { label: 'CA encaissé',    value: `${revenue.toFixed(0)} DT`,   sub: `${delivered.length} livrée${delivered.length !== 1 ? 's' : ''}`, icon: Banknote,    valueClass: 'text-[#16A34A]' },
-    { label: 'Profit net',     value: `${profit.toFixed(0)} DT`,    sub: `Frais: ${totalFees.toFixed(0)} DT`,                              icon: TrendingUp,  valueClass: 'text-[#0B5E46]' },
-    { label: 'Commandes',      value: String(totalOrders),           sub: 'sur la période',                                                 icon: ShoppingBag, valueClass: 'text-[#1C1917]' },
-    { label: 'Taux livraison', value: `${deliveryRate}%`,            sub: `Retours: ${returnRate}%`,                                        icon: Truck,       valueClass: 'text-[#1C1917]' },
-    { label: 'COD en attente', value: `${codPending.toFixed(0)} DT`, sub: 'non encore livré',                                              icon: Clock,       valueClass: 'text-amber-600' },
+    { label: 'CA encaissé',    value: `${revenue.toFixed(0)} DT`,    sub: `${delivered.length} livrée${delivered.length !== 1 ? 's' : ''}`, icon: Banknote,    valueClass: 'text-[#16A34A]', trend: trendDir(revenue, prevRevenue),      trendText: trendLabel(revenue, prevRevenue) },
+    { label: 'Profit net',     value: `${profit.toFixed(0)} DT`,     sub: `Frais: ${totalFees.toFixed(0)} DT`,                              icon: TrendingUp,  valueClass: 'text-[#0B5E46]', trend: trendDir(profit, prevProfit),        trendText: trendLabel(profit, prevProfit) },
+    { label: 'Commandes',      value: String(totalOrders),            sub: 'sur la période',                                                 icon: ShoppingBag, valueClass: 'text-[#1C1917]', trend: trendDir(totalOrders, prevTotalOrders), trendText: trendLabel(totalOrders, prevTotalOrders) },
+    { label: 'Taux livraison', value: `${deliveryRate}%`,             sub: `Retours: ${returnRate}%`,                                        icon: Truck,       valueClass: 'text-[#1C1917]', trend: trendDir(deliveryRate, prevDeliveryRate), trendText: trendLabel(deliveryRate, prevDeliveryRate) },
+    { label: 'COD en attente', value: `${codPending.toFixed(0)} DT`,  sub: 'non encore livré',                                              icon: Clock,       valueClass: 'text-amber-600', trend: 'stable' as const, trendText: '' },
   ]
 
   return (
@@ -190,20 +255,46 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
           <h1 className="text-2xl font-bold text-[#1C1917]">Analytiques</h1>
           <p className="text-sm text-[#78716C] mt-0.5">Basé sur les {period} derniers jours</p>
         </div>
-        <div className="flex gap-1">
-          {([7, 30, 90] as Period[]).map(p => (
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1">
+            {([7, 30, 90] as Period[]).map(p => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                  period === p
+                    ? 'bg-[#0B5E46] text-white'
+                    : 'border border-[#E7E5E4] text-[#78716C] hover:bg-[#F5F5F4]'
+                }`}
+              >
+                {PERIOD_LABELS[p]}
+              </button>
+            ))}
+          </div>
+          {plan === 'starter' ? (
+            <div className="relative group">
+              <button
+                disabled
+                className="border border-[#E7E5E4] rounded-lg px-4 py-2 text-sm text-[#A8A29E] flex items-center gap-2 cursor-not-allowed opacity-60"
+              >
+                <Download className="w-4 h-4" />
+                Exporter
+              </button>
+              <div className="absolute bottom-full right-0 mb-2 bg-[#1C1917] text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                Disponible en plan Pro
+                <div className="absolute top-full right-4 border-4 border-transparent border-t-[#1C1917]" />
+              </div>
+            </div>
+          ) : (
             <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                period === p
-                  ? 'bg-[#0B5E46] text-white'
-                  : 'border border-[#E7E5E4] text-[#78716C] hover:bg-[#F5F5F4]'
-              }`}
+              onClick={handleExport}
+              disabled={exporting}
+              className="border border-[#E7E5E4] rounded-lg px-4 py-2 text-sm text-[#78716C] hover:bg-[#F5F5F4] flex items-center gap-2 transition-colors disabled:opacity-50"
             >
-              {PERIOD_LABELS[p]}
+              <Download className="w-4 h-4" />
+              {exporting ? 'Export...' : 'Exporter'}
             </button>
-          ))}
+          )}
         </div>
       </div>
 
@@ -218,6 +309,17 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
                   <p className="text-xs font-medium text-[#78716C] truncate">{s.label}</p>
                   <p className={`text-2xl font-bold mt-1 ${s.valueClass}`}>{s.value}</p>
                   <p className="text-xs text-[#78716C] mt-0.5">{s.sub}</p>
+                  {s.trendText && (
+                    <div className={`flex items-center gap-0.5 mt-1.5 text-xs font-medium ${
+                      s.trend === 'up' ? 'text-green-600' : s.trend === 'down' ? 'text-red-600' : 'text-[#78716C]'
+                    }`}>
+                      {s.trend === 'up' && <TrendingUp className="w-3 h-3 shrink-0" />}
+                      {s.trend === 'down' && <TrendingDown className="w-3 h-3 shrink-0" />}
+                      {s.trend === 'stable' && <Minus className="w-3 h-3 shrink-0" />}
+                      <span>{s.trendText}</span>
+                      <span className="font-normal text-[#A8A29E] ml-0.5">vs préc.</span>
+                    </div>
+                  )}
                 </div>
                 <Icon className="w-5 h-5 text-[#78716C] shrink-0 mt-0.5" />
               </div>
@@ -355,7 +457,30 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
       {carrierList.length > 0 && (
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-[#E7E5E4]">
-            <h2 className="font-semibold text-[#1C1917]">Par livreur</h2>
+            <h2 className="font-semibold text-[#1C1917] mb-3">Par livreur</h2>
+            {carrierList.length > 1 && (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedCarrier(null)}
+                  className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                    !selectedCarrier ? 'bg-[#0B5E46] text-white' : 'border border-[#E7E5E4] text-[#78716C] hover:bg-[#F5F5F4]'
+                  }`}
+                >
+                  Tous
+                </button>
+                {carrierList.map(c => (
+                  <button
+                    key={c.key}
+                    onClick={() => setSelectedCarrier(selectedCarrier === c.key ? null : c.key)}
+                    className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                      selectedCarrier === c.key ? 'bg-[#0B5E46] text-white' : 'border border-[#E7E5E4] text-[#78716C] hover:bg-[#F5F5F4]'
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -369,7 +494,7 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E7E5E4]">
-                {carrierList.map(c => (
+                {displayedCarriers.map(c => (
                   <tr key={c.key} className="hover:bg-[#FAFAF9] transition-colors">
                     <td className="px-5 py-4 font-semibold text-[#1C1917]">{c.label}</td>
                     <td className="px-5 py-4 text-[#78716C]">{c.shipped}</td>
