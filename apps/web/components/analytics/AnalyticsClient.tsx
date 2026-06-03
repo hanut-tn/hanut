@@ -6,7 +6,7 @@ import { Banknote, TrendingUp, TrendingDown, Minus, ShoppingBag, Truck, Clock, D
 import { getCarrierConfig, ORDER_STATUS_CONFIG, ORDER_STATUSES } from '@/lib/constants'
 
 type Product = { id: string; name: string }
-type Customer = { id: string; name: string; city?: string }
+type Customer = { id: string; name: string; city?: string | null }
 
 type Order = {
   id: string
