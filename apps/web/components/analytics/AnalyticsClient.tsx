@@ -174,7 +174,7 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
   })).sort((a, b) => b.shipped - a.shipped)
 
   const dailyData = useMemo(() => {
-    const days: { label: string; orders: number; revenue: number }[] = []
+    const days: { label: string; fullLabel: string; orders: number; revenue: number }[] = []
     for (let i = period - 1; i >= 0; i--) {
       const d = new Date()
       d.setDate(d.getDate() - i)
@@ -182,6 +182,7 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
       const dayOrders = filtered.filter(o => o.created_at.startsWith(dateStr))
       days.push({
         label: d.toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' }),
+        fullLabel: d.toLocaleDateString('fr-TN', { weekday: 'long', day: '2-digit', month: 'long' }),
         orders: dayOrders.length,
         revenue: dayOrders.filter(o => o.status === 'delivered').reduce((s, o) => s + o.cod_amount, 0),
       })
@@ -285,8 +286,11 @@ export default function AnalyticsClient({ orders, deliveries }: Props) {
                       }`}
                       style={{ height: `${pct}%` }}
                     />
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 bg-[#1C1917] text-white text-[11px] rounded-md px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                      {d.label}: {chartMode === 'orders' ? `${d.orders} cmd` : `${d.revenue.toFixed(0)} DT`}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#1C1917] text-white text-xs rounded-lg px-3 py-2 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-10 whitespace-nowrap">
+                      <p className="font-semibold capitalize">{d.fullLabel}</p>
+                      <p className="text-[#16A34A] mt-0.5">CA : {d.revenue.toFixed(0)} DT</p>
+                      <p className="text-white/70">Commandes : {d.orders}</p>
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#1C1917]" />
                     </div>
                   </div>
                 )

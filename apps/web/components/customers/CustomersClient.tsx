@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Users, Search } from 'lucide-react'
+import { Users, Search, Tag } from 'lucide-react'
 import type { CustomerInput } from '@/app/(dashboard)/customers/actions'
 
 const TAG_COLORS = [
@@ -54,6 +54,7 @@ function getStats(orders: Order[] | null) {
 export default function CustomersClient({ customers, updateCustomer, deleteCustomer }: Props) {
   const router = useRouter()
   const [search, setSearch] = useState('')
+  const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null)
@@ -66,15 +67,23 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
   const [confirmDelete, setConfirmDelete] = useState<Customer | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
+  const allTags = useMemo(() => {
+    const set = new Set<string>()
+    for (const c of customers) for (const t of c.tags ?? []) set.add(t)
+    return Array.from(set).sort()
+  }, [customers])
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return customers
+    let result = customers
+    if (selectedTag) result = result.filter(c => c.tags?.includes(selectedTag))
+    if (!search.trim()) return result
     const q = search.toLowerCase()
-    return customers.filter(c =>
+    return result.filter(c =>
       c.name.toLowerCase().includes(q) ||
       c.phone.includes(q) ||
       (c.city ?? '').toLowerCase().includes(q)
     )
-  }, [customers, search])
+  }, [customers, search, selectedTag])
 
   const totalCA = customers.reduce((s, c) => s + getStats(c.orders).delivered, 0)
 
@@ -159,17 +168,61 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
         />
       </div>
 
+      {/* Filtres par tag */}
+      {allTags.length > 0 && (
+        <div className="flex flex-wrap gap-2 items-center">
+          {allTags.map(tag => (
+            <button
+              key={tag}
+              onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+              className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                selectedTag === tag
+                  ? 'bg-[#0B5E46] text-white'
+                  : 'border border-[#E7E5E4] text-[#78716C] hover:bg-[#F5F5F4]'
+              }`}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Empty */}
       {filtered.length === 0 ? (
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-16 text-center">
-          <Users className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-40" />
-          <p className="font-medium text-[#1C1917]">
-            {search ? 'Aucun client trouvé pour cette recherche' : 'Aucun client pour l\'instant'}
-          </p>
-          {!search && (
-            <p className="text-sm mt-1 text-[#78716C]">
-              Les clients sont créés automatiquement lors de vos commandes.
-            </p>
+          {selectedTag ? (
+            <>
+              <Tag className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-40" />
+              <p className="font-medium text-[#1C1917]">
+                {search.trim() ? (
+                  <>
+                    Aucun client avec le tag <strong>{selectedTag}</strong> ne correspond à cette recherche
+                  </>
+                ) : (
+                  <>
+                    Aucun client avec le tag <strong>{selectedTag}</strong>
+                  </>
+                )}
+              </p>
+              <button
+                onClick={() => setSelectedTag(null)}
+                className="mt-3 text-sm text-[#16A34A] hover:text-[#15803D] font-medium transition-colors"
+              >
+                Voir tous les clients
+              </button>
+            </>
+          ) : (
+            <>
+              <Users className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-40" />
+              <p className="font-medium text-[#1C1917]">
+                {search ? 'Aucun client trouvé pour cette recherche' : 'Aucun client pour l\'instant'}
+              </p>
+              {!search && (
+                <p className="text-sm mt-1 text-[#78716C]">
+                  Les clients sont créés automatiquement lors de vos commandes.
+                </p>
+              )}
+            </>
           )}
         </div>
       ) : (
