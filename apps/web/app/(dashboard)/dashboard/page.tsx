@@ -7,6 +7,7 @@ import {
   Plus, Package, Truck,
 } from 'lucide-react'
 import CopyLinkButton from '@/components/dashboard/CopyLinkButton'
+import OnboardingChecklist from '@/components/dashboard/OnboardingChecklist'
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
   pending:   { label: 'En attente', cls: 'bg-amber-50 text-amber-700 border border-amber-200' },
@@ -54,6 +55,8 @@ export default async function DashboardPage() {
     { data: weeklyOrders },
     { data: recentOrders },
     { data: seller },
+    { count: productCount },
+    { count: orderCount },
   ] = await Promise.all([
     supabase.from('orders').select('cod_amount, created_at').eq('seller_id', context.sellerId).eq('status', 'delivered').is('deleted_at', null).gte('created_at', startOfMonth.toISOString()),
     supabase.from('orders').select('status').eq('seller_id', context.sellerId).is('deleted_at', null).gte('created_at', startOfMonth.toISOString()),
@@ -61,7 +64,9 @@ export default async function DashboardPage() {
     supabase.from('orders').select('status').eq('seller_id', context.sellerId).is('deleted_at', null).gte('created_at', startOfLastMonth.toISOString()).lte('created_at', endOfLastMonth.toISOString()),
     supabase.from('orders').select('cod_amount, created_at').eq('seller_id', context.sellerId).eq('status', 'delivered').is('deleted_at', null).gte('created_at', sevenDaysAgo.toISOString()),
     supabase.from('orders').select('id, cod_amount, status, variant, created_at, customer:customers(name, phone), product:products(name)').eq('seller_id', context.sellerId).is('deleted_at', null).order('created_at', { ascending: false }).limit(5),
-    supabase.from('sellers').select('slug').eq('id', context.sellerId).single(),
+    supabase.from('sellers').select('slug, onboarding_completed, onboarding_steps').eq('id', context.sellerId).single(),
+    supabase.from('products').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId),
+    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId).is('deleted_at', null),
   ])
 
   // Current month KPIs
@@ -121,6 +126,16 @@ export default async function DashboardPage() {
         </div>
         <Link href="/orders/new" className="btn-primary text-sm">+ Nouvelle commande</Link>
       </div>
+
+      {/* Onboarding checklist — visible uniquement aux vendeurs n'ayant pas encore terminé */}
+      {context.isSeller && !seller?.onboarding_completed && (
+        <OnboardingChecklist
+          productAdded={(productCount ?? 0) > 0}
+          linkCopied={(seller?.onboarding_steps as { link_copied?: boolean } | null)?.link_copied === true}
+          firstOrder={(orderCount ?? 0) > 0}
+          slug={seller?.slug ?? null}
+        />
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

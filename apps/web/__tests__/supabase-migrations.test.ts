@@ -16,6 +16,7 @@ describe('Supabase migrations', () => {
   const activityLogs = migration('20260602_add_activity_logs.sql')
   const orderSoftDelete = migration('20260602_add_orders_soft_delete.sql')
   const productsDescription = migration('20260602_add_products_description.sql')
+  const onboarding = migration('20260603_add_onboarding.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -112,5 +113,14 @@ describe('Supabase migrations', () => {
     expect(productsDescription).toMatch(/CREATE POLICY "product_images_authenticated_upload"/i)
     expect(productsDescription).toMatch(/CREATE POLICY "product_images_authenticated_update"/i)
     expect(productsDescription).toMatch(/CREATE POLICY "product_images_authenticated_delete"/i)
+  })
+
+  it('adds seller onboarding state', () => {
+    expect(onboarding).toMatch(
+      /ALTER TABLE sellers ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN NOT NULL DEFAULT FALSE;/i
+    )
+    expect(onboarding).toMatch(
+      /ALTER TABLE sellers ADD COLUMN IF NOT EXISTS onboarding_steps JSONB NOT NULL DEFAULT '\{"product_added": false, "link_copied": false, "first_order": false\}'::jsonb;/i
+    )
   })
 })

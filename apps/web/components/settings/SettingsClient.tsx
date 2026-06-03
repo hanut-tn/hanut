@@ -204,6 +204,11 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
     navigator.clipboard.writeText(orderLinkFull).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
+      fetch('/api/onboarding', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'link_copied' }),
+      }).catch(() => {})
     })
   }
 

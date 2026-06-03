@@ -52,7 +52,7 @@ export default async function SettingsPage({ searchParams }: Props) {
         members: memberCount ?? 0,
       }}
       appUrl={appUrl}
-      initialTab={tab === 'abonnement' ? 'plan' : tab}
+      initialTab={tab === 'abonnement' ? 'plan' : tab === 'lien' ? 'link' : tab}
       updateProfile={updateProfile}
       updateSlug={updateSlug}
       checkSlugAvailability={checkSlugAvailability}
