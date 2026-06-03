@@ -95,7 +95,6 @@ export default function CustomerDetail({ customer, orders: initialOrders, totalO
     }
     document.addEventListener('mousedown', handleDocClick)
     return () => document.removeEventListener('mousedown', handleDocClick)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function persistTags(newTags: string[]) {

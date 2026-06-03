@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { Fragment, useState, useTransition } from 'react'
 import { UserCheck, UserPlus, Users2, ShoppingBag, Package, User, Truck, ClipboardList } from 'lucide-react'
 import type { TeamMember, ActivityLog } from '@/app/(dashboard)/team/page'
 
@@ -39,9 +39,10 @@ type Props = {
   currentUserId: string
   members: TeamMember[]
   initialLogs: ActivityLog[]
+  initialTotal: number
 }
 
-export default function TeamPageClient({ currentUserId, members: initialMembers, initialLogs }: Props) {
+export default function TeamPageClient({ currentUserId, members: initialMembers, initialLogs, initialTotal }: Props) {
   const [members, setMembers] = useState(initialMembers)
   const [isPending, startTransition] = useTransition()
 
@@ -58,10 +59,14 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
   // Role change
   const [roleError, setRoleError] = useState<string | null>(null)
 
+  // Resend invitation per-member feedback
+  const [resentMembers, setResentMembers] = useState<Set<string>>(new Set())
+
   // Activity filters
   const [logs, setLogs] = useState<ActivityLog[]>(initialLogs)
-  const [logOffset, setLogOffset] = useState(20)
-  const [hasMore, setHasMore] = useState(initialLogs.length === 20)
+  const [totalLogs, setTotalLogs] = useState(initialTotal)
+  const [logOffset, setLogOffset] = useState(initialLogs.length)
+  const [hasMore, setHasMore] = useState(initialLogs.length < initialTotal)
   const [loadingMore, setLoadingMore] = useState(false)
   const [filterUserId, setFilterUserId] = useState('')
   const [filterGroup, setFilterGroup] = useState('')
@@ -142,9 +147,21 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
   }
 
   async function handleResendInvite(memberId: string) {
-    await fetch(`/api/team/${memberId}/resend`, { method: 'POST' })
-      .then(r => r.json())
-      .catch(() => null)
+    setRoleError(null)
+    const res = await fetch(`/api/team/${memberId}/resend`, { method: 'POST' })
+    const data = await res.json().catch(() => null)
+    if (!res.ok) {
+      setRoleError(data?.error ?? "Impossible de renvoyer l'invitation")
+      return
+    }
+    setResentMembers(prev => new Set([...prev, memberId]))
+    setTimeout(() => {
+      setResentMembers(prev => {
+        const next = new Set(prev)
+        next.delete(memberId)
+        return next
+      })
+    }, 3000)
   }
 
   async function applyLogFilters(params: { userId?: string; group?: string; days?: number; offset?: number; append?: boolean }) {
@@ -167,7 +184,7 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
     searchParams.set('limit', '20')
     searchParams.set('offset', String(off))
     if (uid) searchParams.set('userId', uid)
-    if (grp && groupActionTypes[grp]?.length === 1) searchParams.set('actionType', groupActionTypes[grp][0])
+    if (grp && groupActionTypes[grp]) searchParams.set('actionTypes', groupActionTypes[grp].join(','))
     if (d > 0) searchParams.set('days', String(d))
 
     setFiltering(!append)
@@ -176,20 +193,18 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
     const res = await fetch(`/api/activity?${searchParams.toString()}`)
     const data = await res.json()
 
-    let fetched: ActivityLog[] = data.logs ?? []
-
-    // Client-side filter for multi-action groups
-    if (grp && groupActionTypes[grp] && groupActionTypes[grp].length > 1) {
-      fetched = fetched.filter(l => groupActionTypes[grp].includes(l.action_type))
-    }
+    const nextTotal = typeof data.total === 'number' ? data.total : totalLogs
+    setTotalLogs(nextTotal)
+    const fetched = (data.logs ?? []) as ActivityLog[]
+    const nextOffset = off + fetched.length
 
     if (append) {
       setLogs(prev => [...prev, ...fetched])
     } else {
       setLogs(fetched)
     }
-    setHasMore(fetched.length === 20)
-    setLogOffset(off + fetched.length)
+    setHasMore(nextOffset < nextTotal)
+    setLogOffset(nextOffset)
     setFiltering(false)
     setLoadingMore(false)
   }
@@ -262,74 +277,97 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
                 const roleConf = ROLE_CONFIG[m.role]
                 const statusConf = STATUS_CONFIG[m.status]
                 const isSelf = m.user_id === currentUserId
+                const hasPendingBanner = m.status === 'pending' && !isSelf
 
                 return (
-                  <tr key={m.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-[#F0FDF4] text-[#166534] rounded-full flex items-center justify-center text-xs font-bold shrink-0">
-                          {initials(m)}
-                        </div>
-                        <div>
-                          {m.name && <p className="font-medium text-gray-900">{m.name}</p>}
-                          <p className={m.name ? 'text-xs text-gray-400' : 'text-sm text-gray-700'}>{m.email}</p>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="px-5 py-4">
-                      {isSelf ? (
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${roleConf.cls}`}>
-                          {roleConf.label}
-                        </span>
-                      ) : (
-                        <select
-                          defaultValue={m.role}
-                          onChange={e => handleRoleChange(m.id, e.target.value)}
-                          className="text-xs font-medium border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-                        >
-                          <option value="operator">Opérateur</option>
-                          <option value="readonly">Lecture seule</option>
-                        </select>
-                      )}
-                    </td>
-
-                    <td className="px-5 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusConf.cls}`}>
-                        {m.status === 'pending' && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                        )}
-                        {statusConf.label}
-                      </span>
-                    </td>
-
-                    <td className="px-5 py-4 text-xs text-gray-500">
-                      {m.status === 'active' ? formatRelative(m.last_sign_in_at ?? null) : '—'}
-                    </td>
-
-                    <td className="px-5 py-4 text-xs text-gray-400">{formatDate(m.invited_at)}</td>
-
-                    <td className="px-5 py-4">
-                      {!isSelf && (
+                  <Fragment key={m.id}>
+                    <tr className="hover:bg-gray-50 transition-colors">
+                      <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-[#F0FDF4] text-[#166534] rounded-full flex items-center justify-center text-xs font-bold shrink-0">
+                            {initials(m)}
+                          </div>
+                          <div>
+                            {m.name && <p className="font-medium text-gray-900">{m.name}</p>}
+                            <p className={m.name ? 'text-xs text-gray-400' : 'text-sm text-gray-700'}>{m.email}</p>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        {isSelf ? (
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${roleConf.cls}`}>
+                            {roleConf.label}
+                          </span>
+                        ) : (
+                          <select
+                            defaultValue={m.role}
+                            onChange={e => handleRoleChange(m.id, e.target.value)}
+                            className="text-xs font-medium border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                          >
+                            <option value="operator">Opérateur</option>
+                            <option value="readonly">Lecture seule</option>
+                          </select>
+                        )}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusConf.cls}`}>
                           {m.status === 'pending' && (
-                            <button
-                              onClick={() => handleResendInvite(m.id)}
-                              className="text-xs text-blue-500 hover:text-blue-700 font-medium"
-                            >
-                              Renvoyer
-                            </button>
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                           )}
+                          {statusConf.label}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-4 text-xs text-gray-500">
+                        {m.status === 'active' ? formatRelative(m.last_sign_in_at ?? null) : '—'}
+                      </td>
+
+                      <td className="px-5 py-4 text-xs text-gray-400">{formatDate(m.invited_at)}</td>
+
+                      <td className="px-5 py-4">
+                        {!isSelf && (
                           <button
                             onClick={() => { setConfirmDelete(m); setDeleteError(null) }}
                             className="text-xs text-red-400 hover:text-red-600 font-medium"
                           >
                             Retirer
                           </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
+                        )}
+                      </td>
+                    </tr>
+
+                    {hasPendingBanner && (
+                      <tr className="!border-t-0">
+                        <td colSpan={6} className="p-0">
+                          <div className="bg-amber-50 border-t border-amber-100 px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap">
+                            <span className="text-xs text-amber-700">
+                              ⚠️ Invitation en attente — envoyée le {formatDate(m.invited_at)}
+                            </span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {resentMembers.has(m.id) ? (
+                                <span className="text-xs text-amber-700 font-medium">✓ Invitation renvoyée</span>
+                              ) : (
+                                <button
+                                  onClick={() => handleResendInvite(m.id)}
+                                  className="bg-amber-500 text-white text-xs px-3 py-1 rounded-lg hover:bg-amber-600 transition-colors"
+                                >
+                                  Renvoyer l&apos;invitation
+                                </button>
+                              )}
+                              <button
+                                onClick={() => { setConfirmDelete(m); setDeleteError(null) }}
+                                className="border border-amber-300 text-amber-700 text-xs px-3 py-1 rounded-lg hover:bg-amber-100 transition-colors"
+                              >
+                                Annuler l&apos;invitation
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 )
               })}
             </tbody>
@@ -441,6 +479,11 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
           </div>
         ) : (
           <div>
+            <div className="px-5 py-2 border-b border-gray-100">
+              <span className="text-xs text-gray-400">
+                {logs.length} activité{logs.length !== 1 ? 's' : ''} affichée{logs.length !== 1 ? 's' : ''} sur {totalLogs}
+              </span>
+            </div>
             <ul className="divide-y divide-gray-100">
               {logs.map(log => {
                 const conf = ACTION_ICONS[log.action_type] ?? { Icon: ClipboardList, cls: 'text-gray-400', group: '' }
@@ -467,15 +510,26 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
               })}
             </ul>
 
-            {hasMore && (
+            {hasMore ? (
               <div className="px-5 py-4 border-t border-gray-100">
                 <button
                   onClick={() => applyLogFilters({ offset: logOffset, append: true })}
                   disabled={loadingMore}
-                  className="w-full text-sm text-center py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="border border-[#E7E5E4] rounded-lg text-sm text-[#78716C] px-4 py-2 hover:bg-[#F5F5F4] w-full flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
                 >
-                  {loadingMore ? 'Chargement…' : 'Charger plus'}
+                  {loadingMore ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-[#78716C] border-t-transparent rounded-full animate-spin" />
+                      Chargement...
+                    </>
+                  ) : (
+                    'Charger plus'
+                  )}
                 </button>
+              </div>
+            ) : (
+              <div className="px-5 py-3 border-t border-gray-100 text-center">
+                <p className="text-xs text-gray-400">Toutes les activités sont affichées</p>
               </div>
             )}
           </div>

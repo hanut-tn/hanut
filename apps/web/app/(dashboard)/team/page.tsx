@@ -20,7 +20,7 @@ export default async function TeamPage() {
 
     serviceClient
       .from('activity_logs')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('seller_id', context.sellerId)
       .order('created_at', { ascending: false })
       .limit(20),
@@ -53,6 +53,7 @@ export default async function TeamPage() {
       currentUserId={context.userId}
       members={membersWithSignIn}
       initialLogs={(logsRes.data ?? []) as ActivityLog[]}
+      initialTotal={logsRes.count ?? 0}
     />
   )
 }

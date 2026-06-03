@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { Product } from '@hanut/types'
+import { PackageX } from 'lucide-react'
 
 const GOUVERNORATS = [
   'Ariana', 'Béja', 'Ben Arous', 'Bizerte', 'Gabès', 'Gafsa',
@@ -17,8 +18,20 @@ type Props = {
 }
 
 type Submitted = { orderId: string }
+type ProductVariant = Product['variants'][number]
+type StockErrorScope = 'product' | 'variant'
 
-export default function OrderForm({ sellerSlug, sellerName, products }: Props) {
+function getVariantLabel(variant: ProductVariant, index: number) {
+  return [variant.size, variant.color].filter(Boolean).join(' / ') || `Variante ${index + 1}`
+}
+
+function getVariantKey(productId: string, label: string) {
+  return `${productId}::${label}`
+}
+
+export default function OrderForm({ sellerSlug, sellerName, products: initialProducts }: Props) {
+  const formTopRef = useRef<HTMLFormElement>(null)
+
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [city, setCity] = useState('')
@@ -29,15 +42,49 @@ export default function OrderForm({ sellerSlug, sellerName, products }: Props) {
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [stockError, setStockError] = useState<string | null>(null)
+  const [stockErrorScope, setStockErrorScope] = useState<StockErrorScope>('product')
+  const [exhaustedIds, setExhaustedIds] = useState<Set<string>>(new Set())
+  const [exhaustedVariantKeys, setExhaustedVariantKeys] = useState<Set<string>>(new Set())
   const [submitted, setSubmitted] = useState<Submitted | null>(null)
 
-  const selectedProduct = products.find(p => p.id === productId)
+  const visibleProducts = initialProducts.filter(p => {
+    if (exhaustedIds.has(p.id)) return false
+    if (p.variants.length === 0) return true
+    return p.variants.some((v, i) => {
+      const label = getVariantLabel(v, i)
+      return v.qty > 0 && !exhaustedVariantKeys.has(getVariantKey(p.id, label))
+    })
+  })
+  const selectedProduct = visibleProducts.find(p => p.id === productId)
+  const hasVariants = (selectedProduct?.variants.length ?? 0) > 0
 
-  // Reset variant when product changes
+  const selectedVariant = hasVariants
+    ? selectedProduct?.variants.find((v, i) => {
+        const label = getVariantLabel(v, i)
+        return label === variant
+      })
+    : undefined
+
+  const maxQty = selectedVariant
+    ? selectedVariant.qty
+    : (selectedProduct?.stock ?? 99)
+
+  // Reset variant + quantity when product changes
   useEffect(() => {
     setVariant('')
     setQuantity(1)
+    setStockError(null)
   }, [productId])
+
+  // Auto-fix quantity when variant changes
+  useEffect(() => {
+    if (selectedVariant) {
+      if (selectedVariant.qty === 0) setQuantity(1)
+      else if (selectedVariant.qty === 1) setQuantity(1)
+      else setQuantity(q => Math.min(q, selectedVariant.qty))
+    }
+  }, [selectedVariant])
 
   function validatePhone(v: string) {
     const digits = v.replace(/\D/g, '')
@@ -47,6 +94,7 @@ export default function OrderForm({ sellerSlug, sellerName, products }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    setStockError(null)
 
     if (!validatePhone(phone)) {
       setError('Numéro de téléphone invalide. Entrez 8 chiffres (ex: 20 123 456).')
@@ -56,8 +104,12 @@ export default function OrderForm({ sellerSlug, sellerName, products }: Props) {
       setError('Sélectionnez un produit.')
       return
     }
-    if (selectedProduct && quantity > selectedProduct.stock) {
-      setError(`Stock disponible : ${selectedProduct.stock} unité(s).`)
+    if (hasVariants && !variant) {
+      setError('Veuillez choisir une variante.')
+      return
+    }
+    if (selectedProduct && quantity > maxQty) {
+      setError(`Stock disponible : ${maxQty} unité(s).`)
       return
     }
 
@@ -83,7 +135,31 @@ export default function OrderForm({ sellerSlug, sellerName, products }: Props) {
 
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error ?? 'Une erreur est survenue. Réessayez.')
+        const msg: string = data.error ?? 'Une erreur est survenue. Réessayez.'
+        const isStockError = msg.toLowerCase().includes('insuffisant') || msg.toLowerCase().includes('stock')
+        if (isStockError) {
+          setStockError(msg)
+          if (hasVariants && variant && selectedProduct) {
+            const exhaustedKey = getVariantKey(productId, variant)
+            const hasOtherAvailableVariant = selectedProduct.variants.some((v, i) => {
+              const label = getVariantLabel(v, i)
+              if (label === variant) return false
+              return v.qty > 0 && !exhaustedVariantKeys.has(getVariantKey(productId, label))
+            })
+            setStockErrorScope(hasOtherAvailableVariant ? 'variant' : 'product')
+            setExhaustedVariantKeys(prev => new Set([...prev, exhaustedKey]))
+            if (!hasOtherAvailableVariant) {
+              setExhaustedIds(prev => new Set([...prev, productId]))
+            }
+            setVariant('')
+            setQuantity(1)
+          } else {
+            setStockErrorScope('product')
+            setExhaustedIds(prev => new Set([...prev, productId]))
+          }
+        } else {
+          setError(msg)
+        }
         return
       }
       setSubmitted({ orderId: (data.order_id as string).slice(0, 8).toUpperCase() })
@@ -94,7 +170,7 @@ export default function OrderForm({ sellerSlug, sellerName, products }: Props) {
     }
   }
 
-  // ── Confirmation screen ────────────────────────────────────────────────────
+  // ── Confirmation screen ──────────────────────────────────────────────────────
   if (submitted) {
     return (
       <div className="flex flex-col items-center text-center py-10 space-y-5">
@@ -129,9 +205,9 @@ export default function OrderForm({ sellerSlug, sellerName, products }: Props) {
     )
   }
 
-  // ── Order form ─────────────────────────────────────────────────────────────
+  // ── Order form ───────────────────────────────────────────────────────────────
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form ref={formTopRef} onSubmit={handleSubmit} className="space-y-5">
       <div>
         <h1 className="text-xl font-bold text-[#1C1917]">Passer une commande</h1>
         <p className="text-sm text-gray-500 mt-0.5">chez <span className="font-medium">{sellerName}</span></p>
@@ -222,7 +298,7 @@ export default function OrderForm({ sellerSlug, sellerName, products }: Props) {
             required
           >
             <option value="">Sélectionner un produit…</option>
-            {products.map(p => (
+            {visibleProducts.map(p => (
               <option key={p.id} value={p.id}>
                 {p.name} — {p.price} DT
               </option>
@@ -230,20 +306,42 @@ export default function OrderForm({ sellerSlug, sellerName, products }: Props) {
           </select>
         </div>
 
-        {selectedProduct && selectedProduct.variants.length > 0 && (
+        {/* Variantes — pills */}
+        {selectedProduct && hasVariants && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Variante</label>
-            <select
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition bg-white"
-              value={variant}
-              onChange={e => setVariant(e.target.value)}
-            >
-              <option value="">Aucune préférence</option>
+            <p className="text-sm font-medium text-[#1C1917] mb-2">Choisissez votre variante</p>
+            <div className="flex flex-wrap gap-2">
               {selectedProduct.variants.map((v, i) => {
-                const label = [v.size, v.color].filter(Boolean).join(' / ') || `Variante ${i + 1}`
-                return <option key={i} value={label}>{label}</option>
+                const label = getVariantLabel(v, i)
+                const isSelected = variant === label
+                const isOut = v.qty === 0 || exhaustedVariantKeys.has(getVariantKey(selectedProduct.id, label))
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    disabled={isOut}
+                    onClick={() => {
+                      setVariant(label)
+                      setStockError(null)
+                    }}
+                    className={`rounded-lg px-3 py-2 text-sm transition-colors ${
+                      isOut
+                        ? 'border border-[#E7E5E4] opacity-40 cursor-not-allowed line-through'
+                        : isSelected
+                          ? 'border-2 border-[#16A34A] bg-[#F0FDF4] text-[#166534] font-medium'
+                          : 'border border-[#E7E5E4] cursor-pointer hover:border-[#16A34A]'
+                    }`}
+                  >
+                    {label}
+                    {isOut ? (
+                      <span className="ml-1 text-xs">— épuisée</span>
+                    ) : (
+                      <span className="ml-1 text-xs text-gray-400">— {v.qty} dispo</span>
+                    )}
+                  </button>
+                )
               })}
-            </select>
+            </div>
           </div>
         )}
 
@@ -260,14 +358,15 @@ export default function OrderForm({ sellerSlug, sellerName, products }: Props) {
             <span className="text-lg font-bold text-[#1C1917] w-8 text-center">{quantity}</span>
             <button
               type="button"
-              onClick={() => setQuantity(q => Math.min(selectedProduct?.stock ?? 99, q + 1))}
-              className="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-lg transition"
+              onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
+              disabled={!selectedProduct || (hasVariants && !variant)}
+              className="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-lg transition disabled:opacity-40"
             >
               +
             </button>
             {selectedProduct && (
               <span className="text-xs text-gray-400 ml-1">
-                {selectedProduct.stock} dispo
+                {selectedVariant ? `${selectedVariant.qty} dispo` : !hasVariants ? `${selectedProduct.stock} dispo` : ''}
               </span>
             )}
           </div>
@@ -298,9 +397,40 @@ export default function OrderForm({ sellerSlug, sellerName, products }: Props) {
         />
       </div>
 
+      {/* Erreur générique */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
           {error}
+        </div>
+      )}
+
+      {/* Erreur stock */}
+	      {stockError && (
+	        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+	          <PackageX className="text-red-500 w-6 h-6 shrink-0 mt-0.5" />
+	          <div className="flex-1">
+	            <p className="text-sm font-semibold text-red-700">
+	              {stockErrorScope === 'variant' ? 'Cette variante n&apos;est plus disponible' : 'Ce produit n&apos;est plus disponible'}
+	            </p>
+	            <p className="text-xs text-red-600 mt-1">
+	              {stockErrorScope === 'variant'
+	                ? 'Le stock de cette variante vient d’être épuisé. Choisissez une autre variante ou un autre produit.'
+	                : 'Le stock de ce produit vient d’être épuisé. Choisissez un autre produit ou revenez plus tard.'}
+	            </p>
+	            <button
+	              type="button"
+	              onClick={() => {
+	                if (stockErrorScope === 'product') setProductId('')
+	                setVariant('')
+	                setQuantity(1)
+	                setStockError(null)
+                formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+	              }}
+	              className="mt-2 text-xs font-semibold text-red-700 underline underline-offset-2"
+	            >
+	              {stockErrorScope === 'variant' ? 'Choisir une autre variante' : 'Choisir un autre produit'}
+	            </button>
+          </div>
         </div>
       )}
 

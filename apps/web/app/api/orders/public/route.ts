@@ -73,13 +73,33 @@ export async function POST(req: Request) {
   // Vérification que product_id appartient bien à ce vendeur
   const { data: product } = await supabase
     .from('products')
-    .select('id')
+    .select('id, variants')
     .eq('id', product_id as string)
     .eq('seller_id', seller.id)
     .single()
 
   if (!product) {
     return NextResponse.json({ error: 'Produit introuvable' }, { status: 404 })
+  }
+
+  // Validation variante
+  type ProductVariant = { size?: string; color?: string; qty: number }
+  const productVariants = (product.variants ?? []) as ProductVariant[]
+  if (productVariants.length > 0) {
+    if (!variant) {
+      return NextResponse.json({ error: 'Veuillez choisir une variante' }, { status: 400 })
+    }
+    const variantLabel = variant as string
+    const matched = productVariants.find(v => {
+      const label = [v.size, v.color].filter(Boolean).join(' / ')
+      return label === variantLabel
+    })
+    if (!matched) {
+      return NextResponse.json({ error: 'Variante invalide' }, { status: 400 })
+    }
+    if (matched.qty < qty) {
+      return NextResponse.json({ error: 'Stock insuffisant pour cette variante' }, { status: 400 })
+    }
   }
 
   const { data: orderId, error } = await supabase.rpc('create_order_with_stock', {

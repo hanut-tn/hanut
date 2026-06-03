@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
   const offset = parseInt(searchParams.get('offset') ?? '0')
   const userId = searchParams.get('userId')
   const actionType = searchParams.get('actionType')
+  const actionTypes = searchParams.get('actionTypes')?.split(',').map(v => v.trim()).filter(Boolean) ?? []
   const days = parseInt(searchParams.get('days') ?? '0')
 
   const serviceClient = createServiceClient()
@@ -26,7 +27,8 @@ export async function GET(request: NextRequest) {
     .range(offset, offset + limit - 1)
 
   if (userId) query = query.eq('user_id', userId)
-  if (actionType) query = query.eq('action_type', actionType)
+  if (actionTypes.length > 0) query = query.in('action_type', actionTypes)
+  else if (actionType) query = query.eq('action_type', actionType)
   if (days > 0) {
     const since = new Date()
     since.setDate(since.getDate() - days)
