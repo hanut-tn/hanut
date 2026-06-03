@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import {
   ArrowLeft, Clock, CheckCircle, Truck, Package, RotateCcw,
   MapPin, Phone, ShoppingBag,
@@ -299,7 +300,17 @@ export default function OrderDetail({
             </div>
             <div className="flex items-center gap-4">
               {product?.image_url ? (
-                <img src={product.image_url} alt={product.name} className="w-16 h-16 rounded-lg object-cover border border-[#E7E5E4] shrink-0" />
+                <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-[#E7E5E4] shrink-0">
+                  <Image
+                    src={product.image_url}
+                    alt={product.name}
+                    fill
+                    sizes="64px"
+                    className="object-cover"
+                    placeholder="blur"
+                    blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AJQAB/9k="
+                  />
+                </div>
               ) : (
                 <div className="w-16 h-16 rounded-lg bg-[#F5F5F4] border border-[#E7E5E4] flex items-center justify-center shrink-0">
                   <Package className="w-6 h-6 text-[#A8A29E]" />

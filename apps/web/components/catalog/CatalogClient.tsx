@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useMemo } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import {
   Search, LayoutGrid, List, Plus, Package, SearchX,
   ImageOff, Pencil, Trash2, Eye, ChevronDown,
@@ -65,10 +66,14 @@ function ProductCard({
       {/* Image */}
       <div className="relative aspect-square bg-[#F0FDF4]">
         {product.image_url ? (
-          <img
+          <Image
             src={product.image_url}
             alt={product.name}
-            className="absolute inset-0 w-full h-full object-cover"
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+            className="object-cover"
+            placeholder="blur"
+            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AJQAB/9k="
           />
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[#78716C]">
@@ -374,9 +379,17 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
                 return (
                   <tr key={p.id} className="hover:bg-[#FAFAF9] transition-colors">
                     <td className="pl-5 pr-3 py-3">
-                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#F0FDF4] flex-shrink-0 flex items-center justify-center">
+                      <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-[#F0FDF4] flex-shrink-0 flex items-center justify-center">
                         {p.image_url ? (
-                          <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
+                          <Image
+                            src={p.image_url}
+                            alt={p.name}
+                            fill
+                            sizes="40px"
+                            className="object-cover"
+                            placeholder="blur"
+                            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AJQAB/9k="
+                          />
                         ) : (
                           <ImageOff className="w-4 h-4 text-[#78716C] opacity-40" />
                         )}

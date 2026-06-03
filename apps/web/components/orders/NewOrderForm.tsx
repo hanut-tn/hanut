@@ -3,6 +3,7 @@
 import { useState, useEffect, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Check, ChevronRight, Package, User, ClipboardList } from 'lucide-react'
 import type { Product } from '@hanut/types'
 import type { CreateOrderInput } from '@/app/(dashboard)/orders/actions'
@@ -364,7 +365,17 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
                 }`}
               >
                 {p.image_url ? (
-                  <img src={p.image_url} alt={p.name} className="w-full aspect-square object-cover rounded-lg mb-2" />
+                  <div className="relative w-full aspect-square rounded-lg mb-2 overflow-hidden">
+                    <Image
+                      src={p.image_url}
+                      alt={p.name}
+                      fill
+                      sizes="(max-width: 640px) 50vw, 25vw"
+                      className="object-cover"
+                      placeholder="blur"
+                      blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AJQAB/9k="
+                    />
+                  </div>
                 ) : (
                   <div className="w-full aspect-square bg-[#F5F5F4] rounded-lg mb-2 flex items-center justify-center">
                     <Package className="w-6 h-6 text-[#A8A29E]" />

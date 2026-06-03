@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import {
   ArrowLeft, Pencil, Trash2, Package, TrendingUp,
   ShoppingCart, RotateCcw, Settings, AlertTriangle, ImageOff,
@@ -159,12 +160,16 @@ export default function ProductDetailClient({
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         {/* Left — Image (40%) */}
         <div className="lg:col-span-2 space-y-3">
-          <div className="aspect-square rounded-xl overflow-hidden bg-[#F0FDF4] flex items-center justify-center">
+          <div className="relative aspect-square rounded-xl overflow-hidden bg-[#F0FDF4] flex items-center justify-center">
             {product.image_url ? (
-              <img
+              <Image
                 src={product.image_url}
                 alt={product.name}
-                className="w-full h-full object-cover"
+                fill
+                sizes="(max-width: 1024px) 100vw, 40vw"
+                className="object-cover"
+                placeholder="blur"
+                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AJQAB/9k="
               />
             ) : (
               <div className="flex flex-col items-center justify-center gap-3 text-[#78716C]">
