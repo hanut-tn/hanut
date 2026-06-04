@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import type { Product } from '@hanut/types'
-import { PackageX, Package } from 'lucide-react'
+import { PackageX, Package, Copy, ExternalLink } from 'lucide-react'
 
 const GOUVERNORATS = [
   'Ariana', 'Béja', 'Ben Arous', 'Bizerte', 'Gabès', 'Gafsa',
@@ -18,7 +18,7 @@ type Props = {
   products: Product[]
 }
 
-type Submitted = { orderId: string }
+type Submitted = { orderId: string; fullId: string }
 type ProductVariant = Product['variants'][number]
 type StockErrorScope = 'product' | 'variant'
 
@@ -163,7 +163,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         }
         return
       }
-      setSubmitted({ orderId: (data.order_id as string).slice(0, 8).toUpperCase() })
+      setSubmitted({ orderId: (data.order_id as string).slice(0, 8).toUpperCase(), fullId: data.order_id as string })
     } catch {
       setError('Erreur réseau. Vérifiez votre connexion et réessayez.')
     } finally {
@@ -173,6 +173,8 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
 
   // ── Confirmation screen ──────────────────────────────────────────────────────
   if (submitted) {
+    const trackUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/track/${submitted.fullId}`
+
     return (
       <div className="flex flex-col items-center text-center py-10 space-y-5">
         <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center">
@@ -184,14 +186,36 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         <div>
           <h2 className="text-2xl font-extrabold text-[#1C1917]">Commande envoyée !</h2>
           <p className="text-gray-500 mt-2 max-w-sm">
-            Vous recevrez un SMS de confirmation de la part de{' '}
-            <span className="font-semibold text-[#1C1917]">{sellerName}</span> sous peu.
+            Le vendeur <span className="font-semibold text-[#1C1917]">{sellerName}</span> vous contactera pour confirmer votre commande.
           </p>
         </div>
+
         <div className="bg-[#F5F5F4] rounded-xl px-6 py-4">
           <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Numéro de commande</p>
-          <p className="text-xl font-bold text-[#0B5E46] tracking-wider">#{submitted.orderId}</p>
+          <p className="text-xl font-bold text-[#0B5E46] tracking-wider font-mono">#{submitted.orderId}</p>
         </div>
+
+        <div className="w-full bg-white border border-[#E7E5E4] rounded-2xl p-4 space-y-3">
+          <p className="text-sm font-semibold text-[#1C1917]">Suivre ma commande</p>
+          <a
+            href={trackUrl}
+            className="flex items-center justify-center gap-2 min-h-[44px] w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold rounded-xl text-sm transition-colors touch-manipulation"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Voir le statut de ma commande
+          </a>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(trackUrl).catch(() => {})
+            }}
+            className="flex items-center justify-center gap-2 min-h-[44px] w-full border border-[#E7E5E4] text-[#78716C] rounded-xl text-sm hover:bg-[#F5F5F4] transition-colors touch-manipulation"
+          >
+            <Copy className="w-4 h-4" />
+            Copier le lien de suivi
+          </button>
+        </div>
+
         <button
           onClick={() => {
             setSubmitted(null)

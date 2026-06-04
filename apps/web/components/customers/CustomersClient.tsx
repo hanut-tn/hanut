@@ -3,8 +3,9 @@
 import { useState, useTransition, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Users, Search, Tag, ArrowUpDown } from 'lucide-react'
+import { Users, Search, Tag, ArrowUpDown, ChevronDown } from 'lucide-react'
 import type { CustomerInput } from '@/app/(dashboard)/customers/actions'
+import { initials } from '@/lib/utils'
 
 const TAG_COLORS = [
   'bg-blue-100 text-blue-700',
@@ -39,6 +40,11 @@ type Customer = {
 
 type Props = {
   customers: Customer[]
+  initialTotal: number
+  stats: {
+    totalRevenue: number
+    orderCount: number
+  }
   updateCustomer: (id: string, input: CustomerInput) => Promise<{ error?: string }>
   deleteCustomer: (id: string) => Promise<{ error?: string }>
 }
@@ -54,13 +60,13 @@ function getStats(orders: Order[] | null) {
 function CustomerMobileCard({ customer }: { customer: Customer }) {
   const stats = getStats(customer.orders)
   const tags = customer.tags ?? []
-  const initials = customer.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  const ini = initials(customer.name)
 
   return (
     <div className="mb-3 bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4">
       <div className="flex items-start gap-3">
         <div className="w-9 h-9 bg-[#F0FDF4] text-[#166534] rounded-full flex items-center justify-center text-sm font-bold shrink-0">
-          {initials}
+          {ini}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2">
@@ -126,12 +132,18 @@ function CustomerMobileCard({ customer }: { customer: Customer }) {
   )
 }
 
-export default function CustomersClient({ customers, updateCustomer, deleteCustomer }: Props) {
+export default function CustomersClient({ customers, initialTotal, stats, updateCustomer, deleteCustomer }: Props) {
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<'name' | 'total_spent' | 'order_count' | 'last_order'>('name')
   const [isPending, startTransition] = useTransition()
+
+  // Pagination
+  const [allCustomers, setAllCustomers] = useState<Customer[]>(customers)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [hasMore, setHasMore] = useState(initialTotal > customers.length)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
 
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null)
   const [editName, setEditName] = useState('')
@@ -145,12 +157,12 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
 
   const allTags = useMemo(() => {
     const set = new Set<string>()
-    for (const c of customers) for (const t of c.tags ?? []) set.add(t)
+    for (const c of allCustomers) for (const t of c.tags ?? []) set.add(t)
     return Array.from(set).sort()
-  }, [customers])
+  }, [allCustomers])
 
   const filtered = useMemo(() => {
-    let result = customers
+    let result = allCustomers
     if (selectedTag) result = result.filter(c => c.tags?.includes(selectedTag))
     if (search.trim()) {
       const q = search.toLowerCase()
@@ -175,9 +187,26 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
       })
     }
     return arr
-  }, [customers, search, selectedTag, sortBy])
+  }, [allCustomers, search, selectedTag, sortBy])
 
-  const totalCA = customers.reduce((s, c) => s + getStats(c.orders).delivered, 0)
+  async function loadMore() {
+    if (isLoadingMore) return
+    setIsLoadingMore(true)
+    try {
+      const res = await fetch(`/api/customers/list?page=${currentPage + 1}&limit=20`)
+      const data = await res.json()
+      if (!res.ok) return
+      setAllCustomers(prev => {
+        const existingIds = new Set(prev.map(c => c.id))
+        const fresh = (data.customers ?? []).filter((c: Customer) => !existingIds.has(c.id))
+        return [...prev, ...fresh]
+      })
+      setHasMore(data.hasMore ?? false)
+      setCurrentPage(p => p + 1)
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }
 
   function openEdit(c: Customer) {
     setEditCustomer(c)
@@ -226,7 +255,7 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-[#1C1917] sm:text-2xl">Clients</h1>
-          <p className="text-sm text-[#78716C] mt-0.5">{customers.length} client{customers.length !== 1 ? 's' : ''}</p>
+          <p className="text-sm text-[#78716C] mt-0.5">{initialTotal} client{initialTotal !== 1 ? 's' : ''}</p>
         </div>
         <Link href="/orders/new" className="btn-primary w-full text-center text-sm sm:w-auto">+ Nouvelle commande</Link>
       </div>
@@ -235,16 +264,16 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-2 sm:p-4">
           <p className="text-xs sm:text-sm font-medium text-[#78716C]">Total clients</p>
-          <p className="text-xl sm:text-2xl font-bold text-[#1C1917] mt-1">{customers.length}</p>
+          <p className="text-xl sm:text-2xl font-bold text-[#1C1917] mt-1">{initialTotal}</p>
         </div>
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-2 sm:p-4">
           <p className="text-xs sm:text-sm font-medium text-[#78716C]">CA encaissé</p>
-          <p className="text-xl sm:text-2xl font-bold text-[#16A34A] mt-1">{totalCA.toFixed(0)} DT</p>
+          <p className="text-xl sm:text-2xl font-bold text-[#16A34A] mt-1">{stats.totalRevenue.toFixed(0)} DT</p>
         </div>
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-2 sm:p-4">
           <p className="text-xs sm:text-sm font-medium text-[#78716C]">Commandes</p>
           <p className="text-xl sm:text-2xl font-bold text-[#1C1917] mt-1">
-            {customers.reduce((s, c) => s + (c.orders?.length ?? 0), 0)}
+            {stats.orderCount}
           </p>
         </div>
       </div>
@@ -427,6 +456,31 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
           </table>
         </div>
         </>
+      )}
+
+      {/* Charger plus */}
+      {hasMore && (
+        <button
+          onClick={loadMore}
+          disabled={isLoadingMore}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#E7E5E4] px-4 py-2.5 text-sm text-[#78716C] transition-colors hover:bg-[#F5F5F4] disabled:opacity-50"
+        >
+          {isLoadingMore ? (
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#78716C] border-t-transparent" />
+          ) : (
+            <>
+              <ChevronDown className="h-4 w-4" />
+              Charger plus
+              <span className="text-[#A8A29E]">({initialTotal - allCustomers.length} restant{initialTotal - allCustomers.length !== 1 ? 's' : ''})</span>
+            </>
+          )}
+        </button>
+      )}
+
+      {allCustomers.length > 0 && (
+        <p className="text-center text-xs text-[#A8A29E]">
+          {allCustomers.length} affiché{allCustomers.length !== 1 ? 's' : ''} sur {initialTotal}
+        </p>
       )}
 
       {/* ── EDIT MODAL ── */}

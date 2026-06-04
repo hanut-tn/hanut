@@ -260,7 +260,7 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors shrink-0 ${
+            className={`whitespace-nowrap px-4 py-3 min-h-[44px] text-sm font-medium transition-colors shrink-0 ${
               tab === t.key
                 ? 'text-[#166534] border-b-2 border-[#16A34A] -mb-px'
                 : 'text-[#78716C] hover:text-[#1C1917]'

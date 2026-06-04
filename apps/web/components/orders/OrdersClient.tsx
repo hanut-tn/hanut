@@ -4,7 +4,7 @@ import { useState, useMemo, useTransition, useEffect } from 'react'
 import Link from 'next/link'
 import {
   Search, SearchX, Download, Trash2, ChevronRight, ShoppingBag, Filter,
-  X, Loader2, RotateCcw,
+  X, Loader2, RotateCcw, ChevronDown,
 } from 'lucide-react'
 import type { OrderStatus } from '@hanut/types'
 import type { UserRole } from '@/lib/get-context'
@@ -52,6 +52,8 @@ type Props = {
   role: UserRole
   plan: 'starter' | 'pro' | 'business'
   orders: Order[]
+  initialTotal: number
+  tabCounts: Record<string, number>
   trashOrders: TrashOrder[]
   updateStatus: (id: string, status: OrderStatus) => Promise<void>
   deleteOrder: (id: string) => Promise<{ error?: string }>
@@ -120,6 +122,8 @@ export default function OrdersClient({
   role,
   plan,
   orders,
+  initialTotal,
+  tabCounts,
   trashOrders,
   updateStatus,
   deleteOrder,
@@ -138,6 +142,16 @@ export default function OrdersClient({
   const [permDeleteInput, setPermDeleteInput] = useState('')
   const [actionError, setActionError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  // Pagination
+  const [allOrders, setAllOrders] = useState<Order[]>(orders)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [hasMore, setHasMore] = useState(initialTotal > orders.length)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [statusOrders, setStatusOrders] = useState<Partial<Record<OrderStatus, Order[]>>>({})
+  const [statusPages, setStatusPages] = useState<Partial<Record<OrderStatus, number>>>({})
+  const [statusHasMore, setStatusHasMore] = useState<Partial<Record<OrderStatus, boolean>>>({})
+  const [loadingStatus, setLoadingStatus] = useState<OrderStatus | null>(null)
 
   // Debounce : met à jour debouncedSearch 300ms après la frappe
   useEffect(() => {
@@ -166,18 +180,69 @@ export default function OrdersClient({
 
   const isAdmin = role === 'admin'
   const canExport = plan === 'pro' || plan === 'business'
+  const activeStatus: OrderStatus | null = tab !== 'all' && tab !== 'trash' ? tab : null
 
-  const counts = useMemo(() => {
-    const c: Partial<Record<OrderStatus | 'all', number>> = { all: orders.length }
-    for (const o of orders) c[o.status] = (c[o.status] ?? 0) + 1
-    return c
-  }, [orders])
+  // Compteurs depuis le serveur (exacts même avec pagination)
+  const counts = useMemo(() => tabCounts as Partial<Record<OrderStatus | 'all', number>>, [tabCounts])
+
+  useEffect(() => {
+    if (!activeStatus || searchResults !== null || statusOrders[activeStatus]) return
+
+    const controller = new AbortController()
+    setLoadingStatus(activeStatus)
+    fetch(`/api/orders/list?page=1&limit=20&status=${activeStatus}`, { signal: controller.signal })
+      .then(r => r.json())
+      .then(data => {
+        setStatusOrders(prev => ({ ...prev, [activeStatus]: data.orders ?? [] }))
+        setStatusHasMore(prev => ({ ...prev, [activeStatus]: data.hasMore ?? false }))
+        setStatusPages(prev => ({ ...prev, [activeStatus]: 1 }))
+      })
+      .catch(() => {})
+      .finally(() => setLoadingStatus(current => current === activeStatus ? null : current))
+
+    return () => controller.abort()
+  }, [activeStatus, searchResults, statusOrders])
 
   const filteredOrders = useMemo(() => {
-    const base = searchResults !== null ? searchResults : orders
-    if (tab === 'all' || tab === 'trash') return base
-    return base.filter(o => o.status === tab)
-  }, [orders, searchResults, tab])
+    if (searchResults !== null) {
+      if (!activeStatus) return searchResults
+      return searchResults.filter(o => o.status === activeStatus)
+    }
+    if (activeStatus) return statusOrders[activeStatus] ?? []
+    return allOrders
+  }, [activeStatus, allOrders, searchResults, statusOrders])
+
+  async function loadMore() {
+    if (isLoadingMore) return
+    setIsLoadingMore(true)
+    try {
+      const statusParam = activeStatus ?? 'all'
+      const nextPage = activeStatus ? (statusPages[activeStatus] ?? 1) + 1 : currentPage + 1
+      const res = await fetch(`/api/orders/list?page=${nextPage}&limit=20&status=${statusParam}`)
+      const data = await res.json()
+      if (!res.ok) return
+      if (activeStatus) {
+        setStatusOrders(prev => {
+          const current = prev[activeStatus] ?? []
+          const existingIds = new Set(current.map(o => o.id))
+          const fresh = (data.orders ?? []).filter((o: Order) => !existingIds.has(o.id))
+          return { ...prev, [activeStatus]: [...current, ...fresh] }
+        })
+        setStatusHasMore(prev => ({ ...prev, [activeStatus]: data.hasMore ?? false }))
+        setStatusPages(prev => ({ ...prev, [activeStatus]: nextPage }))
+      } else {
+        setAllOrders(prev => {
+          const existingIds = new Set(prev.map(o => o.id))
+          const fresh = (data.orders ?? []).filter((o: Order) => !existingIds.has(o.id))
+          return [...prev, ...fresh]
+        })
+        setHasMore(data.hasMore ?? false)
+        setCurrentPage(p => p + 1)
+      }
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }
 
   function handleStatus(orderId: string, status: OrderStatus) {
     startTransition(async () => { await updateStatus(orderId, status) })
@@ -220,6 +285,13 @@ export default function OrdersClient({
 
   const displayedTrash = tab === 'trash' ? trashOrders : []
   const pendingCount = counts['pending'] ?? 0
+  const totalForCurrentTab = activeStatus ? (counts[activeStatus] ?? 0) : initialTotal
+  const totalLoaded = activeStatus ? (statusOrders[activeStatus]?.length ?? 0) : allOrders.length
+  const totalRemaining = Math.max(0, totalForCurrentTab - totalLoaded)
+  const currentHasMore = activeStatus
+    ? (statusHasMore[activeStatus] ?? totalLoaded < totalForCurrentTab)
+    : hasMore
+  const isLoadingCurrentStatus = activeStatus ? loadingStatus === activeStatus : false
 
   return (
     <div className="space-y-5">
@@ -228,7 +300,7 @@ export default function OrdersClient({
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-[#1C1917]">Commandes</h1>
           <p className="text-sm text-[#78716C] mt-0.5">
-            {orders.length} commande{orders.length !== 1 ? 's' : ''} au total
+            {initialTotal} commande{initialTotal !== 1 ? 's' : ''} au total
             {pendingCount > 0 && (
               <span className="ml-2 text-amber-600 font-semibold">
                 · {pendingCount} en attente
@@ -358,7 +430,12 @@ export default function OrdersClient({
       {/* Liste commandes */}
       {tab !== 'trash' && (
         filteredOrders.length === 0 ? (
-          debouncedSearch ? (
+          isLoadingCurrentStatus ? (
+            <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-8 text-center sm:p-16">
+              <div className="h-6 w-6 mx-auto animate-spin rounded-full border-2 border-[#16A34A] border-t-transparent" />
+              <p className="mt-3 text-sm text-[#78716C]">Chargement des commandes...</p>
+            </div>
+          ) : debouncedSearch ? (
             /* État vide — recherche sans résultats */
             <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-8 text-center sm:p-16">
               <SearchX className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-30" />
@@ -637,6 +714,33 @@ export default function OrdersClient({
             </div>
           </div>
         )
+      )}
+
+      {/* Charger plus */}
+      {tab !== 'trash' && searchResults === null && currentHasMore && (
+        <button
+          onClick={loadMore}
+          disabled={isLoadingMore}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#E7E5E4] px-4 py-2.5 text-sm text-[#78716C] transition-colors hover:bg-[#F5F5F4] disabled:opacity-50"
+        >
+          {isLoadingMore ? (
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#78716C] border-t-transparent" />
+          ) : (
+            <>
+              <ChevronDown className="h-4 w-4" />
+              Charger plus
+              {totalRemaining > 0 && (
+                <span className="text-[#A8A29E]">({totalRemaining} restante{totalRemaining !== 1 ? 's' : ''})</span>
+              )}
+            </>
+          )}
+        </button>
+      )}
+
+      {tab !== 'trash' && searchResults === null && totalLoaded > 0 && (
+        <p className="text-center text-xs text-[#A8A29E]">
+          {totalLoaded} affichée{totalLoaded !== 1 ? 's' : ''} sur {totalForCurrentTab}
+        </p>
       )}
 
       {/* Vue Corbeille */}

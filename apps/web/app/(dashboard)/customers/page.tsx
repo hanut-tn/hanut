@@ -11,19 +11,34 @@ export default async function CustomersPage() {
 
   const supabase = await createServerClient()
 
-  const { data: customers } = await supabase
-    .from('customers')
-    .select(`
-      id, name, phone, address, city, created_at, tags,
-      orders(id, cod_amount, status, created_at)
-    `)
-    .eq('seller_id', context.sellerId)
-    .is('orders.deleted_at', null)
-    .order('created_at', { ascending: false })
+  const [{ data: customers, count: customersCount }, { data: allOrders }] = await Promise.all([
+    supabase
+      .from('customers')
+      .select(`
+        id, name, phone, address, city, created_at, tags,
+        orders(id, cod_amount, status, created_at)
+      `, { count: 'exact' })
+      .eq('seller_id', context.sellerId)
+      .is('orders.deleted_at', null)
+      .order('created_at', { ascending: false })
+      .range(0, 19),
+    supabase
+      .from('orders')
+      .select('cod_amount, status')
+      .eq('seller_id', context.sellerId)
+      .is('deleted_at', null),
+  ])
+
+  const orderRows = allOrders ?? []
+  const totalRevenue = orderRows
+    .filter(order => order.status === 'delivered')
+    .reduce((sum, order) => sum + order.cod_amount, 0)
 
   return (
     <CustomersClient
       customers={(customers ?? []) as Customers}
+      initialTotal={customersCount ?? 0}
+      stats={{ totalRevenue, orderCount: orderRows.length }}
       updateCustomer={updateCustomer}
       deleteCustomer={deleteCustomer}
     />

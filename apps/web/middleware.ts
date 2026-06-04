@@ -14,9 +14,11 @@ const PUBLIC_PATHS = [
   '/roadmap',
   '/contact',
   '/order',
+  '/track',
   '/api/contact',
   '/api/waitlist',
   '/api/orders/public',
+  '/api/track',
 ]
 
 export async function middleware(req: NextRequest) {

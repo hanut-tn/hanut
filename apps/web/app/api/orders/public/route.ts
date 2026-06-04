@@ -138,5 +138,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: message }, { status })
   }
 
+  await supabase.from('order_status_history').insert({
+    order_id: orderId,
+    status: 'pending',
+    changed_by: null,
+  })
+
   return NextResponse.json({ success: true, order_id: orderId })
 }

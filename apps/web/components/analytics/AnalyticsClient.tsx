@@ -431,10 +431,10 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        {KPI_ITEMS.map(s => {
+        {KPI_ITEMS.map((s, idx) => {
           const Icon = s.icon
           return (
-            <div key={s.label} className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-3 sm:p-5">
+            <div key={s.label} className={`bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-3 sm:p-5 ${idx === 4 ? 'col-span-2 lg:col-span-1' : ''}`}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-xs font-medium text-[#78716C] truncate sm:text-sm">{s.label}</p>
@@ -521,7 +521,7 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
                   const show = dailyData.length <= 7 || i % Math.ceil(dailyData.length / 7) === 0
                   return (
                     <div key={i} className="flex-1 text-center">
-                      {show && <span className="text-[9px] text-[#78716C]">{d.label}</span>}
+                      {show && <span className="text-[10px] text-[#78716C]">{d.label}</span>}
                     </div>
                   )
                 })}

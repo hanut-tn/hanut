@@ -12,37 +12,47 @@ export default async function OrdersPage() {
 
   const supabase = await createServerClient()
 
-  const [{ data: orders }, { data: trashOrders }] = await Promise.all([
+  const [{ data: orders, count: ordersCount }, { data: trashOrders }, { data: allStatuses }] = await Promise.all([
     supabase
       .from('orders')
-      .select(`
-        id, cod_amount, status, variant, quantity, notes, created_at,
-        customer:customers(id, name, phone, city),
-        product:products(id, name, price)
-      `)
+      .select(
+        'id, cod_amount, status, variant, quantity, notes, created_at, customer:customers(id, name, phone, city), product:products(id, name, price)',
+        { count: 'exact' }
+      )
       .eq('seller_id', context.sellerId)
       .is('deleted_at', null)
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false })
+      .range(0, 19),
 
     context.role === 'admin'
       ? supabase
           .from('orders')
-          .select(`
-            id, cod_amount, status, variant, quantity, deleted_at,
-            customer:customers(id, name, phone, city),
-            product:products(id, name, price)
-          `)
+          .select('id, cod_amount, status, variant, quantity, deleted_at, customer:customers(id, name, phone, city), product:products(id, name, price)')
           .eq('seller_id', context.sellerId)
           .not('deleted_at', 'is', null)
           .order('deleted_at', { ascending: false })
       : { data: [] },
+
+    supabase
+      .from('orders')
+      .select('status')
+      .eq('seller_id', context.sellerId)
+      .is('deleted_at', null),
   ])
+
+  const initialTotal = ordersCount ?? 0
+  const tabCounts: Record<string, number> = { all: initialTotal }
+  for (const { status } of allStatuses ?? []) {
+    tabCounts[status] = (tabCounts[status] ?? 0) + 1
+  }
 
   return (
     <OrdersClient
       role={context.role}
       plan={context.plan}
       orders={(orders ?? []) as Orders}
+      initialTotal={initialTotal}
+      tabCounts={tabCounts}
       trashOrders={(trashOrders ?? []) as TrashOrders}
       updateStatus={updateOrderStatus}
       deleteOrder={deleteOrder}

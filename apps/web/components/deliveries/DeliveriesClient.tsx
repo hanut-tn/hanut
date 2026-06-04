@@ -374,19 +374,19 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {[
           { label: 'COD collecté',   value: `${totalCollected.toFixed(0)} DT`, sub: `${counts.collected} en attente de reversal`, color: 'text-[#16A34A]', Icon: Banknote },
           { label: 'COD reversé',    value: `${totalReversed.toFixed(0)} DT`,  sub: `${counts.reversed} livraisons soldées`,      color: 'text-[#0B5E46]', Icon: ArrowDownCircle },
           { label: 'Frais livreurs', value: `${totalFees.toFixed(0)} DT`,      sub: 'total transporteurs',                        color: 'text-[#1C1917]', Icon: Receipt },
         ].map(s => (
-          <div key={s.label} className="bg-white border border-[#E7E5E4] rounded-xl p-5 shadow-sm">
-            <div className="flex items-center gap-2">
-              <s.Icon className="w-4 h-4 text-[#78716C]" />
-              <p className="text-sm text-[#78716C] font-medium">{s.label}</p>
+          <div key={s.label} className="bg-white border border-[#E7E5E4] rounded-xl p-2 sm:p-5 shadow-sm">
+            <div className="flex items-center gap-1.5">
+              <s.Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#78716C] shrink-0" />
+              <p className="text-[10px] sm:text-sm text-[#78716C] font-medium truncate">{s.label}</p>
             </div>
-            <p className={`text-3xl font-bold mt-2 ${s.color}`}>{s.value}</p>
-            <p className="text-xs text-[#78716C] mt-1">{s.sub}</p>
+            <p className={`text-lg sm:text-3xl font-bold mt-1 sm:mt-2 ${s.color}`}>{s.value}</p>
+            <p className="hidden sm:block text-xs text-[#78716C] mt-1">{s.sub}</p>
           </div>
         ))}
       </div>

@@ -85,7 +85,7 @@ export async function OperatorDashboard({ context }: { context: Context }) {
       </div>
 
       {/* 3 KPIs */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
         {kpis.map(kpi => {
           const Icon = kpi.icon
           return (
@@ -161,9 +161,7 @@ export async function OperatorDashboard({ context }: { context: Context }) {
                   <div className="text-right shrink-0">
                     <p className="text-xs text-[#78716C]">{relativeDate(order.created_at)}</p>
                   </div>
-                  <span className="hidden sm:inline-flex">
-                    <StatusBadge status={order.status} />
-                  </span>
+                  <StatusBadge status={order.status} />
                 </Link>
               )
             })}

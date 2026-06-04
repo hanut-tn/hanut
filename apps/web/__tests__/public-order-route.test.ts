@@ -32,6 +32,10 @@ type SingleQuery = {
   single: Mock
 }
 
+type InsertQuery = {
+  insert: Mock
+}
+
 type RpcResult = {
   data: string | null
   error: { message: string } | null
@@ -67,6 +71,10 @@ function createSingleQuery(data: unknown): SingleQuery {
   return query
 }
 
+function createInsertQuery(): InsertQuery {
+  return { insert: vi.fn().mockResolvedValue({ error: null }) }
+}
+
 function mockSupabase(
   seller: Seller | null,
   rpcResult: RpcResult,
@@ -74,16 +82,18 @@ function mockSupabase(
 ) {
   const sellerQuery = createSingleQuery(seller)
   const productQuery = createSingleQuery(product)
+  const historyQuery = createInsertQuery()
   const rpc = vi.fn().mockResolvedValue(rpcResult)
   const from = vi.fn((table: string) => {
     if (table === 'sellers') return sellerQuery
     if (table === 'products') return productQuery
+    if (table === 'order_status_history') return historyQuery
     throw new Error(`Unexpected table: ${table}`)
   })
 
   serviceMock.createServiceClient.mockReturnValue({ from, rpc })
 
-  return { from, rpc, sellerQuery, productQuery }
+  return { from, rpc, sellerQuery, productQuery, historyQuery }
 }
 
 describe('POST /api/orders/public', () => {
@@ -93,7 +103,7 @@ describe('POST /api/orders/public', () => {
   })
 
   it('creates a pending order through the transactional RPC', async () => {
-    const { rpc, sellerQuery, productQuery } = mockSupabase(
+    const { rpc, sellerQuery, productQuery, historyQuery } = mockSupabase(
       { id: 'seller-1', name: 'Demo Shop' },
       { data: 'order-1', error: null }
     )
@@ -122,10 +132,15 @@ describe('POST /api/orders/public', () => {
         p_status: 'pending',
       })
     )
+    expect(historyQuery.insert).toHaveBeenCalledWith({
+      order_id: 'order-1',
+      status: 'pending',
+      changed_by: null,
+    })
   })
 
   it('normalizes formatted Tunisian phone numbers before calling the RPC', async () => {
-    const { rpc } = mockSupabase(
+    const { rpc, historyQuery } = mockSupabase(
       { id: 'seller-1', name: 'Demo Shop' },
       { data: 'order-1', error: null }
     )
@@ -137,6 +152,11 @@ describe('POST /api/orders/public', () => {
       'create_order_with_stock',
       expect.objectContaining({ p_customer_phone: '11111111' })
     )
+    expect(historyQuery.insert).toHaveBeenCalledWith({
+      order_id: 'order-1',
+      status: 'pending',
+      changed_by: null,
+    })
   })
 
   it('returns 429 when the IP exceeds the public order rate limit', async () => {
@@ -169,7 +189,7 @@ describe('POST /api/orders/public', () => {
     const response = await POST(jsonRequest(validBody({ quantity: 0 })))
 
     expect(response.status).toBe(400)
-    await expect(response.json()).resolves.toEqual({ error: 'Quantité invalide (entre 1 et 99)' })
+    await expect(response.json()).resolves.toEqual({ error: 'Quantité minimum : 1' })
     expect(rpc).not.toHaveBeenCalled()
   })
 

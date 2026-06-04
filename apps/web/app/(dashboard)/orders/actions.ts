@@ -33,7 +33,7 @@ export async function createOrder(input: CreateOrderInput) {
     .eq('id', input.product_id)
     .single()
 
-  const { error } = await supabase.rpc('create_order_with_stock', {
+  const { data: newOrderId, error } = await supabase.rpc('create_order_with_stock', {
     p_seller_id: context.sellerId,
     p_product_id: input.product_id,
     p_quantity: input.quantity,
@@ -48,6 +48,14 @@ export async function createOrder(input: CreateOrderInput) {
     p_status: 'new',
   })
   if (error) throw new Error(error.message)
+
+  if (newOrderId) {
+    await supabase.from('order_status_history').insert({
+      order_id: newOrderId as string,
+      status: 'new',
+      changed_by: context.userId,
+    })
+  }
 
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
@@ -77,6 +85,12 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
     .eq('id', id)
     .eq('seller_id', context.sellerId)
   if (error) throw new Error(error.message)
+
+  await supabase.from('order_status_history').insert({
+    order_id: id,
+    status,
+    changed_by: context.userId,
+  })
 
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
@@ -133,6 +147,12 @@ export async function cancelPendingOrder(id: string) {
     .eq('id', id)
     .eq('seller_id', context.sellerId)
   if (error) throw new Error(error.message)
+
+  await supabase.from('order_status_history').insert({
+    order_id: id,
+    status: 'returned',
+    changed_by: context.userId,
+  })
 
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
