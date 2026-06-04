@@ -384,6 +384,7 @@ export default function OrdersClient({
 
     const prevTrash = localTrashOrders
     const prevAll = allOrders
+    const prevStatus = statusOrders
     const prevCounts = localTabCounts
 
     // Optimistic : retirer de la corbeille ET ajouter aux commandes actives
@@ -400,6 +401,12 @@ export default function OrdersClient({
       product: trashedOrder.product,
     }
     setAllOrders(prev => [restoredOrder, ...prev])
+    setStatusOrders(prev => {
+      const currentStatusOrders = prev[trashedOrder.status]
+      if (!currentStatusOrders) return prev
+      if (currentStatusOrders.some(order => order.id === id)) return prev
+      return { ...prev, [trashedOrder.status]: [restoredOrder, ...currentStatusOrders] }
+    })
     setLocalTabCounts(prev => ({
       ...prev,
       all: (prev.all ?? 0) + 1,
@@ -411,6 +418,7 @@ export default function OrdersClient({
       if (result?.error) {
         setLocalTrashOrders(prevTrash)
         setAllOrders(prevAll)
+        setStatusOrders(prevStatus)
         setLocalTabCounts(prevCounts)
         setActionError(result.error)
       } else {
