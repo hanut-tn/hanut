@@ -57,28 +57,48 @@ function CustomerMobileCard({ customer }: { customer: Customer }) {
   const initials = customer.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 
   return (
-    <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4">
+    <div className="mb-3 bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4">
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 bg-[#F0FDF4] text-[#166534] rounded-full flex items-center justify-center text-sm font-bold shrink-0">
+        <div className="w-9 h-9 bg-[#F0FDF4] text-[#166534] rounded-full flex items-center justify-center text-sm font-bold shrink-0">
           {initials}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-[#1C1917] truncate">{customer.name}</p>
-          <p className="text-sm text-[#78716C] font-mono">{customer.phone}</p>
-          {customer.city && <p className="text-sm text-[#78716C]">{customer.city}</p>}
+          <div className="flex items-start gap-2">
+            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[#1C1917]">{customer.name}</p>
+            {tags.length > 0 && (
+              <div className="ml-auto flex shrink-0 flex-wrap justify-end gap-1">
+                {tags.slice(0, 2).map(tag => (
+                  <span key={tag} className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${tagColor(tag)}`}>
+                    {tag}
+                  </span>
+                ))}
+                {tags.length > 2 && (
+                  <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600">
+                    +{tags.length - 2}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+          <p className="mt-0.5 truncate text-xs text-[#78716C]">
+            <span className="font-mono">{customer.phone}</span>
+            {customer.city ? ` · ${customer.city}` : ''}
+          </p>
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-        <div className="rounded-lg bg-[#FAFAF9] px-2 py-2">
+      <div className="my-2 border-t border-[#E7E5E4]" />
+
+      <div className="grid grid-cols-3 text-center">
+        <div>
           <p className="text-base font-bold text-[#1C1917]">{stats.count}</p>
           <p className="text-[10px] text-[#78716C]">Commandes</p>
         </div>
-        <div className="rounded-lg bg-[#FAFAF9] px-2 py-2">
-          <p className="text-base font-bold text-[#16A34A]">{stats.delivered.toFixed(0)}</p>
-          <p className="text-[10px] text-[#78716C]">DT livré</p>
+        <div>
+          <p className="text-base font-bold text-[#16A34A]">{stats.delivered.toFixed(0)} DT</p>
+          <p className="text-[10px] text-[#78716C]">livré</p>
         </div>
-        <div className="rounded-lg bg-[#FAFAF9] px-2 py-2">
+        <div>
           <p className="text-base font-bold text-[#1C1917]">
             {stats.last ? new Date(stats.last.created_at).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' }) : '-'}
           </p>
@@ -86,21 +106,19 @@ function CustomerMobileCard({ customer }: { customer: Customer }) {
         </div>
       </div>
 
-      {tags.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {tags.map(tag => (
-            <span key={tag} className={`inline-flex px-2 py-1 rounded-full text-[10px] font-medium ${tagColor(tag)}`}>
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
+      <div className="my-2 border-t border-[#E7E5E4]" />
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <Link href={`/orders/new?customer_id=${customer.id}`} className="btn-primary text-center text-sm">
+      <div className="grid grid-cols-2 gap-2">
+        <Link
+          href={`/orders/new?customer_id=${customer.id}`}
+          className="min-h-[44px] flex items-center justify-center rounded-lg bg-[#16A34A] py-2.5 text-sm font-medium text-white"
+        >
           Nouvelle commande
         </Link>
-        <Link href={`/customers/${customer.id}`} className="btn-secondary text-center text-sm">
+        <Link
+          href={`/customers/${customer.id}`}
+          className="min-h-[44px] flex items-center justify-center rounded-lg border border-[#E7E5E4] py-2.5 text-sm font-medium text-[#1C1917]"
+        >
           Voir fiche
         </Link>
       </div>

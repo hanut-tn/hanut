@@ -4,7 +4,7 @@ import { useState, useMemo, useTransition, useEffect } from 'react'
 import Link from 'next/link'
 import {
   Search, SearchX, Download, Trash2, ChevronRight, ShoppingBag, Filter,
-  X, Loader2,
+  X, Loader2, RotateCcw,
 } from 'lucide-react'
 import type { OrderStatus } from '@hanut/types'
 import type { UserRole } from '@/lib/get-context'
@@ -412,7 +412,7 @@ export default function OrdersClient({
             </div>
           )
         ) : (
-          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-hidden">
+          <div className="lg:bg-white lg:border lg:border-[#E7E5E4] lg:rounded-xl lg:shadow-sm lg:overflow-hidden">
             {/* En-têtes colonnes */}
             <div className="hidden grid-cols-[40px_1fr_1fr_120px_100px_140px] gap-4 items-center px-5 py-3 bg-[#FAFAF9] border-b border-[#E7E5E4] lg:grid">
               <div />
@@ -424,7 +424,7 @@ export default function OrdersClient({
             </div>
 
             {/* Lignes */}
-            <div className="divide-y divide-[#E7E5E4]">
+            <div className="py-1">
               {filteredOrders.map(order => {
                 const customer = getCustomer(order)
                 const product = getProduct(order)
@@ -492,6 +492,59 @@ export default function OrdersClient({
                   </div>
                 )
 
+                const mobileLeadingAction = isPendingOrder ? (
+                  <button
+                    onClick={e => { e.stopPropagation(); handleCancel(order.id) }}
+                    disabled={isPending}
+                    className="min-h-[44px] min-w-[44px] flex items-center justify-center border border-[#E7E5E4] rounded-lg text-red-600 disabled:opacity-50"
+                    aria-label="Annuler la commande"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                ) : canDelete ? (
+                  <button
+                    onClick={e => { e.stopPropagation(); setConfirmDelete(order); setActionError(null) }}
+                    className="min-h-[44px] min-w-[44px] flex items-center justify-center border border-[#E7E5E4] rounded-lg text-[#78716C]"
+                    aria-label="Supprimer la commande"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                ) : null
+
+                const mobilePrimaryAction = isPendingOrder || isNew ? (
+                  <button
+                    onClick={e => {
+                      e.stopPropagation()
+                      if (isPendingOrder) handleConfirm(order.id)
+                      else handleStatus(order.id, 'confirmed')
+                    }}
+                    disabled={isPending}
+                    className="flex-1 min-h-[44px] rounded-lg bg-[#16A34A] text-white text-sm font-medium flex items-center justify-center disabled:opacity-50"
+                  >
+                    Confirmer
+                  </button>
+                ) : isConfirmed ? (
+                  <button
+                    onClick={e => { e.stopPropagation(); handleStatus(order.id, 'shipped') }}
+                    disabled={isPending}
+                    className="flex-1 min-h-[44px] rounded-lg bg-orange-500 text-white text-sm font-medium flex items-center justify-center disabled:opacity-50"
+                  >
+                    Expédier
+                  </button>
+                ) : isShipped ? (
+                  <button
+                    onClick={e => { e.stopPropagation(); handleStatus(order.id, 'delivered') }}
+                    disabled={isPending}
+                    className="flex-1 min-h-[44px] rounded-lg bg-[#0B5E46] text-white text-sm font-medium flex items-center justify-center disabled:opacity-50"
+                  >
+                    Livré
+                  </button>
+                ) : (
+                  <div className="flex-1 min-h-[44px] rounded-lg bg-[#F5F5F4] text-[#78716C] text-sm font-medium flex items-center justify-center">
+                    Aucune action
+                  </div>
+                )
+
                 return (
                   <div
                     key={order.id}
@@ -499,7 +552,7 @@ export default function OrdersClient({
                   >
                     {/* ── Layout mobile (< lg) ── */}
                     <div
-                      className={`lg:hidden px-4 py-4 cursor-pointer ${isPendingOrder ? 'hover:bg-amber-50/50' : 'hover:bg-[#FAFAF9]'}`}
+                      className={`lg:hidden mb-3 bg-white border border-[#E7E5E4] rounded-xl p-4 cursor-pointer ${isPendingOrder ? 'hover:bg-amber-50/50' : 'hover:bg-[#FAFAF9]'}`}
                       onClick={() => window.location.href = `/orders/${order.id}`}
                     >
                       <div className="flex items-start gap-3">
@@ -507,7 +560,6 @@ export default function OrdersClient({
                           {ini}
                         </div>
                         <div className="flex-1 min-w-0">
-                          {/* Ligne 1 : nom + montant/statut */}
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
                               {isPendingOrder && (
@@ -523,28 +575,30 @@ export default function OrdersClient({
                                 {customer?.phone ? <Highlight text={customer.phone} query={debouncedSearch} /> : ''}
                                 {customer?.city ? ` · ${customer.city}` : ''}
                               </p>
+                              <p className="text-xs text-[#78716C] mt-0.5 truncate">
+                                {product?.name ?? '—'}
+                                {order.variant ? ` · ${order.variant}` : ''}
+                                {order.quantity > 1 ? ` × ${order.quantity}` : ''}
+                              </p>
                             </div>
-                            <div className="text-right shrink-0">
-                              <p className="text-sm font-bold text-[#16A34A]">{order.cod_amount} DT</p>
-                              <div className="mt-1">
-                                <StatusBadge status={order.status} pulseDot={isPendingOrder} />
-                              </div>
+                            <div className="flex shrink-0 flex-col items-end gap-1">
+                              <p className="text-base font-bold text-[#16A34A]">{order.cod_amount} DT</p>
+                              <StatusBadge status={order.status} pulseDot={isPendingOrder} />
+                              <p className="text-[10px] text-[#78716C]">{relativeDate(order.created_at)}</p>
                             </div>
-                          </div>
-                          {/* Ligne 2 : produit + date */}
-                          <div className="flex items-center justify-between gap-2 mt-1.5">
-                            <p className="text-xs text-[#78716C] truncate">
-                              {product?.name ?? '—'}
-                              {order.variant ? ` · ${order.variant}` : ''}
-                              {order.quantity > 1 ? ` × ${order.quantity}` : ''}
-                            </p>
-                            <p className="text-xs text-[#A8A29E] shrink-0">{relativeDate(order.created_at)}</p>
                           </div>
                         </div>
                       </div>
-                      {/* Actions */}
-                      <div className="mt-3 ml-12">
-                        {actionButtons}
+
+                      <div className="border-t border-[#E7E5E4] mt-3 pt-3 flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                        {mobileLeadingAction}
+                        {mobilePrimaryAction}
+                        <Link
+                          href={`/orders/${order.id}`}
+                          className="min-h-[44px] min-w-[44px] flex items-center justify-center border border-[#E7E5E4] rounded-lg text-[#78716C]"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </Link>
                       </div>
                     </div>
 
@@ -612,7 +666,7 @@ export default function OrdersClient({
                 Les commandes en corbeille sont restaurables pendant 30 jours.
               </p>
             </div>
-            <div className="divide-y divide-[#E7E5E4]">
+            <div className="lg:divide-y lg:divide-[#E7E5E4]">
               {displayedTrash.map(order => {
                 const customer = getCustomer(order)
                 const product = getProduct(order)
@@ -620,44 +674,57 @@ export default function OrdersClient({
                 const ini = customer?.name ? initials(customer.name) : '?'
 
                 return (
-                  <div key={order.id} className="flex flex-col gap-3 px-4 py-4 hover:bg-red-50/30 transition-colors opacity-80 sm:flex-row sm:items-start sm:gap-4 sm:px-5">
-                    <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-semibold text-sm shrink-0 mt-0.5">
-                      {ini}
-                    </div>
-                    <div className="min-w-0 sm:w-36 sm:shrink-0">
-                      <p className="font-semibold text-[#1C1917] text-sm">{customer?.name ?? '—'}</p>
-                      <p className="text-xs text-[#78716C]">{customer?.phone}</p>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-[#1C1917]">{product?.name ?? '—'}</p>
-                      {order.variant && <p className="text-xs text-[#78716C]">{order.variant}</p>}
-                      <div className="mt-1.5">
-                        <StatusBadge status={order.status} />
+                  <div key={order.id} className="m-3 bg-red-50/30 border border-[#E7E5E4] border-l-2 border-l-red-200 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-semibold text-sm shrink-0">
+                        {ini}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-[#1C1917] truncate">
+                              {customer?.name ?? '—'}
+                            </p>
+                            <p className="text-xs text-[#78716C] truncate">
+                              {customer?.phone}
+                              {customer?.city ? ` · ${customer.city}` : ''}
+                            </p>
+                            <p className="mt-0.5 text-xs text-[#78716C] truncate">
+                              {product?.name ?? '—'}
+                              {order.variant ? ` · ${order.variant}` : ''}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            <p className="text-base font-bold text-[#1C1917]">{order.cod_amount} DT</p>
+                            <StatusBadge status={order.status} />
+                            <p className="text-[10px] text-[#78716C]">
+                              {new Date(order.deleted_at).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' })}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div className="text-left sm:text-right sm:shrink-0">
-                      <p className="font-bold text-[#1C1917]">{order.cod_amount} DT</p>
-                      <p className="text-xs text-[#78716C]">
-                        {new Date(order.deleted_at).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' })}
-                      </p>
-                      {daysLeft <= 7 && (
-                        <p className="text-xs text-red-500 font-medium">Expire dans {daysLeft}j</p>
-                      )}
-                      <div className="flex gap-2 justify-end mt-2">
-                        <button
-                          onClick={() => handleRestore(order.id)}
-                          disabled={isPending}
-                          className="text-xs font-semibold text-[#16A34A] hover:text-[#15803D] disabled:opacity-50 transition-colors"
-                        >
-                          Restaurer
-                        </button>
-                        <button
-                          onClick={() => { setConfirmPermDelete(order); setPermDeleteInput(''); setActionError(null) }}
-                          className="text-xs font-semibold text-red-400 hover:text-red-600 transition-colors"
-                        >
-                          Supprimer
-                        </button>
-                      </div>
+
+                    {daysLeft <= 7 && (
+                      <p className="mt-2 text-xs text-red-500 font-medium">Expire dans {daysLeft}j</p>
+                    )}
+
+                    <div className="border-t border-[#E7E5E4] mt-3 pt-3 grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => handleRestore(order.id)}
+                        disabled={isPending}
+                        className="flex-1 min-h-[44px] border border-[#16A34A] text-[#16A34A] rounded-lg text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        Restaurer
+                      </button>
+                      <button
+                        onClick={() => { setConfirmPermDelete(order); setPermDeleteInput(''); setActionError(null) }}
+                        className="flex-1 min-h-[44px] border border-red-300 text-red-600 rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Supprimer déf.
+                      </button>
                     </div>
                   </div>
                 )

@@ -182,9 +182,13 @@ function ProductListMobileCard({
     product.cost && product.price > 0
       ? Math.round(((product.price - product.cost) / product.price) * 100)
       : null
+  const maxRef = Math.max(product.low_stock_alert * 4, product.stock, 10)
+  const stockPct = Math.min((product.stock / maxRef) * 100, 100)
+  const stockBarColor =
+    stockPct > 50 ? 'bg-[#16A34A]' : stockPct > 20 ? 'bg-amber-500' : 'bg-red-500'
 
   return (
-    <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-3">
+    <div className="mb-3 bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4">
       <div className="flex gap-3">
         <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-[#F0FDF4] flex-shrink-0 flex items-center justify-center">
           {product.image_url ? (
@@ -202,11 +206,10 @@ function ProductListMobileCard({
           )}
         </div>
 
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 flex flex-col gap-0.5">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="font-semibold text-[#1C1917] truncate">{product.name}</p>
-              <p className="text-base font-bold text-[#16A34A]">{product.price} DT</p>
+              <p className="font-semibold text-sm text-[#1C1917] truncate">{product.name}</p>
             </div>
             {badge ? (
               <span className={`shrink-0 text-[10px] px-2 py-0.5 rounded-full font-medium ${badge.className}`}>
@@ -219,41 +222,57 @@ function ProductListMobileCard({
             )}
           </div>
 
-          <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[#78716C]">
-            <span>Stock : <strong className="text-[#1C1917]">{product.stock}</strong></span>
-            <span>
-              Coût : {product.cost != null ? <strong className="text-[#1C1917]">{product.cost} DT</strong> : <span className="text-gray-300">-</span>}
-            </span>
-            <span>
-              Variantes : <strong className="text-[#1C1917]">{product.variants.length}</strong>
-            </span>
-            <span>
-              Marge : {margin != null ? <strong className="text-[#16A34A]">{margin}%</strong> : <span className="text-gray-300">-</span>}
-            </span>
+          <p className="text-xs text-[#78716C] truncate">
+            <span className="font-semibold text-[#16A34A]">{product.price} DT</span>
+            {product.cost != null && <> · Coût: {product.cost} DT</>}
+            {margin != null && <> · Marge: {margin}%</>}
+          </p>
+
+          <div className="mt-1 flex items-center gap-2">
+            <span className="shrink-0 text-xs text-[#78716C]">Stock: {product.stock}</span>
+            <div className="h-1.5 flex-1 rounded-full bg-[#E7E5E4]">
+              <div className={`h-1.5 rounded-full ${stockBarColor}`} style={{ width: `${stockPct}%` }} />
+            </div>
           </div>
+          <p className="text-xs text-[#78716C]">Variantes: {product.variants.length}</p>
         </div>
       </div>
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 border-t border-[#E7E5E4] pt-3">
+        <div className="grid grid-cols-3 gap-2">
         {canWrite && (
           <button
             onClick={() => onEdit(product)}
-            className="btn-secondary flex-1 text-sm"
+            className="min-h-[44px] flex items-center justify-center rounded-lg border border-[#E7E5E4] text-sm font-medium text-[#1C1917]"
           >
             Modifier
           </button>
         )}
-        <Link href={`/catalog/${product.id}`} className="btn-secondary flex-1 text-center text-sm">
-          Voir
-        </Link>
+        {canWrite && (
+          <Link
+            href={`/catalog/${product.id}`}
+            className="min-h-[44px] flex items-center justify-center rounded-lg border border-[#E7E5E4] text-sm font-medium text-[#1C1917]"
+          >
+            Voir
+          </Link>
+        )}
         {canWrite && (
           <button
             onClick={() => onDelete(product)}
-            className="min-h-[44px] touch-manipulation rounded-lg border border-red-200 px-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+            className="min-h-[44px] flex items-center justify-center rounded-lg border border-red-200 text-sm font-medium text-red-600"
           >
             Suppr.
           </button>
         )}
+        {!canWrite && (
+          <Link
+            href={`/catalog/${product.id}`}
+            className="col-span-3 min-h-[44px] flex items-center justify-center rounded-lg border border-[#E7E5E4] text-sm font-medium text-[#1C1917]"
+          >
+            Voir le détail
+          </Link>
+        )}
+        </div>
       </div>
     </div>
   )
