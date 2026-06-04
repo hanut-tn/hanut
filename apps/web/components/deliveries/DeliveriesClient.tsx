@@ -369,7 +369,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
         <button
           onClick={() => setShowAdd(true)}
           disabled={shippableOrders.length === 0}
-          className="flex items-center justify-center gap-2 bg-[#16A34A] hover:bg-[#15803D] text-white rounded-lg px-4 py-2 text-sm font-medium w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="flex min-h-[44px] touch-manipulation items-center justify-center gap-2 bg-[#16A34A] hover:bg-[#15803D] text-white rounded-lg px-4 py-2 text-sm font-medium w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           title={shippableOrders.length === 0 ? 'Aucune commande expédiée sans livraison' : ''}
         >
           + Ajouter livraison
@@ -416,7 +416,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
         </div>
         <button
           onClick={() => { setSelectionMode(prev => !prev); setSelectedIds(new Set()) }}
-          className={`flex items-center gap-2 border rounded-lg px-3 py-1.5 text-sm transition-colors shrink-0 ${
+          className={`flex min-h-[44px] touch-manipulation items-center gap-2 border rounded-lg px-3 py-1.5 text-sm transition-colors shrink-0 ${
             selectionMode ? 'border-red-200 text-red-500 hover:bg-red-50' : 'border-[#E7E5E4] text-[#78716C] hover:bg-[#F5F5F4]'
           }`}
         >
@@ -435,7 +435,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
             <button
               onClick={() => handleBulkAction('cod_collected')}
               disabled={isBulkPending}
-              className="flex items-center gap-2 bg-[#16A34A] text-white rounded-lg px-3 py-1.5 text-sm disabled:opacity-50 transition-colors hover:bg-[#15803D]"
+              className="flex min-h-[44px] touch-manipulation items-center gap-2 bg-[#16A34A] text-white rounded-lg px-3 py-1.5 text-sm disabled:opacity-50 transition-colors hover:bg-[#15803D]"
             >
               <CheckCircle2 className="w-4 h-4" />
               Marquer COD collecté
@@ -443,15 +443,17 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
             <button
               onClick={() => handleBulkAction('cod_reversed')}
               disabled={isBulkPending}
-              className="flex items-center gap-2 bg-[#0B5E46] text-white rounded-lg px-3 py-1.5 text-sm disabled:opacity-50 transition-colors hover:bg-[#0a5240]"
+              className="flex min-h-[44px] touch-manipulation items-center gap-2 bg-[#0B5E46] text-white rounded-lg px-3 py-1.5 text-sm disabled:opacity-50 transition-colors hover:bg-[#0a5240]"
             >
               <ArrowDownCircle className="w-4 h-4" />
               Marquer COD reversé
             </button>
           </div>
           <button
-            onClick={() => setSelectedIds(new Set())}
-            className="ml-auto text-[#78716C] hover:text-[#1C1917] transition-colors"
+            type="button"
+            onClick={() => { setSelectionMode(false); setSelectedIds(new Set()) }}
+            className="ml-auto flex min-h-[44px] w-11 touch-manipulation items-center justify-center rounded-lg text-[#78716C] hover:bg-white/70 hover:text-[#1C1917] transition-colors"
+            aria-label="Fermer la sélection"
           >
             <X className="w-4 h-4" />
           </button>
@@ -589,36 +591,58 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
 
                       {/* COD collecté */}
                       <td className="px-4 py-4 text-center">
-                        <button
-                          type="button"
-                          onClick={e => { e.stopPropagation(); handleToggle(d, 'cod_collected') }}
-                          disabled={isPending}
-                          className={`whitespace-nowrap rounded-full px-3 py-1 text-xs transition-colors ${
+                        {selectionMode ? (
+                          <span className={`inline-flex whitespace-nowrap rounded-full px-3 py-1 text-xs ${
                             d.cod_collected
-                              ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
-                              : 'bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-600'
-                          }`}
-                        >
-                          {d.cod_collected ? '✓ Collecté' : 'Non collecté'}
-                        </button>
+                              ? 'bg-green-50 text-green-700 border border-green-200'
+                              : 'bg-gray-100 text-gray-500'
+                          }`}>
+                            {d.cod_collected ? '✓ Collecté' : 'Non collecté'}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); handleToggle(d, 'cod_collected') }}
+                            disabled={isPending}
+                            className={`whitespace-nowrap rounded-full px-3 py-1 text-xs transition-colors ${
+                              d.cod_collected
+                                ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
+                                : 'bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-600'
+                            }`}
+                          >
+                            {d.cod_collected ? '✓ Collecté' : 'Non collecté'}
+                          </button>
+                        )}
                       </td>
 
                       {/* COD reversé */}
                       <td className="px-4 py-4 text-center">
-                        <button
-                          type="button"
-                          onClick={e => { e.stopPropagation(); handleToggle(d, 'cod_reversed') }}
-                          disabled={isPending || !d.cod_collected}
-                          className={`whitespace-nowrap rounded-full px-3 py-1 text-xs transition-colors ${
+                        {selectionMode ? (
+                          <span className={`inline-flex whitespace-nowrap rounded-full px-3 py-1 text-xs ${
                             d.cod_reversed
-                              ? 'bg-[#F0FDF4] text-[#166534] border border-green-200 hover:bg-green-100'
+                              ? 'bg-[#F0FDF4] text-[#166534] border border-green-200'
                               : d.cod_collected
-                                ? 'bg-gray-100 text-gray-500 hover:bg-[#F0FDF4] hover:text-[#166534]'
-                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          }`}
-                        >
-                          {d.cod_reversed ? '✓ Reversé' : d.cod_collected ? 'Non reversé' : '—'}
-                        </button>
+                                ? 'bg-gray-100 text-gray-500'
+                                : 'bg-gray-100 text-gray-400'
+                          }`}>
+                            {d.cod_reversed ? '✓ Reversé' : d.cod_collected ? 'Non reversé' : '—'}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); handleToggle(d, 'cod_reversed') }}
+                            disabled={isPending || !d.cod_collected}
+                            className={`whitespace-nowrap rounded-full px-3 py-1 text-xs transition-colors ${
+                              d.cod_reversed
+                                ? 'bg-[#F0FDF4] text-[#166534] border border-green-200 hover:bg-green-100'
+                                : d.cod_collected
+                                  ? 'bg-gray-100 text-gray-500 hover:bg-[#F0FDF4] hover:text-[#166534]'
+                                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            }`}
+                          >
+                            {d.cod_reversed ? '✓ Reversé' : d.cod_collected ? 'Non reversé' : '—'}
+                          </button>
+                        )}
                       </td>
 
                       {/* Frais */}
