@@ -251,12 +251,12 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-0 border-b border-[#E7E5E4]">
+      <div className="flex gap-0 border-b border-[#E7E5E4] overflow-x-auto scrollbar-none">
         {TABS.map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors ${
+            className={`whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors shrink-0 ${
               tab === t.key
                 ? 'text-[#166534] border-b-2 border-[#16A34A] -mb-px'
                 : 'text-[#78716C] hover:text-[#1C1917]'

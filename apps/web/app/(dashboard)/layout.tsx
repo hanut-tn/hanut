@@ -5,11 +5,11 @@ import { createServerClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
 import { RoleProvider } from '@/lib/role-context'
+import { MobileNavProvider } from '@/lib/mobile-nav-context'
 import Sidebar from '@/components/dashboard/Sidebar'
 import TopBar from '@/components/dashboard/TopBar'
 import BottomNav from '@/components/dashboard/BottomNav'
 import MobileSidebar from '@/components/dashboard/MobileSidebar'
-import { MobileSidebarProvider } from '@/components/dashboard/MobileSidebarContext'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createServerClient()
@@ -66,19 +66,29 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <RoleProvider role={context.role} sellerId={context.sellerId} isSeller={context.isSeller}>
-      <MobileSidebarProvider>
-        <div className="flex min-h-[100svh] bg-[#FAFAF9] md:h-screen md:min-h-0">
-          <div className="hidden shrink-0 md:flex">
+      <MobileNavProvider>
+        <div className="flex min-h-screen bg-[#FAFAF9]">
+
+          {/* Sidebar desktop — cachée sur mobile */}
+          <div className="hidden md:flex shrink-0">
             <Sidebar role={context.role} sellerName={displayName} plan={context.plan} />
           </div>
+
+          {/* Drawer mobile */}
           <MobileSidebar role={context.role} sellerName={displayName} plan={context.plan} />
+
+          {/* Contenu principal */}
           <div className="flex-1 flex flex-col min-w-0 md:overflow-hidden">
             <TopBar sellerName={displayName} role={context.role} isSeller={context.isSeller} />
-            <main className="flex-1 overflow-x-hidden p-4 pb-[calc(8rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(8rem+env(safe-area-inset-bottom))] md:overflow-y-auto md:pb-6">{children}</main>
+            <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 pb-[calc(3.5rem+env(safe-area-inset-bottom)+1rem)] md:pb-6">
+              {children}
+            </main>
           </div>
+
+          {/* Bottom nav mobile */}
           <BottomNav role={context.role} plan={context.plan} />
         </div>
-      </MobileSidebarProvider>
+      </MobileNavProvider>
     </RoleProvider>
   )
 }
