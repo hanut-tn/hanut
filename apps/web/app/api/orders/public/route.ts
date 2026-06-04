@@ -61,8 +61,8 @@ export async function POST(req: Request) {
 
   const { slug, customer_name, customer_phone, customer_address, customer_city, product_id, variant, quantity: qty, notes } = parsed.data
 
-  // Validation téléphone tunisien : exactement 8 chiffres après nettoyage
-  const customerPhone = customer_phone.replace(/\D/g, '')
+  // Normalisation téléphone tunisien : strip non-chiffres + préfixe 216 → 8 chiffres
+  const customerPhone = customer_phone.replace(/\D/g, '').replace(/^216/, '')
   if (!PHONE_RE.test(customerPhone)) {
     return NextResponse.json({ error: 'Numéro de téléphone invalide (8 chiffres requis)' }, { status: 400 })
   }

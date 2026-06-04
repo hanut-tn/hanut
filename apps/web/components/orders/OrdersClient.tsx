@@ -507,7 +507,7 @@ export default function OrdersClient({
                       <button
                         onClick={() => isPendingOrder ? handleConfirm(order.id) : handleStatus(order.id, 'confirmed')}
                         disabled={isPending}
-                        className="text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap min-h-[44px]"
+                        className="text-xs font-medium border border-[#16A34A] text-[#16A34A] hover:bg-[#F0FDF4] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
                       >
                         Confirmer
                       </button>
@@ -516,7 +516,7 @@ export default function OrdersClient({
                       <button
                         onClick={() => handleCancel(order.id)}
                         disabled={isPending}
-                        className="text-xs font-semibold text-red-600 border border-red-200 hover:border-red-300 disabled:opacity-50 px-2 py-1.5 rounded-lg transition-colors min-h-[44px]"
+                        className="text-xs font-medium text-red-500 border border-red-200 hover:bg-red-50 disabled:opacity-50 px-2 py-1.5 rounded-lg transition-colors"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -525,7 +525,7 @@ export default function OrdersClient({
                       <button
                         onClick={() => handleStatus(order.id, 'shipped')}
                         disabled={isPending}
-                        className="text-xs font-semibold text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap min-h-[44px]"
+                        className="text-xs font-medium border border-orange-400 text-orange-600 hover:bg-orange-50 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
                       >
                         Expédier
                       </button>
@@ -534,7 +534,7 @@ export default function OrdersClient({
                       <button
                         onClick={() => handleStatus(order.id, 'delivered')}
                         disabled={isPending}
-                        className="text-xs font-semibold text-white bg-[#0B5E46] hover:bg-[#0a5240] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap min-h-[44px]"
+                        className="text-xs font-medium border border-[#0B5E46] text-[#0B5E46] hover:bg-[#F0FDF4] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
                       >
                         Livré
                       </button>
