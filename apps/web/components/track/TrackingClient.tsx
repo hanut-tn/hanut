@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
   CheckCircle2, Circle, Package, Truck, ExternalLink, MapPin, RefreshCw,
 } from 'lucide-react'
-import { CARRIER_TRACKING_URLS, getCarrierConfig } from '@/lib/constants'
+import { getCarrierConfig } from '@/lib/constants'
 import type { CarrierName } from '@hanut/types'
 
 const STATUS_FLOW = ['new', 'confirmed', 'shipped', 'delivered'] as const
@@ -59,9 +59,12 @@ export default function TrackingClient({ initialData, orderId }: Props) {
   const [data, setData] = useState<TrackData>(initialData)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
+  const isRefreshingRef = useRef(false)
+  const lastUpdatedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const refresh = useCallback(async () => {
-    if (isRefreshing) return
+    if (isRefreshingRef.current) return
+    isRefreshingRef.current = true
     setIsRefreshing(true)
     try {
       const res = await fetch(`/api/track/${orderId}`, { cache: 'no-store' })
@@ -83,17 +86,31 @@ export default function TrackingClient({ initialData, orderId }: Props) {
       })
       const now = new Date()
       setLastUpdated(`${String(now.getHours()).padStart(2, '0')}h${String(now.getMinutes()).padStart(2, '0')}`)
-      setTimeout(() => setLastUpdated(null), 3000)
+      if (lastUpdatedTimeoutRef.current) {
+        clearTimeout(lastUpdatedTimeoutRef.current)
+      }
+      lastUpdatedTimeoutRef.current = setTimeout(() => setLastUpdated(null), 3000)
+    } catch {
+      // Le polling est silencieux : le prochain cycle ou le bouton manuel retentera.
     } finally {
+      isRefreshingRef.current = false
       setIsRefreshing(false)
     }
-  }, [orderId, isRefreshing])
+  }, [orderId])
 
   // Polling toutes les 30 secondes
   useEffect(() => {
     const interval = setInterval(refresh, 30000)
     return () => clearInterval(interval)
   }, [refresh])
+
+  useEffect(() => {
+    return () => {
+      if (lastUpdatedTimeoutRef.current) {
+        clearTimeout(lastUpdatedTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const currentStatus   = data.status
   const currentStepIdx  = getStepIndex(currentStatus)
