@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { z } from 'zod'
 import { createServerClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
+
+const InviteMemberSchema = z.object({
+  email: z.string().min(1, 'Email requis').regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Email invalide'),
+  role: z.enum(['operator', 'readonly'], { error: 'Rôle invalide (operator ou readonly)' }),
+})
 
 const MAX_MEMBERS = 5
 
@@ -33,16 +39,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "La gestion d'équipe est disponible dans le plan Business" }, { status: 403 })
   }
 
-  const body = await request.json()
-  const email: string = (body.email ?? '').trim().toLowerCase()
-  const role: string = body.role ?? ''
+  const rawBody = await request.json().catch(() => null)
+  if (!rawBody) return NextResponse.json({ error: 'Corps de requête invalide' }, { status: 400 })
 
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return NextResponse.json({ error: 'Email invalide' }, { status: 400 })
+  const parsed = InviteMemberSchema.safeParse({
+    ...rawBody,
+    email: typeof rawBody.email === 'string' ? rawBody.email.trim().toLowerCase() : rawBody.email,
+  })
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? 'Données invalides'
+    return NextResponse.json({ error: msg }, { status: 400 })
   }
-  if (!['operator', 'readonly'].includes(role)) {
-    return NextResponse.json({ error: 'Rôle invalide (operator ou readonly)' }, { status: 400 })
-  }
+
+  const { email, role } = parsed.data
 
   const serviceClient = createServiceClient()
 

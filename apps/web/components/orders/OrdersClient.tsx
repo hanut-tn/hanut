@@ -10,6 +10,7 @@ import type { OrderStatus } from '@hanut/types'
 import type { UserRole } from '@/lib/get-context'
 import { DELETABLE_STATUSES, ORDER_STATUS_LABELS } from '@/lib/constants'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { relativeDate, initials } from '@/lib/utils'
 
 const TABS: { label: string; value: OrderStatus | 'all' }[] = [
   { label: 'Toutes',     value: 'all' },
@@ -68,22 +69,6 @@ function getProduct(order: Order | TrashOrder) {
   return Array.isArray(order.product) ? order.product[0] : order.product
 }
 
-function initials(name: string): string {
-  return name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()
-}
-
-function relativeDate(dateStr: string): string {
-  const date = new Date(dateStr)
-  const diffMs = Date.now() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
-  if (diffMins < 1) return 'à l’instant'
-  if (diffMins < 60) return `il y a ${diffMins}min`
-  if (diffHours < 24) return `il y a ${diffHours}h`
-  if (diffDays === 1) return 'hier'
-  return date.toLocaleDateString('fr-TN', { day: 'numeric', month: 'short' })
-}
 
 function daysUntilExpiry(deletedAt: string) {
   const expiryDate = new Date(new Date(deletedAt).getTime() + 30 * 24 * 60 * 60 * 1000)

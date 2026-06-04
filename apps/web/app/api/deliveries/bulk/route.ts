@@ -1,28 +1,32 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
+
+const BulkDeliverySchema = z.object({
+  ids: z.array(z.string().min(1)).min(1, 'Aucune livraison sélectionnée').max(100, 'Maximum 100 livraisons à la fois'),
+  action: z.enum(['cod_collected', 'cod_reversed']),
+})
 
 export async function PATCH(req: Request) {
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   if (context.role === 'readonly') return NextResponse.json({ error: 'Action réservée aux admins et opérateurs' }, { status: 403 })
 
-  let ids: string[]
-  let action: 'cod_collected' | 'cod_reversed'
+  let rawBody: unknown
   try {
-    const body = await req.json()
-    ids = body.ids
-    action = body.action
+    rawBody = await req.json()
   } catch {
     return NextResponse.json({ error: 'Corps de requête invalide' }, { status: 400 })
   }
 
-  if (!Array.isArray(ids) || ids.length === 0) {
-    return NextResponse.json({ error: 'Aucune livraison sélectionnée' }, { status: 400 })
+  const parsed = BulkDeliverySchema.safeParse(rawBody)
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? 'Données invalides'
+    return NextResponse.json({ error: msg }, { status: 400 })
   }
-  if (action !== 'cod_collected' && action !== 'cod_reversed') {
-    return NextResponse.json({ error: 'Action invalide' }, { status: 400 })
-  }
+
+  const { ids, action } = parsed.data
 
   const supabase = await createServerClient()
 

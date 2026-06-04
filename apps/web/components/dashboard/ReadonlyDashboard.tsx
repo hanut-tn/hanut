@@ -1,6 +1,7 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { ShoppingBag, Banknote, TrendingUp, TrendingDown, Clock } from 'lucide-react'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { relativeDate, initials } from '@/lib/utils'
 
 type Context = { sellerId: string }
 type Relation<T> = T | T[] | null
@@ -14,20 +15,6 @@ type ReadonlyOrder = {
   created_at: string
   customer: Relation<CustomerSummary>
   product: Relation<ProductSummary>
-}
-
-function relativeDate(dateStr: string): string {
-  const diffMs = Date.now() - new Date(dateStr).getTime()
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
-  if (diffHours < 1) return 'à l\'instant'
-  if (diffHours < 24) return `il y a ${diffHours}h`
-  if (diffDays === 1) return 'hier'
-  return new Date(dateStr).toLocaleDateString('fr-TN', { day: 'numeric', month: 'short' })
-}
-
-function initials(name: string): string {
-  return name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()
 }
 
 export async function ReadonlyDashboard({ context }: { context: Context }) {

@@ -9,6 +9,7 @@ import {
 import type { CarrierName } from '@hanut/types'
 import type { CreateDeliveryInput, UpdateDeliveryInput } from '@/app/(dashboard)/deliveries/actions'
 import { CARRIER_OPTIONS, CARRIER_TRACKING_URLS, getCarrierConfig } from '@/lib/constants'
+import { initials } from '@/lib/utils'
 
 type OrderInfo = {
   id: string
@@ -50,10 +51,6 @@ const TABS: { key: Tab; label: string }[] = [
 function getOrder(d: Delivery): OrderInfo | null {
   const o = Array.isArray(d.order) ? d.order[0] : d.order
   return o ?? null
-}
-
-function initials(name: string): string {
-  return name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()
 }
 
 function DeliveryMobileCard({

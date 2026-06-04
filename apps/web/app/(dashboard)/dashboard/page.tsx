@@ -10,10 +10,7 @@ import OnboardingChecklist from '@/components/dashboard/OnboardingChecklist'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { OperatorDashboard } from '@/components/dashboard/OperatorDashboard'
 import { ReadonlyDashboard } from '@/components/dashboard/ReadonlyDashboard'
-
-function initials(name: string): string {
-  return name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()
-}
+import { initials } from '@/lib/utils'
 
 type RecentOrder = {
   id: string

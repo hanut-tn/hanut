@@ -11,6 +11,7 @@ import {
 import type { OrderStatus } from '@hanut/types'
 import { DELETABLE_STATUSES, ORDER_STATUS_LABELS } from '@/lib/constants'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { initials } from '@/lib/utils'
 
 const STATUS_FLOW: OrderStatus[] = ['new', 'confirmed', 'shipped', 'delivered']
 
@@ -21,10 +22,6 @@ const TIMELINE_ICONS: Record<string, React.ElementType> = {
   shipped:   Truck,
   delivered: CheckCircle,
   returned:  RotateCcw,
-}
-
-function initials(name: string): string {
-  return name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()
 }
 
 function formatDate(dateStr: string): string {
