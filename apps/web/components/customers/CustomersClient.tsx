@@ -51,6 +51,63 @@ function getStats(orders: Order[] | null) {
   return { count: list.length, total, delivered, last }
 }
 
+function CustomerMobileCard({ customer }: { customer: Customer }) {
+  const stats = getStats(customer.orders)
+  const tags = customer.tags ?? []
+  const initials = customer.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+
+  return (
+    <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 bg-[#F0FDF4] text-[#166534] rounded-full flex items-center justify-center text-sm font-bold shrink-0">
+          {initials}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-[#1C1917] truncate">{customer.name}</p>
+          <p className="text-sm text-[#78716C] font-mono">{customer.phone}</p>
+          {customer.city && <p className="text-sm text-[#78716C]">{customer.city}</p>}
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+        <div className="rounded-lg bg-[#FAFAF9] px-2 py-2">
+          <p className="text-base font-bold text-[#1C1917]">{stats.count}</p>
+          <p className="text-[10px] text-[#78716C]">Commandes</p>
+        </div>
+        <div className="rounded-lg bg-[#FAFAF9] px-2 py-2">
+          <p className="text-base font-bold text-[#16A34A]">{stats.delivered.toFixed(0)}</p>
+          <p className="text-[10px] text-[#78716C]">DT livré</p>
+        </div>
+        <div className="rounded-lg bg-[#FAFAF9] px-2 py-2">
+          <p className="text-base font-bold text-[#1C1917]">
+            {stats.last ? new Date(stats.last.created_at).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' }) : '-'}
+          </p>
+          <p className="text-[10px] text-[#78716C]">Dernière</p>
+        </div>
+      </div>
+
+      {tags.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {tags.map(tag => (
+            <span key={tag} className={`inline-flex px-2 py-1 rounded-full text-[10px] font-medium ${tagColor(tag)}`}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <Link href={`/orders/new?customer_id=${customer.id}`} className="btn-primary text-center text-sm">
+          Nouvelle commande
+        </Link>
+        <Link href={`/customers/${customer.id}`} className="btn-secondary text-center text-sm">
+          Voir fiche
+        </Link>
+      </div>
+    </div>
+  )
+}
+
 export default function CustomersClient({ customers, updateCustomer, deleteCustomer }: Props) {
   const router = useRouter()
   const [search, setSearch] = useState('')
@@ -150,7 +207,7 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1C1917]">Clients</h1>
+          <h1 className="text-xl font-bold text-[#1C1917] sm:text-2xl">Clients</h1>
           <p className="text-sm text-[#78716C] mt-0.5">{customers.length} client{customers.length !== 1 ? 's' : ''}</p>
         </div>
         <Link href="/orders/new" className="btn-primary w-full text-center text-sm sm:w-auto">+ Nouvelle commande</Link>
@@ -190,7 +247,7 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
           <select
             value={sortBy}
             onChange={e => setSortBy(e.target.value as typeof sortBy)}
-            className="min-w-0 flex-1 bg-transparent appearance-none outline-none cursor-pointer text-sm text-[#78716C]"
+            className="min-w-0 flex-1 bg-transparent appearance-none outline-none cursor-pointer text-base text-[#78716C] md:text-sm"
           >
             <option value="name">Nom (A-Z)</option>
             <option value="total_spent">CA le plus élevé</option>
@@ -258,8 +315,15 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
           )}
         </div>
       ) : (
-        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-x-auto">
-          <table className="w-full min-w-[760px] text-sm">
+        <>
+        <div className="space-y-3 lg:hidden">
+          {filtered.map(c => (
+            <CustomerMobileCard key={c.id} customer={c} />
+          ))}
+        </div>
+
+        <div className="hidden bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-x-auto lg:block">
+          <table className="w-full text-sm">
             <thead className="bg-[#FAFAF9] border-b border-[#E7E5E4]">
               <tr>
                 {['Client', 'Téléphone', 'Ville', 'Commandes', 'CA livré', 'Dernière commande', ''].map((h, i) => (
@@ -344,14 +408,18 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {/* ── EDIT MODAL ── */}
       {editCustomer && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-xl p-6 max-w-sm w-full space-y-4">
-            <h3 className="font-semibold text-[#1C1917] text-lg">Modifier le client</h3>
-            <form onSubmit={handleEditSave} className="space-y-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+            <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
+              <h3 className="font-semibold text-[#1C1917] text-lg">Modifier le client</h3>
+            </div>
+            <form onSubmit={handleEditSave} className="flex min-h-0 flex-1 flex-col">
+              <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
               <div>
                 <label className="block text-sm font-medium text-[#1C1917] mb-1">Nom complet *</label>
                 <input
@@ -400,7 +468,8 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
                   {editMsg.text}
                 </div>
               )}
-              <div className="flex flex-col gap-3 pt-1 sm:flex-row">
+              </div>
+              <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
                 <button type="button" onClick={() => setEditCustomer(null)} className="btn-secondary flex-1">
                   Annuler
                 </button>
@@ -415,9 +484,12 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
 
       {/* ── DELETE MODAL ── */}
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-xl p-6 max-w-sm w-full">
-            <h3 className="font-semibold text-[#1C1917] mb-1">Supprimer ce client ?</h3>
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+            <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
+              <h3 className="font-semibold text-[#1C1917]">Supprimer ce client ?</h3>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             <p className="text-sm text-[#78716C] mb-1">{confirmDelete.name} — {confirmDelete.phone}</p>
             {getStats(confirmDelete.orders).count > 0 && !deleteError && (
               <p className="text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 mb-4">
@@ -433,7 +505,8 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
             {!deleteError && (
               <p className="text-sm text-[#78716C] mb-5">Cette action est irréversible.</p>
             )}
-            <div className="flex flex-col gap-3 sm:flex-row">
+            </div>
+            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
               <button onClick={() => { setConfirmDelete(null); setDeleteError(null) }} className="btn-secondary flex-1">
                 Annuler
               </button>

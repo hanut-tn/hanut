@@ -62,7 +62,7 @@ export default async function PublicOrderPage({ params }: Props) {
       </header>
 
       {/* Form */}
-      <main className="max-w-xl mx-auto px-4 py-8 pb-20">
+      <main className="max-w-xl mx-auto px-4 py-6 pb-[calc(5rem+env(safe-area-inset-bottom))]">
         {(products ?? []).length === 0 ? (
           <div className="text-center py-16">
             <p className="text-5xl mb-4">🛍️</p>
@@ -79,7 +79,7 @@ export default async function PublicOrderPage({ params }: Props) {
       </main>
 
       {/* Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-gray-100 py-2.5 text-center">
+      <footer className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-gray-100 py-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] text-center">
         <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
           <div className="w-4 h-4 bg-[#0B5E46] rounded flex items-center justify-center">
             <span className="text-white font-bold" style={{ fontSize: '9px' }}>H</span>

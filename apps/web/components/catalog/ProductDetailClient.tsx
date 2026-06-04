@@ -146,12 +146,12 @@ export default function ProductDetailClient({
       </div>
 
       {/* Product name */}
-      <h1 className="text-2xl font-bold text-[#1C1917]">{product.name}</h1>
+      <h1 className="text-xl font-bold text-[#1C1917] sm:text-2xl">{product.name}</h1>
 
       {/* Two-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+      <div className="flex flex-col gap-6 lg:flex-row">
         {/* Left — Image (40%) */}
-        <div className="lg:col-span-2 space-y-3">
+        <div className="w-full space-y-3 lg:w-2/5">
           <div className="relative aspect-square rounded-xl overflow-hidden bg-[#F0FDF4] flex items-center justify-center">
             {product.image_url ? (
               <Image
@@ -181,7 +181,7 @@ export default function ProductDetailClient({
         </div>
 
         {/* Right — Info (60%) */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="w-full space-y-6 lg:w-3/5">
           {/* Pricing */}
           <div className="bg-white border border-[#E7E5E4] rounded-xl p-5 space-y-3">
             <h2 className="text-sm font-semibold text-[#78716C] uppercase tracking-wide">Prix</h2>
@@ -267,7 +267,7 @@ export default function ProductDetailClient({
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { icon: ShoppingCart, label: 'Commandes totales', value: String(stats.totalOrders) },
           { icon: TrendingUp, label: 'CA livré', value: `${stats.totalRevenue.toFixed(0)} DT` },
@@ -327,10 +327,13 @@ export default function ProductDetailClient({
 
       {/* Stock adjustment modal */}
       {showStockModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-xl p-6 max-w-sm w-full">
-            <h3 className="font-semibold text-[#1C1917] mb-1">Ajuster le stock</h3>
-            <p className="text-sm text-[#78716C] mb-5">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+            <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
+              <h3 className="font-semibold text-[#1C1917]">Ajuster le stock</h3>
+            </div>
+            <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
+            <p className="text-sm text-[#78716C]">
               Stock actuel : <strong>{product.stock} unités</strong>
             </p>
             <div className="space-y-4">
@@ -364,7 +367,8 @@ export default function ProductDetailClient({
                 {stockError}
               </div>
             )}
-            <div className="flex flex-col gap-3 mt-5 sm:flex-row">
+            </div>
+            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
               <button
                 onClick={() => setShowStockModal(false)}
                 className="btn-secondary flex-1"
@@ -385,18 +389,22 @@ export default function ProductDetailClient({
 
       {/* Delete modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-xl p-6 max-w-sm w-full">
-            <h3 className="font-semibold text-[#1C1917] mb-1">Supprimer ce produit ?</h3>
-            <p className="text-sm text-[#78716C] mb-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+            <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
+              <h3 className="font-semibold text-[#1C1917]">Supprimer ce produit ?</h3>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <p className="text-sm text-[#78716C]">
               &quot;{product.name}&quot; sera supprimé définitivement. Cette action est irréversible.
             </p>
             {deleteError && (
-              <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+              <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
                 {deleteError}
               </div>
             )}
-            <div className="flex flex-col gap-3 sm:flex-row">
+            </div>
+            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
               <button onClick={() => setShowDeleteModal(false)} className="btn-secondary flex-1">
                 Annuler
               </button>

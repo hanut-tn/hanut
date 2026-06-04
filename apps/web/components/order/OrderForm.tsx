@@ -197,7 +197,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
             setName(''); setPhone(''); setCity(''); setAddress('')
             setProductId(''); setVariant(''); setQuantity(1); setNotes('')
           }}
-          className="text-sm font-medium text-[#16A34A] hover:underline"
+          className="min-h-[44px] touch-manipulation text-sm font-medium text-[#16A34A] hover:underline"
         >
           Passer une autre commande →
         </button>
@@ -207,7 +207,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
 
   // ── Order form ───────────────────────────────────────────────────────────────
   return (
-    <form ref={formTopRef} onSubmit={handleSubmit} className="space-y-5">
+    <form ref={formTopRef} onSubmit={handleSubmit} className="space-y-4">
       <div>
         <h1 className="text-xl font-bold text-[#1C1917]">Passer une commande</h1>
         <p className="text-sm text-gray-500 mt-0.5">chez <span className="font-medium">{sellerName}</span></p>
@@ -223,7 +223,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Nom complet *</label>
           <input
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="Prénom Nom"
@@ -238,11 +238,11 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
             <span className="text-gray-400 font-normal ml-1">(8 chiffres)</span>
           </label>
           <div className="flex gap-2">
-            <span className="flex items-center px-3 bg-[#F5F5F4] border border-gray-200 rounded-xl text-sm font-medium text-gray-500 shrink-0">
+            <span className="flex items-center px-3 bg-[#F5F5F4] border border-gray-200 rounded-xl text-base font-medium text-gray-500 shrink-0">
               +216
             </span>
             <input
-              className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
+              className="min-w-0 flex-1 border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
               type="tel"
               value={phone}
               onChange={e => setPhone(e.target.value)}
@@ -257,7 +257,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Gouvernorat *</label>
           <select
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition bg-white"
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition bg-white"
             value={city}
             onChange={e => setCity(e.target.value)}
             required
@@ -272,7 +272,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Adresse complète *</label>
           <input
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
             value={address}
             onChange={e => setAddress(e.target.value)}
             placeholder="Rue, numéro, quartier…"
@@ -292,7 +292,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Produit *</label>
           <select
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition bg-white"
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition bg-white"
             value={productId}
             onChange={e => setProductId(e.target.value)}
             required
@@ -324,7 +324,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
                       setVariant(label)
                       setStockError(null)
                     }}
-                    className={`rounded-lg px-3 py-2 text-sm transition-colors ${
+                    className={`min-h-[44px] touch-manipulation rounded-lg px-3 py-2 text-sm transition-colors ${
                       isOut
                         ? 'border border-[#E7E5E4] opacity-40 cursor-not-allowed line-through'
                         : isSelected
@@ -351,7 +351,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
             <button
               type="button"
               onClick={() => setQuantity(q => Math.max(1, q - 1))}
-              className="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-lg transition"
+              className="w-11 h-11 touch-manipulation rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-lg transition"
             >
               −
             </button>
@@ -360,7 +360,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
               type="button"
               onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
               disabled={!selectedProduct || (hasVariants && !variant)}
-              className="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-lg transition disabled:opacity-40"
+              className="w-11 h-11 touch-manipulation rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-lg transition disabled:opacity-40"
             >
               +
             </button>
@@ -389,7 +389,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
           <span className="text-gray-400 font-normal ml-1">(optionnel)</span>
         </label>
         <textarea
-          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition resize-none"
+          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition resize-none"
           rows={3}
           value={notes}
           onChange={e => setNotes(e.target.value)}
@@ -426,7 +426,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
 	                setStockError(null)
                 formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 	              }}
-	              className="mt-2 text-xs font-semibold text-red-700 underline underline-offset-2"
+	              className="mt-2 min-h-[44px] touch-manipulation text-xs font-semibold text-red-700 underline underline-offset-2"
 	            >
 	              {stockErrorScope === 'variant' ? 'Choisir une autre variante' : 'Choisir un autre produit'}
 	            </button>
@@ -437,7 +437,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-[#16A34A] hover:bg-green-700 disabled:opacity-60 text-white font-bold py-4 rounded-2xl text-base transition-colors shadow-lg shadow-green-200"
+        className="h-12 w-full touch-manipulation bg-[#16A34A] hover:bg-green-700 disabled:opacity-60 text-white font-bold rounded-2xl text-base transition-colors shadow-lg shadow-green-200"
       >
         {loading ? 'Envoi en cours…' : 'Passer la commande'}
       </button>

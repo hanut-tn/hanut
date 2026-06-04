@@ -252,16 +252,16 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1C1917]">Analytiques</h1>
+          <h1 className="text-xl font-bold text-[#1C1917] sm:text-2xl">Analytiques</h1>
           <p className="text-sm text-[#78716C] mt-0.5">Basé sur les {period} derniers jours</p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          <div className="grid grid-cols-3 gap-1 sm:flex">
+          <div className="flex gap-2 overflow-x-auto scrollbar-none">
             {([7, 30, 90] as Period[]).map(p => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
-                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                className={`min-h-[44px] touch-manipulation whitespace-nowrap px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                   period === p
                     ? 'bg-[#0B5E46] text-white'
                     : 'border border-[#E7E5E4] text-[#78716C] hover:bg-[#F5F5F4]'
@@ -299,15 +299,15 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         {KPI_ITEMS.map(s => {
           const Icon = s.icon
           return (
-            <div key={s.label} className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4">
+            <div key={s.label} className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-3 sm:p-5">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-xs font-medium text-[#78716C] truncate">{s.label}</p>
-                  <p className={`text-2xl font-bold mt-1 ${s.valueClass}`}>{s.value}</p>
+                  <p className="text-xs font-medium text-[#78716C] truncate sm:text-sm">{s.label}</p>
+                  <p className={`text-xl font-bold mt-1 sm:text-2xl ${s.valueClass}`}>{s.value}</p>
                   <p className="text-xs text-[#78716C] mt-0.5">{s.sub}</p>
                   {s.trendText && (
                     <div className={`flex items-center gap-0.5 mt-1.5 text-xs font-medium ${
@@ -337,7 +337,7 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
               <button
                 key={m}
                 onClick={() => setChartMode(m)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                className={`min-h-[44px] touch-manipulation px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                   chartMode === m
                     ? 'bg-[#0B5E46] text-white'
                     : 'text-[#78716C] hover:text-[#1C1917]'
@@ -355,11 +355,17 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
           </div>
         ) : (
           <>
-            <div className="flex items-end gap-0.5 h-32">
+            <div className="flex items-end gap-0.5 h-40 sm:h-48">
               {dailyData.map((d, i) => {
                 const val = chartMode === 'orders' ? d.orders : d.revenue
                 const max = chartMode === 'orders' ? maxDailyOrders : maxDailyRevenue
                 const pct = Math.max(val > 0 ? 4 : 0, (val / max) * 100)
+                const tooltipPosition =
+                  i < 2
+                    ? 'left-0 translate-x-0'
+                    : i > dailyData.length - 3
+                      ? 'right-0 translate-x-0'
+                      : 'left-1/2 -translate-x-1/2'
                 return (
                   <div key={i} className="flex-1 relative group" style={{ height: '100%', display: 'flex', alignItems: 'flex-end' }}>
                     <div
@@ -368,7 +374,7 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
                       }`}
                       style={{ height: `${pct}%` }}
                     />
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#1C1917] text-white text-xs rounded-lg px-3 py-2 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-10 whitespace-nowrap">
+                    <div className={`absolute bottom-full ${tooltipPosition} mb-2 max-w-[12rem] bg-[#1C1917] text-white text-xs rounded-lg px-3 py-2 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-10 whitespace-nowrap`}>
                       <p className="font-semibold capitalize">{d.fullLabel}</p>
                       <p className="text-[#16A34A] mt-0.5">CA : {d.revenue.toFixed(0)} DT</p>
                       <p className="text-white/70">Commandes : {d.orders}</p>
@@ -395,7 +401,7 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
       </div>
 
       {/* Statuts + Top produits */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-5">
           <h2 className="font-semibold text-[#1C1917] mb-4">Répartition des statuts</h2>
           {totalOrders === 0 ? (
@@ -530,7 +536,7 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
       )}
 
       {/* Top clients + Top villes */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-5">
           <h2 className="font-semibold text-[#1C1917] mb-4">Top clients</h2>
           {topCustomers.length === 0 ? (

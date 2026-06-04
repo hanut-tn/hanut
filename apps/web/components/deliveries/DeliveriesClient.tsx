@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { Truck } from 'lucide-react'
 import type { CarrierName } from '@hanut/types'
 import type { CreateDeliveryInput, UpdateDeliveryInput } from '@/app/(dashboard)/deliveries/actions'
-import { CARRIER_OPTIONS, getCarrierConfig } from '@/lib/constants'
+import { CARRIER_OPTIONS, CARRIER_TRACKING_URLS, getCarrierConfig } from '@/lib/constants'
 
 type OrderInfo = {
   id: string
@@ -46,6 +46,133 @@ const TABS: { key: Tab; label: string }[] = [
 function getOrder(d: Delivery): OrderInfo | null {
   const o = Array.isArray(d.order) ? d.order[0] : d.order
   return o ?? null
+}
+
+function SwitchToggle({
+  checked,
+  disabled,
+  onClick,
+  activeClass = 'bg-[#16A34A]',
+}: {
+  checked: boolean
+  disabled?: boolean
+  onClick: () => void
+  activeClass?: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`relative flex h-11 w-14 touch-manipulation items-center rounded-full p-1 transition-colors disabled:opacity-40 ${
+        checked ? activeClass : 'bg-gray-200'
+      }`}
+    >
+      <span className={`h-5 w-5 rounded-full bg-white shadow transition-transform ${
+        checked ? 'translate-x-7' : 'translate-x-0'
+      }`} />
+    </button>
+  )
+}
+
+function DeliveryMobileCard({
+  delivery,
+  isPending,
+  onToggle,
+  onEdit,
+  onDelete,
+}: {
+  delivery: Delivery
+  isPending: boolean
+  onToggle: (delivery: Delivery, field: 'cod_collected' | 'cod_reversed') => void
+  onEdit: (delivery: Delivery) => void
+  onDelete: (delivery: Delivery) => void
+}) {
+  const order = getOrder(delivery)
+  const carrier = getCarrierConfig(delivery.carrier)
+  const trackingHref = delivery.tracking_number
+    ? `${CARRIER_TRACKING_URLS[delivery.carrier]}${delivery.tracking_number}`
+    : null
+
+  return (
+    <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${carrier.bg} ${carrier.color}`}>
+            {carrier.label}
+          </span>
+          <div className="mt-2">
+            {trackingHref ? (
+              <a
+                href={trackingHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-sm font-semibold text-[#0B5E46] underline underline-offset-2"
+              >
+                {delivery.tracking_number}
+              </a>
+            ) : (
+              <p className="text-sm text-[#78716C]">Aucun numéro de suivi</p>
+            )}
+            {delivery.carrier_status && (
+              <p className="text-xs text-[#78716C] mt-0.5">{delivery.carrier_status}</p>
+            )}
+          </div>
+        </div>
+        <p className="shrink-0 text-xs text-[#78716C]">
+          {new Date(delivery.created_at).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' })}
+        </p>
+      </div>
+
+      <div className="mt-3 rounded-lg bg-[#FAFAF9] px-3 py-2">
+        <p className="font-semibold text-[#1C1917]">{order?.customer?.name ?? '-'}</p>
+        <p className="text-xs text-[#78716C]">{order?.customer?.phone}</p>
+        <p className="mt-1 text-sm text-[#78716C]">
+          {order?.product?.name} — <span className="font-semibold text-[#1C1917]">{order?.cod_amount} DT</span>
+        </p>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <div>
+          <p className="mb-1 text-xs font-medium text-[#78716C]">COD collecté</p>
+          <SwitchToggle
+            checked={delivery.cod_collected}
+            disabled={isPending}
+            onClick={() => onToggle(delivery, 'cod_collected')}
+          />
+        </div>
+        <div>
+          <p className="mb-1 text-xs font-medium text-[#78716C]">COD reversé</p>
+          <SwitchToggle
+            checked={delivery.cod_reversed}
+            disabled={isPending || !delivery.cod_collected}
+            onClick={() => onToggle(delivery, 'cod_reversed')}
+            activeClass="bg-[#0B5E46]"
+          />
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between border-t border-[#E7E5E4] pt-3">
+        <div>
+          <p className="text-xs text-[#78716C]">Frais livraison</p>
+          <p className="font-semibold text-[#1C1917]">
+            {delivery.fee != null ? `${delivery.fee} DT` : '-'}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => onEdit(delivery)} className="btn-secondary text-sm">
+            Éditer
+          </button>
+          <button
+            onClick={() => onDelete(delivery)}
+            className="min-h-[44px] touch-manipulation rounded-lg border border-red-200 px-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+          >
+            Suppr.
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function DeliveriesClient({ deliveries, shippableOrders, createDelivery, updateDelivery, deleteDelivery }: Props) {
@@ -175,12 +302,12 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
       </div>
 
       {/* Tabs — underline style */}
-      <div className="flex gap-0 overflow-x-auto border-b border-[#E7E5E4]">
+      <div className="flex gap-0 overflow-x-auto border-b border-[#E7E5E4] scrollbar-none">
         {TABS.map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors ${
+            className={`min-h-[44px] touch-manipulation whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors ${
               tab === t.key
                 ? 'text-[#166534] border-b-2 border-[#16A34A] -mb-px'
                 : 'text-[#78716C] hover:text-[#1C1917]'
@@ -210,8 +337,22 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
           )}
         </div>
       ) : (
-        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-x-auto">
-          <table className="w-full text-sm min-w-[760px]">
+        <>
+        <div className="space-y-3 lg:hidden">
+          {filtered.map(d => (
+            <DeliveryMobileCard
+              key={d.id}
+              delivery={d}
+              isPending={isPending}
+              onToggle={handleToggle}
+              onEdit={openEdit}
+              onDelete={setConfirmDelete}
+            />
+          ))}
+        </div>
+
+        <div className="hidden bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-x-auto lg:block">
+          <table className="w-full text-sm">
             <thead className="bg-[#FAFAF9] border-b border-[#E7E5E4]">
               <tr>
                 {['Client / Produit', 'Transporteur', 'N° suivi / Statut', 'COD collecté', 'COD reversé', 'Frais', ''].map((h, i) => (
@@ -243,30 +384,19 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
                       {d.carrier_status && <p className="text-xs text-[#78716C] mt-0.5">{d.carrier_status}</p>}
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleToggle(d, 'cod_collected')}
+                      <SwitchToggle
+                        checked={d.cod_collected}
                         disabled={isPending}
-                        className={`w-9 h-5 rounded-full transition-colors relative disabled:opacity-60 ${
-                          d.cod_collected ? 'bg-[#16A34A]' : 'bg-gray-200'
-                        }`}
-                      >
-                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                          d.cod_collected ? 'translate-x-4' : 'translate-x-0.5'
-                        }`} />
-                      </button>
+                        onClick={() => handleToggle(d, 'cod_collected')}
+                      />
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleToggle(d, 'cod_reversed')}
+                      <SwitchToggle
+                        checked={d.cod_reversed}
                         disabled={isPending || !d.cod_collected}
-                        className={`w-9 h-5 rounded-full transition-colors relative disabled:opacity-40 ${
-                          d.cod_reversed ? 'bg-[#0B5E46]' : 'bg-gray-200'
-                        }`}
-                      >
-                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                          d.cod_reversed ? 'translate-x-4' : 'translate-x-0.5'
-                        }`} />
-                      </button>
+                        onClick={() => handleToggle(d, 'cod_reversed')}
+                        activeClass="bg-[#0B5E46]"
+                      />
                     </td>
                     <td className="px-4 py-3 text-[#78716C] text-sm">
                       {d.fee != null ? `${d.fee} DT` : <span className="text-gray-300">—</span>}
@@ -287,14 +417,18 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {/* ── ADD MODAL ── */}
       {showAdd && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-xl p-6 max-w-md w-full space-y-4">
-            <h3 className="font-semibold text-[#1C1917] text-lg">Nouvelle livraison</h3>
-            <form onSubmit={handleAdd} className="space-y-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-md sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+            <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
+              <h3 className="font-semibold text-[#1C1917] text-lg">Nouvelle livraison</h3>
+            </div>
+            <form onSubmit={handleAdd} className="flex min-h-0 flex-1 flex-col">
+              <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
               <div>
                 <label className="block text-sm font-medium text-[#1C1917] mb-1">Commande expédiée *</label>
                 <select className="input" value={addOrderId} onChange={e => setAddOrderId(e.target.value)} required>
@@ -339,7 +473,8 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
               {addError && (
                 <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{addError}</p>
               )}
-              <div className="flex flex-col gap-3 pt-1 sm:flex-row">
+              </div>
+              <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
                 <button type="button" onClick={() => setShowAdd(false)} className="btn-secondary flex-1">Annuler</button>
                 <button type="submit" disabled={isPending} className="btn-primary flex-1">
                   {isPending ? 'Création...' : 'Créer'}
@@ -352,10 +487,13 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
 
       {/* ── EDIT MODAL ── */}
       {editDelivery && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-xl p-6 max-w-sm w-full space-y-4">
-            <h3 className="font-semibold text-[#1C1917] text-lg">Modifier la livraison</h3>
-            <form onSubmit={handleEditSave} className="space-y-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+            <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
+              <h3 className="font-semibold text-[#1C1917] text-lg">Modifier la livraison</h3>
+            </div>
+            <form onSubmit={handleEditSave} className="flex min-h-0 flex-1 flex-col">
+              <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
               <div>
                 <label className="block text-sm font-medium text-[#1C1917] mb-1">N° de suivi</label>
                 <input className="input font-mono" value={editTracking} onChange={e => setEditTracking(e.target.value)} placeholder="EX123456789TN" />
@@ -376,7 +514,8 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
                   placeholder="0.00"
                 />
               </div>
-              <div className="flex flex-col gap-3 pt-1 sm:flex-row">
+              </div>
+              <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
                 <button type="button" onClick={() => setEditDelivery(null)} className="btn-secondary flex-1">Annuler</button>
                 <button type="submit" disabled={isPending} className="btn-primary flex-1">
                   {isPending ? 'Sauvegarde...' : 'Enregistrer'}
@@ -389,13 +528,17 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
 
       {/* ── DELETE CONFIRM ── */}
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-xl p-6 max-w-sm w-full">
-            <h3 className="font-semibold text-[#1C1917] mb-1">Supprimer cette livraison ?</h3>
-            <p className="text-sm text-[#78716C] mb-5">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+            <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
+              <h3 className="font-semibold text-[#1C1917]">Supprimer cette livraison ?</h3>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <p className="text-sm text-[#78716C]">
               {getOrder(confirmDelete)?.customer?.name} — {getCarrierConfig(confirmDelete.carrier).label}
             </p>
-            <div className="flex flex-col gap-3 sm:flex-row">
+            </div>
+            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
               <button onClick={() => setConfirmDelete(null)} className="btn-secondary flex-1">Annuler</button>
               <button
                 onClick={() => handleDelete(confirmDelete)}

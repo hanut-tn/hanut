@@ -103,7 +103,7 @@ function ProductCard({
       </div>
 
       {/* Body */}
-      <div className="p-4 space-y-3">
+      <div className="p-3 space-y-3 sm:p-4">
         <div>
           <p className="text-base font-semibold text-[#1C1917] truncate">{product.name}</p>
           <p className="text-lg font-bold text-[#16A34A]">{product.price} DT</p>
@@ -145,7 +145,7 @@ function ProductCard({
         )}
 
         {/* Actions — visible on hover */}
-        <div className="flex gap-2 pt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex gap-2 pt-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
           {canWrite && (
             <button
               onClick={() => onEdit(product)}
@@ -161,6 +161,99 @@ function ProductCard({
             Voir
           </Link>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function ProductListMobileCard({
+  product,
+  onEdit,
+  onDelete,
+  canWrite,
+}: {
+  product: Product
+  onEdit: (p: Product) => void
+  onDelete: (p: Product) => void
+  canWrite: boolean
+}) {
+  const badge = getStockBadge(product)
+  const margin =
+    product.cost && product.price > 0
+      ? Math.round(((product.price - product.cost) / product.price) * 100)
+      : null
+
+  return (
+    <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-3">
+      <div className="flex gap-3">
+        <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-[#F0FDF4] flex-shrink-0 flex items-center justify-center">
+          {product.image_url ? (
+            <Image
+              src={product.image_url}
+              alt={product.name}
+              fill
+              sizes="64px"
+              className="object-cover"
+              placeholder="blur"
+              blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AJQAB/9k="
+            />
+          ) : (
+            <ImageOff className="w-5 h-5 text-[#78716C] opacity-40" />
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="font-semibold text-[#1C1917] truncate">{product.name}</p>
+              <p className="text-base font-bold text-[#16A34A]">{product.price} DT</p>
+            </div>
+            {badge ? (
+              <span className={`shrink-0 text-[10px] px-2 py-0.5 rounded-full font-medium ${badge.className}`}>
+                {badge.label}
+              </span>
+            ) : (
+              <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-50 text-green-700 border border-green-200">
+                En stock
+              </span>
+            )}
+          </div>
+
+          <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[#78716C]">
+            <span>Stock : <strong className="text-[#1C1917]">{product.stock}</strong></span>
+            <span>
+              Coût : {product.cost != null ? <strong className="text-[#1C1917]">{product.cost} DT</strong> : <span className="text-gray-300">-</span>}
+            </span>
+            <span>
+              Variantes : <strong className="text-[#1C1917]">{product.variants.length}</strong>
+            </span>
+            <span>
+              Marge : {margin != null ? <strong className="text-[#16A34A]">{margin}%</strong> : <span className="text-gray-300">-</span>}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 flex gap-2">
+        {canWrite && (
+          <button
+            onClick={() => onEdit(product)}
+            className="btn-secondary flex-1 text-sm"
+          >
+            Modifier
+          </button>
+        )}
+        <Link href={`/catalog/${product.id}`} className="btn-secondary flex-1 text-center text-sm">
+          Voir
+        </Link>
+        {canWrite && (
+          <button
+            onClick={() => onDelete(product)}
+            className="min-h-[44px] touch-manipulation rounded-lg border border-red-200 px-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+          >
+            Suppr.
+          </button>
+        )}
       </div>
     </div>
   )
@@ -208,14 +301,14 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
   }
 
   const selectClass =
-    'text-sm border border-[#E7E5E4] rounded-lg px-3 py-2 bg-white text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 cursor-pointer appearance-none pr-8'
+    'w-full min-h-[44px] touch-manipulation text-base md:text-sm border border-[#E7E5E4] rounded-lg px-3 py-2 bg-white text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 cursor-pointer appearance-none pr-8'
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1C1917]">Catalogue</h1>
+          <h1 className="text-xl font-bold text-[#1C1917] sm:text-2xl">Catalogue</h1>
           <p className="text-sm text-[#78716C] mt-0.5">
             {products.length} produit{products.length !== 1 ? 's' : ''}
             {products.filter(p => p.stock <= p.low_stock_alert && p.stock > 0).length > 0 && (
@@ -241,10 +334,10 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
       {/* Toolbar: search + view + sort + filter */}
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         {/* Search */}
-        <div className="relative w-full sm:min-w-[200px] sm:flex-1">
+        <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
           <input
-            className="input pl-9 text-sm"
+            className="input pl-9"
             placeholder="Rechercher un produit..."
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -276,7 +369,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
         </div>
 
         {/* Sort */}
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <select
             className={selectClass}
             value={sort}
@@ -291,7 +384,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
         </div>
 
         {/* Stock filter */}
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <select
             className={selectClass}
             value={stockFilter}
@@ -350,8 +443,21 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
         </div>
       ) : (
         /* List view */
-        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-x-auto">
-          <table className="w-full min-w-[780px] text-sm">
+        <>
+        <div className="space-y-3 lg:hidden">
+          {filtered.map(p => (
+            <ProductListMobileCard
+              key={p.id}
+              product={p}
+              onEdit={setModal}
+              onDelete={(product) => { setDeleteError(null); setConfirmDelete(product) }}
+              canWrite={canWrite}
+            />
+          ))}
+        </div>
+
+        <div className="hidden bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-x-auto lg:block">
+          <table className="w-full text-sm">
             <thead className="bg-[#FAFAF9] border-b border-[#E7E5E4]">
               <tr>
                 {['Photo', 'Produit', 'Prix', 'Coût / Marge', 'Stock', 'Statut', 'Actions'].map(h => (
@@ -475,13 +581,17 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {/* Confirm delete modal */}
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-xl p-6 max-w-sm w-full">
-            <h3 className="font-semibold text-[#1C1917] mb-1">Supprimer ce produit ?</h3>
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+            <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
+              <h3 className="font-semibold text-[#1C1917]">Supprimer ce produit ?</h3>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             <p className="text-sm text-[#78716C] mb-1">
               &quot;{confirmDelete.name}&quot; sera supprimé définitivement.
             </p>
@@ -493,7 +603,8 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
                 {deleteError}
               </div>
             )}
-            <div className="flex flex-col gap-3 sm:flex-row">
+            </div>
+            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
               <button
                 onClick={() => { setConfirmDelete(null); setDeleteError(null) }}
                 className="btn-secondary flex-1"

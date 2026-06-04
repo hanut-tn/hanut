@@ -107,22 +107,23 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white border border-[#E7E5E4] rounded-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto shadow-xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E7E5E4] sticky top-0 bg-white z-10">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:p-4">
+      <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:mx-auto sm:my-8 sm:min-h-0 sm:max-h-[calc(100svh-4rem)] sm:max-w-2xl sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
           <h2 className="font-semibold text-[#1C1917]">
             {product ? 'Modifier le produit' : 'Nouveau produit'}
           </h2>
           <button
             onClick={onClose}
-            className="text-[#78716C] hover:text-[#1C1917] w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] transition-colors"
+            className="text-[#78716C] hover:text-[#1C1917] w-10 h-10 touch-manipulation flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] transition-colors"
+            aria-label="Fermer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
             {/* Two-column: image left, fields right */}
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               {/* Image upload */}
@@ -202,7 +203,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                       Prix de vente (DT) <span className="text-red-500">*</span>
                     </label>
                     <input
-                      className="input"
+                    className="input"
                       type="number"
                       min="0"
                       step="0.01"
@@ -217,7 +218,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                       Coût de revient (DT)
                     </label>
                     <input
-                      className="input"
+                    className="input"
                       type="number"
                       min="0"
                       step="0.01"
@@ -244,7 +245,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                       Stock <span className="text-red-500">*</span>
                     </label>
                     <input
-                      className="input"
+                    className="input"
                       type="number"
                       min="0"
                       value={form.stock || ''}
@@ -258,7 +259,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                       Alerte stock bas
                     </label>
                     <input
-                      className="input"
+                    className="input"
                       type="number"
                       min="0"
                       value={form.low_stock_alert || ''}
@@ -289,36 +290,37 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                 <button
                   type="button"
                   onClick={addVariant}
-                  className="text-xs text-[#16A34A] hover:text-[#15803D] font-medium flex items-center gap-1"
+                  className="min-h-[44px] touch-manipulation text-xs text-[#16A34A] hover:text-[#15803D] font-medium flex items-center gap-1"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Ajouter une variante
                 </button>
               </div>
               {form.variants.length > 0 && (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-[1fr_1fr_64px_32px] gap-2 px-1">
+                <div className="-mx-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
+                  <div className="min-w-[520px] space-y-2">
+                  <div className="grid grid-cols-[1fr_1fr_80px_44px] gap-2 px-1">
                     <span className="text-xs text-[#78716C]">Taille</span>
                     <span className="text-xs text-[#78716C]">Couleur</span>
                     <span className="text-xs text-[#78716C]">Qté</span>
                     <span />
                   </div>
                   {form.variants.map((v, i) => (
-                    <div key={i} className="grid grid-cols-[1fr_1fr_64px_32px] gap-2 items-center">
+                    <div key={i} className="grid grid-cols-[1fr_1fr_80px_44px] gap-2 items-center">
                       <input
-                        className="input text-sm"
+                        className="input"
                         value={v.size ?? ''}
                         onChange={e => updateVariant(i, 'size', e.target.value)}
                         placeholder="M, L, XL…"
                       />
                       <input
-                        className="input text-sm"
+                        className="input"
                         value={v.color ?? ''}
                         onChange={e => updateVariant(i, 'color', e.target.value)}
                         placeholder="Noir, Blanc…"
                       />
                       <input
-                        className="input text-sm"
+                        className="input"
                         type="number"
                         min="0"
                         value={v.qty}
@@ -327,24 +329,25 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                       <button
                         type="button"
                         onClick={() => removeVariant(i)}
-                        className="text-[#78716C] hover:text-red-500 flex items-center justify-center transition-colors"
+                        className="flex min-h-[44px] touch-manipulation items-center justify-center text-[#78716C] hover:text-red-500 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   ))}
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
           {error && (
-            <div className="mx-6 mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            <div className="mx-4 mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 sm:mx-6">
               {error}
             </div>
           )}
 
-          <div className="flex flex-col gap-3 px-6 pb-6 sm:flex-row">
+          <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
             <button type="button" onClick={onClose} className="btn-secondary flex-1">
               Annuler
             </button>

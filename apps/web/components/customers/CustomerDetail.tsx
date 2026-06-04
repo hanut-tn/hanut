@@ -257,9 +257,9 @@ export default function CustomerDetail({ customer, orders: initialOrders, totalO
       </div>
 
       {/* ── TAGS + NOTES ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="flex flex-col gap-4 lg:flex-row">
         {/* Tags */}
-        <div className="card p-5">
+        <div className="card p-5 lg:flex-1">
           <h2 className="font-semibold text-gray-900 mb-3">Tags</h2>
           <div ref={tagsContainerRef} className="flex flex-wrap gap-2 mb-3 min-h-[28px]">
             {tags.length === 0 && !showTagInput && (
@@ -296,7 +296,7 @@ export default function CustomerDetail({ customer, orders: initialOrders, totalO
             <div className="space-y-2">
               <input
                 autoFocus
-                className="input text-sm"
+                className="input"
                 placeholder="Nom du tag…"
                 value={tagInput}
                 onChange={e => setTagInput(e.target.value)}
@@ -336,13 +336,13 @@ export default function CustomerDetail({ customer, orders: initialOrders, totalO
         </div>
 
         {/* Notes */}
-        <div className="card p-5">
+        <div className="card p-5 lg:flex-1">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-gray-900">Notes internes</h2>
             {notesSaved && <span className="text-xs text-green-600 font-medium">✓ Sauvegardé</span>}
           </div>
           <textarea
-            className="input text-sm resize-none"
+            className="input resize-none"
             rows={5}
             value={notes}
             onChange={e => onNotesChange(e.target.value)}
@@ -370,8 +370,40 @@ export default function CustomerDetail({ customer, orders: initialOrders, totalO
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
+            <div className="divide-y divide-gray-100 lg:hidden">
+              {displayedOrders.map(order => {
+                const product = Array.isArray(order.product) ? order.product[0] : order.product
+                return (
+                  <div key={order.id} className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{product?.name ?? '-'}</p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(order.created_at).toLocaleDateString('fr-TN', {
+                            day: '2-digit', month: 'short', year: '2-digit',
+                          })}
+                        </p>
+                        {order.variant && <p className="text-xs text-gray-400">{order.variant}</p>}
+                      </div>
+                      <StatusBadge status={order.status} />
+                    </div>
+                    <div className="mt-3 flex items-center justify-between text-sm">
+                      <span className="text-gray-500">Montant</span>
+                      <span className="font-semibold text-gray-900">{order.cod_amount} DT</span>
+                    </div>
+                    {order.quantity > 1 && (
+                      <div className="mt-1 flex items-center justify-between text-sm">
+                        <span className="text-gray-500">Quantité</span>
+                        <span className="font-medium text-gray-900">x {order.quantity}</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="hidden overflow-x-auto lg:block">
+            <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   {['Date', 'Produit', 'Montant', 'Statut'].map((h, i) => (
@@ -427,10 +459,13 @@ export default function CustomerDetail({ customer, orders: initialOrders, totalO
 
       {/* ── EDIT MODAL ── */}
       {editOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="card p-6 max-w-sm w-full shadow-xl space-y-4">
-            <h3 className="font-semibold text-gray-900 text-lg">Modifier le client</h3>
-            <form onSubmit={handleEditSave} className="space-y-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-sm sm:rounded-xl sm:border sm:border-gray-200">
+            <div className="sticky top-0 border-b border-gray-100 bg-white px-4 py-4 sm:px-6">
+              <h3 className="font-semibold text-gray-900 text-lg">Modifier le client</h3>
+            </div>
+            <form onSubmit={handleEditSave} className="flex min-h-0 flex-1 flex-col">
+              <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet *</label>
                 <input
@@ -479,7 +514,8 @@ export default function CustomerDetail({ customer, orders: initialOrders, totalO
                   {editMsg.text}
                 </div>
               )}
-              <div className="flex flex-col gap-3 pt-1 sm:flex-row">
+              </div>
+              <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-gray-100 bg-white px-4 py-4 sm:flex-row sm:px-6">
                 <button type="button" onClick={() => setEditOpen(false)} className="btn-secondary flex-1">
                   Annuler
                 </button>
