@@ -224,27 +224,31 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
       <h1 className="text-2xl font-bold text-gray-900">Paramètres</h1>
 
       {/* Profile card */}
-      <div className="card p-5 flex items-center gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-brand-600 flex items-center justify-center text-white text-xl font-bold flex-shrink-0 select-none">
-          {initials || '?'}
+      <div className="card p-5 space-y-4">
+        {/* Avatar + nom + email */}
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-brand-600 flex items-center justify-center text-white text-xl font-bold shrink-0 select-none">
+            {initials || '?'}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-gray-900 text-base sm:text-lg leading-tight truncate">{seller.name}</p>
+            <p className="text-sm text-gray-500 truncate">{seller.email}</p>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1.5 ${planCfg.color}`}>
+              {planCfg.label}
+            </span>
+          </div>
         </div>
-        <div className="min-w-0">
-          <p className="font-semibold text-gray-900 text-lg truncate">{seller.name}</p>
-          <p className="text-sm text-gray-500 truncate">{seller.email}</p>
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${planCfg.color}`}>
-            {planCfg.label}
-          </span>
-        </div>
-        <div className="ml-auto flex gap-5 text-center flex-shrink-0">
+        {/* Stats — grille en dessous */}
+        <div className={`grid gap-4 pt-4 border-t border-[#E7E5E4] text-center ${seller.plan === 'business' ? 'grid-cols-4' : 'grid-cols-3'}`}>
           {[
-            { label: 'Produits',   val: stats.products },
-            { label: 'Clients',    val: stats.customers },
-            { label: 'Commandes',  val: stats.orders },
+            { label: 'Produits',  val: stats.products  },
+            { label: 'Clients',   val: stats.customers },
+            { label: 'Commandes', val: stats.orders    },
             ...(seller.plan === 'business' ? [{ label: 'Membres', val: stats.members }] : []),
           ].map(s => (
             <div key={s.label}>
               <p className="text-xl font-bold text-gray-900">{s.val}</p>
-              <p className="text-xs text-gray-400">{s.label}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{s.label}</p>
             </div>
           ))}
         </div>

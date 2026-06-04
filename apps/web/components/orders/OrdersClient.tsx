@@ -435,116 +435,159 @@ export default function OrdersClient({
                 const canDelete = isAdmin && DELETABLE_STATUSES.includes(order.status)
                 const ini = customer?.name ? initials(customer.name) : '?'
 
+                // Boutons d'action — partagés entre mobile et desktop
+                const actionButtons = (
+                  <div className="flex flex-wrap items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                    {(isPendingOrder || isNew) && (
+                      <button
+                        onClick={() => isPendingOrder ? handleConfirm(order.id) : handleStatus(order.id, 'confirmed')}
+                        disabled={isPending}
+                        className="text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap min-h-[34px]"
+                      >
+                        Confirmer
+                      </button>
+                    )}
+                    {isPendingOrder && (
+                      <button
+                        onClick={() => handleCancel(order.id)}
+                        disabled={isPending}
+                        className="text-xs font-semibold text-red-600 border border-red-200 hover:border-red-300 disabled:opacity-50 px-2 py-1.5 rounded-lg transition-colors min-h-[34px]"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {isConfirmed && (
+                      <button
+                        onClick={() => handleStatus(order.id, 'shipped')}
+                        disabled={isPending}
+                        className="text-xs font-semibold text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap min-h-[34px]"
+                      >
+                        Expédier
+                      </button>
+                    )}
+                    {isShipped && (
+                      <button
+                        onClick={() => handleStatus(order.id, 'delivered')}
+                        disabled={isPending}
+                        className="text-xs font-semibold text-white bg-[#0B5E46] hover:bg-[#0a5240] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap min-h-[34px]"
+                      >
+                        Livré
+                      </button>
+                    )}
+                    {canDelete && !isPendingOrder && (
+                      <button
+                        onClick={() => { setConfirmDelete(order); setActionError(null) }}
+                        className="text-xs font-medium text-[#A8A29E] hover:text-red-500 px-1.5 py-1.5 rounded-lg transition-colors min-h-[34px]"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <Link
+                      href={`/orders/${order.id}`}
+                      className="flex items-center justify-center w-8 h-8 rounded-lg text-[#78716C] hover:text-[#1C1917] hover:bg-[#F0F0EF] transition-colors shrink-0"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                )
+
                 return (
                   <div
                     key={order.id}
-                    className={`group grid grid-cols-[40px_1fr] gap-3 px-4 py-4 transition-colors cursor-pointer lg:grid-cols-[40px_1fr_1fr_120px_100px_140px] lg:gap-4 lg:items-center lg:px-5 ${
-                      isPendingOrder ? 'bg-amber-50/20 hover:bg-amber-50/50' : 'hover:bg-[#FAFAF9]'
-                    }`}
-                    onClick={() => window.location.href = `/orders/${order.id}`}
+                    className={`transition-colors ${isPendingOrder ? 'bg-amber-50/20' : ''}`}
                   >
-                    {/* Col 1 — Avatar */}
-                    <div className="w-9 h-9 rounded-full bg-[#F0FDF4] text-[#166534] flex items-center justify-center font-semibold text-sm shrink-0 select-none">
-                      {ini}
-                    </div>
-
-                    {/* Col 2 — Client */}
-                    <div className="min-w-0">
-                      {isPendingOrder && (
-                        <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 font-semibold mb-0.5">
-                          <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
-                          Via lien public
-                        </span>
-                      )}
-                      <p className="text-sm font-semibold text-[#1C1917] truncate">
-                        {customer?.name
-                          ? <Highlight text={customer.name} query={debouncedSearch} />
-                          : '—'}
-                      </p>
-                      <p className="text-xs text-[#78716C] truncate">
-                        {customer?.phone
-                          ? <Highlight text={customer.phone} query={debouncedSearch} />
-                          : ''}
-                        {customer?.city ? ` · ${customer.city}` : ''}
-                      </p>
-                      <p className="text-xs text-[#A8A29E]">{relativeDate(order.created_at)}</p>
-                    </div>
-
-                    {/* Col 3 — Produit */}
-                    <div className="col-start-2 min-w-0 lg:col-auto">
-                      <p className="text-sm font-medium text-[#1C1917] truncate">{product?.name ?? '—'}</p>
-                      <p className="text-xs text-[#78716C] truncate">
-                        {[order.variant, order.quantity > 1 ? `× ${order.quantity}` : ''].filter(Boolean).join(' · ')}
-                      </p>
-                    </div>
-
-                    {/* Col 4 — Statut */}
-                    <div className="col-start-2 lg:col-auto">
-                      <StatusBadge status={order.status} pulseDot={isPendingOrder} />
-                    </div>
-
-                    {/* Col 5 — Montant */}
-                    <div className="col-start-2 text-left lg:col-auto lg:text-right">
-                      <p className="text-sm font-bold text-[#16A34A]">{order.cod_amount} DT</p>
-                      <p className="text-xs text-[#78716C]">COD</p>
-                    </div>
-
-                    {/* Col 6 — Actions */}
+                    {/* ── Layout mobile (< lg) ── */}
                     <div
-                      className="col-span-2 flex flex-wrap items-center justify-start gap-1.5 lg:col-auto lg:justify-end"
-                      onClick={e => e.stopPropagation()}
+                      className={`lg:hidden px-4 py-4 cursor-pointer ${isPendingOrder ? 'hover:bg-amber-50/50' : 'hover:bg-[#FAFAF9]'}`}
+                      onClick={() => window.location.href = `/orders/${order.id}`}
                     >
-                      {(isPendingOrder || isNew) && (
-                        <button
-                          onClick={() => isPendingOrder ? handleConfirm(order.id) : handleStatus(order.id, 'confirmed')}
-                          disabled={isPending}
-                          className="text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
-                        >
-                          Confirmer
-                        </button>
-                      )}
-                      {isPendingOrder && (
-                        <button
-                          onClick={() => handleCancel(order.id)}
-                          disabled={isPending}
-                          className="text-xs font-semibold text-red-600 border border-red-200 hover:border-red-300 disabled:opacity-50 px-2 py-1.5 rounded-lg transition-colors"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      {isConfirmed && (
-                        <button
-                          onClick={() => handleStatus(order.id, 'shipped')}
-                          disabled={isPending}
-                          className="text-xs font-semibold text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
-                        >
-                          Expédier
-                        </button>
-                      )}
-                      {isShipped && (
-                        <button
-                          onClick={() => handleStatus(order.id, 'delivered')}
-                          disabled={isPending}
-                          className="text-xs font-semibold text-white bg-[#0B5E46] hover:bg-[#0a5240] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
-                        >
-                          Livré
-                        </button>
-                      )}
-                      {canDelete && !isPendingOrder && (
-                        <button
-                          onClick={() => { setConfirmDelete(order); setActionError(null) }}
-                          className="text-xs font-medium text-[#A8A29E] hover:text-red-500 px-1.5 py-1.5 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      <Link
-                        href={`/orders/${order.id}`}
-                        className="flex items-center justify-center w-7 h-7 rounded-lg text-[#78716C] hover:text-[#1C1917] hover:bg-[#F0F0EF] transition-colors shrink-0"
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </Link>
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-full bg-[#F0FDF4] text-[#166534] flex items-center justify-center font-semibold text-sm shrink-0 select-none mt-0.5">
+                          {ini}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          {/* Ligne 1 : nom + montant/statut */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              {isPendingOrder && (
+                                <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 font-semibold mb-0.5">
+                                  <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+                                  Via lien public
+                                </span>
+                              )}
+                              <p className="text-sm font-semibold text-[#1C1917] truncate">
+                                {customer?.name ? <Highlight text={customer.name} query={debouncedSearch} /> : '—'}
+                              </p>
+                              <p className="text-xs text-[#78716C] truncate">
+                                {customer?.phone ? <Highlight text={customer.phone} query={debouncedSearch} /> : ''}
+                                {customer?.city ? ` · ${customer.city}` : ''}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-sm font-bold text-[#16A34A]">{order.cod_amount} DT</p>
+                              <div className="mt-1">
+                                <StatusBadge status={order.status} pulseDot={isPendingOrder} />
+                              </div>
+                            </div>
+                          </div>
+                          {/* Ligne 2 : produit + date */}
+                          <div className="flex items-center justify-between gap-2 mt-1.5">
+                            <p className="text-xs text-[#78716C] truncate">
+                              {product?.name ?? '—'}
+                              {order.variant ? ` · ${order.variant}` : ''}
+                              {order.quantity > 1 ? ` × ${order.quantity}` : ''}
+                            </p>
+                            <p className="text-xs text-[#A8A29E] shrink-0">{relativeDate(order.created_at)}</p>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Actions */}
+                      <div className="mt-3 ml-12">
+                        {actionButtons}
+                      </div>
+                    </div>
+
+                    {/* ── Layout desktop (≥ lg) ── */}
+                    <div
+                      className={`hidden lg:grid grid-cols-[40px_1fr_1fr_120px_100px_140px] gap-4 items-center px-5 py-4 cursor-pointer ${isPendingOrder ? 'hover:bg-amber-50/50' : 'hover:bg-[#FAFAF9]'}`}
+                      onClick={() => window.location.href = `/orders/${order.id}`}
+                    >
+                      <div className="w-9 h-9 rounded-full bg-[#F0FDF4] text-[#166534] flex items-center justify-center font-semibold text-sm shrink-0 select-none">
+                        {ini}
+                      </div>
+                      <div className="min-w-0">
+                        {isPendingOrder && (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 font-semibold mb-0.5">
+                            <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+                            Via lien public
+                          </span>
+                        )}
+                        <p className="text-sm font-semibold text-[#1C1917] truncate">
+                          {customer?.name ? <Highlight text={customer.name} query={debouncedSearch} /> : '—'}
+                        </p>
+                        <p className="text-xs text-[#78716C] truncate">
+                          {customer?.phone ? <Highlight text={customer.phone} query={debouncedSearch} /> : ''}
+                          {customer?.city ? ` · ${customer.city}` : ''}
+                        </p>
+                        <p className="text-xs text-[#A8A29E]">{relativeDate(order.created_at)}</p>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-[#1C1917] truncate">{product?.name ?? '—'}</p>
+                        <p className="text-xs text-[#78716C] truncate">
+                          {[order.variant, order.quantity > 1 ? `× ${order.quantity}` : ''].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+                      <div>
+                        <StatusBadge status={order.status} pulseDot={isPendingOrder} />
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-[#16A34A]">{order.cod_amount} DT</p>
+                        <p className="text-xs text-[#78716C]">COD</p>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
+                        {actionButtons}
+                      </div>
                     </div>
                   </div>
                 )

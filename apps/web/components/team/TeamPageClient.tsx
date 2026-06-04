@@ -264,116 +264,198 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
             <p className="text-sm">Aucun membre. Invitez votre premier collaborateur ci-dessous.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                {['Membre', 'Rôle', 'Statut', 'Dernière connexion', 'Invité le', ''].map((h, i) => (
-                  <th key={i} className="text-left text-xs font-medium text-gray-500 uppercase tracking-wide px-5 py-3">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
+          <>
+            {/* ── Cards mobiles (< md) ── */}
+            <div className="md:hidden divide-y divide-gray-100">
               {members.map(m => {
-                const roleConf = ROLE_CONFIG[m.role]
+                const roleConf  = ROLE_CONFIG[m.role]
                 const statusConf = STATUS_CONFIG[m.status]
-                const isSelf = m.user_id === currentUserId
-                const hasPendingBanner = m.status === 'pending' && !isSelf
+                const isSelf    = m.user_id === currentUserId
+                const hasPending = m.status === 'pending' && !isSelf
 
                 return (
-                  <Fragment key={m.id}>
-                    <tr className="hover:bg-gray-50 transition-colors">
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-[#F0FDF4] text-[#166534] rounded-full flex items-center justify-center text-xs font-bold shrink-0">
-                            {initials(m)}
-                          </div>
-                          <div>
-                            {m.name && <p className="font-medium text-gray-900">{m.name}</p>}
-                            <p className={m.name ? 'text-xs text-gray-400' : 'text-sm text-gray-700'}>{m.email}</p>
-                          </div>
-                        </div>
-                      </td>
+                  <div key={m.id} className="px-4 py-4 space-y-3">
+                    {/* Ligne principale : avatar + infos + retirer */}
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 bg-[#F0FDF4] text-[#166534] rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                        {initials(m)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        {m.name && <p className="font-medium text-gray-900 text-sm">{m.name}</p>}
+                        <p className={`text-sm truncate ${m.name ? 'text-xs text-gray-400' : 'text-gray-700'}`}>{m.email}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Invité le {formatDate(m.invited_at)}</p>
+                      </div>
+                      {!isSelf && (
+                        <button
+                          onClick={() => { setConfirmDelete(m); setDeleteError(null) }}
+                          className="text-xs text-red-400 hover:text-red-600 font-medium shrink-0 mt-0.5 min-h-[44px] flex items-start pt-0.5"
+                        >
+                          Retirer
+                        </button>
+                      )}
+                    </div>
 
-                      <td className="px-5 py-4">
-                        {isSelf ? (
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${roleConf.cls}`}>
-                            {roleConf.label}
-                          </span>
-                        ) : (
-                          <select
-                            defaultValue={m.role}
-                            onChange={e => handleRoleChange(m.id, e.target.value)}
-                            className="text-xs font-medium border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-                          >
-                            <option value="operator">Opérateur</option>
-                            <option value="readonly">Lecture seule</option>
-                          </select>
-                        )}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusConf.cls}`}>
-                          {m.status === 'pending' && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                          )}
-                          {statusConf.label}
+                    {/* Rôle + statut + dernière connexion */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {isSelf ? (
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${roleConf.cls}`}>
+                          {roleConf.label}
                         </span>
-                      </td>
+                      ) : (
+                        <select
+                          defaultValue={m.role}
+                          onChange={e => handleRoleChange(m.id, e.target.value)}
+                          className="text-xs font-medium border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 min-h-[36px]"
+                        >
+                          <option value="operator">Opérateur</option>
+                          <option value="readonly">Lecture seule</option>
+                        </select>
+                      )}
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusConf.cls}`}>
+                        {m.status === 'pending' && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
+                        {statusConf.label}
+                      </span>
+                      {m.status === 'active' && (
+                        <span className="text-xs text-gray-400">{formatRelative(m.last_sign_in_at ?? null)}</span>
+                      )}
+                    </div>
 
-                      <td className="px-5 py-4 text-xs text-gray-500">
-                        {m.status === 'active' ? formatRelative(m.last_sign_in_at ?? null) : '—'}
-                      </td>
-
-                      <td className="px-5 py-4 text-xs text-gray-400">{formatDate(m.invited_at)}</td>
-
-                      <td className="px-5 py-4">
-                        {!isSelf && (
+                    {/* Bannière invitation pending */}
+                    {hasPending && (
+                      <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2.5 space-y-2">
+                        <p className="text-xs text-amber-700">
+                          ⚠️ Invitation en attente — envoyée le {formatDate(m.invited_at)}
+                        </p>
+                        <div className="flex gap-2 flex-wrap">
+                          {resentMembers.has(m.id) ? (
+                            <span className="text-xs text-amber-700 font-medium">✓ Invitation renvoyée</span>
+                          ) : (
+                            <button
+                              onClick={() => handleResendInvite(m.id)}
+                              className="bg-amber-500 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-amber-600 transition-colors min-h-[36px]"
+                            >
+                              Renvoyer l&apos;invitation
+                            </button>
+                          )}
                           <button
                             onClick={() => { setConfirmDelete(m); setDeleteError(null) }}
-                            className="text-xs text-red-400 hover:text-red-600 font-medium"
+                            className="border border-amber-300 text-amber-700 text-xs px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-colors min-h-[36px]"
                           >
-                            Retirer
+                            Annuler l&apos;invitation
                           </button>
-                        )}
-                      </td>
-                    </tr>
-
-                    {hasPendingBanner && (
-                      <tr className="!border-t-0">
-                        <td colSpan={6} className="p-0">
-                          <div className="bg-amber-50 border-t border-amber-100 px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap">
-                            <span className="text-xs text-amber-700">
-                              ⚠️ Invitation en attente — envoyée le {formatDate(m.invited_at)}
-                            </span>
-                            <div className="flex items-center gap-2 shrink-0">
-                              {resentMembers.has(m.id) ? (
-                                <span className="text-xs text-amber-700 font-medium">✓ Invitation renvoyée</span>
-                              ) : (
-                                <button
-                                  onClick={() => handleResendInvite(m.id)}
-                                  className="bg-amber-500 text-white text-xs px-3 py-1 rounded-lg hover:bg-amber-600 transition-colors"
-                                >
-                                  Renvoyer l&apos;invitation
-                                </button>
-                              )}
-                              <button
-                                onClick={() => { setConfirmDelete(m); setDeleteError(null) }}
-                                className="border border-amber-300 text-amber-700 text-xs px-3 py-1 rounded-lg hover:bg-amber-100 transition-colors"
-                              >
-                                Annuler l&apos;invitation
-                              </button>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
+                        </div>
+                      </div>
                     )}
-                  </Fragment>
+                  </div>
                 )
               })}
-            </tbody>
-          </table>
-          </div>
+            </div>
+
+            {/* ── Tableau desktop (≥ md) ── */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full min-w-[820px] text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    {['Membre', 'Rôle', 'Statut', 'Dernière connexion', 'Invité le', ''].map((h, i) => (
+                      <th key={i} className="text-left text-xs font-medium text-gray-500 uppercase tracking-wide px-5 py-3">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {members.map(m => {
+                    const roleConf   = ROLE_CONFIG[m.role]
+                    const statusConf = STATUS_CONFIG[m.status]
+                    const isSelf     = m.user_id === currentUserId
+                    const hasPendingBanner = m.status === 'pending' && !isSelf
+
+                    return (
+                      <Fragment key={m.id}>
+                        <tr className="hover:bg-gray-50 transition-colors">
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-[#F0FDF4] text-[#166534] rounded-full flex items-center justify-center text-xs font-bold shrink-0">
+                                {initials(m)}
+                              </div>
+                              <div>
+                                {m.name && <p className="font-medium text-gray-900">{m.name}</p>}
+                                <p className={m.name ? 'text-xs text-gray-400' : 'text-sm text-gray-700'}>{m.email}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-5 py-4">
+                            {isSelf ? (
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${roleConf.cls}`}>
+                                {roleConf.label}
+                              </span>
+                            ) : (
+                              <select
+                                defaultValue={m.role}
+                                onChange={e => handleRoleChange(m.id, e.target.value)}
+                                className="text-xs font-medium border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                              >
+                                <option value="operator">Opérateur</option>
+                                <option value="readonly">Lecture seule</option>
+                              </select>
+                            )}
+                          </td>
+                          <td className="px-5 py-4">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusConf.cls}`}>
+                              {m.status === 'pending' && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
+                              {statusConf.label}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 text-xs text-gray-500">
+                            {m.status === 'active' ? formatRelative(m.last_sign_in_at ?? null) : '—'}
+                          </td>
+                          <td className="px-5 py-4 text-xs text-gray-400">{formatDate(m.invited_at)}</td>
+                          <td className="px-5 py-4">
+                            {!isSelf && (
+                              <button
+                                onClick={() => { setConfirmDelete(m); setDeleteError(null) }}
+                                className="text-xs text-red-400 hover:text-red-600 font-medium"
+                              >
+                                Retirer
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+
+                        {hasPendingBanner && (
+                          <tr className="!border-t-0">
+                            <td colSpan={6} className="p-0">
+                              <div className="bg-amber-50 border-t border-amber-100 px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap">
+                                <span className="text-xs text-amber-700">
+                                  ⚠️ Invitation en attente — envoyée le {formatDate(m.invited_at)}
+                                </span>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {resentMembers.has(m.id) ? (
+                                    <span className="text-xs text-amber-700 font-medium">✓ Invitation renvoyée</span>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleResendInvite(m.id)}
+                                      className="bg-amber-500 text-white text-xs px-3 py-1 rounded-lg hover:bg-amber-600 transition-colors"
+                                    >
+                                      Renvoyer l&apos;invitation
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => { setConfirmDelete(m); setDeleteError(null) }}
+                                    className="border border-amber-300 text-amber-700 text-xs px-3 py-1 rounded-lg hover:bg-amber-100 transition-colors"
+                                  >
+                                    Annuler l&apos;invitation
+                                  </button>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
