@@ -182,7 +182,7 @@ export async function deleteOrder(id: string): Promise<OrderMutationResult> {
 
   const { data: order } = await supabase
     .from('orders')
-    .select('status, cod_amount, customer:customers(name)')
+    .select('status, cod_amount, product_id, quantity, customer:customers(name)')
     .eq('id', id)
     .eq('seller_id', context.sellerId)
     .is('deleted_at', null)
@@ -200,6 +200,21 @@ export async function deleteOrder(id: string): Promise<OrderMutationResult> {
     .eq('seller_id', context.sellerId)
     .is('deleted_at', null)
   if (error) return { error: error.message }
+
+  // Restaurer le stock pour les commandes dont le stock avait été décrémenté
+  if (['new', 'confirmed'].includes(order.status) && order.product_id) {
+    const { data: product } = await supabase
+      .from('products')
+      .select('stock')
+      .eq('id', order.product_id)
+      .single()
+    if (product) {
+      await supabase.from('products')
+        .update({ stock: product.stock + order.quantity })
+        .eq('id', order.product_id)
+        .eq('seller_id', context.sellerId)
+    }
+  }
 
   const customer = Array.isArray(order.customer) ? order.customer[0] : order.customer
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()

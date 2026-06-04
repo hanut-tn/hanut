@@ -36,7 +36,7 @@ type Props = {
   shippableOrders: OrderInfo[]
   createDelivery: (input: CreateDeliveryInput) => Promise<void>
   updateDelivery: (id: string, input: UpdateDeliveryInput) => Promise<void>
-  deleteDelivery: (id: string) => Promise<void>
+  deleteDelivery: (id: string) => Promise<{ error?: string }>
 }
 
 type Tab = 'all' | 'pending' | 'collected' | 'reversed'
@@ -208,6 +208,9 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
   const [tab, setTab] = useState<Tab>('all')
   const [isPending, startTransition] = useTransition()
 
+  // État local pour l'optimistic delete
+  const [allDeliveries, setAllDeliveries] = useState<Delivery[]>(deliveries)
+
   const [showAdd, setShowAdd] = useState(false)
   const [addOrderId, setAddOrderId] = useState('')
   const [addCarrier, setAddCarrier] = useState<CarrierName>('intigo')
@@ -234,7 +237,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
     return () => clearTimeout(t)
   }, [toast])
 
-  const filtered = deliveries.filter(d => {
+  const filtered = allDeliveries.filter(d => {
     if (tab === 'pending')   return !d.cod_collected
     if (tab === 'collected') return d.cod_collected && !d.cod_reversed
     if (tab === 'reversed')  return d.cod_reversed
@@ -242,20 +245,20 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
   })
 
   const counts: Record<Tab, number> = {
-    all:       deliveries.length,
-    pending:   deliveries.filter(d => !d.cod_collected).length,
-    collected: deliveries.filter(d => d.cod_collected && !d.cod_reversed).length,
-    reversed:  deliveries.filter(d => d.cod_reversed).length,
+    all:       allDeliveries.length,
+    pending:   allDeliveries.filter(d => !d.cod_collected).length,
+    collected: allDeliveries.filter(d => d.cod_collected && !d.cod_reversed).length,
+    reversed:  allDeliveries.filter(d => d.cod_reversed).length,
   }
 
-  const totalCollected = deliveries
+  const totalCollected = allDeliveries
     .filter(d => d.cod_collected)
     .reduce((s, d) => s + (getOrder(d)?.cod_amount ?? 0), 0)
-  const totalReversed = deliveries
+  const totalReversed = allDeliveries
     .filter(d => d.cod_reversed)
     .reduce((s, d) => s + (getOrder(d)?.cod_amount ?? 0), 0)
-  const totalFees = deliveries.reduce((s, d) => s + (d.fee ?? 0), 0)
-  const activeCount = deliveries.filter(d => !d.cod_reversed).length
+  const totalFees = allDeliveries.reduce((s, d) => s + (d.fee ?? 0), 0)
+  const activeCount = allDeliveries.filter(d => !d.cod_reversed).length
 
   function openEdit(d: Delivery) {
     setEditDelivery(d)
@@ -304,9 +307,17 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
   }
 
   function handleDelete(d: Delivery) {
+    const prev = allDeliveries
+    setAllDeliveries(list => list.filter(delivery => delivery.id !== d.id))
+    setConfirmDelete(null)
     startTransition(async () => {
-      await deleteDelivery(d.id)
-      setConfirmDelete(null)
+      const result = await deleteDelivery(d.id)
+      if (result?.error) {
+        setAllDeliveries(prev)
+        setToast(`Erreur : ${result.error}`)
+      } else {
+        setToast('✓ Livraison supprimée · La commande a été remise en "Confirmée"')
+      }
     })
   }
 

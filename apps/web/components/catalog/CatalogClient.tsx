@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useMemo } from 'react'
+import { useState, useTransition, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
@@ -289,8 +289,20 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
   const [isPending, startTransition] = useTransition()
   const canWrite = role !== 'readonly'
 
+  // État local pour l'optimistic delete
+  const [allProducts, setAllProducts] = useState<Product[]>(products)
+
+  // Toast
+  const [toast, setToast] = useState<string | null>(null)
+  const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  function showToast(msg: string) {
+    if (toastRef.current) clearTimeout(toastRef.current)
+    setToast(msg)
+    toastRef.current = setTimeout(() => setToast(null), 2000)
+  }
+
   const filtered = useMemo(() => {
-    let result = [...products]
+    let result = [...allProducts]
     if (search) {
       const q = search.toLowerCase()
       result = result.filter(p => p.name.toLowerCase().includes(q))
@@ -308,13 +320,20 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
   }, [products, search, sort, stockFilter])
 
   function handleDelete(id: string) {
+    const prev = allProducts
+    const deleted = allProducts.find(p => p.id === id)
+    setAllProducts(list => list.filter(p => p.id !== id))
+    setConfirmDelete(null)
     setDeleteError(null)
     startTransition(async () => {
       const result = await deleteProduct(id)
       if (result?.error) {
+        setAllProducts(prev)
         setDeleteError(result.error)
+        // Rouvrir la modale avec l'erreur
+        if (deleted) setConfirmDelete(deleted)
       } else {
-        setConfirmDelete(null)
+        showToast('✓ Produit supprimé')
       }
     })
   }
@@ -329,15 +348,15 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
         <div>
           <h1 className="text-xl font-bold text-[#1C1917] sm:text-2xl">Catalogue</h1>
           <p className="text-sm text-[#78716C] mt-0.5">
-            {products.length} produit{products.length !== 1 ? 's' : ''}
-            {products.filter(p => p.stock <= p.low_stock_alert && p.stock > 0).length > 0 && (
+            {allProducts.length} produit{allProducts.length !== 1 ? 's' : ''}
+            {allProducts.filter(p => p.stock <= p.low_stock_alert && p.stock > 0).length > 0 && (
               <span className="ml-2 text-amber-600 font-medium">
-                · {products.filter(p => p.stock <= p.low_stock_alert && p.stock > 0).length} stock bas
+                · {allProducts.filter(p => p.stock <= p.low_stock_alert && p.stock > 0).length} stock bas
               </span>
             )}
-            {products.filter(p => p.stock === 0).length > 0 && (
+            {allProducts.filter(p => p.stock === 0).length > 0 && (
               <span className="ml-2 text-red-600 font-medium">
-                · {products.filter(p => p.stock === 0).length} rupture
+                · {allProducts.filter(p => p.stock === 0).length} rupture
               </span>
             )}
           </p>
@@ -654,6 +673,13 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
             return {}
           }}
         />
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="pointer-events-none fixed bottom-20 left-1/2 z-50 -translate-x-1/2 md:bottom-6 md:left-auto md:right-6 md:translate-x-0">
+          <div className="rounded-full bg-[#1C1917] px-4 py-2 text-sm text-white shadow-lg">{toast}</div>
+        </div>
       )}
     </div>
   )

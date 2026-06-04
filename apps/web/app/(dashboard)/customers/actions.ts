@@ -56,16 +56,39 @@ export async function deleteCustomer(id: string): Promise<{ error?: string }> {
 
   const supabase = await createServerClient()
 
-  const { count } = await supabase
+  // Récupérer le nom du client pour le log
+  const { data: customerData } = await supabase
+    .from('customers')
+    .select('name')
+    .eq('id', id)
+    .eq('seller_id', context.sellerId)
+    .single()
+
+  // Bloquer si commandes actives (non soft-deleted)
+  const { count: activeCount } = await supabase
     .from('orders')
     .select('id', { count: 'exact', head: true })
     .eq('customer_id', id)
     .eq('seller_id', context.sellerId)
     .is('deleted_at', null)
 
-  if (count && count > 0) {
+  if (activeCount && activeCount > 0) {
     return {
-      error: `Ce client a ${count} commande${count > 1 ? 's' : ''}. Supprimez d'abord ses commandes avant de supprimer le client.`,
+      error: `Ce client a ${activeCount} commande${activeCount > 1 ? 's' : ''} active${activeCount > 1 ? 's' : ''}. Supprimez-les d'abord avant de supprimer le client.`,
+    }
+  }
+
+  // Bloquer si commandes en corbeille (FK constraint DB)
+  const { count: trashedCount } = await supabase
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('customer_id', id)
+    .eq('seller_id', context.sellerId)
+    .not('deleted_at', 'is', null)
+
+  if (trashedCount && trashedCount > 0) {
+    return {
+      error: `Ce client a ${trashedCount} commande${trashedCount > 1 ? 's' : ''} dans la corbeille. Videz la corbeille d'abord avant de supprimer le client.`,
     }
   }
 
@@ -76,6 +99,19 @@ export async function deleteCustomer(id: string): Promise<{ error?: string }> {
     .eq('seller_id', context.sellerId)
 
   if (error) return { error: error.message }
+
+  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
+
+  await logActivity({
+    sellerId: context.sellerId,
+    userId: context.userId,
+    userName: seller?.name ?? context.userId,
+    actionType: 'customer_deleted',
+    entityType: 'customer',
+    entityId: id,
+    description: `a supprimé le client ${customerData?.name ?? id}`,
+  })
+
   revalidatePath('/customers')
   return {}
 }

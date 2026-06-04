@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useMemo } from 'react'
+import { useState, useTransition, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Users, Search, Tag, ArrowUpDown, ChevronDown } from 'lucide-react'
@@ -145,6 +145,18 @@ export default function CustomersClient({ customers, initialTotal, stats, update
   const [hasMore, setHasMore] = useState(initialTotal > customers.length)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
 
+  // Toast
+  const [toast, setToast] = useState<string | null>(null)
+  const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  function showToast(msg: string) {
+    if (toastRef.current) clearTimeout(toastRef.current)
+    setToast(msg)
+    toastRef.current = setTimeout(() => setToast(null), 2000)
+  }
+
+  // Erreur d'action (hors modal)
+  const [actionError, setActionError] = useState<string | null>(null)
+
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null)
   const [editName, setEditName] = useState('')
   const [editPhone, setEditPhone] = useState('')
@@ -238,13 +250,18 @@ export default function CustomersClient({ customers, initialTotal, stats, update
   }
 
   function handleDelete(c: Customer) {
+    const prevCustomers = allCustomers
+    setAllCustomers(prev => prev.filter(customer => customer.id !== c.id))
+    setConfirmDelete(null)
     setDeleteError(null)
+    setActionError(null)
     startTransition(async () => {
       const result = await deleteCustomer(c.id)
       if (result?.error) {
-        setDeleteError(result.error)
+        setAllCustomers(prevCustomers)
+        setActionError(result.error)
       } else {
-        setConfirmDelete(null)
+        showToast('✓ Client supprimé')
       }
     })
   }
@@ -481,6 +498,21 @@ export default function CustomersClient({ customers, initialTotal, stats, update
         <p className="text-center text-xs text-[#A8A29E]">
           {allCustomers.length} affiché{allCustomers.length !== 1 ? 's' : ''} sur {initialTotal}
         </p>
+      )}
+
+      {/* Erreur d'action (suppression rollback) */}
+      {actionError && (
+        <div className="rounded-lg px-4 py-3 text-sm bg-red-50 border border-red-200 text-red-700 flex items-center justify-between">
+          {actionError}
+          <button onClick={() => setActionError(null)} className="ml-3 text-red-400 hover:text-red-600">✕</button>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="pointer-events-none fixed bottom-20 left-1/2 z-50 -translate-x-1/2 md:bottom-6 md:left-auto md:right-6 md:translate-x-0">
+          <div className="rounded-full bg-[#1C1917] px-4 py-2 text-sm text-white shadow-lg">{toast}</div>
+        </div>
       )}
 
       {/* ── EDIT MODAL ── */}

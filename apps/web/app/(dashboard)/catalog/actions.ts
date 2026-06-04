@@ -104,6 +104,17 @@ export async function deleteProduct(id: string): Promise<{ error?: string }> {
     return { error: 'Ce produit est lié à des commandes existantes et ne peut pas être supprimé définitivement.' }
   }
 
+  // Bloquer si commandes en corbeille (FK constraint DB)
+  const { count: trashedCount } = await supabase.from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('product_id', id)
+    .eq('seller_id', context.sellerId)
+    .not('deleted_at', 'is', null)
+
+  if (trashedCount && trashedCount > 0) {
+    return { error: `Ce produit a ${trashedCount} commande${trashedCount > 1 ? 's' : ''} dans la corbeille. Videz la corbeille d'abord avant de supprimer ce produit.` }
+  }
+
   const { data: product } = await supabase.from('products')
     .select('name')
     .eq('id', id)

@@ -162,8 +162,18 @@ export default function OrdersClient({
     toastRef.current = setTimeout(() => setToast(null), 2000)
   }
 
-  // Applique une mise à jour de statut dans tous les stores locaux
-  function applyOptimisticStatus(orderId: string, newStatus: OrderStatus) {
+  // Counts locaux — mis à jour instantanément, initialisés depuis le serveur
+  const [localTabCounts, setLocalTabCounts] = useState<Record<string, number>>(tabCounts)
+
+  // Corbeille locale — permet le retrait optimiste
+  const [localTrashOrders, setLocalTrashOrders] = useState<TrashOrder[]>(trashOrders)
+
+  // Applique une mise à jour de statut dans tous les stores locaux + counts
+  function applyOptimisticStatus(orderId: string, newStatus: OrderStatus, oldStatus?: OrderStatus) {
+    // Trouver le statut actuel si non fourni
+    const resolvedOld = oldStatus ?? allOrders.find(o => o.id === orderId)?.status
+      ?? (() => { for (const l of Object.values(statusOrders)) { const f = l?.find(o => o.id === orderId); if (f) return f.status } })()
+
     const patch = (list: Order[]) => list.map(o => o.id === orderId ? { ...o, status: newStatus } : o)
     setAllOrders(patch)
     setStatusOrders(prev => {
@@ -174,6 +184,40 @@ export default function OrdersClient({
       return next
     })
     setSearchResults(prev => prev ? patch(prev) : null)
+
+    // Mettre à jour les counts
+    if (resolvedOld && resolvedOld !== newStatus) {
+      setLocalTabCounts(prev => ({
+        ...prev,
+        [resolvedOld]: Math.max(0, (prev[resolvedOld] ?? 0) - 1),
+        [newStatus]: (prev[newStatus] ?? 0) + 1,
+      }))
+    }
+  }
+
+  // Retire une commande de tous les stores locaux + decremente le count
+  function applyOptimisticRemoveOrder(orderId: string) {
+    const order = allOrders.find(o => o.id === orderId)
+      ?? (() => { for (const l of Object.values(statusOrders)) { const f = l?.find(o => o.id === orderId); if (f) return f } })()
+
+    const remover = (list: Order[]) => list.filter(o => o.id !== orderId)
+    setAllOrders(remover)
+    setStatusOrders(prev => {
+      const next: typeof prev = {}
+      for (const k of Object.keys(prev) as OrderStatus[]) {
+        next[k] = prev[k] ? remover(prev[k]!) : prev[k]
+      }
+      return next
+    })
+    setSearchResults(prev => prev ? remover(prev) : null)
+
+    if (order?.status) {
+      setLocalTabCounts(prev => ({
+        ...prev,
+        all: Math.max(0, (prev.all ?? 0) - 1),
+        [order.status]: Math.max(0, (prev[order.status] ?? 0) - 1),
+      }))
+    }
   }
 
   // Debounce
@@ -204,7 +248,7 @@ export default function OrdersClient({
   const canExport = plan === 'pro' || plan === 'business'
   const activeStatus: OrderStatus | null = tab !== 'all' && tab !== 'trash' ? tab : null
 
-  const counts = useMemo(() => tabCounts as Partial<Record<OrderStatus | 'all', number>>, [tabCounts])
+  const counts = useMemo(() => localTabCounts as Partial<Record<OrderStatus | 'all', number>>, [localTabCounts])
 
   useEffect(() => {
     if (!activeStatus || searchResults !== null || statusOrders[activeStatus]) return
@@ -272,51 +316,79 @@ export default function OrdersClient({
   }
 
   function handleStatus(orderId: string, status: OrderStatus) {
-    applyOptimisticStatus(orderId, status)
+    const order = allOrders.find(o => o.id === orderId)
+      ?? (() => { for (const l of Object.values(statusOrders)) { const f = l?.find(o => o.id === orderId); if (f) return f } })()
+    applyOptimisticStatus(orderId, status, order?.status)
     if (STATUS_TOAST[status]) showToast(STATUS_TOAST[status]!)
     startTransition(async () => { await updateStatus(orderId, status) })
   }
 
   function handleConfirm(orderId: string) {
-    applyOptimisticStatus(orderId, 'new')
+    applyOptimisticStatus(orderId, 'new', 'pending')
     showToast('✓ Commande confirmée')
     startTransition(async () => { await confirmOrder(orderId) })
   }
 
   function handleCancel(orderId: string) {
-    applyOptimisticStatus(orderId, 'returned')
+    applyOptimisticStatus(orderId, 'returned', 'pending')
     showToast('✓ Commande annulée')
     startTransition(async () => { await cancelPendingOrder(orderId) })
   }
 
   function handleDelete(id: string) {
     setActionError(null)
+    const prevAll = allOrders
+    const prevStatus = statusOrders
+    const prevCounts = localTabCounts
+    applyOptimisticRemoveOrder(id)
+    setConfirmDelete(null)
     startTransition(async () => {
       const result = await deleteOrder(id)
-      if (result?.error) { setActionError(result.error); return }
-      setConfirmDelete(null)
+      if (result?.error) {
+        setAllOrders(prevAll)
+        setStatusOrders(prevStatus)
+        setLocalTabCounts(prevCounts)
+        setActionError(result.error)
+      } else {
+        showToast('✓ Commande déplacée dans la corbeille')
+      }
     })
   }
 
   function handleRestore(id: string) {
     setActionError(null)
+    const prevTrash = localTrashOrders
+    setLocalTrashOrders(prev => prev.filter(o => o.id !== id))
     startTransition(async () => {
       const result = await restoreOrder(id)
-      if (result?.error) setActionError(result.error)
+      if (result?.error) {
+        setLocalTrashOrders(prevTrash)
+        setActionError(result.error)
+      } else {
+        showToast('✓ Commande restaurée')
+      }
     })
   }
 
   function handlePermanentDelete(id: string) {
     setActionError(null)
+    const prevTrash = localTrashOrders
+    setLocalTrashOrders(prev => prev.filter(o => o.id !== id))
+    setConfirmPermDelete(null)
+    setPermDeleteInput('')
     startTransition(async () => {
       const result = await permanentlyDeleteOrder(id)
-      if (result?.error) { setActionError(result.error); return }
-      setConfirmPermDelete(null)
-      setPermDeleteInput('')
+      if (result?.error) {
+        setLocalTrashOrders(prevTrash)
+        setActionError(result.error)
+        // Pas de re-ouverture de modal — l'erreur s'affiche via actionError
+      } else {
+        showToast('✓ Commande supprimée définitivement')
+      }
     })
   }
 
-  const displayedTrash = tab === 'trash' ? trashOrders : []
+  const displayedTrash = tab === 'trash' ? localTrashOrders : []
   const pendingCount = counts['pending'] ?? 0
   const totalForCurrentTab = activeStatus ? (counts[activeStatus] ?? 0) : initialTotal
   const totalLoaded = activeStatus ? (statusOrders[activeStatus]?.length ?? 0) : allOrders.length
@@ -446,7 +518,7 @@ export default function OrdersClient({
             <Trash2 className="w-3.5 h-3.5" />
             Corbeille
             <span className={tab === 'trash' ? 'text-red-600' : 'text-[#A8A29E]'}>
-              ({trashOrders.length})
+              ({localTrashOrders.length})
             </span>
           </button>
         )}
