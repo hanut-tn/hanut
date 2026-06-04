@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { Truck } from 'lucide-react'
+import { useState, useTransition, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Truck, ExternalLink, CheckCircle2, ArrowDownCircle } from 'lucide-react'
 import type { CarrierName } from '@hanut/types'
 import type { CreateDeliveryInput, UpdateDeliveryInput } from '@/app/(dashboard)/deliveries/actions'
 import { CARRIER_OPTIONS, CARRIER_TRACKING_URLS, getCarrierConfig } from '@/lib/constants'
@@ -81,12 +82,18 @@ function DeliveryMobileCard({
   onToggle,
   onEdit,
   onDelete,
+  selectionMode = false,
+  isSelected = false,
+  onSelect,
 }: {
   delivery: Delivery
   isPending: boolean
   onToggle: (delivery: Delivery, field: 'cod_collected' | 'cod_reversed') => void
   onEdit: (delivery: Delivery) => void
   onDelete: (delivery: Delivery) => void
+  selectionMode?: boolean
+  isSelected?: boolean
+  onSelect?: (id: string) => void
 }) {
   const order = getOrder(delivery)
   const carrier = getCarrierConfig(delivery.carrier)
@@ -95,7 +102,23 @@ function DeliveryMobileCard({
     : null
 
   return (
-    <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4">
+    <div
+      className={`rounded-xl shadow-sm p-4 transition-all ${isSelected ? 'bg-[#F0FDF4] border-2 border-[#16A34A]' : 'bg-white border border-[#E7E5E4]'}`}
+      onClick={selectionMode ? () => onSelect?.(delivery.id) : undefined}
+    >
+      {selectionMode && (
+        <label className="flex items-center gap-2 mb-3 cursor-pointer" onClick={e => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onSelect?.(delivery.id)}
+            className="w-4 h-4 rounded accent-[#16A34A]"
+          />
+          <span className="text-xs font-medium text-[#78716C] select-none">
+            {isSelected ? 'Sélectionnée' : 'Sélectionner'}
+          </span>
+        </label>
+      )}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${carrier.bg} ${carrier.color}`}>
@@ -107,6 +130,7 @@ function DeliveryMobileCard({
                 href={trackingHref}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={e => e.stopPropagation()}
                 className="font-mono text-sm font-semibold text-[#0B5E46] underline underline-offset-2"
               >
                 {delivery.tracking_number}
@@ -132,25 +156,27 @@ function DeliveryMobileCard({
         </p>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        <div>
-          <p className="mb-1 text-xs font-medium text-[#78716C]">COD collecté</p>
-          <SwitchToggle
-            checked={delivery.cod_collected}
-            disabled={isPending}
-            onClick={() => onToggle(delivery, 'cod_collected')}
-          />
+      {!selectionMode && (
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <div>
+            <p className="mb-1 text-xs font-medium text-[#78716C]">COD collecté</p>
+            <SwitchToggle
+              checked={delivery.cod_collected}
+              disabled={isPending}
+              onClick={() => onToggle(delivery, 'cod_collected')}
+            />
+          </div>
+          <div>
+            <p className="mb-1 text-xs font-medium text-[#78716C]">COD reversé</p>
+            <SwitchToggle
+              checked={delivery.cod_reversed}
+              disabled={isPending || !delivery.cod_collected}
+              onClick={() => onToggle(delivery, 'cod_reversed')}
+              activeClass="bg-[#0B5E46]"
+            />
+          </div>
         </div>
-        <div>
-          <p className="mb-1 text-xs font-medium text-[#78716C]">COD reversé</p>
-          <SwitchToggle
-            checked={delivery.cod_reversed}
-            disabled={isPending || !delivery.cod_collected}
-            onClick={() => onToggle(delivery, 'cod_reversed')}
-            activeClass="bg-[#0B5E46]"
-          />
-        </div>
-      </div>
+      )}
 
       <div className="mt-3 flex items-center justify-between border-t border-[#E7E5E4] pt-3">
         <div>
@@ -159,17 +185,19 @@ function DeliveryMobileCard({
             {delivery.fee != null ? `${delivery.fee} DT` : '-'}
           </p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => onEdit(delivery)} className="btn-secondary text-sm">
-            Éditer
-          </button>
-          <button
-            onClick={() => onDelete(delivery)}
-            className="min-h-[44px] touch-manipulation rounded-lg border border-red-200 px-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
-          >
-            Suppr.
-          </button>
-        </div>
+        {!selectionMode && (
+          <div className="flex gap-2">
+            <button onClick={e => { e.stopPropagation(); onEdit(delivery) }} className="btn-secondary text-sm">
+              Éditer
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); onDelete(delivery) }}
+              className="min-h-[44px] touch-manipulation rounded-lg border border-red-200 px-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+            >
+              Suppr.
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -192,6 +220,18 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
   const [editFee, setEditFee] = useState<number | ''>('')
 
   const [confirmDelete, setConfirmDelete] = useState<Delivery | null>(null)
+
+  const router = useRouter()
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [isBulkPending, setIsBulkPending] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 3000)
+    return () => clearTimeout(t)
+  }, [toast])
 
   const filtered = deliveries.filter(d => {
     if (tab === 'pending')   return !d.cod_collected
@@ -268,6 +308,48 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
     })
   }
 
+  async function handleBulkAction(action: 'cod_collected' | 'cod_reversed') {
+    if (selectedIds.size === 0) return
+    setIsBulkPending(true)
+    try {
+      const res = await fetch('/api/deliveries/bulk', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds), action }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setToast(data.error ?? 'Erreur'); return }
+      const label = action === 'cod_collected' ? 'COD collecté' : 'COD reversé'
+      if (data.skipped > 0) {
+        setToast(`✓ ${data.updated} mise${data.updated > 1 ? 's' : ''} à jour · ${data.skipped} ignorée${data.skipped > 1 ? 's' : ''} (déjà marquée${data.skipped > 1 ? 's' : ''})`)
+      } else {
+        setToast(`✓ ${data.updated} livraison${data.updated > 1 ? 's' : ''} marquée${data.updated > 1 ? 's' : ''} comme ${label}`)
+      }
+      setSelectionMode(false)
+      setSelectedIds(new Set())
+      router.refresh()
+    } finally {
+      setIsBulkPending(false)
+    }
+  }
+
+  function toggleSelection(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(filtered.map(d => d.id)))
+    }
+  }
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -301,27 +383,70 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
         ))}
       </div>
 
-      {/* Tabs — underline style */}
-      <div className="flex gap-0 overflow-x-auto border-b border-[#E7E5E4] scrollbar-none">
-        {TABS.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`min-h-[44px] touch-manipulation whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors ${
-              tab === t.key
-                ? 'text-[#166534] border-b-2 border-[#16A34A] -mb-px'
-                : 'text-[#78716C] hover:text-[#1C1917]'
-            }`}
-          >
-            {t.label}
-            {counts[t.key] > 0 && (
-              <span className={`ml-1.5 text-xs rounded-full px-1.5 py-0.5 ${
-                tab === t.key ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-              }`}>{counts[t.key]}</span>
-            )}
-          </button>
-        ))}
+      {/* Tabs + Mode sélection */}
+      <div className="flex items-end gap-2">
+        <div className="flex-1 flex gap-0 overflow-x-auto border-b border-[#E7E5E4] scrollbar-none">
+          {TABS.map(t => (
+            <button
+              key={t.key}
+              onClick={() => { setTab(t.key); setSelectionMode(false); setSelectedIds(new Set()) }}
+              className={`min-h-[44px] touch-manipulation whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors ${
+                tab === t.key
+                  ? 'text-[#166534] border-b-2 border-[#16A34A] -mb-px'
+                  : 'text-[#78716C] hover:text-[#1C1917]'
+              }`}
+            >
+              {t.label}
+              {counts[t.key] > 0 && (
+                <span className={`ml-1.5 text-xs rounded-full px-1.5 py-0.5 ${
+                  tab === t.key ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                }`}>{counts[t.key]}</span>
+              )}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => { setSelectionMode(prev => !prev); setSelectedIds(new Set()) }}
+          className={`mb-px shrink-0 border rounded-lg px-3 py-1.5 text-sm transition-colors ${
+            selectionMode ? 'border-red-200 text-red-500 hover:bg-red-50' : 'border-[#E7E5E4] text-[#78716C] hover:bg-[#F5F5F4]'
+          }`}
+        >
+          {selectionMode ? 'Annuler' : 'Sélectionner'}
+        </button>
       </div>
+
+      {/* Barre d'actions bulk */}
+      {selectionMode && selectedIds.size > 0 && (
+        <div className="sticky top-0 z-10 bg-white border border-[#E7E5E4] rounded-xl px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between shadow-sm">
+          <span className="text-sm font-medium text-[#1C1917]">
+            {selectedIds.size} livraison{selectedIds.size > 1 ? 's' : ''} sélectionnée{selectedIds.size > 1 ? 's' : ''}
+          </span>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              onClick={() => handleBulkAction('cod_collected')}
+              disabled={isBulkPending}
+              className="flex items-center justify-center gap-2 bg-[#16A34A] text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 transition-colors hover:bg-[#15803D]"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              COD Collecté
+            </button>
+            <button
+              onClick={() => handleBulkAction('cod_reversed')}
+              disabled={isBulkPending}
+              className="flex items-center justify-center gap-2 bg-[#0B5E46] text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 transition-colors hover:bg-[#0a5240]"
+            >
+              <ArrowDownCircle className="w-4 h-4" />
+              COD Reversé
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="text-sm text-[#78716C] hover:text-[#1C1917] transition-colors px-2"
+            >
+              Désélectionner tout
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Empty */}
       {filtered.length === 0 ? (
@@ -347,6 +472,9 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
               onToggle={handleToggle}
               onEdit={openEdit}
               onDelete={setConfirmDelete}
+              selectionMode={selectionMode}
+              isSelected={selectedIds.has(d.id)}
+              onSelect={toggleSelection}
             />
           ))}
         </div>
@@ -355,6 +483,16 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
           <table className="w-full text-sm">
             <thead className="bg-[#FAFAF9] border-b border-[#E7E5E4]">
               <tr>
+                {selectionMode && (
+                  <th className="px-4 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 rounded accent-[#16A34A] cursor-pointer"
+                    />
+                  </th>
+                )}
                 {['Client / Produit', 'Transporteur', 'N° suivi / Statut', 'COD collecté', 'COD reversé', 'Frais', ''].map((h, i) => (
                   <th key={i} className="text-left text-xs font-medium text-[#78716C] uppercase tracking-wide px-4 py-3">{h}</th>
                 ))}
@@ -365,7 +503,21 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
                 const order = getOrder(d)
                 const carrier = getCarrierConfig(d.carrier)
                 return (
-                  <tr key={d.id} className="hover:bg-[#FAFAF9] transition-colors">
+                  <tr
+                    key={d.id}
+                    onClick={selectionMode ? () => toggleSelection(d.id) : undefined}
+                    className={`transition-colors ${selectionMode ? 'cursor-pointer' : ''} ${selectedIds.has(d.id) ? 'bg-[#F0FDF4]' : 'hover:bg-[#FAFAF9]'}`}
+                  >
+                    {selectionMode && (
+                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(d.id)}
+                          onChange={() => toggleSelection(d.id)}
+                          className="w-4 h-4 rounded accent-[#16A34A] cursor-pointer"
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       <p className="font-medium text-[#1C1917]">{order?.customer?.name ?? '—'}</p>
                       <p className="text-xs text-[#78716C]">{order?.customer?.phone}</p>
@@ -380,36 +532,59 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
                       </p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-mono text-xs text-[#1C1917]">{d.tracking_number || <span className="text-[#78716C] font-sans">—</span>}</p>
+                      {d.tracking_number ? (
+                        <a
+                          href={`${CARRIER_TRACKING_URLS[d.carrier]}${d.tracking_number}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          className="font-mono text-sm text-[#16A34A] underline underline-offset-2 hover:text-[#0B5E46] flex items-center gap-1"
+                        >
+                          {d.tracking_number}
+                          <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                        </a>
+                      ) : (
+                        <span className="text-[#78716C]">—</span>
+                      )}
                       {d.carrier_status && <p className="text-xs text-[#78716C] mt-0.5">{d.carrier_status}</p>}
                     </td>
                     <td className="px-4 py-3">
-                      <SwitchToggle
-                        checked={d.cod_collected}
-                        disabled={isPending}
-                        onClick={() => handleToggle(d, 'cod_collected')}
-                      />
+                      {selectionMode ? (
+                        <span className="text-xs text-[#78716C]">{d.cod_collected ? 'Oui' : 'Non'}</span>
+                      ) : (
+                        <SwitchToggle
+                          checked={d.cod_collected}
+                          disabled={isPending}
+                          onClick={() => handleToggle(d, 'cod_collected')}
+                        />
+                      )}
                     </td>
                     <td className="px-4 py-3">
-                      <SwitchToggle
-                        checked={d.cod_reversed}
-                        disabled={isPending || !d.cod_collected}
-                        onClick={() => handleToggle(d, 'cod_reversed')}
-                        activeClass="bg-[#0B5E46]"
-                      />
+                      {selectionMode ? (
+                        <span className="text-xs text-[#78716C]">{d.cod_reversed ? 'Oui' : 'Non'}</span>
+                      ) : (
+                        <SwitchToggle
+                          checked={d.cod_reversed}
+                          disabled={isPending || !d.cod_collected}
+                          onClick={() => handleToggle(d, 'cod_reversed')}
+                          activeClass="bg-[#0B5E46]"
+                        />
+                      )}
                     </td>
                     <td className="px-4 py-3 text-[#78716C] text-sm">
                       {d.fee != null ? `${d.fee} DT` : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <button onClick={() => openEdit(d)} className="text-xs text-[#16A34A] hover:text-[#15803D] font-medium">
-                          Éditer
-                        </button>
-                        <button onClick={() => setConfirmDelete(d)} className="text-xs text-red-400 hover:text-red-600 font-medium">
-                          Suppr.
-                        </button>
-                      </div>
+                      {!selectionMode && (
+                        <div className="flex gap-2">
+                          <button onClick={() => openEdit(d)} className="text-xs text-[#16A34A] hover:text-[#15803D] font-medium">
+                            Éditer
+                          </button>
+                          <button onClick={() => setConfirmDelete(d)} className="text-xs text-red-400 hover:text-red-600 font-medium">
+                            Suppr.
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )
@@ -549,6 +724,13 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Toast confirmation bulk */}
+      {toast && (
+        <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#1C1917] text-white px-4 py-2 rounded-full text-sm shadow-lg whitespace-nowrap pointer-events-none">
+          {toast}
         </div>
       )}
     </div>
