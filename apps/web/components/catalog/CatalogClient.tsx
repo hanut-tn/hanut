@@ -317,7 +317,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
     else if (sort === 'low_stock') result.sort((a, b) => a.stock - b.stock)
 
     return result
-  }, [products, search, sort, stockFilter])
+  }, [allProducts, search, sort, stockFilter])
 
   function handleDelete(id: string) {
     const prev = allProducts

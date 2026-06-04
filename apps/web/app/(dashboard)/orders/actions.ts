@@ -7,6 +7,8 @@ import { revalidatePath } from 'next/cache'
 import type { OrderStatus } from '@hanut/types'
 import { DELETABLE_STATUSES, ORDER_STATUS_LABELS } from '@/lib/constants'
 
+const RESERVED_STOCK_STATUSES: OrderStatus[] = ['pending', 'new', 'confirmed']
+
 export type CreateOrderInput = {
   customer_id?: string
   customer_name: string
@@ -201,8 +203,8 @@ export async function deleteOrder(id: string): Promise<OrderMutationResult> {
     .is('deleted_at', null)
   if (error) return { error: error.message }
 
-  // Restaurer le stock pour les commandes dont le stock avait été décrémenté
-  if (['new', 'confirmed'].includes(order.status) && order.product_id) {
+  // Restaurer le stock pour les commandes encore réservées.
+  if (RESERVED_STOCK_STATUSES.includes(order.status as OrderStatus) && order.product_id) {
     const { data: product } = await supabase
       .from('products')
       .select('stock')
@@ -244,7 +246,7 @@ export async function restoreOrder(id: string): Promise<OrderMutationResult> {
 
   const { data: order } = await supabase
     .from('orders')
-    .select('deleted_at')
+    .select('status, product_id, quantity, deleted_at')
     .eq('id', id)
     .eq('seller_id', context.sellerId)
     .not('deleted_at', 'is', null)
@@ -258,12 +260,49 @@ export async function restoreOrder(id: string): Promise<OrderMutationResult> {
     return { error: 'Cette commande ne peut plus être restaurée après 30 jours dans la corbeille.' }
   }
 
+  const shouldReserveStock = RESERVED_STOCK_STATUSES.includes(order.status as OrderStatus) && order.product_id
+  let previousStock: number | null = null
+
+  if (shouldReserveStock) {
+    const { data: product } = await supabase
+      .from('products')
+      .select('stock')
+      .eq('id', order.product_id)
+      .eq('seller_id', context.sellerId)
+      .single()
+
+    if (!product) return { error: 'Produit introuvable pour restaurer cette commande.' }
+    if (product.stock < order.quantity) {
+      return {
+        error: `Stock insuffisant pour restaurer cette commande. Il reste ${product.stock} unité${product.stock > 1 ? 's' : ''} disponible${product.stock > 1 ? 's' : ''}.`,
+      }
+    }
+
+    previousStock = product.stock
+    const { error: stockError } = await supabase
+      .from('products')
+      .update({ stock: product.stock - order.quantity })
+      .eq('id', order.product_id)
+      .eq('seller_id', context.sellerId)
+
+    if (stockError) return { error: stockError.message }
+  }
+
   const { error } = await supabase.from('orders')
     .update({ deleted_at: null, archived_by: null })
     .eq('id', id)
     .eq('seller_id', context.sellerId)
     .not('deleted_at', 'is', null)
-  if (error) return { error: error.message }
+  if (error) {
+    if (shouldReserveStock && previousStock !== null) {
+      await supabase
+        .from('products')
+        .update({ stock: previousStock })
+        .eq('id', order.product_id)
+        .eq('seller_id', context.sellerId)
+    }
+    return { error: error.message }
+  }
 
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 

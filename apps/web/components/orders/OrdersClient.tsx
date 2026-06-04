@@ -168,11 +168,25 @@ export default function OrdersClient({
   // Corbeille locale — permet le retrait optimiste
   const [localTrashOrders, setLocalTrashOrders] = useState<TrashOrder[]>(trashOrders)
 
+  function findLocalOrder(orderId: string) {
+    const loadedOrder = allOrders.find(o => o.id === orderId)
+    if (loadedOrder) return loadedOrder
+
+    const searchedOrder = searchResults?.find(o => o.id === orderId)
+    if (searchedOrder) return searchedOrder
+
+    for (const list of Object.values(statusOrders)) {
+      const found = list?.find(o => o.id === orderId)
+      if (found) return found
+    }
+
+    return null
+  }
+
   // Applique une mise à jour de statut dans tous les stores locaux + counts
   function applyOptimisticStatus(orderId: string, newStatus: OrderStatus, oldStatus?: OrderStatus) {
     // Trouver le statut actuel si non fourni
-    const resolvedOld = oldStatus ?? allOrders.find(o => o.id === orderId)?.status
-      ?? (() => { for (const l of Object.values(statusOrders)) { const f = l?.find(o => o.id === orderId); if (f) return f.status } })()
+    const resolvedOld = oldStatus ?? findLocalOrder(orderId)?.status
 
     const patch = (list: Order[]) => list.map(o => o.id === orderId ? { ...o, status: newStatus } : o)
     setAllOrders(patch)
@@ -197,8 +211,7 @@ export default function OrdersClient({
 
   // Retire une commande de tous les stores locaux + decremente le count
   function applyOptimisticRemoveOrder(orderId: string) {
-    const order = allOrders.find(o => o.id === orderId)
-      ?? (() => { for (const l of Object.values(statusOrders)) { const f = l?.find(o => o.id === orderId); if (f) return f } })()
+    const order = findLocalOrder(orderId)
 
     const remover = (list: Order[]) => list.filter(o => o.id !== orderId)
     setAllOrders(remover)
@@ -316,8 +329,7 @@ export default function OrdersClient({
   }
 
   function handleStatus(orderId: string, status: OrderStatus) {
-    const order = allOrders.find(o => o.id === orderId)
-      ?? (() => { for (const l of Object.values(statusOrders)) { const f = l?.find(o => o.id === orderId); if (f) return f } })()
+    const order = findLocalOrder(orderId)
     applyOptimisticStatus(orderId, status, order?.status)
     if (STATUS_TOAST[status]) showToast(STATUS_TOAST[status]!)
     startTransition(async () => { await updateStatus(orderId, status) })
@@ -337,17 +349,25 @@ export default function OrdersClient({
 
   function handleDelete(id: string) {
     setActionError(null)
+    const order = findLocalOrder(id)
     const prevAll = allOrders
     const prevStatus = statusOrders
+    const prevSearchResults = searchResults
     const prevCounts = localTabCounts
+    const prevTrash = localTrashOrders
     applyOptimisticRemoveOrder(id)
+    if (order) {
+      setLocalTrashOrders(prev => [{ ...order, deleted_at: new Date().toISOString() }, ...prev])
+    }
     setConfirmDelete(null)
     startTransition(async () => {
       const result = await deleteOrder(id)
       if (result?.error) {
         setAllOrders(prevAll)
         setStatusOrders(prevStatus)
+        setSearchResults(prevSearchResults)
         setLocalTabCounts(prevCounts)
+        setLocalTrashOrders(prevTrash)
         setActionError(result.error)
       } else {
         showToast('✓ Commande déplacée dans la corbeille')
