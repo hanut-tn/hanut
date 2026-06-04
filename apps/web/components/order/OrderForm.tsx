@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
 import type { Product } from '@hanut/types'
-import { PackageX } from 'lucide-react'
+import { PackageX, Package } from 'lucide-react'
 
 const GOUVERNORATS = [
   'Ariana', 'Béja', 'Ben Arous', 'Bizerte', 'Gabès', 'Gafsa',
@@ -304,6 +305,31 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
               </option>
             ))}
           </select>
+
+          {selectedProduct && (
+            <div className="mt-2 bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl p-3 flex items-center gap-3 transition-all duration-200">
+              {selectedProduct.image_url ? (
+                <Image
+                  src={selectedProduct.image_url}
+                  alt={selectedProduct.name}
+                  width={64}
+                  height={64}
+                  className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="w-16 h-16 bg-[#E7E5E4] rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Package className="w-6 h-6 text-[#78716C]" />
+                </div>
+              )}
+              <div>
+                <p className="text-sm font-semibold text-[#1C1917]">{selectedProduct.name}</p>
+                <p className="text-sm font-bold text-[#16A34A]">{selectedProduct.price} DT</p>
+                <p className="text-xs text-[#78716C]">
+                  Stock disponible : {selectedProduct.stock} unité{selectedProduct.stock !== 1 ? 's' : ''}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Variantes — pills */}

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Banknote, TrendingUp, TrendingDown, Minus, ShoppingBag, Truck, Clock, Download } from 'lucide-react'
+import { Banknote, TrendingUp, TrendingDown, Minus, ShoppingBag, Truck, Clock, Download, Calendar, X as XIcon } from 'lucide-react'
 import { getCarrierConfig, ORDER_STATUS_CONFIG, ORDER_STATUSES } from '@/lib/constants'
 
 type Product = { id: string; name: string }
@@ -58,24 +58,75 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
   const [chartMode, setChartMode] = useState<ChartMode>('orders')
   const [selectedCarrier, setSelectedCarrier] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [customMode, setCustomMode] = useState(false)
+  const [customFrom, setCustomFrom] = useState('')
+  const [customTo, setCustomTo] = useState('')
+  const [showPicker, setShowPicker] = useState(false)
+  const pickerRef = useRef<HTMLDivElement>(null)
+
+  const todayStr = new Date().toISOString().split('T')[0]
+  const minDate = useMemo(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 180)
+    return d.toISOString().split('T')[0]
+  }, [])
+
+  useEffect(() => {
+    if (!showPicker) return
+    function handleClick(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setShowPicker(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showPicker])
 
   const cutoff = useMemo(() => {
+    if (customMode && customFrom) {
+      const d = new Date(customFrom)
+      d.setHours(0, 0, 0, 0)
+      return d
+    }
     const d = new Date()
     d.setDate(d.getDate() - period)
     d.setHours(0, 0, 0, 0)
     return d
-  }, [period])
+  }, [period, customMode, customFrom])
+
+  const cutoffEnd = useMemo(() => {
+    if (customMode && customTo) {
+      const d = new Date(customTo)
+      d.setHours(23, 59, 59, 999)
+      return d
+    }
+    const d = new Date()
+    d.setHours(23, 59, 59, 999)
+    return d
+  }, [customMode, customTo])
 
   const prevCutoff = useMemo(() => {
+    if (customMode && customFrom && customTo) {
+      const from = new Date(customFrom)
+      const to = new Date(customTo)
+      from.setHours(0, 0, 0, 0)
+      to.setHours(0, 0, 0, 0)
+      const oneDay = 24 * 60 * 60 * 1000
+      const duration = to.getTime() - from.getTime() + oneDay
+      return new Date(from.getTime() - duration)
+    }
     const d = new Date()
     d.setDate(d.getDate() - period * 2)
     d.setHours(0, 0, 0, 0)
     return d
-  }, [period])
+  }, [period, customMode, customFrom, customTo])
 
   const filtered = useMemo(
-    () => orders.filter(o => new Date(o.created_at) >= cutoff),
-    [orders, cutoff]
+    () => orders.filter(o => {
+      const d = new Date(o.created_at)
+      return d >= cutoff && d <= cutoffEnd
+    }),
+    [orders, cutoff, cutoffEnd]
   )
 
   const prevFiltered = useMemo(
@@ -89,9 +140,11 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
   const filteredDeliveries = useMemo(
     () => deliveries.filter(d => {
       const o = getDeliveryOrder(d)
-      return o && new Date(o.created_at) >= cutoff
+      if (!o) return false
+      const date = new Date(o.created_at)
+      return date >= cutoff && date <= cutoffEnd
     }),
-    [deliveries, cutoff]
+    [deliveries, cutoff, cutoffEnd]
   )
 
   const delivered    = filtered.filter(o => o.status === 'delivered')
@@ -220,20 +273,23 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
 
   const dailyData = useMemo(() => {
     const days: { label: string; fullLabel: string; orders: number; revenue: number }[] = []
-    for (let i = period - 1; i >= 0; i--) {
-      const d = new Date()
-      d.setDate(d.getDate() - i)
-      const dateStr = d.toISOString().split('T')[0]
+    const start = new Date(cutoff)
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(cutoffEnd)
+    const current = new Date(start)
+    while (current <= end) {
+      const dateStr = current.toISOString().split('T')[0]
       const dayOrders = filtered.filter(o => o.created_at.startsWith(dateStr))
       days.push({
-        label: d.toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' }),
-        fullLabel: d.toLocaleDateString('fr-TN', { weekday: 'long', day: '2-digit', month: 'long' }),
+        label: current.toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' }),
+        fullLabel: current.toLocaleDateString('fr-TN', { weekday: 'long', day: '2-digit', month: 'long' }),
         orders: dayOrders.length,
         revenue: dayOrders.filter(o => o.status === 'delivered').reduce((s, o) => s + o.cod_amount, 0),
       })
+      current.setDate(current.getDate() + 1)
     }
     return days
-  }, [filtered, period])
+  }, [filtered, cutoff, cutoffEnd])
 
   const maxDailyOrders  = Math.max(...dailyData.map(d => d.orders), 1)
   const maxDailyRevenue = Math.max(...dailyData.map(d => d.revenue), 1)
@@ -253,23 +309,98 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-[#1C1917] sm:text-2xl">Analytiques</h1>
-          <p className="text-sm text-[#78716C] mt-0.5">Basé sur les {period} derniers jours</p>
+          <p className="text-sm text-[#78716C] mt-0.5">
+            {customMode && customFrom && customTo
+              ? `Du ${new Date(customFrom).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' })} au ${new Date(customTo).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' })}`
+              : `Basé sur les ${period} derniers jours`}
+          </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          <div className="flex gap-2 overflow-x-auto scrollbar-none">
-            {([7, 30, 90] as Period[]).map(p => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`min-h-[44px] touch-manipulation whitespace-nowrap px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                  period === p
-                    ? 'bg-[#0B5E46] text-white'
-                    : 'border border-[#E7E5E4] text-[#78716C] hover:bg-[#F5F5F4]'
-                }`}
-              >
-                {PERIOD_LABELS[p]}
-              </button>
-            ))}
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex min-w-0 gap-2 overflow-x-auto scrollbar-none">
+              {([7, 30, 90] as Period[]).map(p => (
+                <button
+                  key={p}
+                  onClick={() => { setPeriod(p); setCustomMode(false) }}
+                  className={`min-h-[44px] touch-manipulation whitespace-nowrap px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                    !customMode && period === p
+                      ? 'bg-[#0B5E46] text-white'
+                      : 'border border-[#E7E5E4] text-[#78716C] hover:bg-[#F5F5F4]'
+                  }`}
+                >
+                  {PERIOD_LABELS[p]}
+                </button>
+              ))}
+            </div>
+            {plan === 'business' && (
+              <div className="relative shrink-0" ref={pickerRef}>
+                <button
+                  onClick={() => setShowPicker(prev => !prev)}
+                  className={`min-h-[44px] touch-manipulation flex items-center gap-2 border rounded-lg px-3 py-1 text-sm transition-colors ${
+                    customMode
+                      ? 'bg-[#F0FDF4] text-[#166534] border-[#BBF7D0]'
+                      : 'border-[#E7E5E4] text-[#78716C] hover:bg-[#F5F5F4]'
+                  }`}
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span className="hidden sm:inline">
+                    {customMode && customFrom && customTo
+                      ? `${new Date(customFrom).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' })} — ${new Date(customTo).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' })}`
+                      : 'Personnalisé'}
+                  </span>
+                </button>
+
+                {showPicker && (
+                  <div className="absolute right-0 top-full mt-2 bg-white border border-[#E7E5E4] rounded-xl shadow-lg p-4 z-20 w-72">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-[#1C1917]">Période personnalisée</h3>
+                      <button onClick={() => setShowPicker(false)} className="text-[#78716C] hover:text-[#1C1917] transition-colors">
+                        <XIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium text-[#78716C] mb-1">Du :</label>
+                        <input
+                          type="date"
+                          value={customFrom}
+                          onChange={e => setCustomFrom(e.target.value)}
+                          min={minDate}
+                          max={customTo || todayStr}
+                          className="w-full border border-[#E7E5E4] rounded-lg px-3 py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-[#16A34A]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-[#78716C] mb-1">Au :</label>
+                        <input
+                          type="date"
+                          value={customTo}
+                          onChange={e => setCustomTo(e.target.value)}
+                          min={customFrom || minDate}
+                          max={todayStr}
+                          className="w-full border border-[#E7E5E4] rounded-lg px-3 py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-[#16A34A]"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <button
+                        onClick={() => { setCustomMode(false); setShowPicker(false) }}
+                        className="btn-secondary flex-1 text-sm"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        onClick={() => { setCustomMode(true); setShowPicker(false) }}
+                        disabled={!customFrom || !customTo || customFrom > customTo}
+                        className="btn-primary flex-1 text-sm disabled:opacity-40"
+                      >
+                        Appliquer
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           {plan === 'starter' ? (
             <div className="relative group">
@@ -384,10 +515,10 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
                 )
               })}
             </div>
-            {period <= 30 && (
+            {dailyData.length <= 30 && (
               <div className="flex mt-1">
                 {dailyData.map((d, i) => {
-                  const show = period <= 7 || i % Math.ceil(period / 7) === 0
+                  const show = dailyData.length <= 7 || i % Math.ceil(dailyData.length / 7) === 0
                   return (
                     <div key={i} className="flex-1 text-center">
                       {show && <span className="text-[9px] text-[#78716C]">{d.label}</span>}

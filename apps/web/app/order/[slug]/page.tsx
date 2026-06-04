@@ -44,7 +44,7 @@ export default async function PublicOrderPage({ params }: Props) {
 
   const { data: products } = await supabase
     .from('products')
-    .select('id, name, price, stock, variants')
+    .select('id, name, price, stock, variants, image_url')
     .eq('seller_id', seller.id)
     .gt('stock', 0)
     .order('name')

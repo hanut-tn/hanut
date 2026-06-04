@@ -48,10 +48,20 @@ export async function POST(_request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: `Erreur d'invitation : ${inviteError.message}` }, { status: 500 })
   }
 
-  await serviceClient
+  const invitedAt = new Date().toISOString()
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { error: updateError } = await serviceClient
     .from('team_members')
-    .update({ invited_at: new Date().toISOString() })
+    .update({
+      invited_at: invitedAt,
+      expires_at: expiresAt,
+    })
     .eq('id', member.id)
+
+  if (updateError) {
+    return NextResponse.json({ error: updateError.message }, { status: 500 })
+  }
 
   await logActivity({
     sellerId: context.sellerId,
@@ -63,5 +73,5 @@ export async function POST(_request: NextRequest, { params }: Params) {
     metadata: { email: member.email, role: member.role, resend: true },
   })
 
-  return NextResponse.json({ success: true })
+  return NextResponse.json({ success: true, invited_at: invitedAt, expires_at: expiresAt })
 }

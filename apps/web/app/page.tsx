@@ -3,6 +3,7 @@ import Link from 'next/link'
 import MarketingNavbar from '@/components/marketing/Navbar'
 import MarketingFooter from '@/components/marketing/Footer'
 import PricingToggle from '@/components/marketing/PricingToggle'
+import WaitlistForm from '@/components/marketing/WaitlistForm'
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -304,6 +305,8 @@ function Hero() {
             </span>
           ))}
         </div>
+
+        <WaitlistForm />
       </div>
     </section>
   )

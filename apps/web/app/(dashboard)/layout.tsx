@@ -21,17 +21,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Active une invitation en attente si l'utilisateur vient d'accepter un lien d'invitation
   const { data: pending } = await serviceClient
     .from('team_members')
-    .select('id')
+    .select('id, expires_at')
     .eq('email', user.email!)
     .eq('status', 'pending')
     .is('user_id', null)
     .maybeSingle()
 
   if (pending) {
-    await serviceClient
-      .from('team_members')
-      .update({ user_id: user.id, status: 'active', joined_at: new Date().toISOString() })
-      .eq('id', pending.id)
+    const isExpired = pending.expires_at && new Date(pending.expires_at) < new Date()
+    if (!isExpired) {
+      await serviceClient
+        .from('team_members')
+        .update({ user_id: user.id, status: 'active', joined_at: new Date().toISOString() })
+        .eq('id', pending.id)
+    }
   }
 
   // Résout le contexte : role + sellerId

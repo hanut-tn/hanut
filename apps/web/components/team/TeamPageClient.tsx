@@ -87,6 +87,15 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
     return new Date(iso).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short', year: '2-digit' })
   }
 
+  function expiryInfo(expires_at?: string | null): { label: string; urgent: boolean; expired: boolean } {
+    if (!expires_at) return { label: '', urgent: false, expired: false }
+    const diff = new Date(expires_at).getTime() - Date.now()
+    if (diff <= 0) return { label: 'Expirée', urgent: true, expired: true }
+    const hours = Math.ceil(diff / 3600000)
+    if (hours <= 24) return { label: `Expire dans ${hours}h`, urgent: true, expired: false }
+    return { label: `Expire le ${formatDate(expires_at)}`, urgent: false, expired: false }
+  }
+
   function formatRelative(iso: string | null) {
     if (!iso) return 'Jamais connecté'
     const diff = Date.now() - new Date(iso).getTime()
@@ -154,6 +163,14 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
       setRoleError(data?.error ?? "Impossible de renvoyer l'invitation")
       return
     }
+    setMembers(prev => prev.map(m => m.id === memberId
+      ? {
+          ...m,
+          invited_at: typeof data?.invited_at === 'string' ? data.invited_at : m.invited_at,
+          expires_at: typeof data?.expires_at === 'string' ? data.expires_at : m.expires_at,
+        }
+      : m
+    ))
     setResentMembers(prev => new Set([...prev, memberId]))
     setTimeout(() => {
       setResentMembers(prev => {
@@ -272,6 +289,7 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
                 const statusConf = STATUS_CONFIG[m.status]
                 const isSelf    = m.user_id === currentUserId
                 const hasPending = m.status === 'pending' && !isSelf
+                const expiry    = expiryInfo(m.expires_at)
 
                 return (
                   <div key={m.id} className="px-4 py-4 space-y-3">
@@ -313,7 +331,7 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
                       )}
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusConf.cls}`}>
                         {m.status === 'pending' && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
-                        {statusConf.label}
+                        {expiry.expired ? 'Expirée' : statusConf.label}
                       </span>
                       {m.status === 'active' && (
                         <span className="text-xs text-gray-400">{formatRelative(m.last_sign_in_at ?? null)}</span>
@@ -322,9 +340,10 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
 
                     {/* Bannière invitation pending */}
                     {hasPending && (
-                      <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2.5 space-y-2">
-                        <p className="text-xs text-amber-700">
-                          ⚠️ Invitation en attente — envoyée le {formatDate(m.invited_at)}
+                      <div className={`border rounded-lg px-3 py-2.5 space-y-2 ${expiry.expired ? 'bg-red-50 border-red-100' : 'bg-amber-50 border-amber-100'}`}>
+                        <p className={`text-xs ${expiry.expired ? 'text-red-700' : expiry.urgent ? 'text-red-600' : 'text-amber-700'}`}>
+                          {expiry.expired ? '🔴' : '⚠️'} Invitation en attente
+                          {expiry.label ? ` — ${expiry.label}` : ''}
                         </p>
                         <div className="flex gap-2 flex-wrap">
                           {resentMembers.has(m.id) ? (
@@ -337,12 +356,14 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
                               Renvoyer l&apos;invitation
                             </button>
                           )}
-                          <button
-                            onClick={() => { setConfirmDelete(m); setDeleteError(null) }}
-                            className="border border-amber-300 text-amber-700 text-xs px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-colors min-h-[44px]"
-                          >
-                            Annuler l&apos;invitation
-                          </button>
+                          {!expiry.expired && (
+                            <button
+                              onClick={() => { setConfirmDelete(m); setDeleteError(null) }}
+                              className="border border-amber-300 text-amber-700 text-xs px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-colors min-h-[44px]"
+                            >
+                              Annuler l&apos;invitation
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}
@@ -367,6 +388,7 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
                     const statusConf = STATUS_CONFIG[m.status]
                     const isSelf     = m.user_id === currentUserId
                     const hasPendingBanner = m.status === 'pending' && !isSelf
+                    const expiry     = expiryInfo(m.expires_at)
 
                     return (
                       <Fragment key={m.id}>
@@ -399,9 +421,9 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
                             )}
                           </td>
                           <td className="px-5 py-4">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusConf.cls}`}>
-                              {m.status === 'pending' && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
-                              {statusConf.label}
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${expiry.expired ? 'bg-red-50 text-red-600 border border-red-200' : statusConf.cls}`}>
+                              {m.status === 'pending' && !expiry.expired && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
+                              {expiry.expired ? 'Expirée' : statusConf.label}
                             </span>
                           </td>
                           <td className="px-5 py-4 text-xs text-gray-500">
@@ -423,9 +445,10 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
                         {hasPendingBanner && (
                           <tr className="!border-t-0">
                             <td colSpan={6} className="p-0">
-                              <div className="bg-amber-50 border-t border-amber-100 px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap">
-                                <span className="text-xs text-amber-700">
-                                  ⚠️ Invitation en attente — envoyée le {formatDate(m.invited_at)}
+                              <div className={`border-t px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap ${expiry.expired ? 'bg-red-50 border-red-100' : 'bg-amber-50 border-amber-100'}`}>
+                                <span className={`text-xs ${expiry.expired ? 'text-red-700' : expiry.urgent ? 'text-red-600' : 'text-amber-700'}`}>
+                                  {expiry.expired ? '🔴' : '⚠️'} Invitation en attente
+                                  {expiry.label ? ` — ${expiry.label}` : ''}
                                 </span>
                                 <div className="flex items-center gap-2 shrink-0">
                                   {resentMembers.has(m.id) ? (
@@ -438,12 +461,14 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
                                       Renvoyer l&apos;invitation
                                     </button>
                                   )}
-                                  <button
-                                    onClick={() => { setConfirmDelete(m); setDeleteError(null) }}
-                                    className="border border-amber-300 text-amber-700 text-xs px-3 py-1 rounded-lg hover:bg-amber-100 transition-colors"
-                                  >
-                                    Annuler l&apos;invitation
-                                  </button>
+                                  {!expiry.expired && (
+                                    <button
+                                      onClick={() => { setConfirmDelete(m); setDeleteError(null) }}
+                                      className="border border-amber-300 text-amber-700 text-xs px-3 py-1 rounded-lg hover:bg-amber-100 transition-colors"
+                                    >
+                                      Annuler l&apos;invitation
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             </td>

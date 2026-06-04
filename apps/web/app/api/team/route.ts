@@ -22,7 +22,7 @@ export async function GET() {
   const serviceClient = createServiceClient()
   const { data: members, error } = await serviceClient
     .from('team_members')
-    .select('id, email, name, role, status, invited_at, joined_at, user_id')
+    .select('id, email, name, role, status, invited_at, joined_at, user_id, expires_at')
     .eq('seller_id', context.sellerId)
     .order('invited_at', { ascending: true })
 
@@ -96,7 +96,13 @@ export async function POST(request: NextRequest) {
 
   const { data: member, error: insertError } = await serviceClient
     .from('team_members')
-    .insert({ seller_id: context.sellerId, email, role, status: 'pending' })
+    .insert({
+      seller_id: context.sellerId,
+      email,
+      role,
+      status: 'pending',
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    })
     .select('id')
     .single()
 

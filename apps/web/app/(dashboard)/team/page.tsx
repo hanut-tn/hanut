@@ -14,7 +14,7 @@ export default async function TeamPage() {
   const [membersRes, logsRes] = await Promise.all([
     serviceClient
       .from('team_members')
-      .select('id, email, name, role, status, invited_at, joined_at, user_id')
+      .select('id, email, name, role, status, invited_at, joined_at, user_id, expires_at')
       .eq('seller_id', context.sellerId)
       .order('invited_at', { ascending: true }),
 
@@ -68,6 +68,7 @@ export type TeamMember = {
   joined_at: string | null
   user_id: string | null
   last_sign_in_at?: string | null
+  expires_at?: string | null
 }
 
 export type ActivityLog = {
