@@ -214,18 +214,18 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4">
-          <p className="text-sm font-medium text-[#78716C]">Total clients</p>
-          <p className="text-2xl font-bold text-[#1C1917] mt-1">{customers.length}</p>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-2 sm:p-4">
+          <p className="text-xs sm:text-sm font-medium text-[#78716C]">Total clients</p>
+          <p className="text-xl sm:text-2xl font-bold text-[#1C1917] mt-1">{customers.length}</p>
         </div>
-        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4">
-          <p className="text-sm font-medium text-[#78716C]">CA encaissé</p>
-          <p className="text-2xl font-bold text-[#16A34A] mt-1">{totalCA.toFixed(0)} DT</p>
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-2 sm:p-4">
+          <p className="text-xs sm:text-sm font-medium text-[#78716C]">CA encaissé</p>
+          <p className="text-xl sm:text-2xl font-bold text-[#16A34A] mt-1">{totalCA.toFixed(0)} DT</p>
         </div>
-        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4">
-          <p className="text-sm font-medium text-[#78716C]">Commandes totales</p>
-          <p className="text-2xl font-bold text-[#1C1917] mt-1">
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-2 sm:p-4">
+          <p className="text-xs sm:text-sm font-medium text-[#78716C]">Commandes</p>
+          <p className="text-xl sm:text-2xl font-bold text-[#1C1917] mt-1">
             {customers.reduce((s, c) => s + (c.orders?.length ?? 0), 0)}
           </p>
         </div>

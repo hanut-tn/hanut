@@ -352,11 +352,10 @@ function RecentOrders({ orders }: { orders: any[] }) {
             </div>
             <div className="text-right shrink-0">
               <p className="text-sm font-bold text-[#16A34A]">{order.cod_amount} DT</p>
-              <p className="text-xs text-[#78716C] mt-0.5">{relativeDate(order.created_at)}</p>
+              <div className="mt-0.5">
+                <StatusBadge status={order.status} />
+              </div>
             </div>
-            <span className="hidden sm:inline-flex">
-              <StatusBadge status={order.status} />
-            </span>
           </Link>
         )
       })}

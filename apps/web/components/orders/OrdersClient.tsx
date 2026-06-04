@@ -442,7 +442,7 @@ export default function OrdersClient({
                       <button
                         onClick={() => isPendingOrder ? handleConfirm(order.id) : handleStatus(order.id, 'confirmed')}
                         disabled={isPending}
-                        className="text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap min-h-[34px]"
+                        className="text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap min-h-[44px]"
                       >
                         Confirmer
                       </button>
@@ -451,7 +451,7 @@ export default function OrdersClient({
                       <button
                         onClick={() => handleCancel(order.id)}
                         disabled={isPending}
-                        className="text-xs font-semibold text-red-600 border border-red-200 hover:border-red-300 disabled:opacity-50 px-2 py-1.5 rounded-lg transition-colors min-h-[34px]"
+                        className="text-xs font-semibold text-red-600 border border-red-200 hover:border-red-300 disabled:opacity-50 px-2 py-1.5 rounded-lg transition-colors min-h-[44px]"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -460,7 +460,7 @@ export default function OrdersClient({
                       <button
                         onClick={() => handleStatus(order.id, 'shipped')}
                         disabled={isPending}
-                        className="text-xs font-semibold text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap min-h-[34px]"
+                        className="text-xs font-semibold text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap min-h-[44px]"
                       >
                         Expédier
                       </button>
@@ -469,7 +469,7 @@ export default function OrdersClient({
                       <button
                         onClick={() => handleStatus(order.id, 'delivered')}
                         disabled={isPending}
-                        className="text-xs font-semibold text-white bg-[#0B5E46] hover:bg-[#0a5240] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap min-h-[34px]"
+                        className="text-xs font-semibold text-white bg-[#0B5E46] hover:bg-[#0a5240] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap min-h-[44px]"
                       >
                         Livré
                       </button>
@@ -477,14 +477,14 @@ export default function OrdersClient({
                     {canDelete && !isPendingOrder && (
                       <button
                         onClick={() => { setConfirmDelete(order); setActionError(null) }}
-                        className="text-xs font-medium text-[#A8A29E] hover:text-red-500 px-1.5 py-1.5 rounded-lg transition-colors min-h-[34px]"
+                        className="text-xs font-medium text-[#A8A29E] hover:text-red-500 px-1.5 py-1.5 rounded-lg transition-colors min-h-[44px]"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     )}
                     <Link
                       href={`/orders/${order.id}`}
-                      className="flex items-center justify-center w-8 h-8 rounded-lg text-[#78716C] hover:text-[#1C1917] hover:bg-[#F0F0EF] transition-colors shrink-0"
+                      className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg text-[#78716C] hover:text-[#1C1917] hover:bg-[#F0F0EF] transition-colors shrink-0"
                       onClick={e => e.stopPropagation()}
                     >
                       <ChevronRight className="w-4 h-4" />

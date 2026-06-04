@@ -230,19 +230,19 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {[
           { label: 'Membres actifs', value: activeCount,     Icon: UserCheck,  color: 'text-green-600',  bg: 'bg-green-50' },
-          { label: 'Invitations en attente', value: pendingCount, Icon: UserPlus, color: 'text-amber-600', bg: 'bg-amber-50' },
+          { label: 'En attente', value: pendingCount, Icon: UserPlus, color: 'text-amber-600', bg: 'bg-amber-50' },
           { label: 'Capacité', value: `${members.length}/${MAX_MEMBERS}`, Icon: Users2, color: 'text-blue-600', bg: 'bg-blue-50' },
         ].map(stat => (
-          <div key={stat.label} className="card p-4 flex items-center gap-4">
-            <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center flex-shrink-0`}>
-              <stat.Icon className={`w-5 h-5 ${stat.color}`} />
+          <div key={stat.label} className="card p-2 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+            <div className={`w-7 h-7 rounded-lg sm:w-10 sm:h-10 sm:rounded-xl ${stat.bg} flex items-center justify-center flex-shrink-0`}>
+              <stat.Icon className={`w-3.5 h-3.5 sm:w-5 sm:h-5 ${stat.color}`} />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{stat.value}</p>
+              <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 leading-tight">{stat.label}</p>
             </div>
           </div>
         ))}
@@ -305,7 +305,7 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
                         <select
                           defaultValue={m.role}
                           onChange={e => handleRoleChange(m.id, e.target.value)}
-                          className="text-xs font-medium border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 min-h-[36px]"
+                          className="text-base md:text-xs font-medium border border-gray-200 rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 min-h-[44px]"
                         >
                           <option value="operator">Opérateur</option>
                           <option value="readonly">Lecture seule</option>
@@ -332,14 +332,14 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
                           ) : (
                             <button
                               onClick={() => handleResendInvite(m.id)}
-                              className="bg-amber-500 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-amber-600 transition-colors min-h-[36px]"
+                              className="bg-amber-500 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-amber-600 transition-colors min-h-[44px]"
                             >
                               Renvoyer l&apos;invitation
                             </button>
                           )}
                           <button
                             onClick={() => { setConfirmDelete(m); setDeleteError(null) }}
-                            className="border border-amber-300 text-amber-700 text-xs px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-colors min-h-[36px]"
+                            className="border border-amber-300 text-amber-700 text-xs px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-colors min-h-[44px]"
                           >
                             Annuler l&apos;invitation
                           </button>
@@ -521,7 +521,7 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
           <select
             value={filterUserId}
             onChange={e => handleFilterChange('userId', e.target.value)}
-            className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-brand-500 sm:w-auto"
+            className="w-full text-base md:text-xs border border-gray-200 rounded-lg px-2 py-2 md:py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-brand-500 sm:w-auto min-h-[44px] md:min-h-0"
           >
             <option value="">Tous les membres</option>
             {members.filter(m => m.user_id).map(m => (
@@ -533,7 +533,7 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
           <select
             value={filterGroup}
             onChange={e => handleFilterChange('group', e.target.value)}
-            className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-brand-500 sm:w-auto"
+            className="w-full text-base md:text-xs border border-gray-200 rounded-lg px-2 py-2 md:py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-brand-500 sm:w-auto min-h-[44px] md:min-h-0"
           >
             <option value="">Toutes les actions</option>
             {ACTION_GROUPS.map(g => (
@@ -545,7 +545,7 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
           <select
             value={filterDays}
             onChange={e => handleFilterChange('days', Number(e.target.value))}
-            className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-brand-500 sm:w-auto"
+            className="w-full text-base md:text-xs border border-gray-200 rounded-lg px-2 py-2 md:py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-brand-500 sm:w-auto min-h-[44px] md:min-h-0"
           >
             <option value={0}>Toute période</option>
             <option value={1}>Aujourd&apos;hui</option>

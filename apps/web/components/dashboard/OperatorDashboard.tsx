@@ -96,16 +96,16 @@ export async function OperatorDashboard({ context }: { context: Context }) {
       </div>
 
       {/* 3 KPIs */}
-      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {kpis.map(kpi => {
           const Icon = kpi.icon
           return (
-            <div key={kpi.label} className="bg-white border border-[#E7E5E4] rounded-xl p-3 sm:p-5 shadow-sm">
+            <div key={kpi.label} className="bg-white border border-[#E7E5E4] rounded-xl p-2 sm:p-5 shadow-sm">
               <div className="flex items-start justify-between gap-1">
                 <p className="text-xs sm:text-sm font-medium text-[#78716C] leading-tight">{kpi.label}</p>
                 <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-[#78716C] shrink-0" />
               </div>
-              <p className={`text-2xl sm:text-3xl font-bold mt-2 ${kpi.valueClass}`}>{kpi.value}</p>
+              <p className={`text-xl sm:text-3xl font-bold mt-2 ${kpi.valueClass}`}>{kpi.value}</p>
               {kpi.sub && <p className="text-xs text-[#78716C] mt-1">{kpi.sub}</p>}
             </div>
           )

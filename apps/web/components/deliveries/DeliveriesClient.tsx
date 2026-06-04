@@ -287,16 +287,16 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {[
           { label: 'COD collecté',   value: `${totalCollected.toFixed(0)} DT`, sub: `${counts.collected} en attente de reversal`, color: 'text-[#16A34A]' },
           { label: 'COD reversé',    value: `${totalReversed.toFixed(0)} DT`,  sub: `${counts.reversed} livraisons soldées`,      color: 'text-[#0B5E46]' },
           { label: 'Frais livreurs', value: `${totalFees.toFixed(0)} DT`,      sub: 'total transporteurs',                        color: 'text-[#1C1917]' },
         ].map(s => (
-          <div key={s.label} className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4">
-            <p className="text-sm font-medium text-[#78716C]">{s.label}</p>
-            <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
-            <p className="text-xs text-[#78716C] mt-0.5">{s.sub}</p>
+          <div key={s.label} className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-2 sm:p-4">
+            <p className="text-xs sm:text-sm font-medium text-[#78716C]">{s.label}</p>
+            <p className={`text-xl sm:text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+            <p className="hidden sm:block text-xs text-[#78716C] mt-0.5">{s.sub}</p>
           </div>
         ))}
       </div>
