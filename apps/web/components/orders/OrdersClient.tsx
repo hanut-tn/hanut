@@ -502,7 +502,7 @@ export default function OrdersClient({
 
                 // Boutons d'action — partagés entre mobile et desktop
                 const actionButtons = (
-                  <div className="flex flex-wrap items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                  <div className="flex flex-nowrap items-center gap-1.5" onClick={e => e.stopPropagation()}>
                     {(isPendingOrder || isNew) && (
                       <button
                         onClick={() => isPendingOrder ? handleConfirm(order.id) : handleStatus(order.id, 'confirmed')}
