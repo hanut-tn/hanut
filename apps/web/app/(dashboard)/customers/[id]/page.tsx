@@ -5,6 +5,7 @@ import { updateCustomer } from '../actions'
 import { notFound } from 'next/navigation'
 
 type Props = { params: Promise<{ id: string }> }
+type CustomerOrders = Parameters<typeof CustomerDetail>[0]['orders']
 
 export default async function CustomerDetailPage({ params }: Props) {
   const { id } = await params
@@ -58,7 +59,7 @@ export default async function CustomerDetailPage({ params }: Props) {
         tags: (customer.tags as string[] | null) ?? [],
         notes: customer.notes ?? '',
       }}
-      orders={orderList.slice(0, 10) as any[]}
+      orders={orderList.slice(0, 10) as CustomerOrders}
       totalOrders={order_count}
       stats={{ total_spent, order_count, delivery_rate, favorite_product }}
       updateCustomer={updateCustomer}

@@ -143,7 +143,12 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                 >
                   {imagePreview ? (
                     <div className="relative">
-                      <img src={imagePreview} alt="" className="w-full object-cover" style={{ height: 200 }} />
+                      <div
+                        aria-label="Aperçu du produit"
+                        role="img"
+                        className="w-full bg-cover bg-center"
+                        style={{ height: 200, backgroundImage: `url(${imagePreview})` }}
+                      />
                       <button
                         type="button"
                         onClick={e => { e.stopPropagation(); removeImage() }}

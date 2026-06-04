@@ -3,6 +3,8 @@ import { getUserContext } from '@/lib/get-context'
 import CustomersClient from '@/components/customers/CustomersClient'
 import { updateCustomer, deleteCustomer } from './actions'
 
+type Customers = Parameters<typeof CustomersClient>[0]['customers']
+
 export default async function CustomersPage() {
   const context = await getUserContext()
   if (!context) return null
@@ -21,7 +23,7 @@ export default async function CustomersPage() {
 
   return (
     <CustomersClient
-      customers={(customers ?? []) as any[]}
+      customers={(customers ?? []) as Customers}
       updateCustomer={updateCustomer}
       deleteCustomer={deleteCustomer}
     />

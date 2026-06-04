@@ -29,9 +29,12 @@ type Order = {
   quantity: number
   notes?: string
   created_at: string
-  customer: { id: string; name: string; phone: string; city?: string } | { id: string; name: string; phone: string; city?: string }[] | null
-  product: { id: string; name: string; price: number } | { id: string; name: string; price: number }[] | null
+  customer: OrderCustomer | OrderCustomer[] | null
+  product: OrderProduct | OrderProduct[] | null
 }
+
+type OrderCustomer = { id: string; name: string; phone: string; city?: string }
+type OrderProduct = { id: string; name: string; price: number }
 
 type TrashOrder = {
   id: string
@@ -40,8 +43,8 @@ type TrashOrder = {
   variant?: string
   quantity: number
   deleted_at: string
-  customer: { id: string; name: string; phone: string; city?: string } | null | any[]
-  product: { id: string; name: string; price: number } | null | any[]
+  customer: OrderCustomer | OrderCustomer[] | null
+  product: OrderProduct | OrderProduct[] | null
 }
 
 type Props = {

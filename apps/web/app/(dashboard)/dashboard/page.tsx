@@ -11,19 +11,18 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { OperatorDashboard } from '@/components/dashboard/OperatorDashboard'
 import { ReadonlyDashboard } from '@/components/dashboard/ReadonlyDashboard'
 
-function relativeDate(dateStr: string): string {
-  const date = new Date(dateStr)
-  const diffMs = Date.now() - date.getTime()
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
-  if (diffHours < 1) return 'à l\'instant'
-  if (diffHours < 24) return `il y a ${diffHours}h`
-  if (diffDays === 1) return 'hier'
-  return date.toLocaleDateString('fr-TN', { day: 'numeric', month: 'short' })
-}
-
 function initials(name: string): string {
   return name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()
+}
+
+type RecentOrder = {
+  id: string
+  cod_amount: number
+  status: string
+  variant?: string | null
+  created_at: string
+  customer: { name: string; phone: string } | { name: string; phone: string }[] | null
+  product: { name: string } | { name: string }[] | null
 }
 
 export default async function DashboardPage() {
@@ -107,9 +106,7 @@ export default async function DashboardPage() {
   const hasWeeklyData = chartData.some(d => d.value > 0)
 
   // COD pending (orders confirmed or shipped — not yet delivered/reversed)
-  const codPending = ((allOrders ?? []) as any[])
-    .filter((o: any) => ['confirmed', 'shipped'].includes(o.status))
-    .length
+  const codPending = all.filter(o => ['confirmed', 'shipped'].includes(o.status)).length
 
   return (
     <div className="space-y-6">
@@ -278,7 +275,7 @@ export default async function DashboardPage() {
             Voir tout →
           </Link>
         </div>
-        <RecentOrders orders={recentOrders as any[] ?? []} />
+        <RecentOrders orders={(recentOrders ?? []) as RecentOrder[]} />
       </div>
     </div>
   )
@@ -319,7 +316,7 @@ function KPICard({
   )
 }
 
-function RecentOrders({ orders }: { orders: any[] }) {
+function RecentOrders({ orders }: { orders: RecentOrder[] }) {
   if (orders.length === 0) {
     return (
       <div className="text-center py-12 text-[#78716C]">
@@ -332,7 +329,7 @@ function RecentOrders({ orders }: { orders: any[] }) {
 
   return (
     <div className="divide-y divide-[#E7E5E4]">
-      {orders.map((order: any) => {
+      {orders.map(order => {
         const customer = Array.isArray(order.customer) ? order.customer[0] : order.customer
         const product = Array.isArray(order.product) ? order.product[0] : order.product
         const ini = customer?.name ? initials(customer.name) : '?'

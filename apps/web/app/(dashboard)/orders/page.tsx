@@ -3,6 +3,9 @@ import { getUserContext } from '@/lib/get-context'
 import OrdersClient from '@/components/orders/OrdersClient'
 import { updateOrderStatus, deleteOrder, confirmPendingOrder, cancelPendingOrder, restoreOrder, permanentlyDeleteOrder } from './actions'
 
+type Orders = Parameters<typeof OrdersClient>[0]['orders']
+type TrashOrders = Parameters<typeof OrdersClient>[0]['trashOrders']
+
 export default async function OrdersPage() {
   const context = await getUserContext()
   if (!context) return null
@@ -39,8 +42,8 @@ export default async function OrdersPage() {
     <OrdersClient
       role={context.role}
       plan={context.plan}
-      orders={(orders ?? []) as any[]}
-      trashOrders={(trashOrders ?? []) as any[]}
+      orders={(orders ?? []) as Orders}
+      trashOrders={(trashOrders ?? []) as TrashOrders}
       updateStatus={updateOrderStatus}
       deleteOrder={deleteOrder}
       confirmOrder={confirmPendingOrder}

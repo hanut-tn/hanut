@@ -63,12 +63,8 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
     : products
 
   useEffect(() => {
-    if (selectedProduct && codAmount === '') setCodAmount(selectedProduct.price * quantity)
-  }, [selectedProduct])
-
-  useEffect(() => {
-    if (selectedProduct && codAmount !== '') setCodAmount(selectedProduct.price * quantity)
-  }, [quantity])
+    if (selectedProduct) setCodAmount(selectedProduct.price * quantity)
+  }, [selectedProduct, quantity])
 
   useEffect(() => { setVariant('') }, [productId])
 
