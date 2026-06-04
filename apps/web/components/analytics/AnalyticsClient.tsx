@@ -250,13 +250,13 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
     <div className="space-y-6">
 
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[#1C1917]">Analytiques</h1>
           <p className="text-sm text-[#78716C] mt-0.5">Basé sur les {period} derniers jours</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <div className="grid grid-cols-3 gap-1 sm:flex">
             {([7, 30, 90] as Period[]).map(p => (
               <button
                 key={p}
@@ -275,7 +275,7 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
             <div className="relative group">
               <button
                 disabled
-                className="border border-[#E7E5E4] rounded-lg px-4 py-2 text-sm text-[#A8A29E] flex items-center gap-2 cursor-not-allowed opacity-60"
+                className="flex w-full items-center justify-center gap-2 border border-[#E7E5E4] rounded-lg px-4 py-2 text-sm text-[#A8A29E] cursor-not-allowed opacity-60 sm:w-auto"
               >
                 <Download className="w-4 h-4" />
                 Exporter
@@ -289,7 +289,7 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
             <button
               onClick={handleExport}
               disabled={exporting}
-              className="border border-[#E7E5E4] rounded-lg px-4 py-2 text-sm text-[#78716C] hover:bg-[#F5F5F4] flex items-center gap-2 transition-colors disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 border border-[#E7E5E4] rounded-lg px-4 py-2 text-sm text-[#78716C] hover:bg-[#F5F5F4] transition-colors disabled:opacity-50 sm:w-auto"
             >
               <Download className="w-4 h-4" />
               {exporting ? 'Export...' : 'Exporter'}
@@ -299,7 +299,7 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 xl:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {KPI_ITEMS.map(s => {
           const Icon = s.icon
           return (
@@ -483,7 +483,7 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
             )}
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[760px] text-sm">
               <thead className="bg-[#FAFAF9] border-b border-[#E7E5E4]">
                 <tr>
                   {['Livreur', 'Expédiées', 'Livrées', 'Taux', 'COD à reverser', 'COD en attente', 'Frais'].map((h, i) => (

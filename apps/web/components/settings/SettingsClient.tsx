@@ -512,7 +512,7 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
       {/* ── ABONNEMENT ── */}
       {tab === 'plan' && (
         <div className="space-y-4">
-          <div className="card p-5 flex items-center justify-between">
+          <div className="card p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm text-gray-500 mb-1">Abonnement actuel</p>
               <div className="flex items-center gap-2">
@@ -523,7 +523,7 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
               </div>
             </div>
             {seller.subscription_end && (
-              <div className="text-right">
+              <div className="sm:text-right">
                 <p className="text-xs text-gray-400">Renouvellement le</p>
                 <p className="text-sm font-medium text-gray-700">
                   {new Date(seller.subscription_end).toLocaleDateString('fr-TN', {
@@ -534,7 +534,7 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             {PLANS.map(plan => {
               const isCurrent = plan.key === seller.plan
               const isUpgrade =
@@ -597,8 +597,8 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
           </p>
 
           {/* Gestion d'équipe */}
-          <div className="card p-5 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="card p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-4">
               <div className="w-10 h-10 bg-[#F0FDF4] text-[#166534] rounded-xl flex items-center justify-center">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               </div>
@@ -614,12 +614,12 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
             {seller.plan === 'business' ? (
               <a
                 href="/team"
-                className="btn-secondary text-sm whitespace-nowrap"
+                className="btn-secondary w-full text-center text-sm whitespace-nowrap sm:w-auto"
               >
                 Gérer l&apos;équipe →
               </a>
             ) : (
-              <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#F0FDF4] text-[#166534] border border-green-200 text-xs font-medium whitespace-nowrap">
+              <span className="inline-flex w-full items-center justify-center px-3 py-1.5 rounded-lg bg-[#F0FDF4] text-[#166534] border border-green-200 text-xs font-medium whitespace-nowrap sm:w-auto">
                 Plan Business requis
               </span>
             )}

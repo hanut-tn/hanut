@@ -1,7 +1,6 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 import {
   ShoppingBag, Banknote, TrendingUp, TrendingDown, Clock,
   Plus, Package, Truck,
@@ -9,6 +8,8 @@ import {
 import CopyLinkButton from '@/components/dashboard/CopyLinkButton'
 import OnboardingChecklist from '@/components/dashboard/OnboardingChecklist'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { OperatorDashboard } from '@/components/dashboard/OperatorDashboard'
+import { ReadonlyDashboard } from '@/components/dashboard/ReadonlyDashboard'
 
 function relativeDate(dateStr: string): string {
   const date = new Date(dateStr)
@@ -28,7 +29,9 @@ function initials(name: string): string {
 export default async function DashboardPage() {
   const context = await getUserContext()
   if (!context) return null
-  if (context.role !== 'admin') redirect('/orders')
+
+  if (context.role === 'operator') return <OperatorDashboard context={context} />
+  if (context.role === 'readonly') return <ReadonlyDashboard context={context} />
 
   const supabase = await createServerClient()
 
@@ -111,12 +114,12 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[#1C1917]">Tableau de bord</h1>
           <p className="text-sm text-[#78716C] mt-0.5">Vue d&apos;ensemble du mois en cours</p>
         </div>
-        <Link href="/orders/new" className="btn-primary text-sm">+ Nouvelle commande</Link>
+        <Link href="/orders/new" className="btn-primary w-full text-center text-sm sm:w-auto">+ Nouvelle commande</Link>
       </div>
 
       {/* Onboarding checklist — visible uniquement aux vendeurs n'ayant pas encore terminé */}
@@ -130,7 +133,7 @@ export default async function DashboardPage() {
       )}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           label="Commandes"
           value={String(ordersThisMonth)}
@@ -233,7 +236,7 @@ export default async function DashboardPage() {
         {/* Quick actions */}
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-6">
           <h2 className="text-base font-semibold text-[#1C1917] mb-4">Actions rapides</h2>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Link
               href="/orders/new"
               className="flex flex-col items-center gap-2 p-4 border border-[#E7E5E4] rounded-xl hover:bg-[#F5F5F4] hover:border-[#D6D3D1] transition-colors text-center"

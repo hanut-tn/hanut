@@ -108,7 +108,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white border border-[#E7E5E4] rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+      <div className="bg-white border border-[#E7E5E4] rounded-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto shadow-xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#E7E5E4] sticky top-0 bg-white z-10">
           <h2 className="font-semibold text-[#1C1917]">
             {product ? 'Modifier le produit' : 'Nouveau produit'}
@@ -124,7 +124,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
         <form onSubmit={handleSubmit}>
           <div className="p-6 space-y-6">
             {/* Two-column: image left, fields right */}
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               {/* Image upload */}
               <div>
                 <label className="block text-sm font-medium text-[#1C1917] mb-2">
@@ -196,7 +196,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium text-[#1C1917] mb-1">
                       Prix de vente (DT) <span className="text-red-500">*</span>
@@ -238,7 +238,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium text-[#1C1917] mb-1">
                       Stock <span className="text-red-500">*</span>
@@ -344,7 +344,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
             </div>
           )}
 
-          <div className="flex gap-3 px-6 pb-6">
+          <div className="flex flex-col gap-3 px-6 pb-6 sm:flex-row">
             <button type="button" onClick={onClose} className="btn-secondary flex-1">
               Annuler
             </button>

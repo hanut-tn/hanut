@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Menu, X } from 'lucide-react'
+import { LogOut, Menu, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { UserRole } from '@/lib/get-context'
 import { useMobileSidebar } from './MobileSidebarContext'
@@ -48,7 +48,7 @@ export default function TopBar({ sellerName, role, isSeller }: TopBarProps) {
           <span className="hidden text-sm text-[#78716C] sm:inline">
             Bonjour, <span className="font-medium text-[#1C1917]">{sellerName}</span>
           </span>
-          <span className="max-w-[9rem] truncate text-sm font-medium text-[#1C1917] sm:hidden">
+          <span className="max-w-[7rem] truncate text-sm font-medium text-[#1C1917] sm:hidden">
             {sellerName}
           </span>
           {!isSeller && (
@@ -62,7 +62,14 @@ export default function TopBar({ sellerName, role, isSeller }: TopBarProps) {
         </div>
         <button
           onClick={handleLogout}
-          className="shrink-0 border border-[#E7E5E4] hover:bg-[#F5F5F4] text-[#1C1917] rounded-lg px-2.5 sm:px-3 py-1.5 text-xs font-medium transition-colors"
+          aria-label="Déconnexion"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#E7E5E4] text-[#1C1917] transition-colors hover:bg-[#F5F5F4] sm:hidden"
+        >
+          <LogOut className="h-4 w-4" />
+        </button>
+        <button
+          onClick={handleLogout}
+          className="hidden shrink-0 border border-[#E7E5E4] hover:bg-[#F5F5F4] text-[#1C1917] rounded-lg px-2.5 sm:inline-flex sm:px-3 py-1.5 text-xs font-medium transition-colors"
         >
           Déconnexion
         </button>

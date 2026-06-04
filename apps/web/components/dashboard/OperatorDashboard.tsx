@@ -87,12 +87,12 @@ export async function OperatorDashboard({ context }: { context: Context }) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[#1C1917]">Tableau de bord</h1>
           <p className="text-sm text-[#78716C] mt-0.5">Activité d&apos;aujourd&apos;hui</p>
         </div>
-        <Link href="/orders/new" className="btn-primary text-sm">+ Nouvelle commande</Link>
+        <Link href="/orders/new" className="btn-primary w-full text-center text-sm sm:w-auto">+ Nouvelle commande</Link>
       </div>
 
       {/* 3 KPIs */}
@@ -115,7 +115,7 @@ export async function OperatorDashboard({ context }: { context: Context }) {
       {/* Actions rapides */}
       <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-6">
         <h2 className="text-base font-semibold text-[#1C1917] mb-4">Actions rapides</h2>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {[
             { href: '/orders/new',  label: 'Nouvelle commande',      icon: Plus },
             { href: '/orders',      label: 'Toutes les commandes',   icon: ShoppingBag },
@@ -137,7 +137,7 @@ export async function OperatorDashboard({ context }: { context: Context }) {
 
       {/* Commandes du jour */}
       <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between gap-3 mb-4">
           <h2 className="text-base font-semibold text-[#1C1917]">Commandes d&apos;aujourd&apos;hui</h2>
           <Link href="/orders" className="text-sm text-[#16A34A] hover:text-[#15803D] font-medium transition-colors">
             Voir tout →

@@ -86,7 +86,7 @@ export default function BottomNav({ role, plan = 'starter' }: BottomNavProps) {
           }`}
         />
         <div
-          className={`absolute bottom-16 left-0 right-0 border-t border-[#E7E5E4] bg-white px-4 pb-4 pt-3 transition-transform duration-300 ${
+          className={`absolute bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 border-t border-[#E7E5E4] bg-white px-4 pb-4 pt-3 transition-transform duration-300 ${
             moreOpen ? 'translate-y-0' : 'translate-y-[calc(100%+4rem)]'
           }`}
         >
@@ -137,7 +137,7 @@ export default function BottomNav({ role, plan = 'starter' }: BottomNavProps) {
       </div>
 
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 grid h-16 border-t border-[#E7E5E4] bg-white md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-50 grid h-[calc(4rem+env(safe-area-inset-bottom))] border-t border-[#E7E5E4] bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
         style={{ gridTemplateColumns: `repeat(${primaryItems.length + 1}, minmax(0, 1fr))` }}
       >
         {primaryItems.map((item) => {

@@ -73,7 +73,7 @@ export default function MobileSidebar({ role, sellerName, plan = 'starter' }: Mo
       />
 
       <aside
-        className={`relative flex h-full w-72 max-w-[85vw] flex-col border-r border-[#E7E5E4] bg-white transition-transform duration-300 ${
+        className={`relative flex h-dvh w-72 max-w-[85vw] flex-col border-r border-[#E7E5E4] bg-white transition-transform duration-300 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

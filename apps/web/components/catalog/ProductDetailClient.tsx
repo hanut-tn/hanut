@@ -115,7 +115,7 @@ export default function ProductDetailClient({
   return (
     <div className="space-y-8">
       {/* Back + actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link
           href="/catalog"
           className="flex items-center gap-1.5 text-sm text-[#78716C] hover:text-[#1C1917] transition-colors"
@@ -124,10 +124,10 @@ export default function ProductDetailClient({
           Catalogue
         </Link>
         {canWrite && (
-          <div className="flex items-center gap-3">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center sm:gap-3">
             <button
               onClick={() => setShowEditModal(true)}
-              className="btn-primary text-sm flex items-center gap-2"
+              className="btn-primary flex items-center justify-center gap-2 text-sm"
             >
               <Pencil className="w-4 h-4" />
               Modifier
@@ -136,7 +136,7 @@ export default function ProductDetailClient({
                 onClick={() => { setDeleteError(null); setShowDeleteModal(true) }}
                 disabled={hasBlockingOrders}
                 title={hasBlockingOrders ? 'Ce produit est lié à des commandes' : 'Supprimer ce produit'}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
               <Trash2 className="w-4 h-4" />
               Supprimer
@@ -267,7 +267,7 @@ export default function ProductDetailClient({
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { icon: ShoppingCart, label: 'Commandes totales', value: String(stats.totalOrders) },
           { icon: TrendingUp, label: 'CA livré', value: `${stats.totalRevenue.toFixed(0)} DT` },
@@ -286,14 +286,14 @@ export default function ProductDetailClient({
 
       {/* Recent orders */}
       {recentOrders.length > 0 && (
-        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-x-auto">
           <div className="flex items-center justify-between px-5 py-4 border-b border-[#E7E5E4]">
             <h2 className="font-semibold text-[#1C1917]">Commandes récentes</h2>
             <Link href="/orders" className="text-sm text-[#16A34A] hover:text-[#15803D] font-medium">
               Voir toutes les commandes →
             </Link>
           </div>
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[640px] text-sm">
             <thead className="bg-[#FAFAF9] border-b border-[#E7E5E4]">
               <tr>
                 {['Client', 'Date', 'Statut', 'Qté', 'Montant'].map(h => (
@@ -364,7 +364,7 @@ export default function ProductDetailClient({
                 {stockError}
               </div>
             )}
-            <div className="flex gap-3 mt-5">
+            <div className="flex flex-col gap-3 mt-5 sm:flex-row">
               <button
                 onClick={() => setShowStockModal(false)}
                 className="btn-secondary flex-1"
@@ -396,7 +396,7 @@ export default function ProductDetailClient({
                 {deleteError}
               </div>
             )}
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <button onClick={() => setShowDeleteModal(false)} className="btn-secondary flex-1">
                 Annuler
               </button>

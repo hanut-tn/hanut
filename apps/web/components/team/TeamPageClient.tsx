@@ -230,7 +230,7 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {[
           { label: 'Membres actifs', value: activeCount,     Icon: UserCheck,  color: 'text-green-600',  bg: 'bg-green-50' },
           { label: 'Invitations en attente', value: pendingCount, Icon: UserPlus, color: 'text-amber-600', bg: 'bg-amber-50' },
@@ -264,7 +264,8 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
             <p className="text-sm">Aucun membre. Invitez votre premier collaborateur ci-dessous.</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[820px] text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 {['Membre', 'Rôle', 'Statut', 'Dernière connexion', 'Invité le', ''].map((h, i) => (
@@ -372,11 +373,12 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
       {/* Inviter */}
-      <div className="card p-6">
+      <div className="card p-4 sm:p-6">
         <h2 className="font-semibold text-gray-900 mb-4">Inviter un collaborateur</h2>
 
         {spotsLeft <= 0 ? (
@@ -385,10 +387,10 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
           </div>
         ) : (
           <form onSubmit={handleInvite} className="space-y-4">
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <input
                 type="email"
-                className="input flex-1"
+                className="input sm:flex-1"
                 placeholder="email@exemple.com"
                 value={inviteEmail}
                 onChange={e => setInviteEmail(e.target.value)}
@@ -397,7 +399,7 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
               <select
                 value={inviteRole}
                 onChange={e => setInviteRole(e.target.value as 'operator' | 'readonly')}
-                className="input w-44"
+                className="input w-full sm:w-44"
               >
                 <option value="operator">Opérateur</option>
                 <option value="readonly">Lecture seule</option>
@@ -405,7 +407,7 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
               <button
                 type="submit"
                 disabled={isPending || !inviteEmail}
-                className="btn-primary whitespace-nowrap"
+                className="btn-primary w-full whitespace-nowrap sm:w-auto"
               >
                 {isPending ? 'Envoi...' : "Envoyer l'invitation"}
               </button>
@@ -437,7 +439,7 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
           <select
             value={filterUserId}
             onChange={e => handleFilterChange('userId', e.target.value)}
-            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-brand-500"
+            className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-brand-500 sm:w-auto"
           >
             <option value="">Tous les membres</option>
             {members.filter(m => m.user_id).map(m => (
@@ -449,7 +451,7 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
           <select
             value={filterGroup}
             onChange={e => handleFilterChange('group', e.target.value)}
-            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-brand-500"
+            className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-brand-500 sm:w-auto"
           >
             <option value="">Toutes les actions</option>
             {ACTION_GROUPS.map(g => (
@@ -461,7 +463,7 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
           <select
             value={filterDays}
             onChange={e => handleFilterChange('days', Number(e.target.value))}
-            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-brand-500"
+            className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-brand-500 sm:w-auto"
           >
             <option value={0}>Toute période</option>
             <option value={1}>Aujourd&apos;hui</option>
@@ -551,7 +553,7 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
                   : "Ce membre n'aura plus accès à votre boutique."}
               </p>
             )}
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={() => { setConfirmDelete(null); setDeleteError(null) }}
                 className="btn-secondary flex-1"

@@ -221,7 +221,7 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
 
       {/* Empty */}
       {filtered.length === 0 ? (
-        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-16 text-center">
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-8 text-center sm:p-16">
           {selectedTag ? (
             <>
               <Tag className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-40" />
@@ -371,7 +371,7 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
                   required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-[#1C1917] mb-1">Adresse</label>
                   <input
@@ -400,7 +400,7 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
                   {editMsg.text}
                 </div>
               )}
-              <div className="flex gap-3 pt-1">
+              <div className="flex flex-col gap-3 pt-1 sm:flex-row">
                 <button type="button" onClick={() => setEditCustomer(null)} className="btn-secondary flex-1">
                   Annuler
                 </button>
@@ -433,7 +433,7 @@ export default function CustomersClient({ customers, updateCustomer, deleteCusto
             {!deleteError && (
               <p className="text-sm text-[#78716C] mb-5">Cette action est irréversible.</p>
             )}
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <button onClick={() => { setConfirmDelete(null); setDeleteError(null) }} className="btn-secondary flex-1">
                 Annuler
               </button>

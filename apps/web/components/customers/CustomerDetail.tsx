@@ -353,7 +353,7 @@ export default function CustomerDetail({ customer, orders: initialOrders, totalO
 
       {/* ── HISTORIQUE COMMANDES ── */}
       <div className="card overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-gray-100 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="font-semibold text-gray-900">
             Historique des commandes
           </h2>
@@ -370,7 +370,8 @@ export default function CustomerDetail({ customer, orders: initialOrders, totalO
           </div>
         ) : (
           <>
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   {['Date', 'Produit', 'Montant', 'Statut'].map((h, i) => (
@@ -404,6 +405,7 @@ export default function CustomerDetail({ customer, orders: initialOrders, totalO
                 })}
               </tbody>
             </table>
+            </div>
             {hasMore && (
               <div className="px-5 py-4 border-t border-gray-100">
                 <button
@@ -448,7 +450,7 @@ export default function CustomerDetail({ customer, orders: initialOrders, totalO
                   required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
                   <input
@@ -477,7 +479,7 @@ export default function CustomerDetail({ customer, orders: initialOrders, totalO
                   {editMsg.text}
                 </div>
               )}
-              <div className="flex gap-3 pt-1">
+              <div className="flex flex-col gap-3 pt-1 sm:flex-row">
                 <button type="button" onClick={() => setEditOpen(false)} className="btn-secondary flex-1">
                   Annuler
                 </button>

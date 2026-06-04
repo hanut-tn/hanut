@@ -148,9 +148,9 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
 
   if (products.length === 0) {
     return (
-      <div className="space-y-6 max-w-2xl">
+      <div className="w-full max-w-2xl space-y-6">
         <h1 className="text-2xl font-bold text-[#1C1917]">Nouvelle commande</h1>
-        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-12 text-center">
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-8 text-center sm:p-12">
           <Package className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-40" />
           <p className="font-medium text-[#1C1917]">Aucun produit dans votre catalogue</p>
           <p className="text-sm text-[#78716C] mt-1 mb-5">Ajoutez d&apos;abord un produit avant de créer une commande.</p>
@@ -165,7 +165,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
     : ''
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="w-full max-w-2xl space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <button
@@ -178,7 +178,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
       </div>
 
       {/* Progress steps */}
-      <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm px-6 py-4">
+      <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm px-4 py-4 sm:px-6">
         <div className="flex items-center gap-0">
           {STEPS.map((s, i) => {
             const done = i < step
@@ -223,7 +223,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
 
       {/* STEP 0 — Client */}
       {step === 0 && (
-        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-6 space-y-4">
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4 space-y-4 sm:p-6">
           <h2 className="font-semibold text-[#1C1917] flex items-center gap-2">
             <span className="w-6 h-6 bg-[#F0FDF4] text-[#166534] rounded-full text-xs flex items-center justify-center font-bold">1</span>
             Client
@@ -312,7 +312,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
             <label className="block text-sm font-medium text-[#1C1917] mb-1">Nom complet <span className="text-red-500">*</span></label>
             <input className="input" value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Prénom Nom" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-[#1C1917] mb-1">Adresse</label>
               <input className="input" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} placeholder="Rue, numéro…" />
@@ -324,7 +324,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
           </div>
 
           <div className="flex justify-end pt-2">
-            <button onClick={() => goToStep(1)} className="btn-primary flex items-center gap-2">
+            <button onClick={() => goToStep(1)} className="btn-primary flex w-full items-center justify-center gap-2 sm:w-auto">
               Produit
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -334,7 +334,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
 
       {/* STEP 1 — Produit */}
       {step === 1 && (
-        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-6 space-y-4">
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4 space-y-4 sm:p-6">
           <h2 className="font-semibold text-[#1C1917] flex items-center gap-2">
             <span className="w-6 h-6 bg-[#F0FDF4] text-[#166534] rounded-full text-xs flex items-center justify-center font-bold">2</span>
             Produit
@@ -349,7 +349,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
             />
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-64 overflow-y-auto pr-1">
+          <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto pr-1 sm:grid-cols-3">
             {filteredProducts.map(p => (
               <button
                 key={p.id}
@@ -425,7 +425,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-[#1C1917] mb-1">Quantité <span className="text-red-500">*</span></label>
               <input
@@ -451,7 +451,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
             </div>
           </div>
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row">
             <button onClick={() => setStep(0)} className="btn-secondary flex-1">Retour</button>
             <button onClick={() => goToStep(2)} className="btn-primary flex-1 flex items-center justify-center gap-2">
               Récapitulatif
@@ -463,7 +463,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
 
       {/* STEP 2 — Récapitulatif */}
       {step === 2 && (
-        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-6 space-y-5">
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4 space-y-5 sm:p-6">
           <h2 className="font-semibold text-[#1C1917] flex items-center gap-2">
             <span className="w-6 h-6 bg-[#F0FDF4] text-[#166534] rounded-full text-xs flex items-center justify-center font-bold">3</span>
             Récapitulatif
@@ -480,13 +480,13 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
           {/* Product summary */}
           <div className="bg-[#FAFAF9] border border-[#E7E5E4] rounded-xl p-4 space-y-1">
             <p className="text-xs font-medium text-[#78716C] uppercase tracking-wide">Produit</p>
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <p className="font-semibold text-[#1C1917]">{selectedProduct?.name ?? '—'}</p>
                 {variant && <p className="text-sm text-[#78716C]">{variant}</p>}
                 {quantity > 1 && <p className="text-sm text-[#78716C]">× {quantity}</p>}
               </div>
-              <p className="text-xl font-bold text-[#16A34A]">{codAmount === '' ? '0' : codAmount} DT</p>
+              <p className="shrink-0 text-xl font-bold text-[#16A34A]">{codAmount === '' ? '0' : codAmount} DT</p>
             </div>
           </div>
 
@@ -504,7 +504,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
             />
           </div>
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row">
             <button onClick={() => setStep(1)} className="btn-secondary flex-1">Retour</button>
             <button onClick={handleSubmit} disabled={isPending} className="btn-primary flex-1">
               {isPending ? 'Création...' : 'Créer la commande'}

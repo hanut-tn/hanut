@@ -144,7 +144,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[#1C1917]">Livraisons</h1>
           <p className="text-sm text-[#78716C] mt-0.5">{deliveries.length} livraison{deliveries.length !== 1 ? 's' : ''}</p>
@@ -152,7 +152,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
         <button
           onClick={() => setShowAdd(true)}
           disabled={shippableOrders.length === 0}
-          className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn-primary w-full text-sm disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto"
           title={shippableOrders.length === 0 ? 'Aucune commande expédiée sans livraison' : ''}
         >
           + Ajouter livraison
@@ -160,7 +160,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {[
           { label: 'COD collecté',   value: `${totalCollected.toFixed(0)} DT`, sub: `${counts.collected} en attente de reversal`, color: 'text-[#16A34A]' },
           { label: 'COD reversé',    value: `${totalReversed.toFixed(0)} DT`,  sub: `${counts.reversed} livraisons soldées`,      color: 'text-[#0B5E46]' },
@@ -175,7 +175,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
       </div>
 
       {/* Tabs — underline style */}
-      <div className="flex gap-0 border-b border-[#E7E5E4]">
+      <div className="flex gap-0 overflow-x-auto border-b border-[#E7E5E4]">
         {TABS.map(t => (
           <button
             key={t.key}
@@ -198,7 +198,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
 
       {/* Empty */}
       {filtered.length === 0 ? (
-        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-16 text-center">
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-8 text-center sm:p-16">
           <Truck className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-40" />
           <p className="font-medium text-[#1C1917]">
             {tab === 'all' ? 'Aucune livraison enregistrée' : 'Aucune livraison dans cette catégorie'}
@@ -318,7 +318,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
                   ))}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-[#1C1917] mb-1">N° de suivi</label>
                   <input className="input" value={addTracking} onChange={e => setAddTracking(e.target.value)} placeholder="Optionnel" />
@@ -339,7 +339,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
               {addError && (
                 <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{addError}</p>
               )}
-              <div className="flex gap-3 pt-1">
+              <div className="flex flex-col gap-3 pt-1 sm:flex-row">
                 <button type="button" onClick={() => setShowAdd(false)} className="btn-secondary flex-1">Annuler</button>
                 <button type="submit" disabled={isPending} className="btn-primary flex-1">
                   {isPending ? 'Création...' : 'Créer'}
@@ -376,7 +376,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
                   placeholder="0.00"
                 />
               </div>
-              <div className="flex gap-3 pt-1">
+              <div className="flex flex-col gap-3 pt-1 sm:flex-row">
                 <button type="button" onClick={() => setEditDelivery(null)} className="btn-secondary flex-1">Annuler</button>
                 <button type="submit" disabled={isPending} className="btn-primary flex-1">
                   {isPending ? 'Sauvegarde...' : 'Enregistrer'}
@@ -395,7 +395,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
             <p className="text-sm text-[#78716C] mb-5">
               {getOrder(confirmDelete)?.customer?.name} — {getCarrierConfig(confirmDelete.carrier).label}
             </p>
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <button onClick={() => setConfirmDelete(null)} className="btn-secondary flex-1">Annuler</button>
               <button
                 onClick={() => handleDelete(confirmDelete)}

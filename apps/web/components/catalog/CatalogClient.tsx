@@ -231,7 +231,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
           </p>
         </div>
         {canWrite && (
-          <button onClick={() => setModal('new')} className="btn-primary text-sm flex items-center gap-2 self-start sm:self-auto">
+          <button onClick={() => setModal('new')} className="btn-primary flex w-full items-center justify-center gap-2 text-sm sm:w-auto sm:self-auto">
             <Plus className="w-4 h-4" />
             Nouveau produit
           </button>
@@ -239,9 +239,9 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
       </div>
 
       {/* Toolbar: search + view + sort + filter */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         {/* Search */}
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="relative w-full sm:min-w-[200px] sm:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
           <input
             className="input pl-9 text-sm"
@@ -252,10 +252,10 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
         </div>
 
         {/* View toggle */}
-        <div className="flex items-center border border-[#E7E5E4] rounded-lg overflow-hidden">
+        <div className="flex w-full items-center border border-[#E7E5E4] rounded-lg overflow-hidden sm:w-auto">
           <button
             onClick={() => setView('grid')}
-            className={`px-3 py-2 transition-colors ${
+            className={`flex flex-1 justify-center px-3 py-2 transition-colors sm:flex-none ${
               view === 'grid'
                 ? 'bg-[#0B5E46] text-white'
                 : 'text-[#78716C] hover:bg-[#FAFAF9]'
@@ -265,7 +265,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
           </button>
           <button
             onClick={() => setView('list')}
-            className={`px-3 py-2 transition-colors ${
+            className={`flex flex-1 justify-center px-3 py-2 transition-colors sm:flex-none ${
               view === 'list'
                 ? 'bg-[#0B5E46] text-white'
                 : 'text-[#78716C] hover:bg-[#FAFAF9]'
@@ -308,7 +308,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
 
       {/* Empty state — no products at all */}
       {products.length === 0 ? (
-        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-16 text-center">
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-8 text-center sm:p-16">
           <Package className="w-12 h-12 mx-auto mb-4 text-[#78716C] opacity-30" />
           <p className="font-semibold text-[#1C1917] text-lg mb-1">Votre catalogue est vide</p>
           <p className="text-sm text-[#78716C] mb-6">
@@ -323,7 +323,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
         </div>
       ) : filtered.length === 0 ? (
         /* Empty state — search/filter has no results */
-        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-16 text-center">
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-8 text-center sm:p-16">
           <SearchX className="w-12 h-12 mx-auto mb-4 text-[#78716C] opacity-30" />
           <p className="font-semibold text-[#1C1917] mb-1">
             Aucun produit ne correspond à votre recherche
@@ -350,8 +350,8 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
         </div>
       ) : (
         /* List view */
-        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-x-auto">
+          <table className="w-full min-w-[780px] text-sm">
             <thead className="bg-[#FAFAF9] border-b border-[#E7E5E4]">
               <tr>
                 {['Photo', 'Produit', 'Prix', 'Coût / Marge', 'Stock', 'Statut', 'Actions'].map(h => (
@@ -493,7 +493,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
                 {deleteError}
               </div>
             )}
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={() => { setConfirmDelete(null); setDeleteError(null) }}
                 className="btn-secondary flex-1"

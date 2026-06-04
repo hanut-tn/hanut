@@ -497,7 +497,7 @@ export default function OrderDetail({
             {actionError && (
               <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{actionError}</p>
             )}
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <button onClick={() => setConfirmDelete(false)} className="btn-secondary flex-1">Annuler</button>
               <button
                 disabled={isPending}

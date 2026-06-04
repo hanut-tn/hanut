@@ -249,16 +249,16 @@ export default function OrdersClient({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
           {/* Search */}
-          <div className="relative">
+          <div className="relative col-span-2 sm:col-span-1">
             {isSearching ? (
               <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C] animate-spin" />
             ) : (
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
             )}
             <input
-              className="pl-9 pr-8 py-2 text-sm bg-white border border-[#E7E5E4] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#16A34A]/30 focus:border-[#16A34A] w-52 transition-all placeholder:text-[#A8A29E]"
+              className="w-full pl-9 pr-8 py-2 text-sm bg-white border border-[#E7E5E4] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#16A34A]/30 focus:border-[#16A34A] transition-all placeholder:text-[#A8A29E] sm:w-52"
               placeholder="Rechercher par nom, téléphone..."
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -278,7 +278,7 @@ export default function OrdersClient({
             <button
               onClick={() => canExport && exportCSV(filteredOrders)}
               disabled={!canExport}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition-colors ${
+              className={`flex w-full items-center justify-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition-colors ${
                 canExport
                   ? 'border-[#E7E5E4] text-[#78716C] hover:text-[#1C1917] hover:border-[#D6D3D1] bg-white'
                   : 'border-[#E7E5E4] text-[#A8A29E] bg-[#FAFAF9] cursor-not-allowed'
@@ -294,7 +294,7 @@ export default function OrdersClient({
             )}
           </div>
 
-          <Link href="/orders/new" className="btn-primary text-sm whitespace-nowrap">
+          <Link href="/orders/new" className="btn-primary text-center text-sm whitespace-nowrap">
             + Nouvelle commande
           </Link>
         </div>
@@ -372,7 +372,7 @@ export default function OrdersClient({
         filteredOrders.length === 0 ? (
           debouncedSearch ? (
             /* État vide — recherche sans résultats */
-            <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-16 text-center">
+            <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-8 text-center sm:p-16">
               <SearchX className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-30" />
               <p className="font-medium text-[#1C1917]">
                 Aucune commande pour <strong>&ldquo;{debouncedSearch}&rdquo;</strong>
@@ -386,7 +386,7 @@ export default function OrdersClient({
             </div>
           ) : tab === 'all' && orders.length === 0 ? (
             /* État vide — aucune commande du tout */
-            <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-16 text-center">
+            <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-8 text-center sm:p-16">
               <ShoppingBag className="w-12 h-12 mx-auto mb-4 text-[#78716C] opacity-30" />
               <p className="font-semibold text-[#1C1917] mb-1">Aucune commande pour l&apos;instant</p>
               <p className="text-sm text-[#78716C] mb-6">
@@ -400,7 +400,7 @@ export default function OrdersClient({
             </div>
           ) : (
             /* État vide — filtre statut sans résultats */
-            <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-16 text-center">
+            <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-8 text-center sm:p-16">
               <Filter className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-30" />
               <p className="font-medium text-[#1C1917]">Aucune commande avec ce statut</p>
               <button
@@ -414,7 +414,7 @@ export default function OrdersClient({
         ) : (
           <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-hidden">
             {/* En-têtes colonnes */}
-            <div className="grid grid-cols-[40px_1fr_1fr_120px_100px_140px] gap-4 items-center px-5 py-3 bg-[#FAFAF9] border-b border-[#E7E5E4]">
+            <div className="hidden grid-cols-[40px_1fr_1fr_120px_100px_140px] gap-4 items-center px-5 py-3 bg-[#FAFAF9] border-b border-[#E7E5E4] lg:grid">
               <div />
               <p className="text-xs font-medium text-[#78716C] uppercase tracking-wider">Client</p>
               <p className="text-xs font-medium text-[#78716C] uppercase tracking-wider">Produit</p>
@@ -438,7 +438,7 @@ export default function OrdersClient({
                 return (
                   <div
                     key={order.id}
-                    className={`group grid grid-cols-[40px_1fr_1fr_120px_100px_140px] gap-4 items-center px-5 py-4 transition-colors cursor-pointer ${
+                    className={`group grid grid-cols-[40px_1fr] gap-3 px-4 py-4 transition-colors cursor-pointer lg:grid-cols-[40px_1fr_1fr_120px_100px_140px] lg:gap-4 lg:items-center lg:px-5 ${
                       isPendingOrder ? 'bg-amber-50/20 hover:bg-amber-50/50' : 'hover:bg-[#FAFAF9]'
                     }`}
                     onClick={() => window.location.href = `/orders/${order.id}`}
@@ -471,7 +471,7 @@ export default function OrdersClient({
                     </div>
 
                     {/* Col 3 — Produit */}
-                    <div className="min-w-0">
+                    <div className="col-start-2 min-w-0 lg:col-auto">
                       <p className="text-sm font-medium text-[#1C1917] truncate">{product?.name ?? '—'}</p>
                       <p className="text-xs text-[#78716C] truncate">
                         {[order.variant, order.quantity > 1 ? `× ${order.quantity}` : ''].filter(Boolean).join(' · ')}
@@ -479,19 +479,19 @@ export default function OrdersClient({
                     </div>
 
                     {/* Col 4 — Statut */}
-                    <div>
+                    <div className="col-start-2 lg:col-auto">
                       <StatusBadge status={order.status} pulseDot={isPendingOrder} />
                     </div>
 
                     {/* Col 5 — Montant */}
-                    <div className="text-right">
+                    <div className="col-start-2 text-left lg:col-auto lg:text-right">
                       <p className="text-sm font-bold text-[#16A34A]">{order.cod_amount} DT</p>
                       <p className="text-xs text-[#78716C]">COD</p>
                     </div>
 
                     {/* Col 6 — Actions */}
                     <div
-                      className="flex items-center justify-end gap-1.5"
+                      className="col-span-2 flex flex-wrap items-center justify-start gap-1.5 lg:col-auto lg:justify-end"
                       onClick={e => e.stopPropagation()}
                     >
                       {(isPendingOrder || isNew) && (
@@ -557,7 +557,7 @@ export default function OrdersClient({
       {/* Vue Corbeille */}
       {tab === 'trash' && (
         displayedTrash.length === 0 ? (
-          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-16 text-center">
+          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-8 text-center sm:p-16">
             <Trash2 className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-40" />
             <p className="font-medium text-[#1C1917]">La corbeille est vide</p>
             <p className="text-sm text-[#78716C] mt-1">Les commandes supprimées apparaissent ici pendant 30 jours.</p>
@@ -577,11 +577,11 @@ export default function OrdersClient({
                 const ini = customer?.name ? initials(customer.name) : '?'
 
                 return (
-                  <div key={order.id} className="flex items-start gap-4 px-5 py-4 hover:bg-red-50/30 transition-colors opacity-80">
+                  <div key={order.id} className="flex flex-col gap-3 px-4 py-4 hover:bg-red-50/30 transition-colors opacity-80 sm:flex-row sm:items-start sm:gap-4 sm:px-5">
                     <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-semibold text-sm shrink-0 mt-0.5">
                       {ini}
                     </div>
-                    <div className="w-36 shrink-0">
+                    <div className="min-w-0 sm:w-36 sm:shrink-0">
                       <p className="font-semibold text-[#1C1917] text-sm">{customer?.name ?? '—'}</p>
                       <p className="text-xs text-[#78716C]">{customer?.phone}</p>
                     </div>
@@ -592,7 +592,7 @@ export default function OrdersClient({
                         <StatusBadge status={order.status} />
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
+                    <div className="text-left sm:text-right sm:shrink-0">
                       <p className="font-bold text-[#1C1917]">{order.cod_amount} DT</p>
                       <p className="text-xs text-[#78716C]">
                         {new Date(order.deleted_at).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' })}
@@ -642,7 +642,7 @@ export default function OrdersClient({
             {actionError && (
               <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{actionError}</p>
             )}
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <button onClick={() => setConfirmDelete(null)} className="btn-secondary flex-1">Annuler</button>
               <button
                 onClick={() => handleDelete(confirmDelete.id)}
@@ -684,7 +684,7 @@ export default function OrdersClient({
             {actionError && (
               <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{actionError}</p>
             )}
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={() => { setConfirmPermDelete(null); setPermDeleteInput('') }}
                 className="btn-secondary flex-1"
