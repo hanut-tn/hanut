@@ -479,7 +479,7 @@ export default function OrdersClient({
         ) : (
           <div className="lg:bg-white lg:border lg:border-[#E7E5E4] lg:rounded-xl lg:shadow-sm lg:overflow-hidden">
             {/* En-têtes colonnes */}
-            <div className="hidden grid-cols-[40px_1fr_1fr_120px_100px_140px] gap-4 items-center px-5 py-3 bg-[#FAFAF9] border-b border-[#E7E5E4] lg:grid">
+            <div className="hidden grid-cols-[40px_1fr_1fr_120px_110px_auto] gap-4 items-center px-5 py-3 bg-[#FAFAF9] border-b border-[#E7E5E4] lg:grid">
               <div />
               <p className="text-xs font-medium text-[#78716C] uppercase tracking-wider">Client</p>
               <p className="text-xs font-medium text-[#78716C] uppercase tracking-wider">Produit</p>
@@ -669,7 +669,7 @@ export default function OrdersClient({
 
                     {/* ── Layout desktop (≥ lg) ── */}
                     <div
-                      className={`hidden lg:grid grid-cols-[40px_1fr_1fr_120px_100px_140px] gap-4 items-center px-5 py-4 cursor-pointer ${isPendingOrder ? 'hover:bg-amber-50/50' : 'hover:bg-[#FAFAF9]'}`}
+                      className={`hidden lg:grid grid-cols-[40px_1fr_1fr_120px_110px_auto] gap-4 items-center px-5 py-4 cursor-pointer ${isPendingOrder ? 'hover:bg-amber-50/50' : 'hover:bg-[#FAFAF9]'}`}
                       onClick={() => window.location.href = `/orders/${order.id}`}
                     >
                       <div className="w-9 h-9 rounded-full bg-[#F0FDF4] text-[#166534] flex items-center justify-center font-semibold text-sm shrink-0 select-none">
