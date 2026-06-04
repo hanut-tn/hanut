@@ -27,7 +27,7 @@ export default async function OrdersPage() {
     context.role === 'admin'
       ? supabase
           .from('orders')
-          .select('id, cod_amount, status, variant, quantity, deleted_at, customer:customers(id, name, phone, city), product:products(id, name, price)')
+          .select('id, cod_amount, status, variant, quantity, notes, created_at, deleted_at, customer:customers(id, name, phone, city), product:products(id, name, price)')
           .eq('seller_id', context.sellerId)
           .not('deleted_at', 'is', null)
           .order('deleted_at', { ascending: false })

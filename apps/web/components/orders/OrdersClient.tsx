@@ -43,6 +43,8 @@ type TrashOrder = {
   status: OrderStatus
   variant?: string
   quantity: number
+  notes?: string
+  created_at: string
   deleted_at: string
   customer: OrderCustomer | OrderCustomer[] | null
   product: OrderProduct | OrderProduct[] | null
@@ -377,12 +379,39 @@ export default function OrdersClient({
 
   function handleRestore(id: string) {
     setActionError(null)
+    const trashedOrder = localTrashOrders.find(o => o.id === id)
+    if (!trashedOrder) return
+
     const prevTrash = localTrashOrders
+    const prevAll = allOrders
+    const prevCounts = localTabCounts
+
+    // Optimistic : retirer de la corbeille ET ajouter aux commandes actives
     setLocalTrashOrders(prev => prev.filter(o => o.id !== id))
+    const restoredOrder: Order = {
+      id: trashedOrder.id,
+      cod_amount: trashedOrder.cod_amount,
+      status: trashedOrder.status,
+      variant: trashedOrder.variant,
+      quantity: trashedOrder.quantity,
+      notes: trashedOrder.notes,
+      created_at: trashedOrder.created_at,
+      customer: trashedOrder.customer,
+      product: trashedOrder.product,
+    }
+    setAllOrders(prev => [restoredOrder, ...prev])
+    setLocalTabCounts(prev => ({
+      ...prev,
+      all: (prev.all ?? 0) + 1,
+      [trashedOrder.status]: (prev[trashedOrder.status] ?? 0) + 1,
+    }))
+
     startTransition(async () => {
       const result = await restoreOrder(id)
       if (result?.error) {
         setLocalTrashOrders(prevTrash)
+        setAllOrders(prevAll)
+        setLocalTabCounts(prevCounts)
         setActionError(result.error)
       } else {
         showToast('✓ Commande restaurée')
