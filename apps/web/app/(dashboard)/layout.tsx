@@ -67,14 +67,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <RoleProvider role={context.role} sellerId={context.sellerId} isSeller={context.isSeller}>
       <MobileSidebarProvider>
-        <div className="flex h-dvh bg-[#FAFAF9]">
+        <div className="flex min-h-[100svh] bg-[#FAFAF9] md:h-screen md:min-h-0">
           <div className="hidden shrink-0 md:flex">
             <Sidebar role={context.role} sellerName={displayName} plan={context.plan} />
           </div>
           <MobileSidebar role={context.role} sellerName={displayName} plan={context.plan} />
-          <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+          <div className="flex-1 flex flex-col min-w-0 md:overflow-hidden">
             <TopBar sellerName={displayName} role={context.role} isSeller={context.isSeller} />
-            <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:p-6 md:pb-6">{children}</main>
+            <main className="flex-1 overflow-x-hidden p-4 pb-[calc(8rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(8rem+env(safe-area-inset-bottom))] md:overflow-y-auto md:pb-6">{children}</main>
           </div>
           <BottomNav role={context.role} plan={context.plan} />
         </div>
