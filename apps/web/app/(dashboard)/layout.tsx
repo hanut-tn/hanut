@@ -67,7 +67,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <RoleProvider role={context.role} sellerId={context.sellerId} isSeller={context.isSeller}>
       <MobileNavProvider>
-        <div className="flex min-h-screen bg-[#FAFAF9]">
+        <div className="flex min-h-dvh bg-[#FAFAF9]">
 
           {/* Sidebar desktop — cachée sur mobile */}
           <div className="hidden md:flex shrink-0">

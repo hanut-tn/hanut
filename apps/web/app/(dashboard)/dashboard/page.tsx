@@ -133,7 +133,7 @@ export default async function DashboardPage() {
       )}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KPICard
           label="Commandes"
           value={String(ordersThisMonth)}
@@ -298,12 +298,12 @@ function KPICard({
   trendLabel: string
 }) {
   return (
-    <div className="bg-white border border-[#E7E5E4] rounded-xl p-5 shadow-sm">
-      <div className="flex items-start justify-between">
-        <p className="text-sm font-medium text-[#78716C]">{label}</p>
-        <Icon className="w-5 h-5 text-[#78716C]" />
+    <div className="bg-white border border-[#E7E5E4] rounded-xl p-3 sm:p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-1">
+        <p className="text-xs sm:text-sm font-medium text-[#78716C] leading-tight">{label}</p>
+        <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-[#78716C] shrink-0" />
       </div>
-      <p className={`text-3xl font-bold mt-2 ${valueClass}`}>{value}</p>
+      <p className={`text-2xl sm:text-3xl font-bold mt-2 ${valueClass}`}>{value}</p>
       <div className="flex items-center justify-between mt-1">
         <p className="text-xs text-[#78716C]">{sub}</p>
         {trendLabel && (
