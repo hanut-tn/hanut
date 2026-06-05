@@ -5,13 +5,13 @@ import Link from 'next/link'
 import Image from 'next/image'
 import {
   Search, LayoutGrid, List, Plus, Package, SearchX,
-  ImageOff, Pencil, Trash2, Eye, ChevronDown,
+  ImageOff, Pencil, Trash2, Eye, ChevronDown, AlertTriangle, PackageX, CheckCircle2,
 } from 'lucide-react'
 import type { Product } from '@hanut/types'
 import type { ProductInput } from '@/app/(dashboard)/catalog/actions'
 import ProductModal from './ProductModal'
 
-type ViewMode = 'grid' | 'list'
+type ViewMode = 'grid' | 'list' | 'restock'
 type SortMode = 'newest' | 'price_asc' | 'price_desc' | 'low_stock'
 type StockFilter = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock'
 
@@ -280,6 +280,9 @@ function ProductListMobileCard({
 
 export default function CatalogClient({ products, role, upsertProduct, deleteProduct }: Props) {
   const [view, setView] = useState<ViewMode>('grid')
+  const outOfStockCount = products.filter(p => p.stock === 0).length
+  const lowStockCount = products.filter(p => p.stock > 0 && p.stock <= p.low_stock_alert).length
+  const alertCount = outOfStockCount + lowStockCount
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<SortMode>('newest')
   const [stockFilter, setStockFilter] = useState<StockFilter>('all')
@@ -369,6 +372,26 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
         )}
       </div>
 
+      {/* Alert banner */}
+      {alertCount > 0 && view !== 'restock' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <p className="text-sm text-amber-800">
+              {outOfStockCount > 0 && <span className="font-semibold">{outOfStockCount} en rupture</span>}
+              {outOfStockCount > 0 && lowStockCount > 0 && ' · '}
+              {lowStockCount > 0 && <span className="font-semibold">{lowStockCount} en stock bas</span>}
+            </p>
+          </div>
+          <button
+            onClick={() => setView('restock')}
+            className="text-xs text-amber-700 hover:text-amber-900 font-medium whitespace-nowrap underline"
+          >
+            Voir →
+          </button>
+        </div>
+      )}
+
       {/* Toolbar: search + view + sort + filter */}
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         {/* Search */}
@@ -387,9 +410,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
           <button
             onClick={() => setView('grid')}
             className={`flex flex-1 justify-center px-3 py-2 transition-colors sm:flex-none ${
-              view === 'grid'
-                ? 'bg-[#0B5E46] text-white'
-                : 'text-[#78716C] hover:bg-[#FAFAF9]'
+              view === 'grid' ? 'bg-[#0B5E46] text-white' : 'text-[#78716C] hover:bg-[#FAFAF9]'
             }`}
           >
             <LayoutGrid className="w-4 h-4" />
@@ -397,12 +418,24 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
           <button
             onClick={() => setView('list')}
             className={`flex flex-1 justify-center px-3 py-2 transition-colors sm:flex-none ${
-              view === 'list'
-                ? 'bg-[#0B5E46] text-white'
-                : 'text-[#78716C] hover:bg-[#FAFAF9]'
+              view === 'list' ? 'bg-[#0B5E46] text-white' : 'text-[#78716C] hover:bg-[#FAFAF9]'
             }`}
           >
             <List className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setView('restock')}
+            className={`relative flex flex-1 items-center justify-center gap-1.5 px-3 py-2 transition-colors sm:flex-none ${
+              view === 'restock' ? 'bg-[#0B5E46] text-white' : 'text-[#78716C] hover:bg-[#FAFAF9]'
+            }`}
+            title="À réapprovisionner"
+          >
+            <PackageX className="w-4 h-4" />
+            {alertCount > 0 && (
+              <span className={`text-[10px] font-bold leading-none px-1 py-0.5 rounded-full ${view === 'restock' ? 'bg-white text-[#0B5E46]' : 'bg-red-500 text-white'}`}>
+                {alertCount}
+              </span>
+            )}
           </button>
         </div>
 
@@ -437,8 +470,96 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
         </div>
       </div>
 
-      {/* Empty state — no products at all */}
-      {products.length === 0 ? (
+      {/* À RÉAPPROVISIONNER view */}
+      {view === 'restock' && (() => {
+        const alertProducts = allProducts
+          .filter(p => p.stock === 0 || p.stock <= p.low_stock_alert)
+          .sort((a, b) => {
+            if (a.stock === 0 && b.stock !== 0) return -1
+            if (b.stock === 0 && a.stock !== 0) return 1
+            return a.stock - b.stock
+          })
+        if (alertProducts.length === 0) {
+          return (
+            <div className="bg-white border border-[#E7E5E4] rounded-xl p-10 text-center">
+              <CheckCircle2 className="w-10 h-10 mx-auto mb-3 text-[#16A34A]" />
+              <p className="font-semibold text-[#1C1917]">Tous vos produits ont un stock suffisant</p>
+              <p className="text-sm text-[#78716C] mt-1">Aucun produit en rupture ou stock bas.</p>
+            </div>
+          )
+        }
+        return (
+          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm divide-y divide-[#E7E5E4] overflow-hidden">
+            {alertProducts.map(p => {
+              const isOut = p.stock === 0
+              const maxRef = Math.max(p.low_stock_alert * 4, p.stock, 10)
+              const pct = Math.min((p.stock / maxRef) * 100, 100)
+              const barColor = isOut ? 'bg-red-500' : pct > 20 ? 'bg-amber-500' : 'bg-red-400'
+
+              return (
+                <div key={p.id} className="flex items-center gap-4 px-4 py-3 sm:px-5 hover:bg-[#FAFAF9] transition-colors">
+                  {/* Thumbnail */}
+                  <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-[#F0FDF4] shrink-0 flex items-center justify-center">
+                    {p.image_url ? (
+                      <Image src={p.image_url} alt={p.name} fill sizes="40px" className="object-cover"
+                        placeholder="blur" blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AJQAB/9k=" />
+                    ) : (
+                      <ImageOff className="w-4 h-4 text-[#78716C] opacity-40" />
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium text-sm text-[#1C1917] truncate">{p.name}</p>
+                      <span className={`shrink-0 text-[10px] px-2 py-0.5 rounded-full font-medium border ${
+                        isOut ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                      }`}>
+                        {isOut ? 'Rupture' : 'Stock bas'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-xs text-[#78716C]">Stock : {p.stock}</span>
+                      <div className="h-1.5 w-20 rounded-full bg-[#E7E5E4]">
+                        <div className={`h-1.5 rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-xs text-[#78716C]">Seuil : {p.low_stock_alert}</span>
+                    </div>
+                    {p.variants.length > 0 && (
+                      <p className="text-xs text-[#A8A29E] mt-0.5">
+                        {p.variants.map((v, i) => {
+                          const label = [v.size, v.color].filter(Boolean).join(' / ') || `V${i + 1}`
+                          return `${label}(${v.qty})`
+                        }).join(' · ')}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Link
+                      href={`/catalog/${p.id}`}
+                      className="text-xs bg-[#F0FDF4] text-[#16A34A] border border-[#BBF7D0] hover:bg-green-100 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                    >
+                      +Stock
+                    </Link>
+                    <Link
+                      href={`/catalog/${p.id}`}
+                      className="p-1.5 text-[#78716C] hover:text-[#0B5E46] hover:bg-green-50 rounded-lg transition-colors"
+                      title="Voir le détail"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Link>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )
+      })()}
+
+      {/* Grid / List views (hidden in restock tab) */}
+      {view !== 'restock' && (products.length === 0 ? (
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-8 text-center sm:p-16">
           <Package className="w-12 h-12 mx-auto mb-4 text-[#78716C] opacity-30" />
           <p className="font-semibold text-[#1C1917] text-lg mb-1">Votre catalogue est vide</p>
@@ -620,7 +741,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
           </table>
         </div>
         </>
-      )}
+      ))}
 
       {/* Confirm delete modal */}
       {confirmDelete && (

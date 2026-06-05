@@ -7,9 +7,11 @@ import Image from 'next/image'
 import {
   ArrowLeft, Pencil, Trash2, Package, TrendingUp,
   ShoppingCart, RotateCcw, Settings, AlertTriangle, ImageOff, ShoppingBag, X,
+  Calendar, RefreshCw,
 } from 'lucide-react'
 import type { Product, ProductVariant } from '@hanut/types'
 import type { ProductInput, StockAdjustmentInput } from '@/app/(dashboard)/catalog/actions'
+import type { RestockOrderInput, CostUpdateMode } from '@/app/(dashboard)/catalog/restock-actions'
 import ProductModal from './ProductModal'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 
@@ -46,16 +48,31 @@ type ProductStats = {
 
 type AdjustType = 'restock' | 'correction' | 'return' | 'loss'
 
+type PlannedRestock = {
+  id: string
+  total_quantity: number
+  unit_cost: number | null
+  supplier: string | null
+  expected_date: string | null
+  created_at: string
+  variants_quantities: { variant: string; quantity: number }[]
+}
+
 type Props = {
   product: Product
   role: string
   stats: ProductStats
   recentOrders: RecentOrder[]
   stockMovements: StockMovement[]
+  plannedRestocks: PlannedRestock[]
   hasBlockingOrders: boolean
   upsertProduct: (input: ProductInput) => Promise<{ error?: string }>
   deleteProduct: (id: string) => Promise<{ error?: string }>
   adjustStock: (id: string, input: StockAdjustmentInput) => Promise<{ error?: string }>
+  createRestockOrder: (productId: string, input: RestockOrderInput) => Promise<{ error?: string; id?: string }>
+  receiveRestockOrder: (restockId: string, mode: CostUpdateMode) => Promise<{ error?: string }>
+  cancelRestockOrder: (restockId: string) => Promise<{ error?: string }>
+  syncProductStock: (productId: string) => Promise<{ error?: string; newStock?: number }>
 }
 
 function getVariantLabel(v: ProductVariant, i: number) {
@@ -85,10 +102,15 @@ export default function ProductDetailClient({
   stats,
   recentOrders,
   stockMovements,
+  plannedRestocks,
   hasBlockingOrders,
   upsertProduct,
   deleteProduct,
   adjustStock,
+  createRestockOrder,
+  receiveRestockOrder,
+  cancelRestockOrder,
+  syncProductStock,
 }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -115,6 +137,12 @@ export default function ProductDetailClient({
   const [stockError, setStockError] = useState<string | null>(null)
   const [toastMsg, setToastMsg] = useState<string | null>(null)
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Planned restock toggle
+  const [isPlanned, setIsPlanned] = useState(false)
+  const [plannedDate, setPlannedDate] = useState('')
+  const [costUpdateMode, setCostUpdateMode] = useState<CostUpdateMode>('wac')
+  // Planned restocks list (optimistic)
+  const [localPlannedRestocks, setLocalPlannedRestocks] = useState<PlannedRestock[]>(plannedRestocks)
 
   const hasVariants = currentVariants.length > 0
 
@@ -126,6 +154,9 @@ export default function ProductDetailClient({
     setAdjustNotes('')
     setVariantAdjs({})
     setStockError(null)
+    setIsPlanned(false)
+    setPlannedDate('')
+    setCostUpdateMode('wac')
     setShowStockModal(true)
   }
 
@@ -151,14 +182,32 @@ export default function ProductDetailClient({
     return currentStock - adjustQty
   })()
 
+  const unitCostNum = parseFloat(adjustUnitCost) || 0
+
+  const wacResult = (() => {
+    if (adjustType !== 'restock' || !unitCostNum || unitCostNum <= 0) return null
+    if (!currentCost || currentStock <= 0) return null
+    const qty = hasVariants ? totalVariantDelta : adjustQty
+    if (qty <= 0) return null
+    const totalQty = currentStock + qty
+    const wac = Math.round((currentStock * currentCost + qty * unitCostNum) / totalQty * 100) / 100
+    return { wac, qty, totalQty }
+  })()
+
   const newMarginPreview = (() => {
-    const cost = parseFloat(adjustUnitCost)
-    if (adjustType !== 'restock' || !cost || cost <= 0 || !product.price) return null
-    return Math.round(((product.price - cost) / product.price) * 100)
+    if (adjustType !== 'restock' || !product.price) return null
+    let costToUse: number | null = null
+    if (wacResult && costUpdateMode === 'wac') costToUse = wacResult.wac
+    else if (unitCostNum > 0 && costUpdateMode === 'new') costToUse = unitCostNum
+    else if (currentCost && costUpdateMode === 'keep') costToUse = currentCost
+    else if (unitCostNum > 0) costToUse = unitCostNum
+    if (!costToUse) return null
+    return Math.round(((product.price - costToUse) / product.price) * 100)
   })()
 
   const summaryDelta = newStockPreview - currentStock
   const canConfirm = (() => {
+    if (isPlanned) return effectiveQty > 0
     if (adjustType === 'correction') return adjustQty >= 0 && adjustNotes.trim().length > 0
     if (adjustType === 'loss') return effectiveQty > 0 && effectiveQty <= currentStock && adjustNotes.trim().length > 0
     if (adjustType === 'return') return effectiveQty > 0 && effectiveQty <= currentStock
@@ -176,10 +225,48 @@ export default function ProductDetailClient({
     const input: StockAdjustmentInput = {
       type: adjustType,
       quantity: adjustQty,
-      unitCost: adjustType === 'restock' ? parseFloat(adjustUnitCost) || null : null,
+      unitCost: adjustType === 'restock' ? unitCostNum || null : null,
+      costUpdateMode: adjustType === 'restock' ? costUpdateMode : undefined,
       supplier: adjustType === 'restock' ? adjustSupplier.trim() || null : null,
       notes: adjustNotes.trim() || null,
       variantAdjustments,
+    }
+
+    // Handle planned restock separately
+    if (isPlanned && adjustType === 'restock') {
+      const restockInput: RestockOrderInput = {
+        totalQuantity: hasVariants ? totalVariantDelta : adjustQty,
+        unitCost: unitCostNum || null,
+        supplier: adjustSupplier.trim() || null,
+        expectedDate: plannedDate || null,
+        notes: adjustNotes.trim() || null,
+        variantsQuantities: variantAdjustments?.filter(item => item.value > 0)
+          .map(item => ({ variant: item.label, quantity: item.value })),
+      }
+      setShowStockModal(false)
+      startTransition(async () => {
+        const result = await createRestockOrder(product.id, restockInput)
+        if (result?.error) {
+          setStockError(result.error)
+          setShowStockModal(true)
+        } else {
+          if (result.id) {
+            setLocalPlannedRestocks(prev => [{
+              id: result.id!,
+              total_quantity: restockInput.totalQuantity,
+              unit_cost: restockInput.unitCost ?? null,
+              supplier: restockInput.supplier ?? null,
+              expected_date: restockInput.expectedDate ?? null,
+              created_at: new Date().toISOString(),
+              variants_quantities: restockInput.variantsQuantities ?? [],
+            }, ...prev])
+          }
+          setToastMsg(`Réapprovisionnement planifié : +${restockInput.totalQuantity} unités`)
+          if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+          toastTimeoutRef.current = setTimeout(() => setToastMsg(null), 3500)
+        }
+      })
+      return
     }
 
     const deltaForToast = summaryDelta
@@ -194,8 +281,10 @@ export default function ProductDetailClient({
     const prevVariants = currentVariants
 
     setCurrentStock(newStockPreview)
-    if (adjustType === 'restock' && parseFloat(adjustUnitCost) > 0) {
-      setCurrentCost(parseFloat(adjustUnitCost))
+    if (adjustType === 'restock' && unitCostNum > 0) {
+      if (wacResult && costUpdateMode === 'wac') setCurrentCost(wacResult.wac)
+      else if (costUpdateMode === 'new') setCurrentCost(unitCostNum)
+      else if (costUpdateMode === 'wac' && !wacResult) setCurrentCost(unitCostNum)
     }
     if (hasVariants && variantAdjustments) {
       const updated = currentVariants.map((v, i) => {
@@ -374,6 +463,98 @@ export default function ProductDetailClient({
               )}
             </p>
 
+            {/* Sync badge */}
+            {hasVariants && currentVariants.reduce((s, v) => s + v.qty, 0) !== currentStock && (
+              <div className="flex items-center justify-between rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
+                <p className="text-xs text-amber-700 font-medium">
+                  ⚠️ Stock désynchronisé avec les variantes
+                </p>
+                <button
+                  onClick={() => {
+                    startTransition(async () => {
+                      const result = await syncProductStock(product.id)
+                      if (result.newStock !== undefined) setCurrentStock(result.newStock)
+                    })
+                  }}
+                  disabled={isPending}
+                  className="text-xs text-amber-800 hover:text-amber-900 font-semibold flex items-center gap-1 disabled:opacity-50"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Synchroniser
+                </button>
+              </div>
+            )}
+
+            {/* Réapprovisionnements planifiés */}
+            {localPlannedRestocks.length > 0 && (
+              <div className="border-t border-[#E7E5E4] pt-4 space-y-2">
+                <p className="text-xs font-semibold text-[#78716C] uppercase tracking-wide">Planifiés</p>
+                {localPlannedRestocks.map(r => {
+                  const today = new Date().toISOString().slice(0, 10)
+                  const isLate = r.expected_date && r.expected_date < today
+                  return (
+                    <div key={r.id} className="flex items-center gap-2 text-xs py-1.5 border-b border-[#F5F5F4] last:border-0">
+                      <Calendar className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <span className="font-semibold text-[#16A34A]">+{r.total_quantity}</span>
+                        <span className="text-[#78716C] ml-1">
+                          {r.expected_date
+                            ? `— prévu le ${new Date(r.expected_date).toLocaleDateString('fr-TN', { day: 'numeric', month: 'short' })}`
+                            : '— date non fixée'}
+                        </span>
+                        {r.supplier && <span className="text-[#A8A29E] ml-1">· {r.supplier}</span>}
+                        {isLate && <span className="ml-1 text-red-600 font-medium">En retard</span>}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => {
+                            startTransition(async () => {
+                              const result = await receiveRestockOrder(r.id, 'wac')
+                              if (!result.error) {
+                                setLocalPlannedRestocks(prev => prev.filter(x => x.id !== r.id))
+                                const stockBeforeReceive = currentStock
+                                setCurrentStock(s => s + r.total_quantity)
+                                if (r.variants_quantities.length > 0) {
+                                  setCurrentVariants(prev => prev.map((variant, index) => {
+                                    const qty = r.variants_quantities.find(item => item.variant === getVariantLabel(variant, index))?.quantity ?? 0
+                                    return { ...variant, qty: variant.qty + Math.max(0, qty) }
+                                  }))
+                                }
+                                if (r.unit_cost && r.unit_cost > 0) {
+                                  setCurrentCost(currentCost && stockBeforeReceive > 0
+                                    ? Math.round(((stockBeforeReceive * currentCost + r.total_quantity * r.unit_cost) / (stockBeforeReceive + r.total_quantity)) * 100) / 100
+                                    : r.unit_cost)
+                                }
+                                if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+                                setToastMsg(`+${r.total_quantity} unités reçues`)
+                                toastTimeoutRef.current = setTimeout(() => setToastMsg(null), 3000)
+                              }
+                            })
+                          }}
+                          disabled={isPending}
+                          className="text-[10px] bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 px-2 py-0.5 rounded font-medium disabled:opacity-50"
+                        >
+                          ✓ Reçu
+                        </button>
+                        <button
+                          onClick={() => {
+                            startTransition(async () => {
+                              const result = await cancelRestockOrder(r.id)
+                              if (!result.error) setLocalPlannedRestocks(prev => prev.filter(x => x.id !== r.id))
+                            })
+                          }}
+                          disabled={isPending}
+                          className="text-[10px] text-[#78716C] hover:text-red-600 px-1 py-0.5 rounded disabled:opacity-50"
+                        >
+                          ✗
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
             {/* Historique des mouvements de stock */}
             {stockMovements.length > 0 && (
               <div className="border-t border-[#E7E5E4] pt-4 space-y-2">
@@ -499,7 +680,7 @@ export default function ProductDetailClient({
                     <button
                       key={key}
                       type="button"
-                      onClick={() => { setAdjustType(key); setVariantAdjs({}); setAdjustQty(key === 'correction' ? currentStock : 0) }}
+                      onClick={() => { setAdjustType(key); setVariantAdjs({}); setAdjustQty(key === 'correction' ? currentStock : 0); setIsPlanned(false) }}
                       className={`flex items-start gap-2.5 rounded-xl p-3 text-left transition-all ${
                         adjustType === key
                           ? 'border-2 border-[#16A34A] bg-[#F0FDF4]'
@@ -520,6 +701,16 @@ export default function ProductDetailClient({
               {/* RÉAPPROVISIONNEMENT */}
               {adjustType === 'restock' && (
                 <div className="space-y-4">
+                  {/* Planned / received toggle */}
+                  <div className="flex rounded-xl border border-[#E7E5E4] overflow-hidden">
+                    {[{ v: false, label: 'Déjà reçu' }, { v: true, label: 'Planifié' }].map(opt => (
+                      <button key={String(opt.v)} type="button" onClick={() => setIsPlanned(opt.v)}
+                        className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${isPlanned === opt.v ? 'bg-[#0B5E46] text-white' : 'text-[#78716C] hover:bg-[#F5F5F4]'}`}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+
                   {!hasVariants && (
                     <div>
                       <label className="block text-sm font-medium text-[#1C1917] mb-1">Quantité reçue</label>
@@ -582,15 +773,62 @@ export default function ProductDetailClient({
                       <label className="block text-sm font-medium text-[#1C1917] mb-1">Prix d&apos;achat unitaire (DT)</label>
                       <input className="input" type="number" min="0" step="0.01" value={adjustUnitCost}
                         onChange={e => setAdjustUnitCost(e.target.value)} placeholder="Optionnel" />
-                      {newMarginPreview !== null && (
-                        <p className="text-xs text-[#16A34A] mt-1">Nouvelle marge : <strong>{newMarginPreview}%</strong></p>
-                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-[#1C1917] mb-1">Fournisseur</label>
                       <input className="input" value={adjustSupplier} onChange={e => setAdjustSupplier(e.target.value)} placeholder="Optionnel" />
                     </div>
                   </div>
+
+                  {/* Planned date */}
+                  {isPlanned && (
+                    <div>
+                      <label className="block text-sm font-medium text-[#1C1917] mb-1">
+                        <Calendar className="inline w-3.5 h-3.5 mr-1" />
+                        Date de réception prévue
+                      </label>
+                      <input className="input" type="date" value={plannedDate} onChange={e => setPlannedDate(e.target.value)} min={new Date().toISOString().slice(0, 10)} />
+                    </div>
+                  )}
+
+                  {isPlanned && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700">
+                      Le stock sera mis à jour à la réception. Un rappel apparaîtra dans la fiche produit.
+                    </div>
+                  )}
+
+                  {/* WAC calculation */}
+                  {!isPlanned && wacResult && currentCost && (
+                    <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl p-3 space-y-2">
+                      <p className="text-xs font-semibold text-[#166534]">Coût moyen pondéré (CMP)</p>
+                      <div className="text-xs text-[#1C1917] space-y-0.5">
+                        <p>Actuel : {currentStock} unités × {currentCost} DT = {(currentStock * currentCost).toFixed(2)} DT</p>
+                        <p>Entrée : +{wacResult.qty} unités × {unitCostNum} DT = {(wacResult.qty * unitCostNum).toFixed(2)} DT</p>
+                        <p className="font-semibold border-t border-[#BBF7D0] pt-1 mt-1">
+                          CMP = <span className="text-[#0B5E46]">{wacResult.wac} DT</span>
+                          {newMarginPreview !== null && <span className="ml-2 text-[#16A34A]">→ marge {newMarginPreview}%</span>}
+                        </p>
+                      </div>
+                      <div className="space-y-1 pt-1 border-t border-[#BBF7D0]">
+                        <p className="text-xs font-medium text-[#1C1917]">Mettre à jour le prix d&apos;achat ?</p>
+                        {([
+                          { v: 'wac' as CostUpdateMode, label: `Oui, CMP (${wacResult.wac} DT)` },
+                          { v: 'new' as CostUpdateMode, label: `Oui, nouveau prix (${unitCostNum} DT)` },
+                          { v: 'keep' as CostUpdateMode, label: `Non, garder (${currentCost} DT)` },
+                        ] as { v: CostUpdateMode; label: string }[]).map(opt => (
+                          <label key={opt.v} className="flex items-center gap-2 text-xs cursor-pointer">
+                            <input type="radio" name="costUpdateMode" value={opt.v} checked={costUpdateMode === opt.v} onChange={() => setCostUpdateMode(opt.v)} className="accent-[#16A34A]" />
+                            {opt.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Simple margin if no WAC */}
+                  {!isPlanned && !wacResult && newMarginPreview !== null && (
+                    <p className="text-xs text-[#16A34A]">Marge : <strong>{newMarginPreview}%</strong></p>
+                  )}
                 </div>
               )}
 
@@ -727,7 +965,7 @@ export default function ProductDetailClient({
                 disabled={isPending || !canConfirm}
                 className="btn-primary flex-1 disabled:opacity-40"
               >
-                {isPending ? 'Enregistrement...' : 'Confirmer'}
+                {isPending ? 'Enregistrement...' : isPlanned ? 'Planifier' : 'Confirmer'}
               </button>
             </div>
           </div>

@@ -3,6 +3,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import ProductDetailClient from '@/components/catalog/ProductDetailClient'
 import { upsertProduct, deleteProduct, adjustStock } from '../actions'
+import { createRestockOrder, receiveRestockOrder, cancelRestockOrder, syncProductStock } from '../restock-actions'
 import type { Product } from '@hanut/types'
 
 type Props = {
@@ -46,6 +47,7 @@ export default async function ProductDetailPage({ params }: Props) {
     { count: returnedCount },
     { data: rawRecentOrders },
     { count: linkedOrdersCount },
+    { data: rawPlannedRestocks },
   ] = await Promise.all([
     supabase
       .from('orders')
@@ -92,7 +94,15 @@ export default async function ProductDetailPage({ params }: Props) {
       .from('orders')
       .select('id', { count: 'exact', head: true })
       .eq('product_id', id)
+      .eq('seller_id', context.sellerId),
+
+    supabase
+      .from('restock_orders')
+      .select('id, total_quantity, unit_cost, supplier, expected_date, created_at, variants_quantities')
+      .eq('product_id', id)
       .eq('seller_id', context.sellerId)
+      .eq('status', 'planned')
+      .order('created_at', { ascending: false }),
   ])
 
   const totalRevenue = deliveredOrders?.reduce((sum, o) => sum + (o.cod_amount ?? 0), 0) ?? 0
@@ -115,6 +125,16 @@ export default async function ProductDetailPage({ params }: Props) {
     }
   })
 
+  const plannedRestocks = (rawPlannedRestocks ?? []).map(r => ({
+    id: r.id as string,
+    total_quantity: r.total_quantity as number,
+    unit_cost: r.unit_cost as number | null,
+    supplier: r.supplier as string | null,
+    expected_date: r.expected_date as string | null,
+    created_at: r.created_at as string,
+    variants_quantities: (r.variants_quantities ?? []) as { variant: string; quantity: number }[],
+  }))
+
   return (
     <ProductDetailClient
       product={product as Product}
@@ -128,10 +148,15 @@ export default async function ProductDetailPage({ params }: Props) {
       }}
       recentOrders={recentOrders}
       stockMovements={stockMovements}
+      plannedRestocks={plannedRestocks}
       hasBlockingOrders={(linkedOrdersCount ?? 0) > 0}
       upsertProduct={upsertProduct}
       deleteProduct={deleteProduct}
       adjustStock={adjustStock}
+      createRestockOrder={createRestockOrder}
+      receiveRestockOrder={receiveRestockOrder}
+      cancelRestockOrder={cancelRestockOrder}
+      syncProductStock={syncProductStock}
     />
   )
 }

@@ -11,6 +11,9 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { OperatorDashboard } from '@/components/dashboard/OperatorDashboard'
 import { ReadonlyDashboard } from '@/components/dashboard/ReadonlyDashboard'
 import { initials } from '@/lib/utils'
+import LowStockWidget from '@/components/dashboard/LowStockWidget'
+import { adjustStock } from '@/app/(dashboard)/catalog/actions'
+import { createRestockOrder } from '@/app/(dashboard)/catalog/restock-actions'
 
 type RecentOrder = {
   id: string
@@ -48,6 +51,7 @@ export default async function DashboardPage() {
     { data: seller },
     { count: productCount },
     { count: orderCount },
+    { data: stockProducts },
   ] = await Promise.all([
     supabase.from('orders').select('cod_amount, created_at').eq('seller_id', context.sellerId).eq('status', 'delivered').is('deleted_at', null).gte('created_at', startOfMonth.toISOString()),
     supabase.from('orders').select('status').eq('seller_id', context.sellerId).is('deleted_at', null).gte('created_at', startOfMonth.toISOString()),
@@ -58,6 +62,7 @@ export default async function DashboardPage() {
     supabase.from('sellers').select('slug, onboarding_completed, onboarding_steps').eq('id', context.sellerId).single(),
     supabase.from('products').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId),
     supabase.from('orders').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId).is('deleted_at', null),
+    supabase.from('products').select('id, name, stock, low_stock_alert, image_url, price, cost').eq('seller_id', context.sellerId).order('stock', { ascending: true }).limit(50),
   ])
 
   // Current month KPIs
@@ -104,6 +109,9 @@ export default async function DashboardPage() {
 
   // COD pending (orders confirmed or shipped — not yet delivered/reversed)
   const codPending = all.filter(o => ['confirmed', 'shipped'].includes(o.status)).length
+  const lowStockProducts = ((stockProducts ?? []) as Parameters<typeof LowStockWidget>[0]['products'])
+    .filter(product => product.stock === 0 || product.stock <= product.low_stock_alert)
+    .slice(0, 10)
 
   return (
     <div className="space-y-6">
@@ -263,6 +271,15 @@ export default async function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Low stock widget */}
+      {lowStockProducts.length > 0 && (
+        <LowStockWidget
+          products={lowStockProducts}
+          adjustStock={adjustStock}
+          createRestockOrder={createRestockOrder}
+        />
+      )}
 
       {/* Recent orders */}
       <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-6">

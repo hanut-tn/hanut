@@ -176,6 +176,7 @@ export type StockAdjustmentInput = {
   type: 'restock' | 'correction' | 'return' | 'loss'
   quantity: number
   unitCost?: number | null
+  costUpdateMode?: 'wac' | 'new' | 'keep'
   supplier?: string | null
   notes?: string | null
   variantAdjustments?: { label: string; value: number }[]
@@ -199,13 +200,17 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
   const variants = (product.variants ?? []) as Variant[]
   const hasVariants = variants.length > 0
 
+  if (!Number.isInteger(input.quantity) || input.quantity < 0) return { error: 'Quantité invalide' }
+  if (input.unitCost != null && input.unitCost < 0) return { error: "Prix d'achat invalide" }
+
   // Calculer le nouveau stock et le delta
   let newStock: number
   let delta: number
+  let updatedVariants: Variant[] | null = null
 
   if (hasVariants && input.variantAdjustments && input.variantAdjustments.length > 0) {
     // Ajustement par variante — recalculer le stock global depuis les variantes
-    const updatedVariants = variants.map((v, i) => {
+    updatedVariants = variants.map((v, i) => {
       const label = [v.size, v.color].filter(Boolean).join(' / ') || `Variante ${i + 1}`
       const adj = input.variantAdjustments!.find(a => a.label === label)
       if (!adj) return v
@@ -221,11 +226,6 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
     })
     newStock = updatedVariants.reduce((s, v) => s + v.qty, 0)
     delta = newStock - product.stock
-
-    const { error: varErr } = await supabase.from('products')
-      .update({ stock: newStock, variants: updatedVariants })
-      .eq('id', id).eq('seller_id', context.sellerId)
-    if (varErr) return { error: varErr.message }
   } else {
     if (input.type === 'restock') {
       delta = input.quantity
@@ -240,16 +240,28 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
 
     if (newStock < 0) return { error: 'Le stock ne peut pas être négatif' }
 
-    const productUpdate: Record<string, unknown> = { stock: newStock }
-    if (input.type === 'restock' && input.unitCost != null && input.unitCost > 0) {
+  }
+
+  if (newStock < 0) return { error: 'Le stock ne peut pas être négatif' }
+
+  const productUpdate: Record<string, unknown> = { stock: newStock }
+  if (updatedVariants) productUpdate.variants = updatedVariants
+
+  if (input.type === 'restock' && input.unitCost != null && input.unitCost > 0 && input.costUpdateMode !== 'keep') {
+    const mode = input.costUpdateMode ?? 'new'
+    if (mode === 'wac') {
+      productUpdate.cost = product.cost && product.stock > 0 && delta > 0
+        ? Math.round(((product.stock * product.cost + delta * input.unitCost) / newStock) * 100) / 100
+        : input.unitCost
+    } else if (mode === 'new') {
       productUpdate.cost = input.unitCost
     }
-
-    const { error: upErr } = await supabase.from('products')
-      .update(productUpdate)
-      .eq('id', id).eq('seller_id', context.sellerId)
-    if (upErr) return { error: upErr.message }
   }
+
+  const { error: upErr } = await supabase.from('products')
+    .update(productUpdate)
+    .eq('id', id).eq('seller_id', context.sellerId)
+  if (upErr) return { error: upErr.message }
 
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
   const sellerName = seller?.name ?? ''
