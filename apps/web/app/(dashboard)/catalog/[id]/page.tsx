@@ -30,6 +30,15 @@ export default async function ProductDetailPage({ params }: Props) {
   startOfMonth.setDate(1)
   startOfMonth.setHours(0, 0, 0, 0)
 
+  const stockMovementsRes = await supabase
+    .from('stock_movements')
+    .select('id, delta, quantity_before, quantity_after, movement_type, unit_cost, supplier, notes, created_by_name, created_at, variant_name')
+    .eq('product_id', id)
+    .eq('seller_id', context.sellerId)
+    .order('created_at', { ascending: false })
+    .limit(10)
+  const stockMovements = stockMovementsRes.data ?? []
+
   const [
     { count: totalOrders },
     { data: deliveredOrders },
@@ -118,6 +127,7 @@ export default async function ProductDetailPage({ params }: Props) {
         returnRate,
       }}
       recentOrders={recentOrders}
+      stockMovements={stockMovements}
       hasBlockingOrders={(linkedOrdersCount ?? 0) > 0}
       upsertProduct={upsertProduct}
       deleteProduct={deleteProduct}

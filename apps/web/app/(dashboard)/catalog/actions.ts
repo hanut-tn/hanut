@@ -172,39 +172,113 @@ export async function uploadProductImage(formData: FormData): Promise<{ url?: st
   return { url: publicUrl }
 }
 
-export async function adjustStock(id: string, newStock: number, reason: string): Promise<{ error?: string }> {
+export type StockAdjustmentInput = {
+  type: 'restock' | 'correction' | 'return' | 'loss'
+  quantity: number
+  unitCost?: number | null
+  supplier?: string | null
+  notes?: string | null
+  variantAdjustments?: { label: string; value: number }[]
+}
+
+export async function adjustStock(id: string, input: StockAdjustmentInput): Promise<{ error?: string }> {
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
-  if (!Number.isInteger(newStock) || newStock < 0) return { error: 'Stock invalide' }
-  if (!reason.trim()) return { error: 'La raison est obligatoire' }
 
   const supabase = await createServerClient()
 
   const { data: product } = await supabase.from('products')
-    .select('stock, name')
+    .select('stock, cost, name, variants')
     .eq('id', id)
     .eq('seller_id', context.sellerId)
     .single()
   if (!product) return { error: 'Produit introuvable' }
 
-  const { error } = await supabase.from('products')
-    .update({ stock: newStock })
-    .eq('id', id)
-    .eq('seller_id', context.sellerId)
-  if (error) return { error: error.message }
+  type Variant = { size?: string; color?: string; qty: number }
+  const variants = (product.variants ?? []) as Variant[]
+  const hasVariants = variants.length > 0
+
+  // Calculer le nouveau stock et le delta
+  let newStock: number
+  let delta: number
+
+  if (hasVariants && input.variantAdjustments && input.variantAdjustments.length > 0) {
+    // Ajustement par variante — recalculer le stock global depuis les variantes
+    const updatedVariants = variants.map((v, i) => {
+      const label = [v.size, v.color].filter(Boolean).join(' / ') || `Variante ${i + 1}`
+      const adj = input.variantAdjustments!.find(a => a.label === label)
+      if (!adj) return v
+      let newQty: number
+      if (input.type === 'correction') {
+        newQty = Math.max(0, adj.value)
+      } else if (input.type === 'restock') {
+        newQty = Math.max(0, v.qty + adj.value)
+      } else {
+        newQty = Math.max(0, v.qty - adj.value)
+      }
+      return { ...v, qty: newQty }
+    })
+    newStock = updatedVariants.reduce((s, v) => s + v.qty, 0)
+    delta = newStock - product.stock
+
+    const { error: varErr } = await supabase.from('products')
+      .update({ stock: newStock, variants: updatedVariants })
+      .eq('id', id).eq('seller_id', context.sellerId)
+    if (varErr) return { error: varErr.message }
+  } else {
+    if (input.type === 'restock') {
+      delta = input.quantity
+      newStock = product.stock + delta
+    } else if (input.type === 'correction') {
+      newStock = input.quantity
+      delta = newStock - product.stock
+    } else {
+      delta = -input.quantity
+      newStock = product.stock + delta
+    }
+
+    if (newStock < 0) return { error: 'Le stock ne peut pas être négatif' }
+
+    const productUpdate: Record<string, unknown> = { stock: newStock }
+    if (input.type === 'restock' && input.unitCost != null && input.unitCost > 0) {
+      productUpdate.cost = input.unitCost
+    }
+
+    const { error: upErr } = await supabase.from('products')
+      .update(productUpdate)
+      .eq('id', id).eq('seller_id', context.sellerId)
+    if (upErr) return { error: upErr.message }
+  }
 
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
+  const sellerName = seller?.name ?? ''
 
+  // Log dans stock_movements
+  await supabase.from('stock_movements').insert({
+    seller_id: context.sellerId,
+    product_id: id,
+    quantity_before: product.stock,
+    quantity_after: newStock,
+    delta,
+    movement_type: input.type,
+    unit_cost: input.unitCost ?? null,
+    supplier: input.supplier ?? null,
+    notes: input.notes ?? null,
+    created_by: context.userId,
+    created_by_name: sellerName,
+  })
+
+  const typeLabel = { restock: 'Réapprovisionnement', correction: "Correction d'inventaire", return: 'Retour fournisseur', loss: 'Perte / Casse' }
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: sellerName || context.userId,
     actionType: 'product_updated',
     entityType: 'product',
     entityId: id,
-    description: `a ajusté le stock de "${product.name}" : ${product.stock} → ${newStock} (${reason})`,
-    metadata: { oldStock: product.stock, newStock, reason },
+    description: `a ajusté le stock de "${product.name}" : ${product.stock} → ${newStock} (${typeLabel[input.type]})`,
+    metadata: { type: input.type, delta, stockBefore: product.stock, stockAfter: newStock },
   })
 
   revalidatePath('/catalog')
