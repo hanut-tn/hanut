@@ -24,6 +24,18 @@ vi.mock('next/cache', () => ({
   revalidateTag: serverMock.revalidateTag,
 }))
 
+vi.mock('@/lib/activity', () => ({
+  logActivity: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock('@/lib/constants', () => ({
+  DELETABLE_STATUSES: ['new', 'pending', 'returned'],
+  ORDER_STATUS_LABELS: {
+    pending: 'En attente', new: 'Nouveau', confirmed: 'Confirmé',
+    shipped: 'Expédié', delivered: 'Livré', returned: 'Retourné',
+  },
+}))
+
 import { createOrder } from '../app/(dashboard)/orders/actions'
 
 const input: CreateOrderInput = {
