@@ -14,12 +14,13 @@ type Props = {
 export default function OnboardingChecklist({ productAdded, linkCopied: initLC, firstOrder, slug }: Props) {
   const router = useRouter()
   const [linkCopied, setLinkCopied] = useState(initLC)
+  const [firstOrderSeen, setFirstOrderSeen] = useState(firstOrder)
   const [dismissed, setDismissed] = useState(false)
   const [celebrating, setCelebrating] = useState(false)
   const [fadingOut, setFadingOut] = useState(false)
   const [hidden, setHidden] = useState(false)
 
-  const completedCount = [productAdded, linkCopied, firstOrder].filter(Boolean).length
+  const completedCount = [productAdded, linkCopied, firstOrderSeen].filter(Boolean).length
   const allDone = completedCount === 3
 
   useEffect(() => {
@@ -31,6 +32,10 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
   useEffect(() => {
     setLinkCopied(initLC)
   }, [initLC])
+
+  useEffect(() => {
+    setFirstOrderSeen(firstOrder)
+  }, [firstOrder])
 
   useEffect(() => {
     if (allDone || hidden || dismissed) return
@@ -71,6 +76,25 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
     setLinkCopied(true)
   }
 
+  async function handleViewOrders() {
+    setFirstOrderSeen(true)
+    await fetch('/api/onboarding', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'first_order' }),
+    }).catch(() => {})
+
+    if (productAdded && linkCopied) {
+      await fetch('/api/onboarding', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'complete' }),
+      }).catch(() => {})
+    }
+
+    router.push('/orders')
+  }
+
   function handleDismiss() {
     sessionStorage.setItem('hanut_onboarding_dismissed', '1')
     setDismissed(true)
@@ -107,11 +131,11 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
     },
     {
       key: 'order',
-      done: firstOrder,
+      done: firstOrderSeen,
       title: 'Recevez votre première commande',
       desc: 'Vos clients commandent via votre lien, vous les confirmez',
       cta: 'Voir mes commandes',
-      action: () => router.push('/orders'),
+      action: handleViewOrders,
     },
   ]
   const activeIndex = steps.findIndex(step => !step.done)

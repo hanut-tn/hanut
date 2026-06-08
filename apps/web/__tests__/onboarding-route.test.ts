@@ -131,6 +131,28 @@ describe('PATCH /api/onboarding', () => {
     expect(updateQuery.eq).toHaveBeenCalledWith('id', 'seller-1')
   })
 
+  it('marks the first order step as completed while preserving existing steps', async () => {
+    mockContext()
+    const { updateQuery, updateQueryPayloads } = mockServerClient({
+      steps: { product_added: true, link_copied: true, first_order: false },
+    })
+
+    const response = await PATCH(jsonRequest({ action: 'first_order' }))
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ success: true })
+    expect(updateQueryPayloads).toEqual([
+      {
+        onboarding_steps: {
+          product_added: true,
+          link_copied: true,
+          first_order: true,
+        },
+      },
+    ])
+    expect(updateQuery.eq).toHaveBeenCalledWith('id', 'seller-1')
+  })
+
   it('surfaces Supabase update errors', async () => {
     mockContext()
     mockServerClient({ updateError: { message: 'RLS denied' } })

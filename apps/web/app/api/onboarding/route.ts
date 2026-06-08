@@ -2,10 +2,10 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import { NextRequest, NextResponse } from 'next/server'
 
-type OnboardingAction = 'link_copied' | 'complete'
+type OnboardingAction = 'link_copied' | 'first_order' | 'complete'
 
 function isOnboardingAction(action: unknown): action is OnboardingAction {
-  return action === 'link_copied' || action === 'complete'
+  return action === 'link_copied' || action === 'first_order' || action === 'complete'
 }
 
 export async function PATCH(req: NextRequest) {
@@ -19,7 +19,7 @@ export async function PATCH(req: NextRequest) {
 
   const supabase = await createServerClient()
 
-  if (body.action === 'link_copied') {
+  if (body.action === 'link_copied' || body.action === 'first_order') {
     const { data: seller, error: selectError } = await supabase
       .from('sellers')
       .select('onboarding_steps')
@@ -31,7 +31,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const currentSteps = (seller?.onboarding_steps ?? {}) as Record<string, unknown>
-    const updated = { ...currentSteps, link_copied: true }
+    const updated = { ...currentSteps, [body.action]: true }
     const { error: updateError } = await supabase
       .from('sellers')
       .update({ onboarding_steps: updated })

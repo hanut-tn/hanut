@@ -119,6 +119,7 @@ export default async function DashboardPage() {
   })
   const chartMax = Math.max(...chartData.map(d => d.value), 1)
   const hasWeeklyData = chartData.some(d => d.value > 0)
+  const onboardingSteps = seller?.onboarding_steps as { link_copied?: boolean; first_order?: boolean } | null
 
   // COD pending (orders confirmed or shipped — not yet delivered/reversed)
   const codPending = all.filter(o => ['confirmed', 'shipped'].includes(o.status)).length
@@ -141,8 +142,8 @@ export default async function DashboardPage() {
       {context.isSeller && !seller?.onboarding_completed && (
         <OnboardingChecklist
           productAdded={(productCount ?? 0) > 0}
-          linkCopied={(seller?.onboarding_steps as { link_copied?: boolean } | null)?.link_copied === true}
-          firstOrder={(orderCount ?? 0) > 0}
+          linkCopied={onboardingSteps?.link_copied === true}
+          firstOrder={(orderCount ?? 0) > 0 || onboardingSteps?.first_order === true}
           slug={seller?.slug ?? null}
         />
       )}
