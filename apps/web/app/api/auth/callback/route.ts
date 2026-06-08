@@ -4,7 +4,8 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
-  const code = new URL(request.url).searchParams.get('code')
+  const requestUrl = new URL(request.url)
+  const code = requestUrl.searchParams.get('code')
   if (code) {
     const cookieStore = await cookies()
     const supabase = createServerClient(
@@ -20,5 +21,7 @@ export async function GET(request: NextRequest) {
     )
     await supabase.auth.exchangeCodeForSession(code)
   }
-  return NextResponse.redirect(new URL('/', request.url))
+  const next = requestUrl.searchParams.get('next')
+  const redirectPath = next?.startsWith('/') && !next.startsWith('//') ? next : '/'
+  return NextResponse.redirect(new URL(redirectPath, requestUrl.origin))
 }

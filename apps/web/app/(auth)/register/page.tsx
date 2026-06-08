@@ -83,6 +83,12 @@ export default function RegisterPage() {
       return
     }
 
+    // Email confirmation required → redirect to verify page
+    if (!data.session) {
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`)
+      return
+    }
+
     router.push('/')
     router.refresh()
   }

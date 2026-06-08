@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useTransition, useRef } from 'react'
+import { useState, useTransition, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { Mail, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { ProfileInput } from '@/app/(dashboard)/settings/actions'
 
@@ -86,10 +87,19 @@ type Msg = { type: 'success' | 'error'; text: string }
 
 const TAB_KEYS: Tab[] = ['profile', 'link', 'security', 'plan']
 
+function getPasswordStrength(pw: string): { level: 'weak' | 'medium' | 'strong'; label: string; color: string } {
+  if (pw.length === 0) return { level: 'weak', label: '', color: '' }
+  if (pw.length < 8) return { level: 'weak', label: 'Faible', color: 'bg-red-400' }
+  const score = [/[A-Z]/.test(pw), /\d/.test(pw), /[^a-zA-Z0-9]/.test(pw), pw.length >= 12].filter(Boolean).length
+  if (score >= 3) return { level: 'strong', label: 'Fort', color: 'bg-green-500' }
+  if (score >= 1) return { level: 'medium', label: 'Moyen', color: 'bg-amber-400' }
+  return { level: 'weak', label: 'Faible', color: 'bg-red-400' }
+}
+
 export default function SettingsClient({ seller, stats, appUrl, initialTab, updateProfile, updateSlug, checkSlugAvailability }: Props) {
   const BASE_URL = appUrl.replace(/\/$/, '')
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [tab, setTab] = useState<Tab>(TAB_KEYS.includes(initialTab as Tab) ? initialTab as Tab : 'profile')
   const [isPending, startTransition] = useTransition()
 
@@ -98,7 +108,15 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
   const [phone, setPhone] = useState(seller.phone)
   const [profileMsg, setProfileMsg] = useState<Msg | null>(null)
 
+  // Email change
+  const [newEmail, setNewEmail] = useState(seller.email)
+  const [emailSentTo, setEmailSentTo] = useState<string | null>(null)
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null)
+  const [emailMsg, setEmailMsg] = useState<Msg | null>(null)
+  const [emailPending, setEmailPending] = useState(false)
+
   // Password
+  const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [pwMsg, setPwMsg] = useState<Msg | null>(null)
@@ -106,6 +124,13 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
 
   // Logout all
   const [logoutPending, setLogoutPending] = useState(false)
+
+  // Delete account
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteEmailInput, setDeleteEmailInput] = useState('')
+  const [deletePending, setDeletePending] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deleteSuccess, setDeleteSuccess] = useState(false)
 
   // Link / slug
   const [newSlug, setNewSlug] = useState(seller.slug ?? '')
@@ -125,6 +150,16 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
   const planCfg = PLAN_CONFIG[seller.plan]
   const orderLinkFull = seller.slug ? `${BASE_URL}/order/${seller.slug}` : null
   const orderLink = orderLinkFull ? orderLinkFull.replace(/^https?:\/\//, '') : null
+  const pwStrength = getPasswordStrength(newPassword)
+  const pendingEmailDisplay = emailSentTo ?? pendingEmail
+
+  useEffect(() => {
+    // Check if there is a pending email change already in progress
+    supabase.auth.getUser().then(({ data }) => {
+      const u = data.user as { new_email?: string } | null
+      if (u?.new_email) setPendingEmail(u.new_email)
+    })
+  }, [supabase])
 
   function handleProfileSave(e: React.FormEvent) {
     e.preventDefault()
@@ -140,11 +175,43 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
     })
   }
 
+  async function handleEmailChange(e: React.FormEvent) {
+    e.preventDefault()
+    const trimmed = newEmail.trim()
+    if (!trimmed || trimmed === seller.email) return
+    setEmailMsg(null)
+    setEmailPending(true)
+    const { error } = await supabase.auth.updateUser({ email: trimmed })
+    setEmailPending(false)
+    if (error) {
+      setEmailMsg({ type: 'error', text: error.message })
+    } else {
+      setEmailSentTo(trimmed)
+    }
+  }
+
+  async function handleCancelEmailChange() {
+    const { error } = await supabase.auth.updateUser({ email: seller.email })
+    if (!error) {
+      setPendingEmail(null)
+      setEmailSentTo(null)
+      setNewEmail(seller.email)
+    }
+  }
+
   async function handlePasswordChange(e: React.FormEvent) {
     e.preventDefault()
     setPwMsg(null)
+    if (!currentPassword) {
+      setPwMsg({ type: 'error', text: 'Veuillez saisir votre mot de passe actuel.' })
+      return
+    }
     if (newPassword.length < 8) {
-      setPwMsg({ type: 'error', text: 'Le mot de passe doit contenir au moins 8 caractères.' })
+      setPwMsg({ type: 'error', text: 'Le nouveau mot de passe doit contenir au moins 8 caractères.' })
+      return
+    }
+    if (!/\d/.test(newPassword)) {
+      setPwMsg({ type: 'error', text: 'Le nouveau mot de passe doit contenir au moins 1 chiffre.' })
       return
     }
     if (newPassword !== confirmPassword) {
@@ -152,12 +219,22 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
       return
     }
     setPwPending(true)
+    const { error: signInErr } = await supabase.auth.signInWithPassword({
+      email: seller.email,
+      password: currentPassword,
+    })
+    if (signInErr) {
+      setPwMsg({ type: 'error', text: 'Mot de passe actuel incorrect.' })
+      setPwPending(false)
+      return
+    }
     const { error } = await supabase.auth.updateUser({ password: newPassword })
     setPwPending(false)
     if (error) {
       setPwMsg({ type: 'error', text: error.message })
     } else {
       setPwMsg({ type: 'success', text: 'Mot de passe changé avec succès.' })
+      setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
     }
@@ -167,6 +244,26 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
     setLogoutPending(true)
     await supabase.auth.signOut({ scope: 'global' })
     router.push('/login')
+  }
+
+  async function handleDeleteAccount() {
+    setDeleteError(null)
+    if (deleteEmailInput !== seller.email) return
+    setDeletePending(true)
+    const res = await fetch('/api/account', {
+      method: 'DELETE',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: deleteEmailInput }),
+    })
+    const json = await res.json().catch(() => ({ error: 'Réponse serveur invalide.' })) as { error?: string }
+    setDeletePending(false)
+    if (!res.ok || json.error) {
+      setDeleteError(json.error ?? 'Suppression impossible.')
+      return
+    }
+    setDeleteSuccess(true)
+    await supabase.auth.signOut()
+    setTimeout(() => router.push('/'), 2000)
   }
 
   function onSlugChange(value: string) {
@@ -225,7 +322,6 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
 
       {/* Profile card */}
       <div className="card p-5 space-y-4">
-        {/* Avatar + nom + email */}
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-brand-600 flex items-center justify-center text-white text-xl font-bold shrink-0 select-none">
             {initials || '?'}
@@ -238,7 +334,6 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
             </span>
           </div>
         </div>
-        {/* Stats — grille en dessous */}
         <div className={`grid gap-4 pt-4 border-t border-[#E7E5E4] text-center ${seller.plan === 'business' ? 'grid-cols-4' : 'grid-cols-3'}`}>
           {[
             { label: 'Produits',  val: stats.products  },
@@ -273,68 +368,129 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
 
       {/* ── PROFIL ── */}
       {tab === 'profile' && (
-        <form onSubmit={handleProfileSave} className="card p-5 space-y-4">
-          <h2 className="font-semibold text-gray-900">Informations personnelles</h2>
+        <div className="space-y-4">
+          {/* Email section */}
+          <div className="card p-5 space-y-4">
+            <h2 className="font-semibold text-gray-900">Adresse email</h2>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Adresse email</label>
-            <input className="input bg-gray-50 text-gray-400 cursor-not-allowed" value={seller.email} readOnly />
-            <p className="text-xs text-gray-400 mt-1">L&apos;email ne peut pas être modifié.</p>
+            {pendingEmailDisplay ? (
+              <>
+                <div className="flex items-center gap-3">
+                  <input className="input flex-1 bg-gray-50 text-gray-500 cursor-not-allowed" value={seller.email} readOnly />
+                  <span className="shrink-0 text-xs font-medium px-2 py-1 bg-amber-100 text-amber-700 rounded-full whitespace-nowrap">
+                    En attente
+                  </span>
+                </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Mail className="w-4 h-4 text-amber-600 shrink-0" />
+                    <p className="text-sm font-medium text-amber-700">Confirmation requise</p>
+                  </div>
+                  <p className="text-xs text-amber-600">
+                    Un email de confirmation a été envoyé à{' '}
+                    <strong>{pendingEmailDisplay}</strong>.{' '}
+                    Cliquez sur le lien pour valider votre nouvelle adresse.
+                    Votre email actuel reste actif jusqu&apos;à confirmation.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleCancelEmailChange}
+                    className="text-xs text-amber-700 underline mt-2 hover:text-amber-800"
+                  >
+                    Annuler le changement
+                  </button>
+                </div>
+              </>
+            ) : (
+              <form onSubmit={handleEmailChange} className="space-y-3">
+                <input
+                  className="input"
+                  type="email"
+                  value={newEmail}
+                  onChange={e => { setNewEmail(e.target.value); setEmailMsg(null) }}
+                  placeholder="vous@exemple.com"
+                  required
+                  autoComplete="email"
+                />
+                {emailMsg && (
+                  <div className={`rounded-lg px-4 py-3 text-sm ${
+                    emailMsg.type === 'success'
+                      ? 'bg-green-50 border border-green-200 text-green-700'
+                      : 'bg-red-50 border border-red-200 text-red-700'
+                  }`}>
+                    {emailMsg.text}
+                  </div>
+                )}
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={emailPending || !newEmail.trim() || newEmail.trim() === seller.email}
+                    className="btn-secondary text-sm"
+                  >
+                    {emailPending ? 'Envoi...' : "Changer l'email"}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet *</label>
-            <input
-              className="input"
-              value={name}
-              onChange={e => { setName(e.target.value); setProfileMsg(null) }}
-              placeholder="Prénom Nom"
-              required
-            />
-          </div>
+          {/* Name / phone section */}
+          <form onSubmit={handleProfileSave} className="card p-5 space-y-4">
+            <h2 className="font-semibold text-gray-900">Informations personnelles</h2>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
-            <input
-              className="input"
-              type="tel"
-              value={phone}
-              onChange={e => { setPhone(e.target.value); setProfileMsg(null) }}
-              placeholder="+216 XX XXX XXX"
-            />
-          </div>
-
-          {seller.created_at && (
-            <p className="text-xs text-gray-400">
-              Compte créé le{' '}
-              {new Date(seller.created_at).toLocaleDateString('fr-TN', {
-                day: '2-digit', month: 'long', year: 'numeric',
-              })}
-            </p>
-          )}
-
-          {profileMsg && (
-            <div className={`rounded-lg px-4 py-3 text-sm ${
-              profileMsg.type === 'success'
-                ? 'bg-green-50 border border-green-200 text-green-700'
-                : 'bg-red-50 border border-red-200 text-red-700'
-            }`}>
-              {profileMsg.text}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet *</label>
+              <input
+                className="input"
+                value={name}
+                onChange={e => { setName(e.target.value); setProfileMsg(null) }}
+                placeholder="Prénom Nom"
+                required
+              />
             </div>
-          )}
 
-          <div className="flex justify-end">
-            <button type="submit" disabled={isPending} className="btn-primary">
-              {isPending ? 'Enregistrement...' : 'Enregistrer'}
-            </button>
-          </div>
-        </form>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
+              <input
+                className="input"
+                type="tel"
+                value={phone}
+                onChange={e => { setPhone(e.target.value); setProfileMsg(null) }}
+                placeholder="+216 XX XXX XXX"
+              />
+            </div>
+
+            {seller.created_at && (
+              <p className="text-xs text-gray-400">
+                Compte créé le{' '}
+                {new Date(seller.created_at).toLocaleDateString('fr-TN', {
+                  day: '2-digit', month: 'long', year: 'numeric',
+                })}
+              </p>
+            )}
+
+            {profileMsg && (
+              <div className={`rounded-lg px-4 py-3 text-sm ${
+                profileMsg.type === 'success'
+                  ? 'bg-green-50 border border-green-200 text-green-700'
+                  : 'bg-red-50 border border-red-200 text-red-700'
+              }`}>
+                {profileMsg.text}
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <button type="submit" disabled={isPending} className="btn-primary">
+                {isPending ? 'Enregistrement...' : 'Enregistrer'}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
       {/* ── LIEN COMMANDE ── */}
       {tab === 'link' && (
         <div className="space-y-4">
-          {/* Current link card */}
           <div className="card p-5 space-y-4">
             <div>
               <h2 className="font-semibold text-gray-900 mb-0.5">Votre lien de commande</h2>
@@ -378,7 +534,6 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
             )}
           </div>
 
-          {/* Edit slug */}
           <form onSubmit={handleSlugSave} className="card p-5 space-y-4">
             <h2 className="font-semibold text-gray-900">
               {seller.slug ? 'Modifier votre lien' : 'Créer votre lien'}
@@ -457,19 +612,57 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
             <h2 className="font-semibold text-gray-900">Changer le mot de passe</h2>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nouveau mot de passe</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe actuel *</label>
+              <input
+                className="input"
+                type="password"
+                value={currentPassword}
+                onChange={e => { setCurrentPassword(e.target.value); setPwMsg(null) }}
+                placeholder="••••••••"
+                required
+                autoComplete="current-password"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nouveau mot de passe *</label>
               <input
                 className="input"
                 type="password"
                 value={newPassword}
                 onChange={e => { setNewPassword(e.target.value); setPwMsg(null) }}
-                placeholder="Minimum 8 caractères"
+                placeholder="Minimum 8 caractères, 1 chiffre"
                 required
+                autoComplete="new-password"
               />
+              {newPassword.length > 0 && (
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="flex gap-1 flex-1">
+                    {(['weak', 'medium', 'strong'] as const).map((level, i) => (
+                      <div
+                        key={level}
+                        className={`h-1.5 flex-1 rounded-full transition-colors ${
+                          (['weak', 'medium', 'strong'] as const).indexOf(pwStrength.level) >= i && pwStrength.color
+                            ? pwStrength.color
+                            : 'bg-gray-200'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  {pwStrength.label && (
+                    <span className={`text-xs font-medium ${
+                      pwStrength.level === 'strong' ? 'text-green-600' :
+                      pwStrength.level === 'medium' ? 'text-amber-600' : 'text-red-500'
+                    }`}>
+                      {pwStrength.label}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Confirmer le mot de passe</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Confirmer le nouveau mot de passe *</label>
               <input
                 className="input"
                 type="password"
@@ -477,7 +670,11 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
                 onChange={e => { setConfirmPassword(e.target.value); setPwMsg(null) }}
                 placeholder="Répéter le mot de passe"
                 required
+                autoComplete="new-password"
               />
+              {confirmPassword.length > 0 && newPassword !== confirmPassword && (
+                <p className="text-xs text-red-500 mt-1">Les mots de passe ne correspondent pas.</p>
+              )}
             </div>
 
             {pwMsg && (
@@ -491,7 +688,11 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
             )}
 
             <div className="flex justify-end">
-              <button type="submit" disabled={pwPending} className="btn-primary">
+              <button
+                type="submit"
+                disabled={pwPending || !currentPassword || newPassword.length < 8 || newPassword !== confirmPassword}
+                className="btn-primary"
+              >
                 {pwPending ? 'Changement...' : 'Changer le mot de passe'}
               </button>
             </div>
@@ -508,6 +709,25 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
               className="btn-secondary text-sm text-red-600 border-red-200 hover:bg-red-50"
             >
               {logoutPending ? 'Déconnexion...' : 'Déconnecter tous les appareils'}
+            </button>
+          </div>
+
+          {/* Danger zone */}
+          <div className="card p-5 ring-1 ring-red-200">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+              <h2 className="font-semibold text-red-700">Zone de danger</h2>
+            </div>
+            <p className="text-sm text-gray-700 mb-1 font-medium">Supprimer mon compte</p>
+            <p className="text-xs text-gray-400 mb-4">
+              Cette action est irréversible. Toutes vos données (commandes, clients, produits) seront supprimées définitivement.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowDeleteModal(true)}
+              className="btn-secondary text-sm text-red-600 border-red-200 hover:bg-red-50"
+            >
+              Supprimer mon compte
             </button>
           </div>
         </div>
@@ -600,7 +820,6 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
             </a>
           </p>
 
-          {/* Gestion d'équipe */}
           <div className="card p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 bg-[#F0FDF4] text-[#166534] rounded-xl flex items-center justify-center">
@@ -626,6 +845,77 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
               <span className="inline-flex w-full items-center justify-center px-3 py-1.5 rounded-lg bg-[#F0FDF4] text-[#166534] border border-green-200 text-xs font-medium whitespace-nowrap sm:w-auto">
                 Plan Business requis
               </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── MODALE SUPPRESSION ── */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 space-y-5">
+            {deleteSuccess ? (
+              <div className="text-center py-4 space-y-3">
+                <p className="font-semibold text-gray-900 text-lg">Compte supprimé</p>
+                <p className="text-sm text-gray-500">Redirection en cours...</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                  </div>
+                  <h2 className="font-semibold text-gray-900 text-lg leading-tight">
+                    Supprimer définitivement votre compte ?
+                  </h2>
+                </div>
+
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700 space-y-1">
+                  <p className="font-medium mb-2">Cette action supprimera :</p>
+                  <p>• {stats.orders} commande{stats.orders !== 1 ? 's' : ''}</p>
+                  <p>• {stats.customers} client{stats.customers !== 1 ? 's' : ''}</p>
+                  <p>• {stats.products} produit{stats.products !== 1 ? 's' : ''}</p>
+                  <p>• Tous vos membres d&apos;équipe</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tapez votre email pour confirmer
+                  </label>
+                  <input
+                    className="input"
+                    type="email"
+                    value={deleteEmailInput}
+                    onChange={e => { setDeleteEmailInput(e.target.value); setDeleteError(null) }}
+                    placeholder={seller.email}
+                    autoComplete="off"
+                  />
+                </div>
+
+                {deleteError && (
+                  <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                    {deleteError}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => { setShowDeleteModal(false); setDeleteEmailInput(''); setDeleteError(null) }}
+                    className="btn-secondary flex-1"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteAccount}
+                    disabled={deleteEmailInput !== seller.email || deletePending}
+                    className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
+                  >
+                    {deletePending ? 'Suppression...' : 'Supprimer définitivement'}
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>
