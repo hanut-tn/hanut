@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Fragment, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle2, Circle } from 'lucide-react'
 
@@ -16,6 +16,7 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
   const [linkCopied, setLinkCopied] = useState(initLC)
   const [dismissed, setDismissed] = useState(false)
   const [celebrating, setCelebrating] = useState(false)
+  const [fadingOut, setFadingOut] = useState(false)
   const [hidden, setHidden] = useState(false)
 
   const completedCount = [productAdded, linkCopied, firstOrder].filter(Boolean).length
@@ -28,7 +29,19 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
   }, [])
 
   useEffect(() => {
-    if (!allDone || celebrating) return
+    setLinkCopied(initLC)
+  }, [initLC])
+
+  useEffect(() => {
+    if (allDone || hidden || dismissed) return
+    const timer = setInterval(() => {
+      router.refresh()
+    }, 30000)
+    return () => clearInterval(timer)
+  }, [allDone, hidden, dismissed, router])
+
+  useEffect(() => {
+    if (!allDone || celebrating || dismissed) return
     setCelebrating(true)
     const timer = setTimeout(() => {
       fetch('/api/onboarding', {
@@ -36,10 +49,11 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'complete' }),
       }).catch(() => {})
-      setHidden(true)
+      setFadingOut(true)
+      setTimeout(() => setHidden(true), 500)
     }, 3000)
     return () => clearTimeout(timer)
-  }, [allDone, celebrating])
+  }, [allDone, celebrating, dismissed])
 
   if (hidden || dismissed) return null
 
@@ -64,11 +78,11 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
 
   if (celebrating) {
     return (
-      <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl p-5 flex items-center gap-4">
-        <CheckCircle2 className="w-8 h-8 text-[#16A34A] shrink-0" />
-        <div>
-          <p className="font-bold text-[#0B5E46]">Vous êtes prêt ! Bonne vente !</p>
-          <p className="text-sm text-[#16A34A] mt-0.5">Votre boutique est configurée. Les commandes peuvent arriver.</p>
+      <div className={`bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl p-5 transition-opacity duration-500 ${fadingOut ? 'opacity-0' : 'opacity-100'}`}>
+        <div className="text-center py-4">
+          <CheckCircle2 className="w-8 h-8 text-[#16A34A] mx-auto mb-2" />
+          <p className="font-semibold text-[#0B5E46]">Vous êtes prêt !</p>
+          <p className="text-xs text-[#78716C]">Bonne vente sur Hanut 🎉</p>
         </div>
       </div>
     )
@@ -100,59 +114,84 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
       action: () => router.push('/orders'),
     },
   ]
+  const activeIndex = steps.findIndex(step => !step.done)
 
   return (
     <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl p-5">
-      <div className="mb-4">
-        <h2 className="font-bold text-[#0B5E46] text-base">Bienvenue sur Hanut</h2>
-        <p className="text-sm text-[#16A34A] mt-0.5">Suivez ces 3 étapes pour commencer à recevoir des commandes</p>
-      </div>
+      <div className="mb-4 space-y-3">
+        <div>
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="font-bold text-[#0B5E46] text-base">Bienvenue sur Hanut 👋</h2>
+            <p className="shrink-0 text-xs text-[#78716C] mt-1">{completedCount}/3 complétées</p>
+          </div>
+          <p className="text-sm text-[#16A34A] mt-0.5">Suivez ces 3 étapes pour recevoir des commandes</p>
+        </div>
 
-      <div className="mb-4">
-        <p className="text-xs text-[#78716C] mb-1.5">{completedCount}/3 étapes complétées</p>
-        <div className="w-full bg-[#BBF7D0] rounded-full h-1.5">
+        <div className="w-full bg-[#BBF7D0] rounded-full h-2 overflow-hidden">
           <div
-            className="bg-[#16A34A] h-1.5 rounded-full transition-all duration-500"
+            className="bg-[#16A34A] h-2 rounded-full transition-all duration-500 ease-out"
             style={{ width: `${(completedCount / 3) * 100}%` }}
           />
         </div>
       </div>
 
-      <div className="space-y-2">
-        {steps.map((step) => (
-          <div
-            key={step.key}
-            className={`flex items-center gap-3 p-3 rounded-lg ${
-              step.done ? 'opacity-60' : 'bg-white border border-[#E7E5E4]'
-            }`}
-          >
-            {step.done ? (
-              <CheckCircle2 className="w-5 h-5 text-[#16A34A] shrink-0" />
-            ) : (
-              <Circle className="w-5 h-5 text-[#A8A29E] shrink-0" />
-            )}
-            <div className="flex-1 min-w-0">
-              <p className={`text-sm font-medium ${step.done ? 'line-through text-[#78716C]' : 'text-[#1C1917]'}`}>
-                {step.title}
-              </p>
-              {!step.done && <p className="text-xs text-[#A8A29E] mt-0.5">{step.desc}</p>}
-            </div>
-            {!step.done && (
-              <button
-                onClick={step.action}
-                className="shrink-0 text-xs font-medium text-[#16A34A] hover:text-[#15803D] border border-[#16A34A]/30 hover:border-[#16A34A]/60 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+      <div>
+        {steps.map((step, index) => {
+          const isActive = !step.done && index === activeIndex
+
+          return (
+            <Fragment key={step.key}>
+              {index > 0 && <div className="border-t border-[#E7E5E4] my-2" />}
+              <div
+                className={`transition-all duration-300 ${
+                  isActive
+                    ? 'bg-white border border-[#E7E5E4] rounded-lg p-3'
+                    : 'py-1'
+                }`}
               >
-                {step.cta} →
-              </button>
-            )}
-          </div>
-        ))}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    {step.done ? (
+                      <CheckCircle2 className="w-5 h-5 text-[#16A34A] shrink-0 mt-0.5" />
+                    ) : (
+                      <Circle className={`w-5 h-5 shrink-0 mt-0.5 ${isActive ? 'text-[#78716C]' : 'text-[#E7E5E4]'}`} />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={`text-sm transition-colors duration-300 ${
+                          step.done
+                            ? 'text-[#78716C] line-through'
+                            : isActive
+                              ? 'font-semibold text-[#1C1917]'
+                              : 'text-[#A8A29E]'
+                        }`}
+                      >
+                        {step.title}
+                      </p>
+                      {isActive && (
+                        <p className="text-xs text-[#78716C] mt-0.5">{step.desc}</p>
+                      )}
+                    </div>
+                  </div>
+                  {isActive && (
+                    <button
+                      onClick={step.action}
+                      className="w-full sm:w-auto shrink-0 border border-[#16A34A] text-[#16A34A] text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-[#F0FDF4] transition-colors whitespace-nowrap"
+                    >
+                      {step.cta} →
+                    </button>
+                  )}
+                </div>
+              </div>
+            </Fragment>
+          )
+        })}
       </div>
 
-      <div className="mt-3 flex justify-end">
+      <div className="mt-4 flex justify-start">
         <button
           onClick={handleDismiss}
-          className="text-xs text-[#A8A29E] hover:text-[#78716C] transition-colors"
+          className="text-xs text-[#78716C] hover:text-[#1C1917] cursor-pointer underline transition-colors"
         >
           Ignorer pour l&apos;instant
         </button>
