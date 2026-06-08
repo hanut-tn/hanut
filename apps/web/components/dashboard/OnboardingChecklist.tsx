@@ -107,7 +107,7 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
         <div className="text-center py-4">
           <CheckCircle2 className="w-8 h-8 text-[#16A34A] mx-auto mb-2" />
           <p className="font-semibold text-[#0B5E46]">Vous êtes prêt !</p>
-          <p className="text-xs text-[#78716C]">Bonne vente sur Hanut 🎉</p>
+          <p className="text-xs text-[#78716C]">Bonne vente sur Hanut !</p>
         </div>
       </div>
     )
@@ -146,7 +146,7 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
       <div className="mb-4 space-y-3">
         <div>
           <div className="flex items-start justify-between gap-3">
-            <h2 className="font-bold text-[#0B5E46] text-base">Bienvenue sur Hanut 👋</h2>
+            <h2 className="font-bold text-[#0B5E46] text-base">Bienvenue sur Hanut</h2>
             <p className="shrink-0 text-xs text-[#78716C] mt-1">{completedCount}/3 complétées</p>
           </div>
           <p className="text-sm text-[#16A34A] mt-0.5">Suivez ces 3 étapes pour recevoir des commandes</p>

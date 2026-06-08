@@ -145,7 +145,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
   if (products.length === 0) {
     return (
       <div className="w-full max-w-2xl space-y-6">
-        <h1 className="text-2xl font-bold text-[#1C1917]">Nouvelle commande</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-[#1C1917]">Nouvelle commande</h1>
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-8 text-center sm:p-12">
           <Package className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-40" />
           <p className="font-medium text-[#1C1917]">Aucun produit dans votre catalogue</p>
@@ -170,7 +170,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
         >
           ←
         </button>
-        <h1 className="text-2xl font-bold text-[#1C1917]">Nouvelle commande</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-[#1C1917]">Nouvelle commande</h1>
       </div>
 
       {/* Progress steps */}

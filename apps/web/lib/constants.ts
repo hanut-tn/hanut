@@ -61,7 +61,7 @@ export const CARRIER_CONFIG: Record<CarrierName, CarrierConfig> = {
   navex:         { label: 'Navex',         color: 'text-orange-700', bg: 'bg-orange-50' },
   adex:          { label: 'Adex',          color: 'text-green-700',  bg: 'bg-green-50'  },
   aramex:        { label: 'Aramex',        color: 'text-red-700',    bg: 'bg-red-50'    },
-  bestdelivery:  { label: 'Best Delivery', color: 'text-purple-700', bg: 'bg-purple-50' },
+  bestdelivery:  { label: 'Best Delivery', color: 'text-teal-700',   bg: 'bg-teal-50'   },
 }
 
 export const CARRIER_OPTIONS: { value: CarrierName; label: string }[] = CARRIER_NAMES.map(name => ({

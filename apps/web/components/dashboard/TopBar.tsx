@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { LogOut, Menu } from 'lucide-react'
+import { LogOut, Menu, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { UserRole } from '@/lib/get-context'
 import { useMobileNav } from '@/lib/mobile-nav-context'
@@ -21,7 +21,7 @@ interface TopBarProps {
 export default function TopBar({ sellerName, role, isSeller }: TopBarProps) {
   const router = useRouter()
   const supabase = createClient()
-  const { openDrawer } = useMobileNav()
+  const { isDrawerOpen, openDrawer, closeDrawer } = useMobileNav()
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -37,11 +37,11 @@ export default function TopBar({ sellerName, role, isSeller }: TopBarProps) {
       {/* ── Mobile : bouton hamburger ── */}
       <button
         type="button"
-        onClick={openDrawer}
-        aria-label="Ouvrir le menu"
+        onClick={isDrawerOpen ? closeDrawer : openDrawer}
+        aria-label={isDrawerOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
         className="md:hidden h-10 w-10 flex items-center justify-center rounded-lg border border-[#E7E5E4] text-[#1C1917] hover:bg-[#F5F5F4] transition-colors shrink-0"
       >
-        <Menu className="h-5 w-5" />
+        {isDrawerOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>
 
       {/* ── Logo centré mobile / spacer desktop ── */}

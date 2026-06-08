@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, useState, useTransition } from 'react'
-import { UserCheck, UserPlus, Users2, ShoppingBag, Package, User, Truck, ClipboardList } from 'lucide-react'
+import { UserCheck, UserPlus, Users2, ShoppingBag, Package, User, Truck, ClipboardList, AlertCircle, AlertTriangle, Check } from 'lucide-react'
 import type { TeamMember, ActivityLog } from '@/app/(dashboard)/team/page'
 
 const MAX_MEMBERS = 5
@@ -242,7 +242,7 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Équipe</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Équipe</h1>
         <p className="text-sm text-gray-500 mt-0.5">Gérez vos collaborateurs et consultez leur activité</p>
       </div>
 
@@ -342,12 +342,18 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
                     {hasPending && (
                       <div className={`border rounded-lg px-3 py-2.5 space-y-2 ${expiry.expired ? 'bg-red-50 border-red-100' : 'bg-amber-50 border-amber-100'}`}>
                         <p className={`text-xs ${expiry.expired ? 'text-red-700' : expiry.urgent ? 'text-red-600' : 'text-amber-700'}`}>
-                          {expiry.expired ? '🔴' : '⚠️'} Invitation en attente
-                          {expiry.label ? ` — ${expiry.label}` : ''}
+                          <span className="inline-flex items-center gap-1">
+                            {expiry.expired
+                              ? <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                              : <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />}
+                            Invitation en attente{expiry.label ? ` — ${expiry.label}` : ''}
+                          </span>
                         </p>
                         <div className="flex gap-2 flex-wrap">
                           {resentMembers.has(m.id) ? (
-                            <span className="text-xs text-amber-700 font-medium">✓ Invitation renvoyée</span>
+                            <span className="inline-flex items-center gap-1 text-xs text-amber-700 font-medium">
+                              <Check className="w-3 h-3" /> Invitation renvoyée
+                            </span>
                           ) : (
                             <button
                               onClick={() => handleResendInvite(m.id)}
@@ -447,12 +453,18 @@ export default function TeamPageClient({ currentUserId, members: initialMembers,
                             <td colSpan={6} className="p-0">
                               <div className={`border-t px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap ${expiry.expired ? 'bg-red-50 border-red-100' : 'bg-amber-50 border-amber-100'}`}>
                                 <span className={`text-xs ${expiry.expired ? 'text-red-700' : expiry.urgent ? 'text-red-600' : 'text-amber-700'}`}>
-                                  {expiry.expired ? '🔴' : '⚠️'} Invitation en attente
-                                  {expiry.label ? ` — ${expiry.label}` : ''}
+                                  <span className="inline-flex items-center gap-1">
+                                    {expiry.expired
+                                      ? <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                                      : <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />}
+                                    Invitation en attente{expiry.label ? ` — ${expiry.label}` : ''}
+                                  </span>
                                 </span>
                                 <div className="flex items-center gap-2 shrink-0">
                                   {resentMembers.has(m.id) ? (
-                                    <span className="text-xs text-amber-700 font-medium">✓ Invitation renvoyée</span>
+                                    <span className="inline-flex items-center gap-1 text-xs text-amber-700 font-medium">
+                                      <Check className="w-3 h-3" /> Invitation renvoyée
+                                    </span>
                                   ) : (
                                     <button
                                       onClick={() => handleResendInvite(m.id)}

@@ -378,7 +378,7 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
                 </button>
 
                 {showPicker && (
-                  <div className="absolute right-0 top-full mt-2 bg-white border border-[#E7E5E4] rounded-xl shadow-lg p-4 z-20 w-72">
+                  <div className="absolute right-0 left-0 sm:left-auto top-full mt-2 bg-white border border-[#E7E5E4] rounded-xl shadow-lg p-4 z-20 w-auto sm:w-72">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-sm font-semibold text-[#1C1917]">Période personnalisée</h3>
                       <button onClick={() => setShowPicker(false)} className="text-[#78716C] hover:text-[#1C1917] transition-colors">

@@ -83,7 +83,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           {/* Contenu principal */}
           <div className="flex-1 flex flex-col min-w-0 md:overflow-hidden">
             <TopBar sellerName={displayName} role={context.role} isSeller={context.isSeller} />
-            <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 pb-[calc(3.5rem+env(safe-area-inset-bottom)+1rem)] md:pb-6">
+            <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 pb-[calc(4rem+env(safe-area-inset-bottom)+1rem)] md:pb-6">
               {children}
             </main>
           </div>

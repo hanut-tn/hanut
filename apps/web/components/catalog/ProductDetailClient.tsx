@@ -7,7 +7,7 @@ import Image from 'next/image'
 import {
   ArrowLeft, Pencil, Trash2, Package, TrendingUp,
   ShoppingCart, RotateCcw, Settings, AlertTriangle, ImageOff, ShoppingBag, X,
-  Calendar, RefreshCw,
+  Calendar, RefreshCw, Check,
 } from 'lucide-react'
 import type { Product, ProductVariant } from '@hanut/types'
 import type { ProductInput, StockAdjustmentInput } from '@/app/(dashboard)/catalog/actions'
@@ -466,8 +466,9 @@ export default function ProductDetailClient({
             {/* Sync badge */}
             {hasVariants && currentVariants.reduce((s, v) => s + v.qty, 0) !== currentStock && (
               <div className="flex items-center justify-between rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
-                <p className="text-xs text-amber-700 font-medium">
-                  ⚠️ Stock désynchronisé avec les variantes
+                <p className="text-xs text-amber-700 font-medium flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  Stock désynchronisé avec les variantes
                 </p>
                 <button
                   onClick={() => {
@@ -532,9 +533,9 @@ export default function ProductDetailClient({
                             })
                           }}
                           disabled={isPending}
-                          className="text-[10px] bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 px-2 py-0.5 rounded font-medium disabled:opacity-50"
+                          className="inline-flex items-center gap-1 text-[10px] bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 px-2 py-0.5 rounded font-medium disabled:opacity-50"
                         >
-                          ✓ Reçu
+                          <Check className="w-3 h-3" /> Reçu
                         </button>
                         <button
                           onClick={() => {
@@ -546,7 +547,7 @@ export default function ProductDetailClient({
                           disabled={isPending}
                           className="text-[10px] text-[#78716C] hover:text-red-600 px-1 py-0.5 rounded disabled:opacity-50"
                         >
-                          ✗
+                          <X className="w-3 h-3" />
                         </button>
                       </div>
                     </div>
@@ -1018,7 +1019,7 @@ export default function ProductDetailClient({
       {/* ── TOAST ── */}
       {toastMsg && (
         <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-[60] flex max-w-[calc(100vw-2rem)] items-center gap-2 bg-[#1C1917] text-white text-sm font-medium px-5 py-3 rounded-full shadow-lg">
-          <span className="text-[#4ADE80]">✓</span>
+          <Check className="w-4 h-4 text-[#4ADE80] shrink-0" />
           Stock mis à jour : {toastMsg}
         </div>
       )}

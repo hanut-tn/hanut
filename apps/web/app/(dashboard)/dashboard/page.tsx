@@ -132,7 +132,7 @@ export default async function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1C1917]">Tableau de bord</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#1C1917]">Tableau de bord</h1>
           <p className="text-sm text-[#78716C] mt-0.5">Vue d&apos;ensemble du mois en cours</p>
         </div>
         <Link href="/orders/new" className="btn-primary w-full text-center text-sm sm:w-auto">+ Nouvelle commande</Link>

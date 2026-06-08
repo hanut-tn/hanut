@@ -134,7 +134,7 @@ export default function BottomNav({ role, plan = 'starter' }: Props) {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex-1 flex flex-col items-center justify-center h-14 gap-0.5 transition-colors ${
+              className={`flex-1 flex flex-col items-center justify-center h-16 gap-0.5 transition-colors ${
                 isActive ? 'text-[#16A34A]' : 'text-[#78716C]'
               }`}
             >
@@ -159,7 +159,7 @@ export default function BottomNav({ role, plan = 'starter' }: Props) {
           onClick={() => isSheetOpen ? closeSheet() : openSheet()}
           aria-expanded={isSheetOpen}
           aria-label="Ouvrir le menu plus"
-          className={`flex-1 flex flex-col items-center justify-center h-14 gap-0.5 transition-colors ${
+          className={`flex-1 flex flex-col items-center justify-center h-16 gap-0.5 transition-colors ${
             isMoreActive || isSheetOpen ? 'text-[#16A34A]' : 'text-[#78716C]'
           }`}
         >

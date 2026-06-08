@@ -148,7 +148,7 @@ function DeliveryMobileCard({
             type="button"
             onClick={e => { e.stopPropagation(); onToggle(delivery, 'cod_collected') }}
             disabled={isPending}
-            className={`flex-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors min-h-[36px] touch-manipulation ${
+            className={`flex-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors min-h-[44px] touch-manipulation ${
               delivery.cod_collected
                 ? 'bg-green-50 text-green-700 border border-green-200'
                 : 'bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-600'
@@ -160,7 +160,7 @@ function DeliveryMobileCard({
             type="button"
             onClick={e => { e.stopPropagation(); onToggle(delivery, 'cod_reversed') }}
             disabled={isPending || !delivery.cod_collected}
-            className={`flex-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors min-h-[36px] touch-manipulation ${
+            className={`flex-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors min-h-[44px] touch-manipulation ${
               delivery.cod_reversed
                 ? 'bg-[#F0FDF4] text-[#166534] border border-green-200'
                 : delivery.cod_collected
@@ -387,7 +387,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1C1917]">Livraisons</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#1C1917]">Livraisons</h1>
           <p className="text-sm text-[#78716C] mt-0.5">
             {activeCount} livraison{activeCount !== 1 ? 's' : ''} active{activeCount !== 1 ? 's' : ''}
           </p>

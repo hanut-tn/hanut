@@ -90,7 +90,7 @@ export async function ReadonlyDashboard({ context }: { context: Context }) {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-[#1C1917]">Tableau de bord</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-[#1C1917]">Tableau de bord</h1>
         <p className="text-sm text-[#78716C] mt-0.5">Vue d&apos;ensemble du mois en cours</p>
       </div>
 

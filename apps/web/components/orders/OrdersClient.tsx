@@ -634,7 +634,7 @@ export default function OrdersClient({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-[#1C1917]">Commandes</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#1C1917]">Commandes</h1>
           <p className="text-sm text-[#78716C] mt-0.5">
             {initialTotal} commande{initialTotal !== 1 ? 's' : ''} au total
             {pendingCount > 0 && (

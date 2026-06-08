@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mail, AlertTriangle, MessageCircle, Clock, Info } from 'lucide-react'
+import { Mail, AlertTriangle, MessageCircle, Clock, Info, Check, X as XIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { ProfileInput } from '@/app/(dashboard)/settings/actions'
 import { HANUT_CONTACT } from '@/lib/constants'
@@ -337,7 +337,7 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900">Paramètres</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Paramètres</h1>
 
       {/* Profile card */}
       <div className="card p-5 space-y-4">
@@ -585,13 +585,13 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
                     </span>
                   )}
                   {!slugChecking && slugAvailable === true && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-green-600 font-semibold">
-                      ✓ Disponible
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs text-green-600 font-semibold">
+                      <Check className="w-3 h-3" /> Disponible
                     </span>
                   )}
                   {!slugChecking && slugAvailable === false && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-red-500 font-semibold">
-                      ✗ Pris
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs text-red-500 font-semibold">
+                      <XIcon className="w-3 h-3" /> Pris
                     </span>
                   )}
                 </div>
@@ -817,7 +817,7 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
                   <ul className="space-y-1.5 flex-1 mb-4">
                     {plan.features.map(f => (
                       <li key={f} className="flex items-start gap-1.5 text-sm text-gray-600">
-                        <span className="text-green-500 mt-0.5 flex-shrink-0 text-xs">✓</span>
+                        <Check className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" />
                         {f}
                       </li>
                     ))}
@@ -906,7 +906,7 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
               <ul className="space-y-2">
                 {upgradePlan.features.map(feature => (
                   <li key={feature} className="flex items-start gap-2 text-sm text-gray-700">
-                    <span className="text-[#16A34A] font-bold shrink-0">✓</span>
+                    <Check className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
                     {feature}
                   </li>
                 ))}
