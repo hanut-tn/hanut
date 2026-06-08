@@ -24,13 +24,14 @@ export default withSentryConfig(nextConfig, {
   // Désactive le tunnel (on n'a pas de /monitoring route)
   tunnelRoute: undefined,
 
-  // Tree-shake le SDK dans les bundles non-affectés
-  disableLogger: true,
-
-  // Upload des source maps uniquement en CI / production
+  // Upload des source maps uniquement si le token est disponible
   sourcemaps: {
     disable: !process.env.SENTRY_AUTH_TOKEN,
   },
 
-  automaticVercelMonitors: false,
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
 })
