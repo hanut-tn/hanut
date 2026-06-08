@@ -77,6 +77,7 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
   }
 
   async function handleViewOrders() {
+    setHidden(true)
     setFirstOrderSeen(true)
     await fetch('/api/onboarding', {
       method: 'PATCH',

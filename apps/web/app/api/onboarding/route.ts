@@ -1,5 +1,6 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { NextRequest, NextResponse } from 'next/server'
 
 type OnboardingAction = 'link_copied' | 'first_order' | 'complete'
@@ -41,6 +42,9 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
 
+    revalidatePath('/dashboard')
+    revalidateTag('dashboard')
+
     return NextResponse.json({ success: true })
   }
 
@@ -52,6 +56,9 @@ export async function PATCH(req: NextRequest) {
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 })
   }
+
+  revalidatePath('/dashboard')
+  revalidateTag('dashboard')
 
   return NextResponse.json({ success: true })
 }
