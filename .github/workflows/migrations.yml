@@ -1,0 +1,138 @@
+name: Check Migrations
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/schema.sql'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/schema.sql'
+
+jobs:
+  check-migrations:
+    name: Verify SQL Migrations
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: hanut_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Wait for PostgreSQL
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+
+      - name: Apply auth mocks (CI only)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -p 5432 -U postgres -d hanut_test -f supabase/schema.test.sql
+
+      - name: Apply base schema
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -p 5432 -U postgres -d hanut_test -f supabase/schema.sql
+
+      - name: Apply migrations in order
+        env:
+          PGPASSWORD: postgres
+        run: |
+          echo "Applying migrations..."
+          for file in $(ls supabase/migrations/*.sql | sort); do
+            echo "→ Applying $file"
+            psql -h localhost -p 5432 -U postgres -d hanut_test -f "$file"
+            if [ $? -ne 0 ]; then
+              echo "❌ Migration failed: $file"
+              exit 1
+            fi
+            echo "✓ Applied: $file"
+          done
+          echo "✅ All migrations applied successfully"
+
+      - name: Verify key tables exist
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -p 5432 -U postgres -d hanut_test -c "
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+            ORDER BY table_name;
+          "
+
+          psql -h localhost -p 5432 -U postgres -d hanut_test -c "
+            DO \$\$
+            BEGIN
+              IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'sellers') THEN
+                RAISE EXCEPTION 'Table sellers manquante';
+              END IF;
+              IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'orders') THEN
+                RAISE EXCEPTION 'Table orders manquante';
+              END IF;
+              IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'products') THEN
+                RAISE EXCEPTION 'Table products manquante';
+              END IF;
+              IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'customers') THEN
+                RAISE EXCEPTION 'Table customers manquante';
+              END IF;
+              IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'deliveries') THEN
+                RAISE EXCEPTION 'Table deliveries manquante';
+              END IF;
+              IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'team_members') THEN
+                RAISE EXCEPTION 'Table team_members manquante';
+              END IF;
+              IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'stock_movements') THEN
+                RAISE EXCEPTION 'Table stock_movements manquante';
+              END IF;
+              IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'order_status_history') THEN
+                RAISE EXCEPTION 'Table order_status_history manquante';
+              END IF;
+              RAISE NOTICE '✅ Toutes les tables critiques existent';
+            END \$\$;
+          "
+
+      - name: Verify key functions exist
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -p 5432 -U postgres -d hanut_test -c "
+            DO \$\$
+            BEGIN
+              IF NOT EXISTS (
+                SELECT 1 FROM pg_proc WHERE proname = 'create_order_with_stock'
+              ) THEN
+                RAISE EXCEPTION 'Fonction create_order_with_stock manquante';
+              END IF;
+              IF NOT EXISTS (
+                SELECT 1 FROM pg_proc WHERE proname = 'get_seller_id'
+              ) THEN
+                RAISE EXCEPTION 'Fonction get_seller_id manquante';
+              END IF;
+              RAISE NOTICE '✅ Toutes les fonctions critiques existent';
+            END \$\$;
+          "
+
+      - name: Success
+        run: echo "✅ Toutes les migrations sont valides et cohérentes"
