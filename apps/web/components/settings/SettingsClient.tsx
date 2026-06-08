@@ -832,14 +832,17 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
                       <button
                         type="button"
                         onClick={() => setUpgradePlan(whatsappPlan)}
-                        className={`w-full rounded-lg py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                        className={`w-full min-h-[56px] rounded-lg px-3 py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
                           whatsappPlan.key === 'pro'
                             ? 'bg-[#16A34A] hover:bg-[#15803D] text-white'
                             : 'bg-[#0B5E46] hover:bg-[#0a5240] text-white'
                         }`}
                       >
-                        <MessageCircle className="w-4 h-4" />
-                        Passer au plan {whatsappPlan.label} — {whatsappPlan.price.replace(' / ', '/')}
+                        <MessageCircle className="w-4 h-4 shrink-0" />
+                        <span className="min-w-0 text-center leading-tight">
+                          <span className="block whitespace-nowrap">Passer au plan {whatsappPlan.label}</span>
+                          <span className="block text-xs font-normal opacity-90">{whatsappPlan.price.replace(' / ', '/')}</span>
+                        </span>
                       </button>
                       <p className="text-xs text-[#78716C] text-center mt-3 flex items-center justify-center gap-1">
                         <Clock className="w-3 h-3" />
