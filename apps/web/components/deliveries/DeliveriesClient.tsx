@@ -301,8 +301,16 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
   }
 
   function handleToggle(d: Delivery, field: 'cod_collected' | 'cod_reversed') {
+    const prevValue = d[field]
+    const newValue = !prevValue
+    setAllDeliveries(list => list.map(del => del.id === d.id ? { ...del, [field]: newValue } : del))
     startTransition(async () => {
-      await updateDelivery(d.id, { [field]: !d[field] })
+      try {
+        await updateDelivery(d.id, { [field]: newValue })
+      } catch (err) {
+        setAllDeliveries(list => list.map(del => del.id === d.id ? { ...del, [field]: prevValue } : del))
+        setToast(`Erreur : ${err instanceof Error ? err.message : 'Veuillez réessayer.'}`)
+      }
     })
   }
 
@@ -331,13 +339,23 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
         body: JSON.stringify({ ids: Array.from(selectedIds), action }),
       })
       const data = await res.json()
-      if (!res.ok) { setToast(data.error ?? 'Erreur'); return }
+      if (!res.ok) { setToast(data.error ?? data.message ?? 'Erreur'); return }
       const label = action === 'cod_collected' ? 'COD collecté' : 'COD reversé'
-      if (data.skipped > 0) {
+      if (data.skipped > 0 && data.message) {
+        setToast(`✓ ${data.updated} mise${data.updated > 1 ? 's' : ''} à jour · ${data.message}`)
+      } else if (data.skipped > 0) {
         setToast(`✓ ${data.updated} mise${data.updated > 1 ? 's' : ''} à jour · ${data.skipped} ignorée${data.skipped > 1 ? 's' : ''} (déjà marquée${data.skipped > 1 ? 's' : ''})`)
       } else {
         setToast(`✓ ${data.updated} livraison${data.updated > 1 ? 's' : ''} marquée${data.updated > 1 ? 's' : ''} comme ${label}`)
       }
+      // Mise à jour optimiste du state local pour une réponse UI immédiate
+      const affectedIds = new Set(selectedIds)
+      setAllDeliveries(prev => prev.map(d => {
+        if (!affectedIds.has(d.id)) return d
+        if (action === 'cod_collected') return { ...d, cod_collected: true }
+        if (action === 'cod_reversed' && d.cod_collected) return { ...d, cod_reversed: true }
+        return d
+      }))
       setSelectionMode(false)
       setSelectedIds(new Set())
       router.refresh()

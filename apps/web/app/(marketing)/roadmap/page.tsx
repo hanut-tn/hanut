@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { HANUT_CONTACT } from '@/lib/constants'
 
 export const metadata: Metadata = {
   title: 'Roadmap — Hanut',
@@ -172,7 +173,7 @@ export default function RoadmapPage() {
             Dites-le nous sur WhatsApp. On prend chaque suggestion au sérieux.
           </p>
           <a
-            href="https://wa.me/21600000000?text=Bonjour%20Hanut%2C%20je%20voudrais%20suggérer%20une%20fonctionnalité%20%3A%20"
+            href={`${HANUT_CONTACT.whatsappUrl}?text=${encodeURIComponent('Bonjour Hanut, je voudrais suggérer une fonctionnalité : ')}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2.5 bg-[#25D366] hover:bg-green-500 text-white font-semibold px-6 py-3 rounded-xl transition-colors shadow-lg shadow-green-100"

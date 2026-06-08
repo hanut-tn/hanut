@@ -74,3 +74,9 @@ export function getCarrierConfig(carrier: string): CarrierConfig {
   if (!knownCarrier) return { label: carrier, color: 'text-gray-700', bg: 'bg-gray-50' }
   return CARRIER_CONFIG[knownCarrier]
 }
+
+export const HANUT_CONTACT = {
+  whatsapp: '+21654727060',
+  whatsappUrl: 'https://wa.me/21654727060',
+  email: 'hanut.tn@gmail.com',
+} as const

@@ -26,7 +26,7 @@ const STEPS = [
     emoji: '✅',
     num: '03',
     title: 'Le livreur part, le client est informé',
-    desc: "L'expédition est créée chez ton transporteur. Le client reçoit un SMS avec son numéro de suivi.",
+    desc: "L'expédition est créée chez ton transporteur. Le client reçoit son numéro de suivi automatiquement.",
   },
 ]
 
@@ -346,7 +346,7 @@ function FeaturesSection() {
     {
       tag: 'Livraisons',
       headline: 'Créez une expédition en 1 clic chez IntiGo, Navex et plus',
-      body: "Sélectionnez votre transporteur, renseignez l'adresse et Hanut crée l'expédition automatiquement. Le client reçoit son numéro de suivi par SMS.",
+      body: "Sélectionnez votre transporteur, renseignez l'adresse et Hanut crée l'expédition automatiquement. Le client reçoit son numéro de suivi.",
       mockup: <DeliveriesMockup />,
     },
     {

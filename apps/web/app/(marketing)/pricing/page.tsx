@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { MessageCircle } from 'lucide-react'
+import { HANUT_CONTACT } from '@/lib/constants'
 
 type Plan = {
   name: string
@@ -107,11 +108,9 @@ const FAQ = [
   },
 ]
 
-const HANUT_WHATSAPP = '21600000000'
-
 function getPricingWhatsAppUrl(planName: string, price: number): string {
   const message = `Bonjour Hanut, je voudrais m'abonner au plan ${planName} (${price} DT/mois).`
-  return `https://wa.me/${HANUT_WHATSAPP}?text=${encodeURIComponent(message)}`
+  return `${HANUT_CONTACT.whatsappUrl}?text=${encodeURIComponent(message)}`
 }
 
 export default function PricingPage() {

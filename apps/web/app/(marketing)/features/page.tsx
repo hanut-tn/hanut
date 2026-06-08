@@ -166,7 +166,7 @@ function DeliveryMockup() {
             <p className="text-xs text-green-700 font-mono mt-0.5">TN-8821-2026</p>
           </div>
         </div>
-        <p className="text-[10px] text-gray-400 text-center">SMS de suivi envoyé au client automatiquement</p>
+        <p className="text-[10px] text-gray-400 text-center">Numéro de suivi transmis au client automatiquement</p>
       </div>
     </MockupShell>
   )
@@ -291,7 +291,7 @@ const SECTIONS = [
     points: [
       'Page mobile-first optimisée pour la conversion',
       'Catalogue en temps réel',
-      'SMS automatique au client à la réception',
+      'Confirmation envoyée automatiquement au client',
     ],
     mockup: 'link',
   },

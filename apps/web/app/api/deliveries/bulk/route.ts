@@ -44,25 +44,37 @@ export async function PATCH(req: Request) {
 
   let toUpdate: string[]
   let skipped: number
+  let message: string | null = null
 
   if (action === 'cod_collected') {
-    const notYet = deliveries.filter(d => !d.cod_collected)
-    skipped = deliveries.length - notYet.length
-    toUpdate = notYet.map(d => d.id)
+    const eligible = deliveries.filter(d => !d.cod_collected)
+    skipped = deliveries.length - eligible.length
+    toUpdate = eligible.map(d => d.id)
   } else {
-    const notYet = deliveries.filter(d => !d.cod_reversed)
-    skipped = deliveries.length - notYet.length
-    toUpdate = notYet.map(d => d.id)
+    // CRITIQUE : ne reverser que les livraisons dont le COD a été collecté
+    const eligible = deliveries.filter(d => d.cod_collected && !d.cod_reversed)
+    const notCollected = deliveries.filter(d => !d.cod_collected && !d.cod_reversed).length
+    skipped = deliveries.length - eligible.length
+    toUpdate = eligible.map(d => d.id)
+    if (notCollected > 0) {
+      message = `${notCollected} livraison${notCollected !== 1 ? 's' : ''} ignorée${notCollected !== 1 ? 's' : ''} — COD non collecté`
+    }
   }
 
   if (toUpdate.length === 0) {
-    return NextResponse.json({ updated: 0, skipped: deliveries.length })
+    return NextResponse.json({
+      updated: 0,
+      skipped: deliveries.length,
+      message: action === 'cod_reversed'
+        ? 'Aucune livraison éligible. Le COD doit être collecté avant d\'être reversé.'
+        : null,
+    }, action === 'cod_reversed' ? { status: 400 } : undefined)
   }
 
   const patch =
     action === 'cod_collected'
       ? { cod_collected: true, delivered_at: new Date().toISOString() }
-      : { cod_collected: true, cod_reversed: true, delivered_at: new Date().toISOString() }
+      : { cod_reversed: true }
 
   const { error: updateError } = await supabase
     .from('deliveries')
@@ -71,5 +83,5 @@ export async function PATCH(req: Request) {
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
 
-  return NextResponse.json({ updated: toUpdate.length, skipped })
+  return NextResponse.json({ updated: toUpdate.length, skipped, message })
 }

@@ -192,6 +192,8 @@ export default function OrdersClient({
   const [dateTotal, setDateTotal] = useState(0)
   const [isLoadingDate, setIsLoadingDate] = useState(false)
 
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
+
   // Toast
   const [toast, setToast] = useState<string | null>(null)
   const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -450,21 +452,52 @@ export default function OrdersClient({
 
   function handleStatus(orderId: string, status: OrderStatus) {
     const order = findLocalOrder(orderId)
-    applyOptimisticStatus(orderId, status, order?.status)
-    if (STATUS_TOAST[status]) showToast(STATUS_TOAST[status]!)
-    startTransition(async () => { await updateStatus(orderId, status) })
+    const oldStatus = order?.status
+    applyOptimisticStatus(orderId, status, oldStatus)
+    setUpdatingId(orderId)
+    startTransition(async () => {
+      try {
+        await updateStatus(orderId, status)
+        if (STATUS_TOAST[status]) showToast(STATUS_TOAST[status]!)
+      } catch {
+        if (oldStatus) applyOptimisticStatus(orderId, oldStatus, status)
+        showToast('Erreur. Veuillez réessayer.')
+      } finally {
+        setUpdatingId(null)
+      }
+    })
   }
 
   function handleConfirm(orderId: string) {
     applyOptimisticStatus(orderId, 'new', 'pending')
-    showToast('✓ Commande confirmée')
-    startTransition(async () => { await confirmOrder(orderId) })
+    setUpdatingId(orderId)
+    startTransition(async () => {
+      try {
+        await confirmOrder(orderId)
+        showToast('✓ Commande confirmée')
+      } catch {
+        applyOptimisticStatus(orderId, 'pending', 'new')
+        showToast('Erreur. Veuillez réessayer.')
+      } finally {
+        setUpdatingId(null)
+      }
+    })
   }
 
   function handleCancel(orderId: string) {
     applyOptimisticStatus(orderId, 'returned', 'pending')
-    showToast('✓ Commande annulée')
-    startTransition(async () => { await cancelPendingOrder(orderId) })
+    setUpdatingId(orderId)
+    startTransition(async () => {
+      try {
+        await cancelPendingOrder(orderId)
+        showToast('✓ Commande annulée')
+      } catch {
+        applyOptimisticStatus(orderId, 'pending', 'returned')
+        showToast('Erreur. Veuillez réessayer.')
+      } finally {
+        setUpdatingId(null)
+      }
+    })
   }
 
   function handleDelete(id: string) {
@@ -819,14 +852,15 @@ export default function OrdersClient({
                 const canDelete = isAdmin && DELETABLE_STATUSES.includes(order.status)
                 const ini = customer?.name ? initials(customer.name) : '?'
 
+                const isUpdatingThis = updatingId === order.id
                 const mobileLeadingAction = isPendingOrder ? (
                   <button
                     onClick={e => { e.stopPropagation(); handleCancel(order.id) }}
-                    disabled={isPending}
+                    disabled={isPending || isUpdatingThis}
                     className="min-h-[44px] min-w-[44px] flex items-center justify-center border border-[#E7E5E4] rounded-lg text-red-600 disabled:opacity-50"
                     aria-label="Annuler la commande"
                   >
-                    <X className="w-4 h-4" />
+                    {isUpdatingThis ? <div className="w-3.5 h-3.5 border border-current border-t-transparent rounded-full animate-spin" /> : <X className="w-4 h-4" />}
                   </button>
                 ) : canDelete ? (
                   <button
@@ -845,26 +879,26 @@ export default function OrdersClient({
                       if (isPendingOrder) handleConfirm(order.id)
                       else handleStatus(order.id, 'confirmed')
                     }}
-                    disabled={isPending}
+                    disabled={isPending || isUpdatingThis}
                     className="flex-1 min-h-[44px] rounded-lg bg-[#16A34A] text-white text-sm font-medium flex items-center justify-center disabled:opacity-50"
                   >
-                    Confirmer
+                    {isUpdatingThis ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Confirmer'}
                   </button>
                 ) : isConfirmed ? (
                   <button
                     onClick={e => { e.stopPropagation(); handleStatus(order.id, 'shipped') }}
-                    disabled={isPending}
+                    disabled={isPending || isUpdatingThis}
                     className="flex-1 min-h-[44px] rounded-lg bg-orange-500 text-white text-sm font-medium flex items-center justify-center disabled:opacity-50"
                   >
-                    Expédier
+                    {isUpdatingThis ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Expédier'}
                   </button>
                 ) : isShipped ? (
                   <button
                     onClick={e => { e.stopPropagation(); handleStatus(order.id, 'delivered') }}
-                    disabled={isPending}
+                    disabled={isPending || isUpdatingThis}
                     className="flex-1 min-h-[44px] rounded-lg bg-[#0B5E46] text-white text-sm font-medium flex items-center justify-center disabled:opacity-50"
                   >
-                    Livré
+                    {isUpdatingThis ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Livré'}
                   </button>
                 ) : (
                   <div className="flex-1 min-h-[44px] rounded-lg bg-[#F5F5F4] text-[#78716C] text-sm font-medium flex items-center justify-center">
@@ -1007,37 +1041,37 @@ export default function OrdersClient({
                             {(isPendingOrder || isNew) && (
                               <button
                                 onClick={() => isPendingOrder ? handleConfirm(order.id) : handleStatus(order.id, 'confirmed')}
-                                disabled={isPending}
-                                className="text-xs font-medium border border-[#16A34A] text-[#16A34A] hover:bg-[#F0FDF4] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                                disabled={isPending || updatingId === order.id}
+                                className="text-xs font-medium border border-[#16A34A] text-[#16A34A] hover:bg-[#F0FDF4] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap min-w-[72px] flex items-center justify-center gap-1.5"
                               >
-                                Confirmer
+                                {updatingId === order.id ? <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" /> : 'Confirmer'}
                               </button>
                             )}
                             {isPendingOrder && (
                               <button
                                 onClick={() => handleCancel(order.id)}
-                                disabled={isPending}
+                                disabled={isPending || updatingId === order.id}
                                 className="text-xs font-medium text-red-500 border border-red-200 hover:bg-red-50 disabled:opacity-50 px-2 py-1.5 rounded-lg transition-colors"
                               >
-                                <X className="w-3.5 h-3.5" />
+                                {updatingId === order.id ? <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" /> : <X className="w-3.5 h-3.5" />}
                               </button>
                             )}
                             {isConfirmed && (
                               <button
                                 onClick={() => handleStatus(order.id, 'shipped')}
-                                disabled={isPending}
-                                className="text-xs font-medium border border-orange-400 text-orange-600 hover:bg-orange-50 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                                disabled={isPending || updatingId === order.id}
+                                className="text-xs font-medium border border-orange-400 text-orange-600 hover:bg-orange-50 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap min-w-[72px] flex items-center justify-center gap-1.5"
                               >
-                                Expédier
+                                {updatingId === order.id ? <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" /> : 'Expédier'}
                               </button>
                             )}
                             {isShipped && (
                               <button
                                 onClick={() => handleStatus(order.id, 'delivered')}
-                                disabled={isPending}
-                                className="text-xs font-medium border border-[#0B5E46] text-[#0B5E46] hover:bg-[#F0FDF4] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                                disabled={isPending || updatingId === order.id}
+                                className="text-xs font-medium border border-[#0B5E46] text-[#0B5E46] hover:bg-[#F0FDF4] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap min-w-[52px] flex items-center justify-center gap-1.5"
                               >
-                                Livré
+                                {updatingId === order.id ? <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" /> : 'Livré'}
                               </button>
                             )}
                             {canDelete && !isPendingOrder && (

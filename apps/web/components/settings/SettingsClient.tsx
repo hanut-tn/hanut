@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Mail, AlertTriangle, MessageCircle, Clock, Info } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { ProfileInput } from '@/app/(dashboard)/settings/actions'
+import { HANUT_CONTACT } from '@/lib/constants'
 
 const PLAN_CONFIG = {
   starter:  { label: 'Starter',  color: 'bg-gray-100 text-gray-700',         price: '39 DT/mois' },
@@ -62,8 +63,6 @@ const PLANS: {
   },
 ]
 
-const HANUT_WHATSAPP = '21600000000'
-
 type PlanOption = (typeof PLANS)[number]
 type UpgradePlanKey = 'pro' | 'business'
 type UpgradePlan = PlanOption & { key: UpgradePlanKey }
@@ -77,7 +76,7 @@ function getWhatsAppMessage(plan: UpgradePlanKey, vendorName: string): string {
 }
 
 function getWhatsAppUrl(plan: UpgradePlanKey, vendorName: string): string {
-  return `https://wa.me/${HANUT_WHATSAPP}?text=${getWhatsAppMessage(plan, vendorName)}`
+  return `${HANUT_CONTACT.whatsappUrl}?text=${getWhatsAppMessage(plan, vendorName)}`
 }
 
 type Seller = {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { HANUT_CONTACT } from '@/lib/constants'
 
 const FAQ = [
   {
@@ -85,7 +86,7 @@ export default function ContactPage() {
             <div className="space-y-4">
               {/* WhatsApp */}
               <a
-                href="https://wa.me/21600000000?text=Bonjour%20Hanut%2C%20j%27ai%20une%20question%20%3A%20"
+                href={`${HANUT_CONTACT.whatsappUrl}?text=${encodeURIComponent('Bonjour Hanut, j\'ai une question : ')}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-4 bg-white rounded-2xl border border-gray-200 shadow-sm p-5 hover:shadow-md transition-all hover:border-green-200 group"
