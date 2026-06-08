@@ -9,15 +9,36 @@ type DeliveryRow = {
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
-  const period = Math.min(180, Math.max(1, parseInt(searchParams.get('period') ?? '30')))
+  const fromParam = searchParams.get('from')
+  const toParam   = searchParams.get('to')
+  const periodParam = parseInt(searchParams.get('period') ?? '30')
 
   const context = await getUserContext()
   if (!context) return new Response('Non autorisé', { status: 401 })
   if (context.plan === 'starter') return new Response('Plan Pro requis', { status: 403 })
 
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - period)
-  cutoff.setHours(0, 0, 0, 0)
+  let cutoff: Date
+  let cutoffEnd: Date
+  let period: number
+  let fileLabel: string
+
+  if (fromParam && toParam) {
+    cutoff    = new Date(fromParam)
+    cutoff.setHours(0, 0, 0, 0)
+    cutoffEnd = new Date(toParam)
+    cutoffEnd.setHours(23, 59, 59, 999)
+    period = Math.ceil((cutoffEnd.getTime() - cutoff.getTime()) / (1000 * 60 * 60 * 24))
+    if (period > 365) return new Response('Période maximum 365 jours', { status: 400 })
+    fileLabel = `${fromParam}-${toParam}`
+  } else {
+    period    = Math.min(180, Math.max(1, periodParam))
+    cutoff    = new Date()
+    cutoff.setDate(cutoff.getDate() - period)
+    cutoff.setHours(0, 0, 0, 0)
+    cutoffEnd = new Date()
+    cutoffEnd.setHours(23, 59, 59, 999)
+    fileLabel = `${period}j-${new Date().toISOString().split('T')[0]}`
+  }
 
   const supabase = await createServerClient()
 
@@ -29,6 +50,7 @@ export async function GET(req: Request) {
       .eq('seller_id', context.sellerId)
       .is('deleted_at', null)
       .gte('created_at', cutoff.toISOString())
+      .lte('created_at', cutoffEnd.toISOString())
       .order('created_at', { ascending: true }),
     supabase
       .from('deliveries')
@@ -48,10 +70,9 @@ export async function GET(req: Request) {
   }
 
   const rows: string[] = []
-  for (let i = period - 1; i >= 0; i--) {
-    const d = new Date()
-    d.setDate(d.getDate() - i)
-    const dateStr = d.toISOString().split('T')[0]
+  const cursor = new Date(cutoff)
+  while (cursor <= cutoffEnd) {
+    const dateStr = cursor.toISOString().split('T')[0]
 
     const dayOrders = orderList.filter(o => o.created_at.startsWith(dateStr))
     const delivered = dayOrders.filter(o => o.status === 'delivered')
@@ -65,17 +86,17 @@ export async function GET(req: Request) {
       .reduce((s, o) => s + o.cod_amount, 0)
 
     rows.push(`${dateStr},${dayOrders.length},${revenue.toFixed(2)},${profit.toFixed(2)},${deliveryRate}%,${codPending.toFixed(2)}`)
+    cursor.setDate(cursor.getDate() + 1)
   }
 
   const BOM = '﻿'
   const header = 'Date,Commandes,CA livré,Profit net,Taux livraison,COD en attente'
   const csv = BOM + [header, ...rows].join('\n')
-  const today = new Date().toISOString().split('T')[0]
 
   return new Response(csv, {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="hanut-analytics-${period}j-${today}.csv"`,
+      'Content-Disposition': `attachment; filename="hanut-analytics-${fileLabel}.csv"`,
     },
   })
 }

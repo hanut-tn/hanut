@@ -10,21 +10,31 @@ export async function GET(req: NextRequest) {
   const page = Math.max(1, parseInt(params.get('page') ?? '1'))
   const limit = Math.min(50, Math.max(10, parseInt(params.get('limit') ?? '20')))
   const search = params.get('search')?.trim() ?? ''
+  const sortBy = params.get('sortBy') ?? 'name'
 
   const from = (page - 1) * limit
   const to = from + limit - 1
 
   const supabase = await createServerClient()
 
+  const sortConfig: { column: string; ascending: boolean } = (() => {
+    switch (sortBy) {
+      case 'order_count':
+      case 'total_spent': return { column: 'order_count', ascending: false }
+      case 'last_order':  return { column: 'created_at',  ascending: false }
+      default:            return { column: 'name',         ascending: true  }
+    }
+  })()
+
   let query = supabase
     .from('customers')
     .select(
-      'id, name, phone, address, city, created_at, tags, orders(id, cod_amount, status, created_at)',
+      'id, name, phone, address, city, created_at, tags, order_count, orders(id, cod_amount, status, created_at)',
       { count: 'exact' }
     )
     .eq('seller_id', context.sellerId)
     .is('orders.deleted_at', null)
-    .order('name', { ascending: true })
+    .order(sortConfig.column, { ascending: sortConfig.ascending })
     .range(from, to)
 
   const safeSearch = search.replace(/[,()]/g, '').slice(0, 100)

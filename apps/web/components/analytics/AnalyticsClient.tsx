@@ -147,6 +147,16 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
     [deliveries, cutoff, cutoffEnd]
   )
 
+  const prevFilteredDeliveries = useMemo(
+    () => deliveries.filter(d => {
+      const o = getDeliveryOrder(d)
+      if (!o) return false
+      const date = new Date(o.created_at)
+      return date >= prevCutoff && date < cutoff
+    }),
+    [deliveries, prevCutoff, cutoff]
+  )
+
   const delivered    = filtered.filter(o => o.status === 'delivered')
   const revenue      = delivered.reduce((s, o) => s + o.cod_amount, 0)
   const totalOrders  = filtered.length
@@ -172,7 +182,11 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
   const prevClosedOrders = prevFiltered.filter(o => ['shipped', 'delivered', 'returned'].includes(o.status))
   const prevDeliveryRate = prevClosedOrders.length > 0
     ? Math.round(prevDelivered.length / prevClosedOrders.length * 100) : 0
-  const prevProfit = prevRevenue // fees not included in prev period (simplified)
+  const prevTotalFees = prevFilteredDeliveries.reduce((s, d) => {
+    const o = getDeliveryOrder(d)
+    return o?.status === 'delivered' ? s + (d.fee ?? 0) : s
+  }, 0)
+  const prevProfit = prevRevenue - prevTotalFees
 
   function trendDir(current: number, prev: number): 'up' | 'down' | 'stable' {
     if (prev === 0) return current > 0 ? 'up' : 'stable'
@@ -187,18 +201,31 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
     return `${pct > 0 ? '+' : ''}${pct}%`
   }
 
+  function getExportUrl(): string {
+    if (customMode && customFrom && customTo) {
+      return `/api/analytics/export?from=${customFrom}&to=${customTo}`
+    }
+    return `/api/analytics/export?period=${period}`
+  }
+
+  function getExportFilename(): string {
+    if (customMode && customFrom && customTo) {
+      return `hanut-analytics-${customFrom}-${customTo}.csv`
+    }
+    return `hanut-analytics-${period}j-${new Date().toISOString().split('T')[0]}.csv`
+  }
+
   async function handleExport() {
     if (exporting || plan === 'starter') return
     setExporting(true)
     try {
-      const res = await fetch(`/api/analytics/export?period=${period}`)
+      const res = await fetch(getExportUrl())
       if (!res.ok) return
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      const today = new Date().toISOString().split('T')[0]
-      a.download = `hanut-analytics-${period}j-${today}.csv`
+      a.download = getExportFilename()
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)

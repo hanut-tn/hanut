@@ -205,7 +205,7 @@ export default function CustomersClient({ customers, initialTotal, stats, update
     if (isLoadingMore) return
     setIsLoadingMore(true)
     try {
-      const res = await fetch(`/api/customers/list?page=${currentPage + 1}&limit=20`)
+      const res = await fetch(`/api/customers/list?page=${currentPage + 1}&limit=20&sortBy=${sortBy}`)
       const data = await res.json()
       if (!res.ok) return
       setAllCustomers(prev => {

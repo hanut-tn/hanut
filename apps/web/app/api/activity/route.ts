@@ -41,23 +41,44 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ logs: data ?? [], total: count ?? 0 })
 }
 
-// POST /api/activity — créer une entrée (interne, appelée par logActivity)
+const ALLOWED_ACTION_TYPES = [
+  'order_created', 'order_confirmed', 'order_status_changed',
+  'order_deleted', 'order_restored', 'order_permanently_deleted',
+  'product_created', 'product_updated', 'product_deleted', 'stock_adjusted',
+  'customer_updated', 'customer_deleted',
+  'delivery_created', 'delivery_deleted',
+  'member_invited', 'member_removed', 'member_role_changed',
+] as const
+
+// POST /api/activity — réservé aux admins, action_type whitelist, seller_id forcé depuis contexte
 export async function POST(request: NextRequest) {
   const context = await getUserContext()
-  if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+  if (!context || context.role !== 'admin') {
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
+  }
 
-  const body = await request.json()
+  let body: Record<string, unknown>
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Corps de requête invalide' }, { status: 400 })
+  }
+
+  if (!ALLOWED_ACTION_TYPES.includes(body.action_type as typeof ALLOWED_ACTION_TYPES[number])) {
+    return NextResponse.json({ error: "Type d'action non autorisé" }, { status: 400 })
+  }
+
   const serviceClient = createServiceClient()
 
   const { error } = await serviceClient.from('activity_logs').insert({
-    seller_id: context.sellerId,
-    user_id: body.user_id ?? context.userId,
-    user_name: body.user_name ?? '',
+    seller_id: context.sellerId,           // toujours depuis le contexte
+    user_id: context.userId,               // toujours depuis le contexte
+    user_name: typeof body.user_name === 'string' ? body.user_name.slice(0, 100) : '',
     action_type: body.action_type,
-    entity_type: body.entity_type ?? null,
-    entity_id: body.entity_id ?? null,
-    description: body.description,
-    metadata: body.metadata ?? {},
+    entity_type: typeof body.entity_type === 'string' ? body.entity_type : null,
+    entity_id: typeof body.entity_id === 'string' ? body.entity_id : null,
+    description: typeof body.description === 'string' ? body.description.slice(0, 200) : null,
+    metadata: body.metadata && typeof body.metadata === 'object' ? body.metadata : {},
   })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

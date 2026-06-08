@@ -18,6 +18,7 @@ export async function DELETE(request: Request) {
   const supabase = createServiceClient()
   const { sellerId, userId } = context
 
+  // Vérifier que l'email correspond avant tout
   const { data: seller, error: sellerError } = await supabase
     .from('sellers')
     .select('email')
@@ -32,71 +33,32 @@ export async function DELETE(request: Request) {
     return failure('Email de confirmation incorrect.', 400)
   }
 
-  // Récupérer les IDs de commandes pour ce vendeur
-  const { data: sellerOrders, error: ordersError } = await supabase
-    .from('orders')
-    .select('id')
-    .eq('seller_id', sellerId)
+  // Suppression transactionnelle via RPC (COD check + cascade inclus)
+  const { error: rpcError } = await supabase.rpc('delete_seller_account', {
+    p_seller_id: sellerId,
+    p_user_id: userId,
+  })
 
-  if (ordersError) return failure(ordersError.message)
-
-  // Bloquer si COD collecté mais pas encore reversé
-  if (sellerOrders && sellerOrders.length > 0) {
-    const orderIds = sellerOrders.map(o => o.id as string)
-    const { data: pendingCOD, error: pendingCodError } = await supabase
-      .from('deliveries')
-      .select('id')
-      .in('order_id', orderIds)
-      .eq('cod_collected', true)
-      .eq('cod_reversed', false)
-
-    if (pendingCodError) return failure(pendingCodError.message)
-
-    if (pendingCOD && pendingCOD.length > 0) {
-      return NextResponse.json({
-        error: `Impossible de supprimer votre compte. ${pendingCOD.length} livraison${pendingCOD.length !== 1 ? 's' : ''} ont un COD collecté mais pas encore reversé.`,
-      }, { status: 400 })
+  if (rpcError) {
+    if (rpcError.message.includes('cod_pending')) {
+      return NextResponse.json(
+        { error: 'Vous avez du COD en attente de reversal. Récupérez vos fonds avant de supprimer votre compte.' },
+        { status: 400 }
+      )
     }
+    if (rpcError.message.includes('seller_not_found')) {
+      return failure('Compte vendeur introuvable.', 404)
+    }
+    return failure('Erreur lors de la suppression. Veuillez réessayer.')
   }
 
-  // Suppression en cascade dans le bon ordre
-  const { error: activityError } = await supabase.from('activity_logs').delete().eq('seller_id', sellerId)
-  if (activityError) return failure(activityError.message)
-
-  const { error: stockMovementsError } = await supabase.from('stock_movements').delete().eq('seller_id', sellerId)
-  if (stockMovementsError) return failure(stockMovementsError.message)
-
-  const { error: restockError } = await supabase.from('restock_orders').delete().eq('seller_id', sellerId)
-  if (restockError) return failure(restockError.message)
-
-  if (sellerOrders && sellerOrders.length > 0) {
-    const orderIds = sellerOrders.map(o => o.id as string)
-    const { error: historyError } = await supabase.from('order_status_history').delete().in('order_id', orderIds)
-    if (historyError) return failure(historyError.message)
-
-    const { error: deliveriesError } = await supabase.from('deliveries').delete().in('order_id', orderIds)
-    if (deliveriesError) return failure(deliveriesError.message)
-  }
-
-  const { error: deleteOrdersError } = await supabase.from('orders').delete().eq('seller_id', sellerId)
-  if (deleteOrdersError) return failure(deleteOrdersError.message)
-
-  const { error: customersError } = await supabase.from('customers').delete().eq('seller_id', sellerId)
-  if (customersError) return failure(customersError.message)
-
-  const { error: productsError } = await supabase.from('products').delete().eq('seller_id', sellerId)
-  if (productsError) return failure(productsError.message)
-
-  const { error: teamError } = await supabase.from('team_members').delete().eq('seller_id', sellerId)
-  if (teamError) return failure(teamError.message)
-
-  const { error: sellerDeleteError } = await supabase.from('sellers').delete().eq('id', sellerId)
-  if (sellerDeleteError) return failure(sellerDeleteError.message)
-
-  // Supprimer le compte Auth
+  // Supprimer le compte Auth uniquement si la RPC a réussi
   const { error: authError } = await supabase.auth.admin.deleteUser(userId)
+
   if (authError) {
-    return failure(authError.message)
+    // DB nettoyée mais Auth non supprimé — l'utilisateur ne peut plus se connecter
+    // car ses données sont absentes. Logger pour traitement manuel si nécessaire.
+    console.error('CRITICAL: DB deleted but Auth user remains:', userId, authError.message)
   }
 
   return NextResponse.json({ success: true })

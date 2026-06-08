@@ -92,15 +92,15 @@ const FAQ = [
   },
   {
     q: "Y a-t-il un engagement minimum ?",
-    a: "Aucun engagement. En mensuel, vous pouvez annuler à tout moment. En annuel, vous bénéficiez de 20% de réduction et l'abonnement court jusqu'à la fin de l'année.",
+    a: "Aucun engagement. Vous payez mois par mois. Annulation possible à tout moment en nous contactant sur WhatsApp.",
   },
   {
     q: 'Comment fonctionne le paiement ?',
-    a: 'Paiement par virement bancaire, carte ou mobile money (eDinar, Paymee). Facture envoyée automatiquement à chaque renouvellement.',
+    a: "Le paiement se fait par virement bancaire ou mobile money (eDinar, Paymee). Contactez-nous sur WhatsApp pour activer votre plan. Activation sous 24h garantie.",
   },
   {
     q: 'Puis-je tester avant de payer ?',
-    a: "Oui. Vous démarrez sur le plan Starter gratuitement pendant 14 jours. Aucune carte bancaire requise pour l'essai.",
+    a: "Contactez-nous sur WhatsApp pour une démonstration personnalisée. On vous aide à configurer votre boutique avant que vous ne vous engagiez.",
   },
   {
     q: 'Que se passe-t-il si je dépasse mes commandes ?',
@@ -286,7 +286,7 @@ export default function PricingPage() {
       <section className="py-20 px-4 sm:px-6 bg-[#0B5E46]">
         <div className="max-w-xl mx-auto text-center">
           <h2 className="text-3xl font-extrabold text-white mb-4">Commencer gratuitement</h2>
-          <p className="text-green-200 mb-8">14 jours d&apos;essai. Sans carte bancaire.</p>
+          <p className="text-green-200 mb-8">Sans engagement. Contactez-nous pour commencer.</p>
           <Link
             href="/register"
             className="inline-flex items-center gap-2 bg-white text-[#0B5E46] hover:bg-green-50 text-base font-bold px-8 py-3.5 rounded-xl transition-colors shadow-lg"
