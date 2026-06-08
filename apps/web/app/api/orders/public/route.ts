@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs'
 import { NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
@@ -20,6 +21,15 @@ const PublicOrderSchema = z.object({
 })
 
 export async function POST(req: Request) {
+  try {
+    return await handlePublicOrder(req)
+  } catch (err) {
+    Sentry.captureException(err, { tags: { module: 'public_order' } })
+    return NextResponse.json({ error: 'Une erreur est survenue' }, { status: 500 })
+  }
+}
+
+async function handlePublicOrder(req: Request) {
   const ip = getClientIp(req.headers)
   let rl: RateLimitResult
 
@@ -155,3 +165,4 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ success: true, order_id: orderId, tracking_token: orderRow?.tracking_token ?? null })
 }
+

@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs'
 import { createServiceClient } from '@/lib/supabase/service'
 
 type LogActivityParams = {
@@ -32,9 +33,13 @@ export async function logActivity(params: LogActivityParams): Promise<void> {
         sellerId: params.sellerId,
         error: error.message,
       })
+      Sentry.captureException(new Error(`logActivity failed: ${error.message}`), {
+        extra: { actionType: params.actionType, sellerId: params.sellerId },
+      })
     }
   } catch (err) {
     console.error('[logActivity] Unexpected error:', err)
+    Sentry.captureException(err)
   }
 }
 

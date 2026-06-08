@@ -1,5 +1,6 @@
 'use server'
 
+import * as Sentry from '@sentry/nextjs'
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
@@ -49,7 +50,13 @@ export async function createOrder(input: CreateOrderInput) {
     p_notes: input.notes ?? null,
     p_status: 'new',
   })
-  if (error) throw new Error(error.message)
+  if (error) {
+    Sentry.captureException(new Error(error.message), {
+      tags: { module: 'orders' },
+      extra: { sellerId: context.sellerId },
+    })
+    throw new Error(error.message)
+  }
 
   if (newOrderId) {
     await supabase.from('order_status_history').insert({

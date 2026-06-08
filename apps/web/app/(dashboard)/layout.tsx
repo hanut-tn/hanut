@@ -6,6 +6,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
 import { RoleProvider } from '@/lib/role-context'
 import { MobileNavProvider } from '@/lib/mobile-nav-context'
+import { SentryUserProvider } from '@/components/providers/SentryUserProvider'
 import Sidebar from '@/components/dashboard/Sidebar'
 import TopBar from '@/components/dashboard/TopBar'
 import BottomNav from '@/components/dashboard/BottomNav'
@@ -69,6 +70,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <RoleProvider role={context.role} sellerId={context.sellerId} isSeller={context.isSeller}>
+      <SentryUserProvider sellerId={context.sellerId} plan={context.plan}>
       <MobileNavProvider>
         <div className="flex min-h-dvh bg-[#FAFAF9]">
 
@@ -92,6 +94,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <BottomNav role={context.role} plan={context.plan} />
         </div>
       </MobileNavProvider>
+      </SentryUserProvider>
     </RoleProvider>
   )
 }

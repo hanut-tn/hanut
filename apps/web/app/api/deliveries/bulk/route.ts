@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createServerClient } from '@/lib/supabase/server'
@@ -81,7 +82,10 @@ export async function PATCH(req: Request) {
     .update(patch)
     .in('id', toUpdate)
 
-  if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
+  if (updateError) {
+    Sentry.captureException(new Error(updateError.message), { tags: { module: 'deliveries_bulk' } })
+    return NextResponse.json({ error: updateError.message }, { status: 500 })
+  }
 
   return NextResponse.json({ updated: toUpdate.length, skipped, message })
 }
