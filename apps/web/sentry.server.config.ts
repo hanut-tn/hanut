@@ -6,6 +6,10 @@ Sentry.init({
   tracesSampleRate: 0.1,
 
   enabled: process.env.NODE_ENV === 'production',
+  enableLogs: true,
+  integrations: [
+    Sentry.consoleLoggingIntegration({ levels: ['log', 'warn', 'error'] }),
+  ],
 
   beforeSend(event) {
     if (event.request?.data) {

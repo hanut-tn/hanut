@@ -10,11 +10,13 @@ Sentry.init({
   replaysOnErrorSampleRate: 1.0,
   replaysSessionSampleRate: 0.05,
 
+  enableLogs: true,
   integrations: [
     Sentry.replayIntegration({
       maskAllInputs: true,
       blockAllMedia: false,
     }),
+    Sentry.consoleLoggingIntegration({ levels: ['log', 'warn', 'error'] }),
   ],
 
   enabled: process.env.NODE_ENV === 'production',
