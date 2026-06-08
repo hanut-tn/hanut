@@ -3,7 +3,7 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import type { OrderStatus } from '@hanut/types'
 import { DELETABLE_STATUSES, ORDER_STATUS_LABELS } from '@/lib/constants'
 
@@ -89,6 +89,7 @@ export async function createOrder(input: CreateOrderInput) {
 
   revalidatePath('/orders')
   revalidatePath('/dashboard')
+  revalidateTag('dashboard')
 }
 
 export async function updateOrderStatus(id: string, status: OrderStatus) {
@@ -124,6 +125,7 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
 
   revalidatePath('/orders')
   revalidatePath('/dashboard')
+  revalidateTag('dashboard')
 }
 
 export async function confirmPendingOrder(id: string) {
@@ -203,6 +205,7 @@ export async function cancelPendingOrder(id: string) {
 
   revalidatePath('/orders')
   revalidatePath('/dashboard')
+  revalidateTag('dashboard')
 }
 
 type OrderMutationResult = { error?: string }
@@ -284,6 +287,7 @@ export async function deleteOrder(id: string): Promise<OrderMutationResult> {
 
   revalidatePath('/orders')
   revalidatePath('/dashboard')
+  revalidateTag('dashboard')
   return {}
 }
 
@@ -369,6 +373,7 @@ export async function restoreOrder(id: string): Promise<OrderMutationResult> {
 
   revalidatePath('/orders')
   revalidatePath('/dashboard')
+  revalidateTag('dashboard')
   return {}
 }
 
@@ -413,5 +418,6 @@ export async function permanentlyDeleteOrder(id: string): Promise<OrderMutationR
 
   revalidatePath('/orders')
   revalidatePath('/dashboard')
+  revalidateTag('dashboard')
   return {}
 }

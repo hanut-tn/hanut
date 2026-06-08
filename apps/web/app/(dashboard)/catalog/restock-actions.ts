@@ -3,7 +3,7 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 
 export type RestockOrderInput = {
   totalQuantity: number
@@ -199,6 +199,8 @@ export async function receiveRestockOrder(
   })
 
   revalidatePath(`/catalog/${restock.product_id}`)
+  revalidatePath('/dashboard')
+  revalidateTag('dashboard')
   return {}
 }
 
@@ -242,5 +244,7 @@ export async function syncProductStock(productId: string): Promise<{ error?: str
   if (error) return { error: error.message }
 
   revalidatePath(`/catalog/${productId}`)
+  revalidatePath('/dashboard')
+  revalidateTag('dashboard')
   return { newStock: data as number }
 }

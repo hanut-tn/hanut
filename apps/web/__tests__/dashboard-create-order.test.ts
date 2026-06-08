@@ -4,6 +4,7 @@ import type { CreateOrderInput } from '../app/(dashboard)/orders/actions'
 const serverMock = vi.hoisted(() => ({
   createServerClient: vi.fn(),
   revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
 }))
 
 const contextMock = vi.hoisted(() => ({
@@ -20,6 +21,7 @@ vi.mock('@/lib/get-context', () => ({
 
 vi.mock('next/cache', () => ({
   revalidatePath: serverMock.revalidatePath,
+  revalidateTag: serverMock.revalidateTag,
 }))
 
 import { createOrder } from '../app/(dashboard)/orders/actions'
@@ -84,6 +86,7 @@ describe('createOrder dashboard action', () => {
 
     expect(serverMock.createServerClient).not.toHaveBeenCalled()
     expect(serverMock.revalidatePath).not.toHaveBeenCalled()
+    expect(serverMock.revalidateTag).not.toHaveBeenCalled()
   })
 
   it('creates a new order through the transactional RPC using the effective seller id', async () => {
@@ -111,6 +114,7 @@ describe('createOrder dashboard action', () => {
     )
     expect(serverMock.revalidatePath).toHaveBeenCalledWith('/orders')
     expect(serverMock.revalidatePath).toHaveBeenCalledWith('/dashboard')
+    expect(serverMock.revalidateTag).toHaveBeenCalledWith('dashboard')
   })
 
   it('surfaces RPC errors and skips revalidation', async () => {
@@ -120,5 +124,6 @@ describe('createOrder dashboard action', () => {
     await expect(createOrder(input)).rejects.toThrow('Stock insuffisant')
 
     expect(serverMock.revalidatePath).not.toHaveBeenCalled()
+    expect(serverMock.revalidateTag).not.toHaveBeenCalled()
   })
 })

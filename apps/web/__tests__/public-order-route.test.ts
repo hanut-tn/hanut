@@ -10,6 +10,10 @@ const rateLimitMock = vi.hoisted(() => ({
   getClientIp: vi.fn(() => '127.0.0.1'),
 }))
 
+const cacheMock = vi.hoisted(() => ({
+  revalidateTag: vi.fn(),
+}))
+
 vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: serviceMock.createServiceClient,
 }))
@@ -17,6 +21,10 @@ vi.mock('@/lib/supabase/service', () => ({
 vi.mock('@/lib/rate-limit', () => ({
   checkRateLimit: rateLimitMock.checkRateLimit,
   getClientIp: rateLimitMock.getClientIp,
+}))
+
+vi.mock('next/cache', () => ({
+  revalidateTag: cacheMock.revalidateTag,
 }))
 
 import { POST } from '../app/api/orders/public/route'
@@ -137,6 +145,7 @@ describe('POST /api/orders/public', () => {
       status: 'pending',
       changed_by: null,
     })
+    expect(cacheMock.revalidateTag).toHaveBeenCalledWith('dashboard')
   })
 
   it('normalizes formatted Tunisian phone numbers before calling the RPC', async () => {
@@ -157,6 +166,7 @@ describe('POST /api/orders/public', () => {
       status: 'pending',
       changed_by: null,
     })
+    expect(cacheMock.revalidateTag).toHaveBeenCalledWith('dashboard')
   })
 
   it('returns 429 when the IP exceeds the public order rate limit', async () => {
@@ -168,6 +178,7 @@ describe('POST /api/orders/public', () => {
     expect(response.headers.get('Retry-After')).toBe('120')
     expect(response.headers.get('X-RateLimit-Remaining')).toBe('0')
     expect(serviceMock.createServiceClient).not.toHaveBeenCalled()
+    expect(cacheMock.revalidateTag).not.toHaveBeenCalled()
   })
 
   it('returns 404 when the seller slug does not exist', async () => {
@@ -178,6 +189,7 @@ describe('POST /api/orders/public', () => {
     expect(response.status).toBe(404)
     await expect(response.json()).resolves.toEqual({ error: 'Boutique introuvable' })
     expect(rpc).not.toHaveBeenCalled()
+    expect(cacheMock.revalidateTag).not.toHaveBeenCalled()
   })
 
   it('rejects invalid quantities before calling the RPC', async () => {

@@ -1,4 +1,5 @@
-import { createServerClient } from '@/lib/supabase/server'
+import { unstable_cache } from 'next/cache'
+import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
 import Link from 'next/link'
 import {
@@ -25,6 +26,46 @@ type RecentOrder = {
   product: { name: string } | { name: string }[] | null
 }
 
+const getDashboardData = unstable_cache(
+  async (sellerId: string) => {
+    const supabase = createServiceClient()
+
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+
+    const [
+      { data: allDelivered },
+      { data: allOrders },
+      { data: lastMonthDelivered },
+      { data: lastMonthOrders },
+      { data: weeklyOrders },
+      { data: recentOrders },
+      { data: seller },
+      { count: productCount },
+      { count: orderCount },
+      { data: stockProducts },
+    ] = await Promise.all([
+      supabase.from('orders').select('cod_amount, created_at').eq('seller_id', sellerId).eq('status', 'delivered').is('deleted_at', null).gte('created_at', startOfMonth.toISOString()),
+      supabase.from('orders').select('status').eq('seller_id', sellerId).is('deleted_at', null).gte('created_at', startOfMonth.toISOString()),
+      supabase.from('orders').select('cod_amount').eq('seller_id', sellerId).eq('status', 'delivered').is('deleted_at', null).gte('created_at', startOfLastMonth.toISOString()).lte('created_at', endOfLastMonth.toISOString()),
+      supabase.from('orders').select('status').eq('seller_id', sellerId).is('deleted_at', null).gte('created_at', startOfLastMonth.toISOString()).lte('created_at', endOfLastMonth.toISOString()),
+      supabase.from('orders').select('cod_amount, created_at').eq('seller_id', sellerId).eq('status', 'delivered').is('deleted_at', null).gte('created_at', sevenDaysAgo.toISOString()),
+      supabase.from('orders').select('id, cod_amount, status, variant, created_at, customer:customers(name, phone), product:products(name)').eq('seller_id', sellerId).is('deleted_at', null).order('created_at', { ascending: false }).limit(5),
+      supabase.from('sellers').select('slug, onboarding_completed, onboarding_steps').eq('id', sellerId).single(),
+      supabase.from('products').select('id', { count: 'exact', head: true }).eq('seller_id', sellerId),
+      supabase.from('orders').select('id', { count: 'exact', head: true }).eq('seller_id', sellerId).is('deleted_at', null),
+      supabase.from('products').select('id, name, stock, low_stock_alert, image_url, price, cost').eq('seller_id', sellerId).order('stock', { ascending: true }).limit(50),
+    ])
+
+    return { allDelivered, allOrders, lastMonthDelivered, lastMonthOrders, weeklyOrders, recentOrders, seller, productCount, orderCount, stockProducts }
+  },
+  ['dashboard-data'],
+  { revalidate: 60, tags: ['dashboard', 'orders', 'products'] }
+)
+
 export default async function DashboardPage() {
   const context = await getUserContext()
   if (!context) return null
@@ -32,38 +73,10 @@ export default async function DashboardPage() {
   if (context.role === 'operator') return <OperatorDashboard context={context} />
   if (context.role === 'readonly') return <ReadonlyDashboard context={context} />
 
-  const supabase = await createServerClient()
-
-  // Date boundaries
-  const now = new Date()
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-  const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-
-  const [
-    { data: allDelivered },
-    { data: allOrders },
-    { data: lastMonthDelivered },
-    { data: lastMonthOrders },
-    { data: weeklyOrders },
-    { data: recentOrders },
-    { data: seller },
-    { count: productCount },
-    { count: orderCount },
-    { data: stockProducts },
-  ] = await Promise.all([
-    supabase.from('orders').select('cod_amount, created_at').eq('seller_id', context.sellerId).eq('status', 'delivered').is('deleted_at', null).gte('created_at', startOfMonth.toISOString()),
-    supabase.from('orders').select('status').eq('seller_id', context.sellerId).is('deleted_at', null).gte('created_at', startOfMonth.toISOString()),
-    supabase.from('orders').select('cod_amount').eq('seller_id', context.sellerId).eq('status', 'delivered').is('deleted_at', null).gte('created_at', startOfLastMonth.toISOString()).lte('created_at', endOfLastMonth.toISOString()),
-    supabase.from('orders').select('status').eq('seller_id', context.sellerId).is('deleted_at', null).gte('created_at', startOfLastMonth.toISOString()).lte('created_at', endOfLastMonth.toISOString()),
-    supabase.from('orders').select('cod_amount, created_at').eq('seller_id', context.sellerId).eq('status', 'delivered').is('deleted_at', null).gte('created_at', sevenDaysAgo.toISOString()),
-    supabase.from('orders').select('id, cod_amount, status, variant, created_at, customer:customers(name, phone), product:products(name)').eq('seller_id', context.sellerId).is('deleted_at', null).order('created_at', { ascending: false }).limit(5),
-    supabase.from('sellers').select('slug, onboarding_completed, onboarding_steps').eq('id', context.sellerId).single(),
-    supabase.from('products').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId),
-    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId).is('deleted_at', null),
-    supabase.from('products').select('id, name, stock, low_stock_alert, image_url, price, cost').eq('seller_id', context.sellerId).order('stock', { ascending: true }).limit(50),
-  ])
+  const {
+    allDelivered, allOrders, lastMonthDelivered, lastMonthOrders,
+    weeklyOrders, recentOrders, seller, productCount, orderCount, stockProducts,
+  } = await getDashboardData(context.sellerId)
 
   // Current month KPIs
   const revenue = ((allDelivered ?? []) as { cod_amount: number }[]).reduce((s, o) => s + o.cod_amount, 0)

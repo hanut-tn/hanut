@@ -3,7 +3,7 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import type { CarrierName } from '@hanut/types'
 
 export type CreateDeliveryInput = {
@@ -50,6 +50,7 @@ export async function createDelivery(input: CreateDeliveryInput) {
 
   revalidatePath('/deliveries')
   revalidatePath('/dashboard')
+  revalidateTag('dashboard')
 }
 
 export async function updateDelivery(id: string, input: UpdateDeliveryInput) {
@@ -73,6 +74,7 @@ export async function updateDelivery(id: string, input: UpdateDeliveryInput) {
 
   revalidatePath('/deliveries')
   revalidatePath('/dashboard')
+  revalidateTag('dashboard')
 }
 
 export async function deleteDelivery(id: string): Promise<{ error?: string }> {
@@ -121,5 +123,6 @@ export async function deleteDelivery(id: string): Promise<{ error?: string }> {
   revalidatePath('/deliveries')
   revalidatePath('/orders')
   revalidatePath('/dashboard')
+  revalidateTag('dashboard')
   return {}
 }

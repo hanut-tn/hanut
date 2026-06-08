@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
@@ -143,6 +144,8 @@ export async function POST(req: Request) {
     status: 'pending',
     changed_by: null,
   })
+
+  revalidateTag('dashboard')
 
   return NextResponse.json({ success: true, order_id: orderId })
 }

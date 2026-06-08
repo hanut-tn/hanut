@@ -4,7 +4,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 
 export type ProductVariant = { size?: string; color?: string; qty: number }
 
@@ -73,6 +73,7 @@ export async function upsertProduct(input: ProductInput): Promise<{ error?: stri
 
   revalidatePath('/catalog')
   if (productId) revalidatePath(`/catalog/${productId}`)
+  revalidateTag('dashboard')
   return {}
 }
 
@@ -140,6 +141,7 @@ export async function deleteProduct(id: string): Promise<{ error?: string }> {
   })
 
   revalidatePath('/catalog')
+  revalidateTag('dashboard')
   return {}
 }
 
@@ -310,5 +312,6 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
 
   revalidatePath('/catalog')
   revalidatePath(`/catalog/${id}`)
+  revalidateTag('dashboard')
   return {}
 }
