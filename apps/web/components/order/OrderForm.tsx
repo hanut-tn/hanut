@@ -18,7 +18,7 @@ type Props = {
   products: Product[]
 }
 
-type Submitted = { orderId: string; fullId: string }
+type Submitted = { orderId: string; fullId: string; trackingToken: string | null }
 type ProductVariant = Product['variants'][number]
 type StockErrorScope = 'product' | 'variant'
 
@@ -163,7 +163,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         }
         return
       }
-      setSubmitted({ orderId: (data.order_id as string).slice(0, 8).toUpperCase(), fullId: data.order_id as string })
+      setSubmitted({ orderId: (data.order_id as string).slice(0, 8).toUpperCase(), fullId: data.order_id as string, trackingToken: (data.tracking_token as string | null) ?? null })
     } catch {
       setError('Erreur réseau. Vérifiez votre connexion et réessayez.')
     } finally {
@@ -173,7 +173,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
 
   // ── Confirmation screen ──────────────────────────────────────────────────────
   if (submitted) {
-    const trackUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/track/${submitted.fullId}`
+    const trackUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/track/${submitted.trackingToken ?? submitted.fullId}`
 
     return (
       <div className="flex flex-col items-center text-center py-10 space-y-5">

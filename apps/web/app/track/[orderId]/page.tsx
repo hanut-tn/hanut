@@ -25,7 +25,7 @@ export default async function TrackPage({ params }: Params) {
   const { data: order } = await supabase
     .from('orders')
     .select('id, status, cod_amount, variant, quantity, created_at, customer:customers(name, city), product:products(name, image_url)')
-    .eq('id', orderId)
+    .eq('tracking_token', orderId)
     .is('deleted_at', null)
     .single()
 
@@ -40,14 +40,14 @@ export default async function TrackPage({ params }: Params) {
     supabase
       .from('deliveries')
       .select('carrier, tracking_number')
-      .eq('order_id', orderId)
+      .eq('order_id', order.id)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
     supabase
       .from('order_status_history')
       .select('status, changed_at')
-      .eq('order_id', orderId)
+      .eq('order_id', order.id)
       .order('changed_at', { ascending: true }),
   ])
 

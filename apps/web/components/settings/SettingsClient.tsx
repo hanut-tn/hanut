@@ -528,13 +528,13 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
                 <div className="flex gap-2 shrink-0">
                   <button
                     onClick={handleCopy}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                    className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
                       copied
                         ? 'bg-green-100 text-green-700'
                         : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    {copied ? '✓ Copié !' : 'Copier'}
+                    {copied ? <><Check className="w-3 h-3" /> Copié !</> : 'Copier'}
                   </button>
                   <a
                     href={orderLinkFull!}
@@ -930,16 +930,29 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
               >
                 Annuler
               </button>
-              <a
-                href={upgradeWhatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setUpgradePlan(null)}
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!upgradePlan) return
+                  const url = getWhatsAppUrl(upgradePlan.key, seller.name)
+                  const popup = window.open('', '_blank', 'noopener,noreferrer')
+                  await fetch('/api/upgrade-requests', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requested_plan: upgradePlan.key }),
+                  }).catch(() => {})
+                  if (popup) {
+                    popup.location.href = url
+                  } else {
+                    window.open(url, '_blank', 'noopener,noreferrer')
+                  }
+                  setUpgradePlan(null)
+                }}
                 className="w-full sm:w-auto bg-[#16A34A] hover:bg-[#15803D] text-white rounded-lg px-4 py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition-colors min-h-[44px]"
               >
                 <MessageCircle className="w-4 h-4" />
                 Continuer sur WhatsApp →
-              </a>
+              </button>
             </div>
           </div>
         </div>

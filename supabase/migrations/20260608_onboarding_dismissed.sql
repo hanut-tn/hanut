@@ -1,0 +1,2 @@
+ALTER TABLE sellers
+ADD COLUMN IF NOT EXISTS onboarding_dismissed_until TIMESTAMPTZ DEFAULT NULL;

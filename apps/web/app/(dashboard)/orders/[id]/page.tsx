@@ -16,7 +16,7 @@ export default async function OrderDetailPage({ params }: Props) {
   const { data: order } = await supabase
     .from('orders')
     .select(`
-      id, status, cod_amount, variant, quantity, notes, created_at,
+      id, status, cod_amount, variant, quantity, notes, created_at, tracking_token,
       customer:customers(id, name, phone, address, city),
       product:products(id, name, price, cost, image_url)
     `)
@@ -90,6 +90,7 @@ export default async function OrderDetailPage({ params }: Props) {
       customerStats={customerStats}
       linkedCustomer={linkedCustomer}
       hasExistingCustomer={hasExistingCustomer}
+      trackingToken={order.tracking_token ?? null}
       updateStatus={updateOrderStatus}
       confirmOrder={confirmPendingOrder}
       cancelOrder={cancelPendingOrder}

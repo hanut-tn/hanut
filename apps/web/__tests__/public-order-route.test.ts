@@ -90,18 +90,20 @@ function mockSupabase(
 ) {
   const sellerQuery = createSingleQuery(seller)
   const productQuery = createSingleQuery(product)
+  const orderQuery = createSingleQuery({ tracking_token: 'test-tracking-token' })
   const historyQuery = createInsertQuery()
   const rpc = vi.fn().mockResolvedValue(rpcResult)
   const from = vi.fn((table: string) => {
     if (table === 'sellers') return sellerQuery
     if (table === 'products') return productQuery
+    if (table === 'orders') return orderQuery
     if (table === 'order_status_history') return historyQuery
     throw new Error(`Unexpected table: ${table}`)
   })
 
   serviceMock.createServiceClient.mockReturnValue({ from, rpc })
 
-  return { from, rpc, sellerQuery, productQuery, historyQuery }
+  return { from, rpc, sellerQuery, productQuery, orderQuery, historyQuery }
 }
 
 describe('POST /api/orders/public', () => {
@@ -119,7 +121,7 @@ describe('POST /api/orders/public', () => {
     const response = await POST(jsonRequest(validBody()))
 
     expect(response.status).toBe(200)
-    await expect(response.json()).resolves.toEqual({ success: true, order_id: 'order-1' })
+    await expect(response.json()).resolves.toEqual({ success: true, order_id: 'order-1', tracking_token: 'test-tracking-token' })
     expect(rateLimitMock.checkRateLimit).toHaveBeenCalledWith('127.0.0.1', 'orders_public', 10, 60)
     expect(sellerQuery.eq).toHaveBeenCalledWith('slug', 'demo-shop')
     expect(productQuery.eq).toHaveBeenCalledWith('id', 'product-1')

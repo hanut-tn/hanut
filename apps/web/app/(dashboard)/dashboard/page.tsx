@@ -54,7 +54,7 @@ const getDashboardData = unstable_cache(
       supabase.from('orders').select('status').eq('seller_id', sellerId).is('deleted_at', null).gte('created_at', startOfLastMonth.toISOString()).lte('created_at', endOfLastMonth.toISOString()),
       supabase.from('orders').select('cod_amount, created_at').eq('seller_id', sellerId).eq('status', 'delivered').is('deleted_at', null).gte('created_at', sevenDaysAgo.toISOString()),
       supabase.from('orders').select('id, cod_amount, status, variant, created_at, customer:customers(name, phone), product:products(name)').eq('seller_id', sellerId).is('deleted_at', null).order('created_at', { ascending: false }).limit(5),
-      supabase.from('sellers').select('slug, onboarding_completed, onboarding_steps').eq('id', sellerId).single(),
+      supabase.from('sellers').select('slug, onboarding_completed, onboarding_steps, onboarding_dismissed_until').eq('id', sellerId).single(),
       supabase.from('products').select('id', { count: 'exact', head: true }).eq('seller_id', sellerId),
       supabase.from('orders').select('id', { count: 'exact', head: true }).eq('seller_id', sellerId).is('deleted_at', null),
       supabase.from('products').select('id, name, stock, low_stock_alert, image_url, price, cost').eq('seller_id', sellerId).order('stock', { ascending: true }).limit(50),
@@ -139,14 +139,16 @@ export default async function DashboardPage() {
       </div>
 
       {/* Onboarding checklist — visible uniquement aux vendeurs n'ayant pas encore terminé */}
-      {context.isSeller && !seller?.onboarding_completed && (
+      {context.isSeller && !seller?.onboarding_completed &&
+       (!seller?.onboarding_dismissed_until || new Date(seller.onboarding_dismissed_until) < new Date()) && (
         <OnboardingChecklist
           productAdded={(productCount ?? 0) > 0}
           linkCopied={onboardingSteps?.link_copied === true}
           firstOrder={(orderCount ?? 0) > 0 || onboardingSteps?.first_order === true}
           slug={seller?.slug ?? null}
         />
-      )}
+      )
+      }
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">

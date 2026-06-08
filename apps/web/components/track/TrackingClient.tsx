@@ -4,12 +4,10 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
-  CheckCircle2, Circle, Package, Truck, ExternalLink, MapPin, RefreshCw,
+  CheckCircle2, Circle, Package, Truck, ExternalLink, MapPin, RefreshCw, RotateCcw,
 } from 'lucide-react'
 import { getCarrierConfig } from '@/lib/constants'
 import type { CarrierName } from '@hanut/types'
-
-const STATUS_FLOW = ['new', 'confirmed', 'shipped', 'delivered'] as const
 
 const STATUS_MESSAGE: Record<string, string> = {
   pending:   'Votre commande est en attente de confirmation. Le vendeur vous contactera bientôt.',
@@ -20,9 +18,19 @@ const STATUS_MESSAGE: Record<string, string> = {
   returned:  "Votre commande a été retournée. Contactez le vendeur pour plus d'informations.",
 }
 
-function getStepIndex(status: string): number {
-  if (status === 'pending') return 0
-  return STATUS_FLOW.indexOf(status as typeof STATUS_FLOW[number])
+const TRACKING_STEPS = [
+  { key: 'received',  label: 'Commande reçue',       matchStatuses: ['pending', 'new'] },
+  { key: 'confirmed', label: 'Commande confirmée',    matchStatuses: ['confirmed'] },
+  { key: 'shipped',   label: 'En cours de livraison', matchStatuses: ['shipped'] },
+  { key: 'delivered', label: 'Livrée',                matchStatuses: ['delivered'] },
+] as const
+
+function getCurrentStepIndex(status: string): number {
+  if (status === 'pending' || status === 'new') return 0
+  if (status === 'confirmed') return 1
+  if (status === 'shipped') return 2
+  if (status === 'delivered') return 3
+  return -1
 }
 
 function formatDate(iso: string) {
@@ -112,9 +120,9 @@ export default function TrackingClient({ initialData, orderId }: Props) {
     }
   }, [])
 
-  const currentStatus   = data.status
-  const currentStepIdx  = getStepIndex(currentStatus)
-  const isReturned      = currentStatus === 'returned'
+  const currentStatus  = data.status
+  const currentStepIdx = getCurrentStepIndex(currentStatus)
+  const isReturned     = currentStatus === 'returned'
 
   const statusMap = new Map<string, string>()
   for (const h of data.status_history) {
@@ -124,15 +132,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
     statusMap.set(currentStatus, data.created_at)
   }
 
-  const timelineSteps = [
-    { status: 'new',       label: 'Commande reçue' },
-    { status: 'confirmed', label: 'Commande confirmée' },
-    { status: 'shipped',   label: 'En cours de livraison' },
-    ...(isReturned
-      ? [{ status: 'returned',  label: 'Retournée' }]
-      : [{ status: 'delivered', label: 'Livrée' }]
-    ),
-  ]
+  const timelineSteps = isReturned ? TRACKING_STEPS.slice(0, 3) : TRACKING_STEPS
 
   const carrier       = data.delivery?.carrier as CarrierName | undefined
   const trackingUrl   = data.delivery?.tracking_url ?? null
@@ -204,15 +204,16 @@ export default function TrackingClient({ initialData, orderId }: Props) {
           <h2 className="text-sm font-semibold text-[#1C1917] mb-4">Suivi</h2>
           <div className="space-y-0">
             {timelineSteps.map((step, i) => {
-              const stepIdx = getStepIndex(step.status)
+              const isCurrent = (step.matchStatuses as readonly string[]).includes(currentStatus)
               const isDone = isReturned
-                ? step.status !== 'returned' ? stepIdx < getStepIndex(currentStatus) : true
-                : stepIdx < currentStepIdx || (stepIdx === currentStepIdx && currentStatus !== 'pending')
-              const isCurrent = step.status === currentStatus
-              const changedAt = statusMap.get(step.status)
+                ? step.key === 'received' || (step.matchStatuses as readonly string[]).some(s => statusMap.has(s))
+                : currentStepIdx > i
+              const changedAt = step.key === 'received'
+                ? (statusMap.get('new') ?? statusMap.get('pending') ?? data.created_at)
+                : statusMap.get(step.matchStatuses[0])
 
               return (
-                <div key={step.status} className="flex gap-4">
+                <div key={step.key} className="flex gap-4">
                   <div className="flex flex-col items-center">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
                       isDone || isCurrent ? 'text-[#16A34A]' : 'text-[#E7E5E4]'
@@ -240,6 +241,17 @@ export default function TrackingClient({ initialData, orderId }: Props) {
                 </div>
               )
             })}
+            {isReturned && (
+              <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg mt-2">
+                <RotateCcw className="w-5 h-5 text-red-500 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-red-700">Commande retournée</p>
+                  {statusMap.get('returned') && (
+                    <p className="text-xs text-red-500 mt-0.5">{formatDate(statusMap.get('returned')!)}</p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -281,7 +293,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
           <button
             onClick={refresh}
             disabled={isRefreshing}
-            className="flex items-center gap-2 text-xs text-[#78716C] hover:text-[#1C1917] transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 text-xs text-[#78716C] hover:text-[#1C1917] mx-auto mt-4 min-h-[44px] px-4 rounded-lg hover:bg-[#F5F5F4] touch-manipulation transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
             Actualiser

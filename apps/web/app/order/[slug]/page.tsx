@@ -2,7 +2,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import OrderForm from '@/components/order/OrderForm'
 import type { Product } from '@hanut/types'
 import Link from 'next/link'
-import { SearchX } from 'lucide-react'
+import { AlertTriangle, SearchX } from 'lucide-react'
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -15,7 +15,7 @@ export default async function PublicOrderPage({ params }: Props) {
   } catch {
     return (
       <div className="min-h-screen bg-[#FAFAF9] flex flex-col items-center justify-center px-4 text-center">
-        <div className="text-6xl mb-4">⚠️</div>
+        <AlertTriangle className="w-12 h-12 text-amber-500 mb-4" />
         <h1 className="text-2xl font-bold text-[#1C1917] mb-2">Page temporairement indisponible</h1>
         <p className="text-gray-500 max-w-sm">Contactez le vendeur directement.</p>
       </div>

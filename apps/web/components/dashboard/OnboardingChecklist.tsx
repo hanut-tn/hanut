@@ -23,11 +23,6 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
   const completedCount = [productAdded, linkCopied, firstOrderSeen].filter(Boolean).length
   const allDone = completedCount === 3
 
-  useEffect(() => {
-    if (sessionStorage.getItem('hanut_onboarding_dismissed') === '1') {
-      setDismissed(true)
-    }
-  }, [])
 
   useEffect(() => {
     setLinkCopied(initLC)
@@ -96,9 +91,16 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
     router.push('/orders')
   }
 
-  function handleDismiss() {
-    sessionStorage.setItem('hanut_onboarding_dismissed', '1')
+  async function handleDismiss() {
     setDismissed(true)
+    await fetch('/api/onboarding', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'dismiss',
+        until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      }),
+    }).catch(() => {})
   }
 
   if (celebrating) {

@@ -145,7 +145,13 @@ export async function POST(req: Request) {
     changed_by: null,
   })
 
+  const { data: orderRow } = await supabase
+    .from('orders')
+    .select('tracking_token')
+    .eq('id', orderId)
+    .single()
+
   revalidateTag('dashboard')
 
-  return NextResponse.json({ success: true, order_id: orderId })
+  return NextResponse.json({ success: true, order_id: orderId, tracking_token: orderRow?.tracking_token ?? null })
 }

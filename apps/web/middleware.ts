@@ -22,6 +22,8 @@ const PUBLIC_PATHS = [
   '/api/waitlist',
   '/api/orders/public',
   '/api/track',
+  '/legal',
+  '/privacy',
 ]
 
 export async function middleware(req: NextRequest) {

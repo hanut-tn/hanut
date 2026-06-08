@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import {
   ArrowLeft, Clock, CheckCircle, Truck, Package, RotateCcw,
-  MapPin, Phone, ShoppingBag,
+  MapPin, Phone, ShoppingBag, Copy,
 } from 'lucide-react'
 import type { OrderStatus } from '@hanut/types'
 import { DELETABLE_STATUSES, ORDER_STATUS_LABELS } from '@/lib/constants'
@@ -60,6 +60,7 @@ type Props = {
     orderCount: number
     totalSpent: number
   }
+  trackingToken?: string | null
   linkedCustomer: { id: string; name: string } | null
   hasExistingCustomer: boolean
   updateStatus: (id: string, status: OrderStatus) => Promise<void>
@@ -74,6 +75,7 @@ export default function OrderDetail({
   customer,
   product,
   customerStats,
+  trackingToken,
   linkedCustomer,
   hasExistingCustomer,
   updateStatus,
@@ -419,6 +421,24 @@ export default function OrderDetail({
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Lien de suivi client */}
+          {trackingToken && (
+            <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-5">
+              <h2 className="font-semibold text-[#1C1917] mb-3">Lien de suivi client</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  const url = `${window.location.origin}/track/${trackingToken}`
+                  navigator.clipboard.writeText(url).catch(() => {})
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-[#E7E5E4] rounded-lg text-sm text-[#78716C] hover:bg-[#FAFAF9] transition-colors min-h-[44px] touch-manipulation"
+              >
+                <Copy className="w-4 h-4" />
+                Copier le lien de suivi
+              </button>
             </div>
           )}
 

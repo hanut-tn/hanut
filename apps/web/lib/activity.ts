@@ -16,7 +16,7 @@ export async function logActivity(params: LogActivityParams): Promise<void> {
     const serviceClient = createServiceClient()
     const userName = await resolveActivityUserName(serviceClient, params)
 
-    await serviceClient.from('activity_logs').insert({
+    const { error } = await serviceClient.from('activity_logs').insert({
       seller_id: params.sellerId,
       user_id: params.userId,
       user_name: userName,
@@ -26,8 +26,15 @@ export async function logActivity(params: LogActivityParams): Promise<void> {
       description: params.description,
       metadata: params.metadata ?? {},
     })
-  } catch {
-    // Log silencieusement — ne doit jamais bloquer l'action principale
+    if (error) {
+      console.error('[logActivity] Failed to log activity:', {
+        actionType: params.actionType,
+        sellerId: params.sellerId,
+        error: error.message,
+      })
+    }
+  } catch (err) {
+    console.error('[logActivity] Unexpected error:', err)
   }
 }
 
