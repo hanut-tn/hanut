@@ -903,12 +903,16 @@ export default function ProductDetailClient({
                     <div className="flex items-center gap-2">
                       <span className="text-red-500 font-bold text-lg">−</span>
                       <input className="input flex-1" type="number" min="0" max={currentStock}
-                        value={adjustQty || ''} onChange={e => setAdjustQty(Math.min(currentStock, Math.max(0, parseInt(e.target.value) || 0)))} placeholder="0" />
+                        value={adjustQty || ''} onChange={e => setAdjustQty(Math.max(0, parseInt(e.target.value) || 0))} placeholder="0" />
                     </div>
                     {adjustQty > 0 && (
                       <p className="text-xs text-[#78716C] mt-1">
-                        Stock après : {currentStock} − {adjustQty} = <strong className="text-[#0B5E46]">{newStockPreview} unités</strong>
+                        Stock après : {currentStock} − {adjustQty} ={' '}
+                        <strong className={newStockPreview < 0 ? 'text-red-600' : 'text-[#0B5E46]'}>{newStockPreview} unités</strong>
                       </p>
+                    )}
+                    {adjustQty > currentStock && (
+                      <p className="text-xs text-red-600 mt-1">Dépasse le stock disponible ({currentStock} unités)</p>
                     )}
                   </div>
                   <div>
@@ -926,15 +930,16 @@ export default function ProductDetailClient({
                     <div className="flex items-center gap-2">
                       <span className="text-red-500 font-bold text-lg">−</span>
                       <input className="input flex-1" type="number" min="0" max={currentStock}
-                        value={adjustQty || ''} onChange={e => setAdjustQty(Math.min(currentStock, Math.max(0, parseInt(e.target.value) || 0)))} placeholder="0" />
+                        value={adjustQty || ''} onChange={e => setAdjustQty(Math.max(0, parseInt(e.target.value) || 0))} placeholder="0" />
                     </div>
                     {adjustQty > 0 && (
                       <p className="text-xs text-[#78716C] mt-1">
-                        Stock après : {currentStock} − {adjustQty} = <strong className="text-[#0B5E46]">{newStockPreview} unités</strong>
+                        Stock après : {currentStock} − {adjustQty} ={' '}
+                        <strong className={newStockPreview < 0 ? 'text-red-600' : 'text-[#0B5E46]'}>{newStockPreview} unités</strong>
                       </p>
                     )}
                     {adjustQty > currentStock && (
-                      <p className="text-xs text-red-600 mt-1">La quantité dépasse le stock disponible</p>
+                      <p className="text-xs text-red-600 mt-1">Dépasse le stock disponible ({currentStock} unités)</p>
                     )}
                   </div>
                   <div>

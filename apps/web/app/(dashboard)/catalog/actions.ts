@@ -150,11 +150,19 @@ export async function uploadProductImage(formData: FormData): Promise<{ url?: st
 
   const file = formData.get('file') as File
   if (!file || !file.size) return { error: 'Aucun fichier fourni' }
-  if (!file.type.startsWith('image/')) return { error: 'Le fichier doit être une image' }
+
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+  const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif']
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return { error: 'Format non autorisé. Utilisez JPG, PNG, WebP ou HEIC uniquement.' }
+  }
+  const ext = (file.name.split('.').pop() ?? '').toLowerCase()
+  if (!ALLOWED_EXTENSIONS.includes(ext)) {
+    return { error: 'Extension non autorisée. Utilisez .jpg, .png, .webp, .heic ou .heif uniquement.' }
+  }
   if (file.size > 5 * 1024 * 1024) return { error: "L'image ne doit pas dépasser 5 Mo" }
 
   const serviceClient = createServiceClient()
-  const ext = file.name.split('.').pop() ?? 'jpg'
   const path = `${context.sellerId}/${Date.now()}.${ext}`
 
   const bytes = await file.arrayBuffer()
@@ -209,21 +217,27 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
   let updatedVariants: Variant[] | null = null
 
   if (hasVariants && input.variantAdjustments && input.variantAdjustments.length > 0) {
-    // Ajustement par variante — recalculer le stock global depuis les variantes
-    updatedVariants = variants.map((v, i) => {
+    const result: Variant[] = []
+    for (let i = 0; i < variants.length; i++) {
+      const v = variants[i]
       const label = [v.size, v.color].filter(Boolean).join(' / ') || `Variante ${i + 1}`
-      const adj = input.variantAdjustments!.find(a => a.label === label)
-      if (!adj) return v
+      const adj = input.variantAdjustments.find(a => a.label === label)
+      if (!adj) { result.push(v); continue }
       let newQty: number
       if (input.type === 'correction') {
         newQty = Math.max(0, adj.value)
       } else if (input.type === 'restock') {
-        newQty = Math.max(0, v.qty + adj.value)
+        newQty = v.qty + adj.value
+        if (newQty < 0) return { error: `Stock invalide pour "${label}".` }
       } else {
-        newQty = Math.max(0, v.qty - adj.value)
+        newQty = v.qty - adj.value
+        if (newQty < 0) {
+          return { error: `Stock insuffisant pour "${label}". Stock actuel : ${v.qty} unité${v.qty !== 1 ? 's' : ''}.` }
+        }
       }
-      return { ...v, qty: newQty }
-    })
+      result.push({ ...v, qty: newQty })
+    }
+    updatedVariants = result
     newStock = updatedVariants.reduce((s, v) => s + v.qty, 0)
     delta = newStock - product.stock
   } else {
@@ -238,11 +252,12 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
       newStock = product.stock + delta
     }
 
-    if (newStock < 0) return { error: 'Le stock ne peut pas être négatif' }
-
+    if (newStock < 0) {
+      return {
+        error: `Stock insuffisant. Stock actuel : ${product.stock} unité${product.stock !== 1 ? 's' : ''}. Vous ne pouvez pas retirer ${input.quantity} unité${input.quantity !== 1 ? 's' : ''}.`,
+      }
+    }
   }
-
-  if (newStock < 0) return { error: 'Le stock ne peut pas être négatif' }
 
   const productUpdate: Record<string, unknown> = { stock: newStock }
   if (updatedVariants) productUpdate.variants = updatedVariants

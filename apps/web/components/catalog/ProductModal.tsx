@@ -41,17 +41,34 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
   )
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(product?.image_url ?? null)
+  const [imageError, setImageError] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+  const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif']
 
   function set<K extends keyof ProductInput>(key: K, value: ProductInput[K]) {
     setForm(f => ({ ...f, [key]: value }))
   }
 
   function handleImageFile(file: File) {
-    if (!file.type.startsWith('image/')) return
+    setImageError(null)
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setImageError('Format non autorisé. Utilisez JPG, PNG, WebP ou HEIC uniquement.')
+      return
+    }
+    const ext = '.' + (file.name.split('.').pop()?.toLowerCase() ?? '')
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      setImageError('Extension non autorisée. Utilisez .jpg, .png, .webp, .heic ou .heif uniquement.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setImageError("Image trop lourde. Maximum 5 Mo.")
+      return
+    }
     setImageFile(file)
     setImagePreview(URL.createObjectURL(file))
   }
@@ -66,6 +83,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
   function removeImage() {
     setImageFile(null)
     setImagePreview(null)
+    setImageError(null)
     set('image_url', null)
   }
 
@@ -165,7 +183,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                         ou{' '}
                         <span className="text-[#16A34A] font-medium underline">parcourir</span>
                       </p>
-                      <p className="text-xs text-[#A8A29E]">JPG, PNG, WebP — max 5 Mo</p>
+                      <p className="text-xs text-[#A8A29E]">JPG, PNG, WebP, HEIC — max 5 Mo</p>
                     </div>
                   )}
                 </div>
@@ -181,10 +199,15 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept=".jpg,.jpeg,.png,.webp,.heic,.heif"
                   className="hidden"
                   onChange={e => { const f = e.target.files?.[0]; if (f) handleImageFile(f) }}
                 />
+                {imageError && (
+                  <p className="mt-2 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-red-700">
+                    {imageError}
+                  </p>
+                )}
               </div>
 
               {/* Main fields */}
