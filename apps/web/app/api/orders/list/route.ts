@@ -14,6 +14,8 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(50, Math.max(10, parseInt(params.get('limit') ?? '20')))
   const rawStatus = params.get('status') ?? 'all'
   const status = VALID_STATUSES.includes(rawStatus as OrderStatus | 'all') ? rawStatus : 'all'
+  const since = params.get('since')
+  const until = params.get('until')
 
   const from = (page - 1) * limit
   const to = from + limit - 1
@@ -31,9 +33,9 @@ export async function GET(req: NextRequest) {
     .order('created_at', { ascending: false })
     .range(from, to)
 
-  if (status !== 'all') {
-    query = query.eq('status', status)
-  }
+  if (status !== 'all') query = query.eq('status', status)
+  if (since) query = query.gte('created_at', since)
+  if (until) query = query.lt('created_at', until)
 
   const { data: orders, count, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

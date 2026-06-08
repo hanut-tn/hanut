@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Banknote, TrendingUp, TrendingDown, Minus, ShoppingBag, Truck, Clock, Download, Calendar, X as XIcon } from 'lucide-react'
+import { Banknote, TrendingUp, TrendingDown, Minus, ShoppingBag, Truck, Clock, Download, Calendar, X as XIcon, ExternalLink } from 'lucide-react'
 import { getCarrierConfig, ORDER_STATUS_CONFIG, ORDER_STATUSES } from '@/lib/constants'
 
 type Product = { id: string; name: string }
@@ -224,11 +224,11 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
   const topProducts = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5)
   const maxProductRevenue = Math.max(...topProducts.map(p => p.revenue), 1)
 
-  const customerMap: Record<string, { name: string; revenue: number; count: number }> = {}
+  const customerMap: Record<string, { id: string; name: string; revenue: number; count: number }> = {}
   for (const o of filtered) {
     const c = getCustomer(o)
     if (c?.id && o.status === 'delivered') {
-      if (!customerMap[c.id]) customerMap[c.id] = { name: c.name, revenue: 0, count: 0 }
+      if (!customerMap[c.id]) customerMap[c.id] = { id: c.id, name: c.name, revenue: 0, count: 0 }
       customerMap[c.id].revenue += o.cod_amount
       customerMap[c.id].count  += 1
     }
@@ -681,10 +681,11 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
                       {c.name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()}
                     </div>
                     <Link
-                      href="/customers"
-                      className="text-sm text-[#78716C] truncate flex-1 hover:text-[#16A34A] transition-colors"
+                      href={`/customers/${c.id}`}
+                      className="group/link text-sm text-[#78716C] truncate flex-1 hover:text-[#16A34A] transition-colors inline-flex items-center gap-1"
                     >
                       {c.name}
+                      <ExternalLink className="w-3 h-3 shrink-0 opacity-0 group-hover/link:opacity-100 transition-opacity" />
                     </Link>
                     <span className="text-sm font-semibold text-[#1C1917] shrink-0">
                       {c.revenue.toFixed(0)} DT

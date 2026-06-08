@@ -4,7 +4,7 @@ import { useState, useMemo, useTransition, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import {
   Search, SearchX, Download, Trash2, ChevronRight, ShoppingBag, Filter,
-  X, Loader2, RotateCcw, ChevronDown,
+  X, Loader2, RotateCcw, ChevronDown, Calendar,
 } from 'lucide-react'
 import type { OrderStatus } from '@hanut/types'
 import type { UserRole } from '@/lib/get-context'
@@ -92,6 +92,38 @@ function Highlight({ text, query }: { text: string; query: string }) {
   )
 }
 
+type DateFilter = 'today' | 'yesterday' | 'week' | 'month' | '30days' | '90days' | 'all'
+
+const DATE_FILTER_LABELS: Record<DateFilter, string> = {
+  today:    "Aujourd'hui",
+  yesterday:'Hier',
+  week:     'Cette semaine',
+  month:    'Ce mois',
+  '30days': '30 derniers jours',
+  '90days': '90 derniers jours',
+  all:      'Toutes les périodes',
+}
+
+function getDateRange(filter: DateFilter): { start: string; end: string } | null {
+  if (filter === 'all') return null
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const tomorrow = new Date(today.getTime() + 86400000)
+  switch (filter) {
+    case 'today':     return { start: today.toISOString(), end: tomorrow.toISOString() }
+    case 'yesterday': return { start: new Date(today.getTime() - 86400000).toISOString(), end: today.toISOString() }
+    case 'week': {
+      const dow = today.getDay()
+      const diff = dow === 0 ? 6 : dow - 1
+      return { start: new Date(today.getTime() - diff * 86400000).toISOString(), end: tomorrow.toISOString() }
+    }
+    case 'month':   return { start: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(), end: tomorrow.toISOString() }
+    case '30days':  return { start: new Date(today.getTime() - 29 * 86400000).toISOString(), end: tomorrow.toISOString() }
+    case '90days':  return { start: new Date(today.getTime() - 89 * 86400000).toISOString(), end: tomorrow.toISOString() }
+    default: return null
+  }
+}
+
 function exportCSV(orders: Order[]) {
   const rows = orders.map(o => {
     const customer = getCustomer(o)
@@ -134,6 +166,7 @@ export default function OrdersClient({
   permanentlyDeleteOrder,
 }: Props) {
   const [tab, setTab] = useState<OrderStatus | 'all' | 'trash'>('all')
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [isSearching, setIsSearching] = useState(false)
@@ -153,6 +186,11 @@ export default function OrdersClient({
   const [statusPages, setStatusPages] = useState<Partial<Record<OrderStatus, number>>>({})
   const [statusHasMore, setStatusHasMore] = useState<Partial<Record<OrderStatus, boolean>>>({})
   const [loadingStatus, setLoadingStatus] = useState<OrderStatus | null>(null)
+  const [dateOrders, setDateOrders] = useState<Order[]>([])
+  const [datePage, setDatePage] = useState(1)
+  const [dateHasMore, setDateHasMore] = useState(false)
+  const [dateTotal, setDateTotal] = useState(0)
+  const [isLoadingDate, setIsLoadingDate] = useState(false)
 
   // Toast
   const [toast, setToast] = useState<string | null>(null)
@@ -177,6 +215,9 @@ export default function OrdersClient({
     const searchedOrder = searchResults?.find(o => o.id === orderId)
     if (searchedOrder) return searchedOrder
 
+    const datedOrder = dateOrders.find(o => o.id === orderId)
+    if (datedOrder) return datedOrder
+
     for (const list of Object.values(statusOrders)) {
       const found = list?.find(o => o.id === orderId)
       if (found) return found
@@ -200,6 +241,10 @@ export default function OrdersClient({
       return next
     })
     setSearchResults(prev => prev ? patch(prev) : null)
+    setDateOrders(patch)
+    if (dateRange && activeStatus && resolvedOld === activeStatus && newStatus !== activeStatus) {
+      setDateTotal(prev => Math.max(0, prev - 1))
+    }
 
     // Mettre à jour les counts
     if (resolvedOld && resolvedOld !== newStatus) {
@@ -214,6 +259,7 @@ export default function OrdersClient({
   // Retire une commande de tous les stores locaux + decremente le count
   function applyOptimisticRemoveOrder(orderId: string) {
     const order = findLocalOrder(orderId)
+    const wasInDateOrders = dateOrders.some(o => o.id === orderId)
 
     const remover = (list: Order[]) => list.filter(o => o.id !== orderId)
     setAllOrders(remover)
@@ -225,6 +271,8 @@ export default function OrdersClient({
       return next
     })
     setSearchResults(prev => prev ? remover(prev) : null)
+    setDateOrders(remover)
+    if (wasInDateOrders) setDateTotal(prev => Math.max(0, prev - 1))
 
     if (order?.status) {
       setLocalTabCounts(prev => ({
@@ -281,20 +329,90 @@ export default function OrdersClient({
     return () => controller.abort()
   }, [activeStatus, searchResults, statusOrders])
 
-  const filteredOrders = useMemo(() => {
-    if (searchResults !== null) {
-      if (!activeStatus) return searchResults
-      return searchResults.filter(o => o.status === activeStatus)
+  const dateRange = useMemo(() => getDateRange(dateFilter), [dateFilter])
+
+  useEffect(() => {
+    if (!dateRange || searchResults !== null || tab === 'trash') {
+      setDateOrders([])
+      setDatePage(1)
+      setDateHasMore(false)
+      setDateTotal(0)
+      setIsLoadingDate(false)
+      return
     }
-    if (activeStatus) return statusOrders[activeStatus] ?? []
-    return allOrders
-  }, [activeStatus, allOrders, searchResults, statusOrders])
+
+    const controller = new AbortController()
+    const statusParam = activeStatus ?? 'all'
+    const params = new URLSearchParams({
+      page: '1',
+      limit: '20',
+      status: statusParam,
+      since: dateRange.start,
+      until: dateRange.end,
+    })
+
+    setIsLoadingDate(true)
+    fetch(`/api/orders/list?${params.toString()}`, { signal: controller.signal })
+      .then(r => r.json())
+      .then(data => {
+        setDateOrders(data.orders ?? [])
+        setDateHasMore(data.hasMore ?? false)
+        setDateTotal(data.total ?? 0)
+        setDatePage(1)
+      })
+      .catch(() => {})
+      .finally(() => setIsLoadingDate(false))
+
+    return () => controller.abort()
+  }, [activeStatus, dateRange, searchResults, tab])
+
+  const filteredOrders = useMemo(() => {
+    let result: Order[]
+    if (searchResults !== null) {
+      result = activeStatus ? searchResults.filter(o => o.status === activeStatus) : searchResults
+      if (dateRange) {
+        result = result.filter(o => o.created_at >= dateRange.start && o.created_at < dateRange.end)
+      }
+      return result
+    }
+    if (dateRange) {
+      result = activeStatus ? dateOrders.filter(o => o.status === activeStatus) : dateOrders
+    } else if (activeStatus) {
+      result = statusOrders[activeStatus] ?? []
+    } else {
+      result = allOrders
+    }
+    return result
+  }, [activeStatus, allOrders, dateOrders, searchResults, statusOrders, dateRange])
 
   async function loadMore() {
     if (isLoadingMore) return
     setIsLoadingMore(true)
     try {
       const statusParam = activeStatus ?? 'all'
+      if (dateRange) {
+        const nextPage = datePage + 1
+        const params = new URLSearchParams({
+          page: String(nextPage),
+          limit: '20',
+          status: statusParam,
+          since: dateRange.start,
+          until: dateRange.end,
+        })
+        const res = await fetch(`/api/orders/list?${params.toString()}`)
+        const data = await res.json()
+        if (!res.ok) return
+        setDateOrders(prev => {
+          const existingIds = new Set(prev.map(o => o.id))
+          const fresh = (data.orders ?? []).filter((o: Order) => !existingIds.has(o.id))
+          return [...prev, ...fresh]
+        })
+        setDateHasMore(data.hasMore ?? false)
+        setDateTotal(data.total ?? 0)
+        setDatePage(nextPage)
+        return
+      }
+
       const nextPage = activeStatus ? (statusPages[activeStatus] ?? 1) + 1 : currentPage + 1
       const res = await fetch(`/api/orders/list?page=${nextPage}&limit=20&status=${statusParam}`)
       const data = await res.json()
@@ -357,6 +475,8 @@ export default function OrdersClient({
     const prevSearchResults = searchResults
     const prevCounts = localTabCounts
     const prevTrash = localTrashOrders
+    const prevDateOrders = dateOrders
+    const prevDateTotal = dateTotal
     applyOptimisticRemoveOrder(id)
     if (order) {
       setLocalTrashOrders(prev => [{ ...order, deleted_at: new Date().toISOString() }, ...prev])
@@ -370,6 +490,8 @@ export default function OrdersClient({
         setSearchResults(prevSearchResults)
         setLocalTabCounts(prevCounts)
         setLocalTrashOrders(prevTrash)
+        setDateOrders(prevDateOrders)
+        setDateTotal(prevDateTotal)
         setActionError(result.error)
       } else {
         showToast('✓ Commande déplacée dans la corbeille')
@@ -386,6 +508,8 @@ export default function OrdersClient({
     const prevAll = allOrders
     const prevStatus = statusOrders
     const prevCounts = localTabCounts
+    const prevDateOrders = dateOrders
+    const prevDateTotal = dateTotal
 
     // Optimistic : retirer de la corbeille ET ajouter aux commandes actives
     setLocalTrashOrders(prev => prev.filter(o => o.id !== id))
@@ -407,6 +531,15 @@ export default function OrdersClient({
       if (currentStatusOrders.some(order => order.id === id)) return prev
       return { ...prev, [trashedOrder.status]: [restoredOrder, ...currentStatusOrders] }
     })
+    if (
+      dateRange &&
+      restoredOrder.created_at >= dateRange.start &&
+      restoredOrder.created_at < dateRange.end &&
+      (!activeStatus || restoredOrder.status === activeStatus)
+    ) {
+      setDateOrders(prev => prev.some(order => order.id === id) ? prev : [restoredOrder, ...prev])
+      setDateTotal(prev => prev + 1)
+    }
     setLocalTabCounts(prev => ({
       ...prev,
       all: (prev.all ?? 0) + 1,
@@ -420,6 +553,8 @@ export default function OrdersClient({
         setAllOrders(prevAll)
         setStatusOrders(prevStatus)
         setLocalTabCounts(prevCounts)
+        setDateOrders(prevDateOrders)
+        setDateTotal(prevDateTotal)
         setActionError(result.error)
       } else {
         showToast('✓ Commande restaurée')
@@ -447,13 +582,19 @@ export default function OrdersClient({
 
   const displayedTrash = tab === 'trash' ? localTrashOrders : []
   const pendingCount = counts['pending'] ?? 0
-  const totalForCurrentTab = activeStatus ? (counts[activeStatus] ?? 0) : initialTotal
-  const totalLoaded = activeStatus ? (statusOrders[activeStatus]?.length ?? 0) : allOrders.length
+  const totalForCurrentTab = dateRange
+    ? dateTotal
+    : activeStatus ? (counts[activeStatus] ?? 0) : initialTotal
+  const totalLoaded = dateRange
+    ? dateOrders.length
+    : activeStatus ? (statusOrders[activeStatus]?.length ?? 0) : allOrders.length
   const totalRemaining = Math.max(0, totalForCurrentTab - totalLoaded)
-  const currentHasMore = activeStatus
+  const currentHasMore = dateRange
+    ? dateHasMore
+    : activeStatus
     ? (statusHasMore[activeStatus] ?? totalLoaded < totalForCurrentTab)
     : hasMore
-  const isLoadingCurrentStatus = activeStatus ? loadingStatus === activeStatus : false
+  const isLoadingCurrentStatus = isLoadingDate || (activeStatus ? loadingStatus === activeStatus : false)
 
   return (
     <div className="space-y-5">
@@ -494,6 +635,24 @@ export default function OrdersClient({
             )}
           </div>
 
+          <div className="relative col-span-2 sm:col-span-1">
+            <Calendar className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
+            <select
+              value={dateFilter}
+              onChange={e => setDateFilter(e.target.value as DateFilter)}
+              className={`w-full appearance-none pl-9 pr-8 py-2 text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-[#16A34A]/30 focus:border-[#16A34A] ${
+                dateFilter !== 'all'
+                  ? 'bg-[#F0FDF4] text-[#166534] border-[#BBF7D0]'
+                  : 'bg-white text-[#78716C] border-[#E7E5E4] hover:bg-[#F5F5F4]'
+              }`}
+            >
+              {(Object.entries(DATE_FILTER_LABELS) as [DateFilter, string][]).map(([v, label]) => (
+                <option key={v} value={v}>{label}</option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
+          </div>
+
           <div className="relative group">
             <button
               onClick={() => canExport && exportCSV(filteredOrders)}
@@ -520,6 +679,21 @@ export default function OrdersClient({
         </div>
       </div>
 
+      {/* Badges filtres actifs */}
+      {(debouncedSearch || dateFilter !== 'all') && (
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {dateFilter !== 'all' && (
+            <span className="inline-flex items-center gap-1.5 text-xs bg-[#F0FDF4] text-[#166534] border border-[#BBF7D0] px-2.5 py-1 rounded-full">
+              <Calendar className="w-3 h-3" />
+              {DATE_FILTER_LABELS[dateFilter]}
+              <span className="text-[#78716C] ml-0.5">· {filteredOrders.length} commande{filteredOrders.length !== 1 ? 's' : ''}</span>
+              <button onClick={() => setDateFilter('all')} className="ml-0.5 hover:text-[#0B5E46] transition-colors">
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+        </div>
+      )}
       {/* Badge recherche */}
       {debouncedSearch && (
         <div className="flex items-center gap-2.5">
@@ -545,7 +719,7 @@ export default function OrdersClient({
         {TABS.map(t => (
           <button
             key={t.value}
-            onClick={() => setTab(t.value)}
+            onClick={() => { setTab(t.value); setDateFilter('all') }}
             className={`px-4 py-2.5 text-sm font-medium transition-colors relative whitespace-nowrap ${
               tab === t.value
                 ? 'text-[#166534] border-b-2 border-[#16A34A] -mb-px'
@@ -565,7 +739,7 @@ export default function OrdersClient({
 
         {isAdmin && (
           <button
-            onClick={() => setTab('trash')}
+            onClick={() => { setTab('trash'); setDateFilter('all') }}
             className={`ml-auto flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors relative whitespace-nowrap ${
               tab === 'trash'
                 ? 'text-red-600 border-b-2 border-red-400 -mb-px'
