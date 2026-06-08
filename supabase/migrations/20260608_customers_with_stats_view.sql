@@ -1,6 +1,6 @@
 -- View for server-side customer sorting by computed stats.
 
-CREATE OR REPLACE VIEW customers_with_stats AS
+CREATE OR REPLACE VIEW customers_with_stats WITH (security_invoker = true) AS
 SELECT
   c.id,
   c.seller_id,

@@ -7,11 +7,22 @@ type DeliveryRow = {
   order: { id: string; status: string; seller_id: string; deleted_at: string | null } | null
 }
 
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/
+const DAY_MS = 24 * 60 * 60 * 1000
+
+function parseDateOnly(value: string): Date | null {
+  if (!DATE_ONLY_RE.test(value)) return null
+  const date = new Date(`${value}T00:00:00.000Z`)
+  if (Number.isNaN(date.getTime())) return null
+  if (date.toISOString().slice(0, 10) !== value) return null
+  return date
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const fromParam = searchParams.get('from')
   const toParam   = searchParams.get('to')
-  const periodParam = parseInt(searchParams.get('period') ?? '30')
+  const rawPeriod = Number.parseInt(searchParams.get('period') ?? '30', 10)
 
   const context = await getUserContext()
   if (!context) return new Response('Non autorisé', { status: 401 })
@@ -22,16 +33,22 @@ export async function GET(req: Request) {
   let period: number
   let fileLabel: string
 
-  if (fromParam && toParam) {
-    cutoff    = new Date(fromParam)
-    cutoff.setHours(0, 0, 0, 0)
-    cutoffEnd = new Date(toParam)
-    cutoffEnd.setHours(23, 59, 59, 999)
-    period = Math.ceil((cutoffEnd.getTime() - cutoff.getTime()) / (1000 * 60 * 60 * 24))
+  if (fromParam || toParam) {
+    if (!fromParam || !toParam) return new Response('Dates from/to requises', { status: 400 })
+
+    const fromDate = parseDateOnly(fromParam)
+    const toDate = parseDateOnly(toParam)
+    if (!fromDate || !toDate) return new Response('Format de date invalide', { status: 400 })
+
+    cutoff = fromDate
+    cutoffEnd = new Date(toDate)
+    cutoffEnd.setUTCHours(23, 59, 59, 999)
+    period = Math.floor((cutoffEnd.getTime() - cutoff.getTime()) / DAY_MS) + 1
+    if (period < 1) return new Response('Période invalide', { status: 400 })
     if (period > 365) return new Response('Période maximum 365 jours', { status: 400 })
     fileLabel = `${fromParam}-${toParam}`
   } else {
-    period    = Math.min(180, Math.max(1, periodParam))
+    period    = Number.isFinite(rawPeriod) ? Math.min(180, Math.max(1, rawPeriod)) : 30
     cutoff    = new Date()
     cutoff.setDate(cutoff.getDate() - period)
     cutoff.setHours(0, 0, 0, 0)

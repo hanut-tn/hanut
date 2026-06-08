@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useMemo, useRef } from 'react'
+import { useEffect, useState, useTransition, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Users, Search, Tag, ArrowUpDown, ChevronDown } from 'lucide-react'
@@ -35,6 +35,9 @@ type Customer = {
   city?: string
   created_at: string
   tags?: string[] | null
+  order_count?: number | null
+  total_spent_calc?: number | null
+  last_order_at?: string | null
   orders: Order[] | null
 }
 
@@ -144,6 +147,7 @@ export default function CustomersClient({ customers, initialTotal, stats, update
   const [currentPage, setCurrentPage] = useState(1)
   const [hasMore, setHasMore] = useState(initialTotal > customers.length)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const didInitSortRef = useRef(false)
 
   // Toast
   const [toast, setToast] = useState<string | null>(null)
@@ -186,26 +190,61 @@ export default function CustomersClient({ customers, initialTotal, stats, update
     }
     const arr = [...result]
     if (sortBy === 'name') return arr.sort((a, b) => a.name.localeCompare(b.name))
-    if (sortBy === 'total_spent') return arr.sort((a, b) => getStats(b.orders).delivered - getStats(a.orders).delivered)
-    if (sortBy === 'order_count') return arr.sort((a, b) => getStats(b.orders).count - getStats(a.orders).count)
+    if (sortBy === 'total_spent') return arr.sort((a, b) => (b.total_spent_calc ?? getStats(b.orders).delivered) - (a.total_spent_calc ?? getStats(a.orders).delivered))
+    if (sortBy === 'order_count') return arr.sort((a, b) => (b.order_count ?? getStats(b.orders).count) - (a.order_count ?? getStats(a.orders).count))
     if (sortBy === 'last_order') {
       return arr.sort((a, b) => {
-        const aLast = getStats(a.orders).last
-        const bLast = getStats(b.orders).last
+        const aLast = a.last_order_at ?? getStats(a.orders).last?.created_at
+        const bLast = b.last_order_at ?? getStats(b.orders).last?.created_at
         if (!aLast && !bLast) return 0
         if (!aLast) return 1
         if (!bLast) return -1
-        return new Date(bLast.created_at).getTime() - new Date(aLast.created_at).getTime()
+        return new Date(bLast).getTime() - new Date(aLast).getTime()
       })
     }
     return arr
   }, [allCustomers, search, selectedTag, sortBy])
 
+  useEffect(() => {
+    if (!didInitSortRef.current) {
+      didInitSortRef.current = true
+      return
+    }
+
+    let cancelled = false
+    async function reloadSortedCustomers() {
+      setIsLoadingMore(true)
+      try {
+        const params = new URLSearchParams({ page: '1', limit: '20', sortBy })
+        const q = search.trim()
+        if (q.length >= 2) params.set('search', q)
+        const res = await fetch(`/api/customers/list?${params.toString()}`)
+        const data = await res.json()
+        if (!res.ok || cancelled) return
+        setAllCustomers(data.customers ?? [])
+        setCurrentPage(1)
+        setHasMore(data.hasMore ?? false)
+      } finally {
+        if (!cancelled) setIsLoadingMore(false)
+      }
+    }
+
+    reloadSortedCustomers()
+    return () => { cancelled = true }
+  }, [sortBy, search])
+
   async function loadMore() {
     if (isLoadingMore) return
     setIsLoadingMore(true)
     try {
-      const res = await fetch(`/api/customers/list?page=${currentPage + 1}&limit=20&sortBy=${sortBy}`)
+      const params = new URLSearchParams({
+        page: String(currentPage + 1),
+        limit: '20',
+        sortBy,
+      })
+      const q = search.trim()
+      if (q.length >= 2) params.set('search', q)
+      const res = await fetch(`/api/customers/list?${params.toString()}`)
       const data = await res.json()
       if (!res.ok) return
       setAllCustomers(prev => {

@@ -20,7 +20,7 @@ export default async function CustomersPage() {
       `, { count: 'exact' })
       .eq('seller_id', context.sellerId)
       .is('orders.deleted_at', null)
-      .order('created_at', { ascending: false })
+      .order('name', { ascending: true })
       .range(0, 19),
     supabase
       .from('orders')
