@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { MessageCircle } from 'lucide-react'
 
 type Plan = {
   name: string
@@ -106,6 +107,13 @@ const FAQ = [
   },
 ]
 
+const HANUT_WHATSAPP = '21600000000'
+
+function getPricingWhatsAppUrl(planName: string, price: number): string {
+  const message = `Bonjour Hanut, je voudrais m'abonner au plan ${planName} (${price} DT/mois).`
+  return `https://wa.me/${HANUT_WHATSAPP}?text=${encodeURIComponent(message)}`
+}
+
 export default function PricingPage() {
   const [annual, setAnnual] = useState(false)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
@@ -186,16 +194,28 @@ export default function PricingPage() {
                   ))}
                 </ul>
 
-                <Link
-                  href="/register"
-                  className={`w-full text-center py-3 rounded-xl font-semibold text-sm transition-colors ${
-                    plan.highlighted
-                      ? 'bg-[#16A34A] hover:bg-green-500 text-white'
-                      : 'bg-[#0B5E46] hover:bg-green-900 text-white'
-                  }`}
-                >
-                  {plan.cta}
-                </Link>
+                {plan.name === 'Starter' ? (
+                  <Link
+                    href="/register"
+                    className="w-full text-center py-3 rounded-xl font-semibold text-sm transition-colors bg-[#0B5E46] hover:bg-green-900 text-white"
+                  >
+                    {plan.cta}
+                  </Link>
+                ) : (
+                  <a
+                    href={getPricingWhatsAppUrl(plan.name, annual ? plan.annual : plan.monthly)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`w-full py-3 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2 ${
+                      plan.highlighted
+                        ? 'bg-[#16A34A] hover:bg-green-500 text-white'
+                        : 'bg-[#0B5E46] hover:bg-green-900 text-white'
+                    }`}
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    Choisir ce plan
+                  </a>
+                )}
               </div>
             ))}
           </div>

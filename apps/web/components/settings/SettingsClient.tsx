@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mail, AlertTriangle } from 'lucide-react'
+import { Mail, AlertTriangle, MessageCircle, Clock, Info } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { ProfileInput } from '@/app/(dashboard)/settings/actions'
 
@@ -61,6 +61,24 @@ const PLANS: {
     ],
   },
 ]
+
+const HANUT_WHATSAPP = '21600000000'
+
+type PlanOption = (typeof PLANS)[number]
+type UpgradePlanKey = 'pro' | 'business'
+type UpgradePlan = PlanOption & { key: UpgradePlanKey }
+
+function getWhatsAppMessage(plan: UpgradePlanKey, vendorName: string): string {
+  const messages = {
+    pro: `Bonjour Hanut, je suis ${vendorName} et je voudrais passer au plan Pro (79 DT/mois). Pouvez-vous m'aider ?`,
+    business: `Bonjour Hanut, je suis ${vendorName} et je voudrais passer au plan Business (149 DT/mois). Pouvez-vous m'aider ?`,
+  }
+  return encodeURIComponent(messages[plan])
+}
+
+function getWhatsAppUrl(plan: UpgradePlanKey, vendorName: string): string {
+  return `https://wa.me/${HANUT_WHATSAPP}?text=${getWhatsAppMessage(plan, vendorName)}`
+}
 
 type Seller = {
   name: string
@@ -131,6 +149,7 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
   const [deletePending, setDeletePending] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleteSuccess, setDeleteSuccess] = useState(false)
+  const [upgradePlan, setUpgradePlan] = useState<UpgradePlan | null>(null)
 
   // Link / slug
   const [newSlug, setNewSlug] = useState(seller.slug ?? '')
@@ -152,6 +171,7 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
   const orderLink = orderLinkFull ? orderLinkFull.replace(/^https?:\/\//, '') : null
   const pwStrength = getPasswordStrength(newPassword)
   const pendingEmailDisplay = emailSentTo ?? pendingEmail
+  const upgradeWhatsappUrl = upgradePlan ? getWhatsAppUrl(upgradePlan.key, seller.name) : null
 
   useEffect(() => {
     // Check if there is a pending email change already in progress
@@ -736,6 +756,19 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
       {/* ── ABONNEMENT ── */}
       {tab === 'plan' && (
         <div className="space-y-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3">
+            <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-medium text-amber-700">
+                Paiement en cours d&apos;intégration
+              </p>
+              <p className="text-xs text-amber-600 mt-0.5">
+                Pour l&apos;instant les upgrades se font via WhatsApp.
+                Activation sous 24h garantie.
+              </p>
+            </div>
+          </div>
+
           <div className="card p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm text-gray-500 mb-1">Abonnement actuel</p>
@@ -761,9 +794,8 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             {PLANS.map(plan => {
               const isCurrent = plan.key === seller.plan
-              const isUpgrade =
-                (seller.plan === 'starter' && (plan.key === 'pro' || plan.key === 'business')) ||
-                (seller.plan === 'pro' && plan.key === 'business')
+              const isPaidPlan = plan.key === 'pro' || plan.key === 'business'
+              const whatsappPlan = isPaidPlan ? plan as UpgradePlan : null
 
               return (
                 <div
@@ -792,33 +824,37 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
                     ))}
                   </ul>
                   {isCurrent ? (
-                    <div className="w-full text-center py-2 rounded-lg bg-gray-200 text-gray-500 text-sm font-medium">
+                    <div className="w-full text-center py-2.5 rounded-lg bg-gray-100 text-gray-400 cursor-not-allowed text-sm font-medium">
                       Plan actuel
                     </div>
+                  ) : whatsappPlan ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setUpgradePlan(whatsappPlan)}
+                        className={`w-full rounded-lg py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                          whatsappPlan.key === 'pro'
+                            ? 'bg-[#16A34A] hover:bg-[#15803D] text-white'
+                            : 'bg-[#0B5E46] hover:bg-[#0a5240] text-white'
+                        }`}
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        Passer au plan {whatsappPlan.label} — {whatsappPlan.price.replace(' / ', '/')}
+                      </button>
+                      <p className="text-xs text-[#78716C] text-center mt-3 flex items-center justify-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        Activation sous 24h · Paiement par virement ou en main propre
+                      </p>
+                    </>
                   ) : (
-                    <button
-                      className={`w-full text-sm py-2 rounded-lg font-medium transition-colors ${
-                        plan.recommended
-                          ? 'btn-primary'
-                          : isUpgrade
-                            ? 'btn-secondary'
-                            : 'btn-secondary text-gray-400'
-                      }`}
-                    >
-                      {isUpgrade ? 'Passer à ce plan' : 'Rétrograder'}
-                    </button>
+                    <div className="w-full text-center py-2.5 rounded-lg bg-gray-100 text-gray-400 cursor-not-allowed text-sm font-medium">
+                      Plan inférieur
+                    </div>
                   )}
                 </div>
               )
             })}
           </div>
-
-          <p className="text-xs text-center text-gray-400">
-            Pour modifier votre abonnement, contactez-nous à{' '}
-            <a href="mailto:hanut.tn@gmail.com" className="text-brand-600 hover:underline">
-              hanut.tn@gmail.com
-            </a>
-          </p>
 
           <div className="card p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-4">
@@ -846,6 +882,63 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
                 Plan Business requis
               </span>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── MODALE UPGRADE WHATSAPP ── */}
+      {upgradePlan && upgradeWhatsappUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 px-4 py-6">
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl p-6 space-y-5">
+            <div>
+              <p className="text-lg font-semibold text-gray-900">
+                Passer au plan {upgradePlan.label}
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Vous allez être redirigé vers WhatsApp pour finaliser votre upgrade.
+              </p>
+            </div>
+
+            <div>
+              <p className="text-sm font-semibold text-gray-900 mb-3">Ce que vous obtenez :</p>
+              <ul className="space-y-2">
+                {upgradePlan.features.map(feature => (
+                  <li key={feature} className="flex items-start gap-2 text-sm text-gray-700">
+                    <span className="text-[#16A34A] font-bold shrink-0">✓</span>
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="rounded-xl bg-[#FAFAF9] border border-[#E7E5E4] p-4 space-y-1">
+              <p className="text-sm text-gray-700">
+                Prix : <span className="font-semibold text-gray-900">{upgradePlan.price.replace(' / ', '/')}</span>
+              </p>
+              <p className="text-sm text-gray-700">
+                Activation : <span className="font-semibold text-gray-900">sous 24h après paiement</span>
+              </p>
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setUpgradePlan(null)}
+                className="btn-secondary w-full sm:w-auto"
+              >
+                Annuler
+              </button>
+              <a
+                href={upgradeWhatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setUpgradePlan(null)}
+                className="w-full sm:w-auto bg-[#16A34A] hover:bg-[#15803D] text-white rounded-lg px-4 py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition-colors min-h-[44px]"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Continuer sur WhatsApp →
+              </a>
+            </div>
           </div>
         </div>
       )}
