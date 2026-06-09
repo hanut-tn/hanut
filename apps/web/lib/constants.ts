@@ -9,11 +9,14 @@ export const TUNISIAN_GOVERNORATES = [
 
 export type TunisianGovernorate = typeof TUNISIAN_GOVERNORATES[number]
 
-// Premiers chiffres valides : 2x (Ooredoo), 4x (Orange), 5x (Ooredoo), 7x (Telecom/fixes), 9x (Ooredoo)
-export const TUNISIAN_PHONE_REGEX = /^[2457912][0-9]{7}$/
+// Premiers chiffres valides : 2x, 4x, 5x, 7x, 9x.
+export const TUNISIAN_PHONE_REGEX = /^[24579][0-9]{7}$/
 
 export function formatTunisianPhone(phone: string): string {
-  return phone.replace(/\s/g, '').replace(/^(\+216|00216)/, '')
+  const digits = phone.replace(/\D/g, '')
+  if (digits.startsWith('00216')) return digits.slice(5)
+  if (digits.startsWith('216')) return digits.slice(3)
+  return digits
 }
 
 export function isValidTunisianPhone(phone: string): boolean {

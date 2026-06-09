@@ -60,47 +60,53 @@ export async function updateDelivery(id: string, input: UpdateDeliveryInput) {
 
   const supabase = await createServerClient()
 
+  if (input.cod_collected === true) {
+    const patch: Record<string, unknown> = {}
+    if ('tracking_number' in input) patch.tracking_number = input.tracking_number
+    if ('carrier_status' in input) patch.carrier_status = input.carrier_status
+    if ('fee' in input) patch.fee = input.fee
+    if ('cod_reversed' in input) patch.cod_reversed = input.cod_reversed
+
+    if (Object.keys(patch).length > 0) {
+      const { error: patchError } = await supabase.from('deliveries').update(patch).eq('id', id)
+      if (patchError) throw new Error(patchError.message)
+    }
+
+    const { data: orderId, error: rpcError } = await supabase.rpc('mark_delivery_cod_collected', {
+      p_seller_id: context.sellerId,
+      p_user_id: context.userId,
+      p_delivery_id: id,
+    })
+
+    if (rpcError) throw new Error(rpcError.message)
+
+    const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
+    await logActivity({
+      sellerId: context.sellerId,
+      userId: context.userId,
+      userName: seller?.name ?? context.userId,
+      actionType: 'order_status_changed',
+      entityType: 'order',
+      entityId: typeof orderId === 'string' ? orderId : undefined,
+      description: 'commande marquée comme livrée (COD collecté)',
+    })
+
+    revalidatePath('/deliveries')
+    revalidatePath('/orders')
+    revalidatePath('/dashboard')
+    revalidateTag('dashboard')
+    return
+  }
+
   const patch: Record<string, unknown> = { ...input }
 
-  if (input.cod_collected === true) {
-    patch.delivered_at = new Date().toISOString()
-  } else if (input.cod_collected === false) {
+  if (input.cod_collected === false) {
     patch.delivered_at = null
     patch.cod_reversed = false
   }
 
   const { error } = await supabase.from('deliveries').update(patch).eq('id', id)
   if (error) throw new Error(error.message)
-
-  // Amélioration 5 : COD collecté → commande "Livrée"
-  if (input.cod_collected === true) {
-    const { data: delivery } = await supabase
-      .from('deliveries').select('order_id').eq('id', id).single()
-
-    if (delivery?.order_id) {
-      await supabase.from('orders')
-        .update({ status: 'delivered' })
-        .eq('id', delivery.order_id)
-        .eq('seller_id', context.sellerId)
-
-      await supabase.from('order_status_history').insert({
-        order_id: delivery.order_id,
-        status: 'delivered',
-        changed_by: context.userId,
-      })
-
-      const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
-      await logActivity({
-        sellerId: context.sellerId,
-        userId: context.userId,
-        userName: seller?.name ?? context.userId,
-        actionType: 'order_status_changed',
-        entityType: 'order',
-        entityId: delivery.order_id,
-        description: 'commande marquée comme livrée (COD collecté)',
-      })
-    }
-  }
 
   revalidatePath('/deliveries')
   revalidatePath('/orders')
@@ -120,23 +126,21 @@ export async function createDeliveryFromOrder(
 
   const supabase = await createServerClient()
 
-  const { error: deliveryError } = await supabase.from('deliveries').insert({
-    order_id: orderId,
-    carrier,
-    tracking_number: tracking ?? null,
-    fee: fee > 0 ? fee : null,
+  const { error: shipError } = await supabase.rpc('create_delivery_from_order', {
+    p_seller_id: context.sellerId,
+    p_user_id: context.userId,
+    p_order_id: orderId,
+    p_carrier: carrier,
+    p_tracking_number: tracking ?? null,
+    p_fee: fee > 0 ? fee : null,
   })
-  if (deliveryError) return { error: deliveryError.message }
 
-  const { error: orderError } = await supabase.from('orders')
-    .update({ status: 'shipped' })
-    .eq('id', orderId)
-    .eq('seller_id', context.sellerId)
-  if (orderError) return { error: orderError.message }
-
-  await supabase.from('order_status_history').insert({
-    order_id: orderId, status: 'shipped', changed_by: context.userId,
-  })
+  if (shipError) {
+    if (shipError.message.includes('order_not_shippable')) {
+      return { error: 'Cette commande ne peut pas être expédiée.' }
+    }
+    return { error: shipError.message }
+  }
 
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
   await logActivity({

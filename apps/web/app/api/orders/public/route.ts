@@ -5,8 +5,7 @@ import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import type { RateLimitResult } from '@/lib/rate-limit'
-
-const PHONE_RE = /^[0-9]{8}$/
+import { formatTunisianPhone, isValidTunisianPhone } from '@/lib/constants'
 
 const PublicOrderSchema = z.object({
   slug: z.string().min(1, 'Boutique invalide'),
@@ -73,9 +72,9 @@ async function handlePublicOrder(req: Request) {
   const { slug, customer_name, customer_phone, customer_address, customer_city, product_id, variant, quantity: qty, notes } = parsed.data
 
   // Normalisation téléphone tunisien : strip non-chiffres + préfixe 216 → 8 chiffres
-  const customerPhone = customer_phone.replace(/\D/g, '').replace(/^216/, '')
-  if (!PHONE_RE.test(customerPhone)) {
-    return NextResponse.json({ error: 'Numéro de téléphone invalide (8 chiffres requis)' }, { status: 400 })
+  const customerPhone = formatTunisianPhone(customer_phone)
+  if (!isValidTunisianPhone(customerPhone)) {
+    return NextResponse.json({ error: 'Numéro de téléphone tunisien invalide' }, { status: 400 })
   }
 
   const supabase = createServiceClient()
@@ -165,4 +164,3 @@ async function handlePublicOrder(req: Request) {
 
   return NextResponse.json({ success: true, order_id: orderId, tracking_token: orderRow?.tracking_token ?? null })
 }
-

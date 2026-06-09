@@ -72,10 +72,20 @@ export async function PATCH(req: Request) {
     }, action === 'cod_reversed' ? { status: 400 } : undefined)
   }
 
-  const patch =
-    action === 'cod_collected'
-      ? { cod_collected: true, delivered_at: new Date().toISOString() }
-      : { cod_reversed: true }
+  if (action === 'cod_collected') {
+    for (const id of toUpdate) {
+      const { error: rpcError } = await supabase.rpc('mark_delivery_cod_collected', {
+        p_seller_id: context.sellerId,
+        p_user_id: context.userId,
+        p_delivery_id: id,
+      })
+      if (rpcError) return NextResponse.json({ error: rpcError.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ updated: toUpdate.length, skipped, message })
+  }
+
+  const patch = { cod_reversed: true }
 
   const { error: updateError } = await supabase
     .from('deliveries')

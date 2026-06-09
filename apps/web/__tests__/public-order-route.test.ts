@@ -61,7 +61,7 @@ function validBody(overrides: Record<string, unknown> = {}) {
   return {
     slug: 'demo-shop',
     customer_name: 'Fatima',
-    customer_phone: '11111111',
+    customer_phone: '22222222',
     customer_address: 'Rue 1',
     customer_city: 'Tunis',
     product_id: 'product-1',
@@ -133,7 +133,7 @@ describe('POST /api/orders/public', () => {
         p_product_id: 'product-1',
         p_quantity: 2,
         p_customer_name: 'Fatima',
-        p_customer_phone: '11111111',
+        p_customer_phone: '22222222',
         p_customer_address: 'Rue 1',
         p_customer_city: 'Tunis',
         p_customer_id: null,
@@ -156,12 +156,12 @@ describe('POST /api/orders/public', () => {
       { data: 'order-1', error: null }
     )
 
-    const response = await POST(jsonRequest(validBody({ customer_phone: '11 111 111' })))
+    const response = await POST(jsonRequest(validBody({ customer_phone: '22 222 222' })))
 
     expect(response.status).toBe(200)
     expect(rpc).toHaveBeenCalledWith(
       'create_order_with_stock',
-      expect.objectContaining({ p_customer_phone: '11111111' })
+      expect.objectContaining({ p_customer_phone: '22222222' })
     )
     expect(historyQuery.insert).toHaveBeenCalledWith({
       order_id: 'order-1',
@@ -204,6 +204,19 @@ describe('POST /api/orders/public', () => {
 
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toEqual({ error: 'Quantité minimum : 1' })
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('rejects Tunisian phone numbers with unsupported prefixes before calling the RPC', async () => {
+    const { rpc } = mockSupabase(
+      { id: 'seller-1', name: 'Demo Shop' },
+      { data: 'order-1', error: null }
+    )
+
+    const response = await POST(jsonRequest(validBody({ customer_phone: '11111111' })))
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: 'Numéro de téléphone tunisien invalide' })
     expect(rpc).not.toHaveBeenCalled()
   })
 
