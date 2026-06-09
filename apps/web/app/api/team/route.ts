@@ -5,19 +5,24 @@ import { createServerClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
+import { PLAN_LIMITS } from '@/lib/constants'
 
 const InviteMemberSchema = z.object({
   email: z.string().min(1, 'Email requis').regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Email invalide'),
   role: z.enum(['operator', 'readonly'], { error: 'Rôle invalide (operator ou readonly)' }),
 })
 
-const MAX_MEMBERS = 5
+function getTeamMemberLimit(plan: keyof typeof PLAN_LIMITS) {
+  return PLAN_LIMITS[plan].teamMembers
+}
 
 // GET /api/team — liste les membres de l'équipe
 export async function GET() {
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
-  if (context.plan !== 'business') return NextResponse.json({ error: 'Disponible dans le plan Business' }, { status: 403 })
+  if (context.plan !== 'pro' && context.plan !== 'business') {
+    return NextResponse.json({ error: 'Disponible dans le plan Pro' }, { status: 403 })
+  }
 
   const serviceClient = createServiceClient()
   const { data: members, error } = await serviceClient
@@ -35,8 +40,8 @@ export async function POST(request: NextRequest) {
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   if (context.role !== 'admin') return NextResponse.json({ error: 'Réservé aux admins' }, { status: 403 })
-  if (context.plan !== 'business') {
-    return NextResponse.json({ error: "La gestion d'équipe est disponible dans le plan Business" }, { status: 403 })
+  if (context.plan !== 'pro' && context.plan !== 'business') {
+    return NextResponse.json({ error: "La gestion d'équipe est disponible dans le plan Pro" }, { status: 403 })
   }
 
   const rawBody = await request.json().catch(() => null)
@@ -73,9 +78,10 @@ export async function POST(request: NextRequest) {
     .select('id', { count: 'exact', head: true })
     .eq('seller_id', context.sellerId)
 
-  if ((count ?? 0) >= MAX_MEMBERS) {
+  const maxMembers = getTeamMemberLimit(context.plan)
+  if ((count ?? 0) >= maxMembers) {
     return NextResponse.json(
-      { error: `Limite atteinte (${MAX_MEMBERS} membres maximum par boutique)` },
+      { error: `Limite atteinte (${maxMembers} membres maximum par boutique)` },
       { status: 400 }
     )
   }

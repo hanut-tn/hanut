@@ -1,7 +1,7 @@
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/service'
-import { getUserContext } from '@/lib/get-context'
+import { getUserContext, getMonthlyOrderCount } from '@/lib/get-context'
 import SettingsClient from '@/components/settings/SettingsClient'
 import { updateProfile, updateSlug, checkSlugAvailability } from './actions'
 
@@ -27,11 +27,12 @@ export default async function SettingsPage({ searchParams }: Props) {
     .eq('id', context.sellerId)
     .single()
 
-  const [{ count: productCount }, { count: customerCount }, { count: orderCount }, { count: memberCount }] = await Promise.all([
+  const [{ count: productCount }, { count: customerCount }, { count: orderCount }, { count: memberCount }, monthlyOrderCount] = await Promise.all([
     serviceClient.from('products').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId),
     serviceClient.from('customers').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId),
     serviceClient.from('orders').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId).is('deleted_at', null),
     serviceClient.from('team_members').select('id', { count: 'exact', head: true }).eq('seller_id', context.sellerId).eq('status', 'active'),
+    context.plan === 'starter' ? getMonthlyOrderCount(context.sellerId) : Promise.resolve(null),
   ])
 
   return (
@@ -51,6 +52,7 @@ export default async function SettingsPage({ searchParams }: Props) {
         orders: orderCount ?? 0,
         members: memberCount ?? 0,
       }}
+      monthlyOrderCount={monthlyOrderCount}
       appUrl={appUrl}
       initialTab={tab === 'abonnement' ? 'plan' : tab === 'lien' ? 'link' : tab}
       updateProfile={updateProfile}

@@ -17,6 +17,7 @@ vi.mock('@/lib/supabase/server', () => ({
 
 vi.mock('@/lib/get-context', () => ({
   getUserContext: contextMock.getUserContext,
+  getMonthlyOrderCount: vi.fn().mockResolvedValue(0),
 }))
 
 vi.mock('next/cache', () => ({
@@ -33,6 +34,11 @@ vi.mock('@/lib/constants', () => ({
   ORDER_STATUS_LABELS: {
     pending: 'En attente', new: 'Nouveau', confirmed: 'Confirmé',
     shipped: 'Expédié', delivered: 'Livré', returned: 'Retourné',
+  },
+  PLAN_LIMITS: {
+    starter: { ordersPerMonth: 100 },
+    pro: { ordersPerMonth: Infinity },
+    business: { ordersPerMonth: Infinity },
   },
 }))
 
@@ -94,7 +100,8 @@ describe('createOrder dashboard action', () => {
   it('requires an authenticated seller', async () => {
     mockContext(null)
 
-    await expect(createOrder(input)).rejects.toThrow('Non autorisé')
+    const result = await createOrder(input)
+    expect(result.error).toBe('Non autorisé')
 
     expect(serverMock.createServerClient).not.toHaveBeenCalled()
     expect(serverMock.revalidatePath).not.toHaveBeenCalled()
@@ -134,7 +141,8 @@ describe('createOrder dashboard action', () => {
     mockContext('seller-1')
     mockServerClient({ message: 'Stock insuffisant' })
 
-    await expect(createOrder(input)).rejects.toThrow('Stock insuffisant')
+    const result = await createOrder(input)
+    expect(result.error).toBe('Stock insuffisant')
 
     expect(serverMock.revalidatePath).not.toHaveBeenCalled()
     expect(serverMock.revalidateTag).not.toHaveBeenCalled()

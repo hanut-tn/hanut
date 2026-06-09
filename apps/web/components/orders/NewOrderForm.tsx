@@ -20,7 +20,7 @@ type CustomerSuggestion = {
 
 type Props = {
   products: Product[]
-  createOrder: (input: CreateOrderInput) => Promise<void>
+  createOrder: (input: CreateOrderInput) => Promise<{ error?: string }>
   initialCustomer?: CustomerSuggestion
 }
 
@@ -140,7 +140,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
     setError(null)
     startTransition(async () => {
       try {
-        await createOrder({
+        const result = await createOrder({
           customer_id: selectedCustomer?.id,
           customer_name: customerName.trim(),
           customer_phone: phone.trim(),
@@ -152,6 +152,16 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
           cod_amount: codAmount === '' ? 0 : codAmount,
           notes: notes.trim() || undefined,
         })
+        if (result?.error === 'LIMIT_REACHED') {
+          setError('Limite de 100 commandes atteinte ce mois. Passe au plan Pro pour des commandes illimitées.')
+          setStep(0)
+          return
+        }
+        if (result?.error) {
+          setError(result.error)
+          setStep(0)
+          return
+        }
         router.push('/orders')
         router.refresh()
       } catch (err: unknown) {

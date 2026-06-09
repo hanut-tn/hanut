@@ -2,6 +2,19 @@ import * as React from 'react'
 import { createServerClient } from './supabase/server'
 import { createServiceClient } from './supabase/service'
 
+export async function getMonthlyOrderCount(sellerId: string): Promise<number> {
+  const supabase = await createServerClient()
+  const now = new Date()
+  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  const { count } = await supabase
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('seller_id', sellerId)
+    .is('deleted_at', null)
+    .gte('created_at', firstOfMonth)
+  return count ?? 0
+}
+
 export type UserRole = 'admin' | 'operator' | 'readonly'
 
 export type UserContext = {
@@ -10,6 +23,22 @@ export type UserContext = {
   role: UserRole
   isSeller: boolean
   plan: 'starter' | 'pro' | 'business'
+  demoExpiresAt: string | null
+  demoExpired: boolean
+  daysLeft: number | null
+}
+
+function computeDemoStatus(subscriptionEnd: string | null): Pick<UserContext, 'demoExpiresAt' | 'demoExpired' | 'daysLeft'> {
+  if (!subscriptionEnd) {
+    return { demoExpiresAt: null, demoExpired: false, daysLeft: null }
+  }
+  const expiresAt = new Date(subscriptionEnd)
+  const diffMs = expiresAt.getTime() - Date.now()
+  if (diffMs <= 0) {
+    return { demoExpiresAt: subscriptionEnd, demoExpired: true, daysLeft: 0 }
+  }
+  const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+  return { demoExpiresAt: subscriptionEnd, demoExpired: false, daysLeft }
 }
 
 type CacheFn = <T extends (...args: never[]) => unknown>(fn: T) => T
@@ -26,7 +55,7 @@ export const getUserContext = cacheFn(async (): Promise<UserContext | null> => {
   // L'utilisateur est-il un vendeur (owner = toujours admin) ?
   const { data: seller } = await supabase
     .from('sellers')
-    .select('id, plan')
+    .select('id, plan, subscription_end')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -36,7 +65,8 @@ export const getUserContext = cacheFn(async (): Promise<UserContext | null> => {
       sellerId: seller.id,
       role: 'admin',
       isSeller: true,
-      plan: (seller.plan ?? 'starter') as UserContext['plan'],
+      plan: (seller.plan ?? 'pro') as UserContext['plan'],
+      ...computeDemoStatus(seller.subscription_end ?? null),
     }
   }
 
@@ -52,7 +82,7 @@ export const getUserContext = cacheFn(async (): Promise<UserContext | null> => {
   if (member) {
     const { data: sellerData } = await serviceClient
       .from('sellers')
-      .select('plan')
+      .select('plan, subscription_end')
       .eq('id', member.seller_id)
       .single()
 
@@ -61,7 +91,8 @@ export const getUserContext = cacheFn(async (): Promise<UserContext | null> => {
       sellerId: member.seller_id,
       role: member.role as UserRole,
       isSeller: false,
-      plan: (sellerData?.plan ?? 'starter') as UserContext['plan'],
+      plan: (sellerData?.plan ?? 'pro') as UserContext['plan'],
+      ...computeDemoStatus(sellerData?.subscription_end ?? null),
     }
   }
 

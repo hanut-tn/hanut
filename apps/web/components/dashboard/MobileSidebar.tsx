@@ -38,7 +38,7 @@ export default function MobileSidebar({ role, sellerName, plan = 'starter' }: Pr
   const pathname     = usePathname()
   const { isDrawerOpen, closeDrawer } = useMobileNav()
   const pendingCount = usePendingOrdersCount()
-  const isBusiness   = plan === 'business'
+  const hasTeamAccess = plan === 'pro' || plan === 'business'
   const visible      = NAV_ITEMS.filter(item => item.roles.includes(role))
 
   const initials = sellerName
@@ -107,23 +107,23 @@ export default function MobileSidebar({ role, sellerName, plan = 'starter' }: Pr
 
                 {insertTeamAfter && (
                   <Link
-                    href={isBusiness ? '/team' : '/settings?tab=abonnement'}
+                    href={hasTeamAccess ? '/team' : '/settings?tab=abonnement'}
                     onClick={closeDrawer}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] mt-0.5 ${
-                      pathname.startsWith('/team') && isBusiness
+                      pathname.startsWith('/team') && hasTeamAccess
                         ? 'bg-[#F0FDF4] text-[#166534]'
-                        : isBusiness
+                        : hasTeamAccess
                           ? 'text-[#78716C] hover:bg-[#F5F5F4] hover:text-[#1C1917]'
                           : 'text-[#A8A29E]'
                     }`}
                   >
                     <Users2 className={`w-5 h-5 shrink-0 ${
-                      pathname.startsWith('/team') && isBusiness ? 'text-[#166534]' : isBusiness ? 'text-[#78716C]' : 'text-[#A8A29E]'
+                      pathname.startsWith('/team') && hasTeamAccess ? 'text-[#166534]' : hasTeamAccess ? 'text-[#78716C]' : 'text-[#A8A29E]'
                     }`} />
                     <span className="flex-1">Équipe</span>
-                    {!isBusiness && (
+                    {!hasTeamAccess && (
                       <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[#F0FDF4] text-[#166534] border border-green-200">
-                        Business
+                        Pro
                       </span>
                     )}
                   </Link>

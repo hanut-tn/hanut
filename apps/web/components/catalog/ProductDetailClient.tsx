@@ -62,6 +62,7 @@ type PlannedRestock = {
 type Props = {
   product: Product
   role: string
+  plan?: string
   stats: ProductStats
   recentOrders: RecentOrder[]
   stockMovements: StockMovement[]
@@ -96,6 +97,7 @@ const MOVEMENT_LABELS: Record<StockMovement['movement_type'], string> = {
 export default function ProductDetailClient({
   product,
   role,
+  plan,
   stats,
   recentOrders,
   stockMovements,
@@ -556,8 +558,16 @@ export default function ProductDetailClient({
               </div>
             )}
 
-            {/* Historique des mouvements de stock */}
-            {stockMovements.length > 0 && (
+            {/* Historique des mouvements de stock — Pro uniquement */}
+            {plan === 'starter' ? (
+              <div className="border-t border-[#E7E5E4] pt-4">
+                <p className="text-xs text-[#78716C] flex items-center gap-1.5">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="shrink-0"><rect x="1" y="5" width="10" height="7" rx="1" stroke="#9CA3AF" strokeWidth="1.2"/><path d="M4 5V3.5a2 2 0 014 0V5" stroke="#9CA3AF" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                  Historique des mouvements disponible sur le{' '}
+                  <a href="/settings?tab=abonnement" className="text-[#16A34A] font-medium hover:underline">plan Pro</a>
+                </p>
+              </div>
+            ) : stockMovements.length > 0 && (
               <div className="border-t border-[#E7E5E4] pt-4 space-y-2">
                 <p className="text-xs font-semibold text-[#78716C] uppercase tracking-wide">Historique</p>
                 {stockMovements.slice(0, 5).map(m => {

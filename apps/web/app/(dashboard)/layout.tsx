@@ -11,6 +11,7 @@ import Sidebar from '@/components/dashboard/Sidebar'
 import TopBar from '@/components/dashboard/TopBar'
 import BottomNav from '@/components/dashboard/BottomNav'
 import MobileSidebar from '@/components/dashboard/MobileSidebar'
+import DemoBanner from '@/components/dashboard/DemoBanner'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createServerClient()
@@ -49,7 +50,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       name: (user.user_metadata?.name as string | undefined) ?? user.email!.split('@')[0],
       phone: (user.user_metadata?.phone as string | undefined) ?? null,
     }, { onConflict: 'id', ignoreDuplicates: true })
-    context = { userId: user.id, sellerId: user.id, role: 'admin', isSeller: true, plan: 'starter' }
+    context = { userId: user.id, sellerId: user.id, role: 'admin', isSeller: true, plan: 'pro', demoExpiresAt: null, demoExpired: false, daysLeft: null }
   } else if (context.isSeller) {
     // Vendeur existant — s'assure que le profil est à jour
     await supabase.from('sellers').upsert({
@@ -76,7 +77,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
           {/* Sidebar desktop — cachée sur mobile */}
           <div className="hidden md:flex shrink-0">
-            <Sidebar role={context.role} sellerName={displayName} plan={context.plan} />
+            <Sidebar role={context.role} sellerName={displayName} plan={context.plan} daysLeft={context.daysLeft} />
           </div>
 
           {/* Drawer mobile */}
@@ -85,6 +86,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           {/* Contenu principal */}
           <div className="flex-1 flex flex-col min-w-0 md:overflow-hidden">
             <TopBar sellerName={displayName} role={context.role} isSeller={context.isSeller} />
+            {context.daysLeft !== null && context.daysLeft <= 4 && context.daysLeft > 0 && (
+              <DemoBanner daysLeft={context.daysLeft} />
+            )}
             <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 pb-[calc(4rem+env(safe-area-inset-bottom)+1rem)] md:pb-6">
               {children}
             </main>

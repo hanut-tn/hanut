@@ -25,14 +25,14 @@ const PLANS: {
     label: 'Starter',
     price: '39 DT / mois',
     features: [
-      'Commandes illimitées',
+      '100 commandes / mois',
       'Catalogue produits illimité',
       'Lien de commande public /order',
       'Suivi commande client /track',
-      'Gestion stock avec historique des mouvements',
-      'Fiche client + CRM basique',
+      'Gestion stock en temps réel',
+      'Fiche client',
       'Gestion livraisons COD (5 transporteurs)',
-      'Dashboard analytics 30 jours',
+      'Analytics 30 jours',
       'Support WhatsApp',
     ],
   },
@@ -41,11 +41,13 @@ const PLANS: {
     label: 'Pro',
     price: '79 DT / mois',
     features: [
-      'Tout Starter inclus',
+      'Commandes illimitées',
       'Analytics 180 jours + comparaison période',
+      'Historique mouvements stock',
+      'Fiche client CRM (tags et notes)',
       'Export CSV commandes et analytics',
-      'Équipe jusqu\'à 3 membres',
       'Top produits, clients et villes',
+      'Équipe jusqu\'à 3 membres',
       'Support prioritaire WhatsApp',
     ],
     recommended: true,
@@ -95,6 +97,7 @@ type Props = {
   stats: { products: number; customers: number; orders: number; members: number }
   appUrl: string
   initialTab?: string
+  monthlyOrderCount?: number | null
   updateProfile: (input: ProfileInput) => Promise<void>
   updateSlug: (slug: string) => Promise<void>
   checkSlugAvailability: (slug: string) => Promise<boolean>
@@ -114,7 +117,7 @@ function getPasswordStrength(pw: string): { level: 'weak' | 'medium' | 'strong';
   return { level: 'weak', label: 'Faible', color: 'bg-red-400' }
 }
 
-export default function SettingsClient({ seller, stats, appUrl, initialTab, updateProfile, updateSlug, checkSlugAvailability }: Props) {
+export default function SettingsClient({ seller, stats, appUrl, initialTab, monthlyOrderCount, updateProfile, updateSlug, checkSlugAvailability }: Props) {
   const BASE_URL = appUrl.replace(/\/$/, '')
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
@@ -772,12 +775,28 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, upda
           <div className="card p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm text-gray-500 mb-1">Abonnement actuel</p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className={`px-2.5 py-0.5 rounded-full text-sm font-semibold ${planCfg.color}`}>
                   {planCfg.label}
                 </span>
                 <span className="text-gray-500 text-sm">— {planCfg.price}</span>
               </div>
+              {seller.plan === 'starter' && monthlyOrderCount !== null && monthlyOrderCount !== undefined && (
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="h-1.5 w-32 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${monthlyOrderCount >= 100 ? 'bg-red-500' : monthlyOrderCount >= 80 ? 'bg-amber-500' : 'bg-green-500'}`}
+                      style={{ width: `${Math.min(100, (monthlyOrderCount / 100) * 100)}%` }}
+                    />
+                  </div>
+                  <span className={`text-xs font-medium ${monthlyOrderCount >= 100 ? 'text-red-600' : 'text-gray-500'}`}>
+                    {monthlyOrderCount} / 100 commandes ce mois
+                  </span>
+                </div>
+              )}
+              {seller.plan === 'pro' && (
+                <p className="text-xs text-green-600 font-medium mt-1">Commandes illimitées</p>
+              )}
             </div>
             {seller.subscription_end && (
               <div className="sm:text-right">

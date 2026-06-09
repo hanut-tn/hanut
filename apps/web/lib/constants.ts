@@ -103,3 +103,40 @@ export const HANUT_CONTACT = {
   whatsappUrl: 'https://wa.me/21654727060',
   email: 'hanut.tn@gmail.com',
 } as const
+
+export const PLAN_LIMITS = {
+  starter: {
+    ordersPerMonth: 100,
+    analyticsDays: 30,
+    teamMembers: 0,
+    stockHistory: false,
+    crmTagsNotes: false,
+    topStats: false,
+    csvExport: false,
+  },
+  pro: {
+    ordersPerMonth: Infinity,
+    analyticsDays: 180,
+    teamMembers: 3,
+    stockHistory: true,
+    crmTagsNotes: true,
+    topStats: true,
+    csvExport: true,
+  },
+  business: {
+    ordersPerMonth: Infinity,
+    analyticsDays: 180,
+    teamMembers: Infinity,
+    stockHistory: true,
+    crmTagsNotes: true,
+    topStats: true,
+    csvExport: true,
+  },
+} as const
+
+export function getUpgradeWhatsAppUrl(message?: string): string {
+  const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER
+  const base = whatsapp ? `https://wa.me/${whatsapp}` : HANUT_CONTACT.whatsappUrl
+  const text = message ?? 'Bonjour, je souhaite passer au plan Pro (79 DT/mois) pour mon compte Hanut.'
+  return `${base}?text=${encodeURIComponent(text)}`
+}

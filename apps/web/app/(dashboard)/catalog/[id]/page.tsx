@@ -139,6 +139,7 @@ export default async function ProductDetailPage({ params }: Props) {
     <ProductDetailClient
       product={product as Product}
       role={context.role}
+      plan={context.plan}
       stats={{
         totalOrders: totalOrders ?? 0,
         totalRevenue,

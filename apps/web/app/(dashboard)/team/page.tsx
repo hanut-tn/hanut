@@ -7,7 +7,7 @@ export default async function TeamPage() {
   const context = await getUserContext()
   if (!context) redirect('/login')
   if (context.role !== 'admin') redirect('/dashboard')
-  if (context.plan !== 'business') redirect('/settings?tab=abonnement')
+  if (context.plan !== 'pro' && context.plan !== 'business') redirect('/settings?tab=abonnement')
 
   const serviceClient = createServiceClient()
 
@@ -51,6 +51,7 @@ export default async function TeamPage() {
     <TeamPageClient
       sellerId={context.sellerId}
       currentUserId={context.userId}
+      plan={context.plan}
       members={membersWithSignIn}
       initialLogs={(logsRes.data ?? []) as ActivityLog[]}
       initialTotal={logsRes.count ?? 0}

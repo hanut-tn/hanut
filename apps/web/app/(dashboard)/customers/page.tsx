@@ -38,6 +38,7 @@ export default async function CustomersPage() {
     <CustomersClient
       customers={(customers ?? []) as Customers}
       initialTotal={customersCount ?? 0}
+      plan={context.plan}
       stats={{ totalRevenue, orderCount: orderRows.length }}
       updateCustomer={updateCustomer}
       deleteCustomer={deleteCustomer}

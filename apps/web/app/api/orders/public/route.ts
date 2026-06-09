@@ -90,12 +90,30 @@ async function handlePublicOrder(req: Request) {
   // Vérification slug → vendeur
   const { data: seller } = await supabase
     .from('sellers')
-    .select('id, name')
+    .select('id, name, plan')
     .eq('slug', slug)
     .single()
 
   if (!seller) {
     return NextResponse.json({ error: 'Boutique introuvable' }, { status: 404 })
+  }
+
+  // Vérification limite mensuelle Starter
+  if (seller.plan === 'starter') {
+    const now = new Date()
+    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+    const { count: monthlyCount } = await supabase
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('seller_id', seller.id)
+      .is('deleted_at', null)
+      .gte('created_at', firstOfMonth)
+    if ((monthlyCount ?? 0) >= 100) {
+      return NextResponse.json(
+        { error: 'Ce vendeur a atteint sa limite de commandes ce mois. Revenez le mois prochain.' },
+        { status: 403 }
+      )
+    }
   }
 
   // Vérification que product_id appartient bien à ce vendeur

@@ -26,9 +26,10 @@ type Props = {
   role: UserRole
   sellerName?: string
   plan?: string
+  daysLeft?: number | null
 }
 
-export default function Sidebar({ role, sellerName, plan = 'starter' }: Props) {
+export default function Sidebar({ role, sellerName, plan = 'pro', daysLeft }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const visible = NAV_ITEMS.filter(item => item.roles.includes(role))
@@ -37,11 +38,11 @@ export default function Sidebar({ role, sellerName, plan = 'starter' }: Props) {
     ? sellerName.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()
     : '?'
 
-  const isBusiness = plan === 'business'
+  const hasTeamAccess = plan === 'pro' || plan === 'business'
   const teamActive = pathname.startsWith('/team')
 
   function handleTeamClick(e: React.MouseEvent) {
-    if (!isBusiness) {
+    if (!hasTeamAccess) {
       e.preventDefault()
       router.push('/settings?tab=abonnement')
     }
@@ -87,23 +88,23 @@ export default function Sidebar({ role, sellerName, plan = 'starter' }: Props) {
 
                 {insertTeamAfter && (
                   <Link
-                    href={isBusiness ? '/team' : '/settings?tab=abonnement'}
+                    href={hasTeamAccess ? '/team' : '/settings?tab=abonnement'}
                     onClick={handleTeamClick}
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      teamActive && isBusiness
+                      teamActive && hasTeamAccess
                         ? 'bg-[#F0FDF4] text-[#166534]'
-                        : isBusiness
+                        : hasTeamAccess
                           ? 'text-[#78716C] hover:bg-[#F5F5F4] hover:text-[#1C1917]'
                           : 'text-[#A8A29E] cursor-pointer'
                     }`}
                   >
                     <Users2 className={`w-5 h-5 flex-shrink-0 ${
-                      teamActive && isBusiness ? 'text-[#166534]' : isBusiness ? 'text-[#78716C]' : 'text-[#A8A29E]'
+                      teamActive && hasTeamAccess ? 'text-[#166534]' : hasTeamAccess ? 'text-[#78716C]' : 'text-[#A8A29E]'
                     }`} />
                     Équipe
-                    {!isBusiness && (
+                    {!hasTeamAccess && (
                       <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[#F0FDF4] text-[#166534] border border-green-200">
-                        Business
+                        Pro
                       </span>
                     )}
                   </Link>
@@ -122,9 +123,19 @@ export default function Sidebar({ role, sellerName, plan = 'starter' }: Props) {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-[#1C1917] truncate">{sellerName ?? '—'}</p>
-            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold mt-0.5 ${PLAN_BADGE[plan] ?? PLAN_BADGE.starter}`}>
-              {plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : 'Starter'}
-            </span>
+            {daysLeft === 0 ? (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold mt-0.5 bg-red-100 text-red-600">
+                Plan expiré
+              </span>
+            ) : daysLeft !== null && daysLeft !== undefined && daysLeft <= 4 ? (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold mt-0.5 bg-amber-100 text-amber-700">
+                Pro · {daysLeft}j restants
+              </span>
+            ) : (
+              <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold mt-0.5 ${PLAN_BADGE[plan] ?? PLAN_BADGE.pro}`}>
+                {plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : 'Pro'}
+              </span>
+            )}
           </div>
         </div>
       </div>

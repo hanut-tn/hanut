@@ -64,6 +64,7 @@ type Props = {
   restoreOrder: (id: string) => Promise<{ error?: string }>
   permanentlyDeleteOrder: (id: string) => Promise<{ error?: string }>
   createDeliveryFromOrder: (orderId: string, carrier: string, tracking: string | undefined, fee: number) => Promise<{ error?: string }>
+  monthlyOrderCount?: number
 }
 
 function getCustomer(order: Order | TrashOrder) {
@@ -166,7 +167,9 @@ export default function OrdersClient({
   restoreOrder,
   permanentlyDeleteOrder,
   createDeliveryFromOrder,
+  monthlyOrderCount = 0,
 }: Props) {
+  const orderLimitReached = plan === 'starter' && monthlyOrderCount >= 100
   const [tab, setTab] = useState<OrderStatus | 'all' | 'trash'>('all')
   const [dateFilter, setDateFilter] = useState<DateFilter>('all')
   const [search, setSearch] = useState('')
@@ -752,9 +755,20 @@ export default function OrdersClient({
             )}
           </div>
 
-          <Link href="/orders/new" className="btn-primary text-center text-sm whitespace-nowrap">
-            + Nouvelle commande
-          </Link>
+          {orderLimitReached ? (
+            <div className="relative group">
+              <button disabled className="btn-primary text-center text-sm whitespace-nowrap opacity-50 cursor-not-allowed">
+                + Nouvelle commande
+              </button>
+              <div className="absolute bottom-full mb-1.5 right-0 whitespace-nowrap bg-[#1C1917] text-white text-xs px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                Limite de 100 commandes atteinte ce mois
+              </div>
+            </div>
+          ) : (
+            <Link href="/orders/new" className="btn-primary text-center text-sm whitespace-nowrap">
+              + Nouvelle commande
+            </Link>
+          )}
         </div>
       </div>
 
@@ -868,9 +882,11 @@ export default function OrdersClient({
               <p className="text-sm text-[#78716C] mb-6">
                 Partagez votre lien de commande ou créez votre première commande
               </p>
-              <Link href="/orders/new" className="btn-primary text-sm">
-                + Nouvelle commande
-              </Link>
+              {!orderLimitReached && (
+                <Link href="/orders/new" className="btn-primary text-sm">
+                  + Nouvelle commande
+                </Link>
+              )}
             </div>
           ) : (
             <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-8 text-center sm:p-16">

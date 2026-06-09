@@ -45,6 +45,7 @@ type Customer = {
 type Props = {
   customers: Customer[]
   initialTotal: number
+  plan?: string
   stats: {
     totalRevenue: number
     orderCount: number
@@ -61,7 +62,7 @@ function getStats(orders: Order[] | null) {
   return { count: list.length, total, delivered, last }
 }
 
-function CustomerMobileCard({ customer }: { customer: Customer }) {
+function CustomerMobileCard({ customer, crmEnabled }: { customer: Customer; crmEnabled: boolean }) {
   const stats = getStats(customer.orders)
   const tags = customer.tags ?? []
   const ini = initials(customer.name)
@@ -75,7 +76,7 @@ function CustomerMobileCard({ customer }: { customer: Customer }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2">
             <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[#1C1917]">{customer.name}</p>
-            {tags.length > 0 && (
+            {crmEnabled && tags.length > 0 && (
               <div className="ml-auto flex shrink-0 flex-wrap justify-end gap-1">
                 {tags.slice(0, 2).map(tag => (
                   <span key={tag} className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${tagColor(tag)}`}>
@@ -136,7 +137,8 @@ function CustomerMobileCard({ customer }: { customer: Customer }) {
   )
 }
 
-export default function CustomersClient({ customers, initialTotal, stats, updateCustomer, deleteCustomer }: Props) {
+export default function CustomersClient({ customers, initialTotal, plan, stats, updateCustomer, deleteCustomer }: Props) {
+  const crmEnabled = plan !== 'starter'
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
@@ -361,8 +363,8 @@ export default function CustomersClient({ customers, initialTotal, stats, update
         </div>
       </div>
 
-      {/* Filtres par tag */}
-      {allTags.length > 0 && (
+      {/* Filtres par tag — Pro uniquement */}
+      {crmEnabled && allTags.length > 0 && (
         <div className="flex flex-wrap gap-2 items-center">
           {allTags.map(tag => (
             <button
@@ -422,7 +424,7 @@ export default function CustomersClient({ customers, initialTotal, stats, update
         <>
         <div className="space-y-3 lg:hidden">
           {filtered.map(c => (
-            <CustomerMobileCard key={c.id} customer={c} />
+            <CustomerMobileCard key={c.id} customer={c} crmEnabled={crmEnabled} />
           ))}
         </div>
 
@@ -454,7 +456,7 @@ export default function CustomersClient({ customers, initialTotal, stats, update
                         </div>
                         <div>
                           <p className="font-medium text-[#1C1917]">{c.name}</p>
-                          {tags.length > 0 && (
+                          {crmEnabled && tags.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1">
                               {tags.map(tag => (
                                 <span

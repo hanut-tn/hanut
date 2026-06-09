@@ -4,7 +4,10 @@ import { Fragment, useState, useTransition } from 'react'
 import { UserCheck, UserPlus, Users2, ShoppingBag, Package, User, Truck, ClipboardList, AlertCircle, AlertTriangle, Check } from 'lucide-react'
 import type { TeamMember, ActivityLog } from '@/app/(dashboard)/team/page'
 
-const MAX_MEMBERS = 5
+const MAX_MEMBERS_BY_PLAN: Record<string, number> = {
+  pro: 3,
+  business: Infinity,
+}
 
 const ROLE_CONFIG = {
   admin:    { label: 'Admin',         cls: 'bg-[#F0FDF4] text-[#166534]' },
@@ -37,12 +40,14 @@ const ACTION_GROUPS = ['Commandes', 'Produits', 'Clients', 'Livraisons', 'Équip
 type Props = {
   sellerId: string
   currentUserId: string
+  plan?: string
   members: TeamMember[]
   initialLogs: ActivityLog[]
   initialTotal: number
 }
 
-export default function TeamPageClient({ currentUserId, members: initialMembers, initialLogs, initialTotal }: Props) {
+export default function TeamPageClient({ currentUserId, plan, members: initialMembers, initialLogs, initialTotal }: Props) {
+  const MAX_MEMBERS = MAX_MEMBERS_BY_PLAN[plan ?? 'pro'] ?? 3
   const [members, setMembers] = useState(initialMembers)
   const [isPending, startTransition] = useTransition()
 

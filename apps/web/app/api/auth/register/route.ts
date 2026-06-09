@@ -70,12 +70,15 @@ export async function POST(req: NextRequest) {
 
   for (let attempt = 0; attempt < 10; attempt++) {
     const slug = attempt === 0 ? baseSlug : `${baseSlug}-${attempt + 1}`
+    const trialEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
     const { error } = await serviceClient.from('sellers').insert({
       id: data.user.id,
       email,
       name: shop_name,
       phone: phone || null,
       slug,
+      plan: 'pro',
+      subscription_end: trialEnd,
     })
 
     if (!error) {

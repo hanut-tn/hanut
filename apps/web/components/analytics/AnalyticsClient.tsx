@@ -359,7 +359,7 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
                 </button>
               ))}
             </div>
-            {plan === 'business' && (
+            {plan !== 'starter' && (
               <div className="relative shrink-0" ref={pickerRef}>
                 <button
                   onClick={() => setShowPicker(prev => !prev)}
@@ -591,7 +591,12 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
 
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-5">
           <h2 className="font-semibold text-[#1C1917] mb-4">Top produits</h2>
-          {topProducts.length === 0 ? (
+          {plan === 'starter' ? (
+            <div className="flex flex-col items-center justify-center py-6 gap-2">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="9" width="16" height="11" rx="2" stroke="#9CA3AF" strokeWidth="1.5"/><path d="M6 9V6a4 4 0 018 0v3" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              <p className="text-sm text-[#78716C] text-center">Disponible sur le <a href="/settings?tab=abonnement" className="text-[#16A34A] font-medium hover:underline">plan Pro</a></p>
+            </div>
+          ) : topProducts.length === 0 ? (
             <p className="text-sm text-[#78716C] py-4 text-center">Aucune donnée sur cette période</p>
           ) : (
             <div className="space-y-3">
@@ -617,8 +622,8 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
         </div>
       </div>
 
-      {/* Tableau par livreur */}
-      {carrierList.length > 0 && (
+      {/* Tableau par livreur — Pro uniquement */}
+      {plan !== 'starter' && carrierList.length > 0 && (
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-[#E7E5E4]">
             <h2 className="font-semibold text-[#1C1917] mb-3">Par livreur</h2>
@@ -697,7 +702,12 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-5">
           <h2 className="font-semibold text-[#1C1917] mb-4">Top clients</h2>
-          {topCustomers.length === 0 ? (
+          {plan === 'starter' ? (
+            <div className="flex flex-col items-center justify-center py-6 gap-2">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="9" width="16" height="11" rx="2" stroke="#9CA3AF" strokeWidth="1.5"/><path d="M6 9V6a4 4 0 018 0v3" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              <p className="text-sm text-[#78716C] text-center">Disponible sur le <a href="/settings?tab=abonnement" className="text-[#16A34A] font-medium hover:underline">plan Pro</a></p>
+            </div>
+          ) : topCustomers.length === 0 ? (
             <p className="text-sm text-[#78716C] py-4 text-center">Aucune donnée sur cette période</p>
           ) : (
             <div className="space-y-3">
@@ -733,7 +743,12 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
 
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-5">
           <h2 className="font-semibold text-[#1C1917] mb-4">Top villes</h2>
-          {topCities.length === 0 ? (
+          {plan === 'starter' ? (
+            <div className="flex flex-col items-center justify-center py-6 gap-2">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="9" width="16" height="11" rx="2" stroke="#9CA3AF" strokeWidth="1.5"/><path d="M6 9V6a4 4 0 018 0v3" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              <p className="text-sm text-[#78716C] text-center">Disponible sur le <a href="/settings?tab=abonnement" className="text-[#16A34A] font-medium hover:underline">plan Pro</a></p>
+            </div>
+          ) : topCities.length === 0 ? (
             <p className="text-sm text-[#78716C] py-4 text-center">Aucune donnée (villes non renseignées)</p>
           ) : (
             <div className="space-y-3">

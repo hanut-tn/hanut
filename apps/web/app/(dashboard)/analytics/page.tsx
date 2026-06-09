@@ -35,9 +35,10 @@ export default async function AnalyticsPage() {
 
   const supabase = await createServerClient()
 
-  // 180 days to support 90-day period + 90-day previous period comparison
+  // Starter: 30 jours, Pro/Business: 180 jours (90j période + 90j comparaison)
+  const windowDays = context.plan === 'starter' ? 30 : 180
   const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - 180)
+  cutoff.setDate(cutoff.getDate() - windowDays)
   const iso = cutoff.toISOString()
 
   // Cast as unknown to prevent TypeScript from hanging on Supabase join generics.

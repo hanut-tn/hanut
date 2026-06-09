@@ -6,7 +6,8 @@ import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import type { OrderStatus } from '@hanut/types'
-import { DELETABLE_STATUSES, ORDER_STATUS_LABELS } from '@/lib/constants'
+import { DELETABLE_STATUSES, ORDER_STATUS_LABELS, PLAN_LIMITS } from '@/lib/constants'
+import { getMonthlyOrderCount } from '@/lib/get-context'
 
 export type CreateOrderInput = {
   customer_id?: string
@@ -21,10 +22,19 @@ export type CreateOrderInput = {
   notes?: string
 }
 
-export async function createOrder(input: CreateOrderInput) {
+export type OrderMutationResult = { error?: string }
+
+export async function createOrder(input: CreateOrderInput): Promise<OrderMutationResult> {
   const context = await getUserContext()
-  if (!context) throw new Error('Non autorisé')
-  if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+
+  if (context.plan === 'starter') {
+    const count = await getMonthlyOrderCount(context.sellerId)
+    if (count >= PLAN_LIMITS.starter.ordersPerMonth) {
+      return { error: 'LIMIT_REACHED' }
+    }
+  }
 
   const supabase = await createServerClient()
 
@@ -55,7 +65,7 @@ export async function createOrder(input: CreateOrderInput) {
       tags: { module: 'orders' },
       extra: { sellerId: context.sellerId },
     })
-    throw new Error(error.message)
+    return { error: error.message }
   }
 
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
@@ -73,6 +83,7 @@ export async function createOrder(input: CreateOrderInput) {
   revalidatePath('/orders')
   revalidatePath('/dashboard')
   revalidateTag('dashboard')
+  return {}
 }
 
 export async function updateOrderStatus(id: string, status: OrderStatus) {
@@ -145,8 +156,6 @@ export async function cancelPendingOrder(id: string) {
   revalidatePath('/dashboard')
   revalidateTag('dashboard')
 }
-
-type OrderMutationResult = { error?: string }
 
 // Soft-delete : déplace la commande en corbeille
 export async function deleteOrder(id: string): Promise<OrderMutationResult> {

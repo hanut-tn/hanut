@@ -18,6 +18,7 @@ const PUBLIC_PATHS = [
   '/contact',
   '/order',
   '/track',
+  '/billing',
   '/api/contact',
   '/api/waitlist',
   '/api/orders/public',
@@ -70,6 +71,22 @@ export async function middleware(req: NextRequest) {
 
   if (!user) {
     return NextResponse.redirect(new URL('/login', req.url))
+  }
+
+  // Vérification démo expirée — uniquement pour les routes dashboard (pas /billing)
+  if (!pathname.startsWith('/billing')) {
+    const { data: seller } = await supabase
+      .from('sellers')
+      .select('subscription_end')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (seller?.subscription_end) {
+      const expired = new Date(seller.subscription_end) < new Date()
+      if (expired) {
+        return NextResponse.redirect(new URL('/billing', req.url))
+      }
+    }
   }
 
   return res

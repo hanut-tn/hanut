@@ -43,7 +43,7 @@ export default function BottomNav({ role, plan = 'starter' }: Props) {
   const pathname = usePathname()
   const { isSheetOpen, openSheet, closeSheet } = useMobileNav()
   const pendingCount = usePendingOrdersCount()
-  const isBusiness = plan === 'business'
+  const hasTeamAccess = plan === 'pro' || plan === 'business'
 
   const primaryItems = PRIMARY_ITEMS.filter(item => item.roles.includes(role))
   const moreItems    = MORE_ITEMS.filter(item => item.roles.includes(role))
@@ -100,7 +100,7 @@ export default function BottomNav({ role, plan = 'starter' }: Props) {
 
           {showTeam && (
             <Link
-              href={isBusiness ? '/team' : '/settings?tab=abonnement'}
+              href={hasTeamAccess ? '/team' : '/settings?tab=abonnement'}
               onClick={closeSheet}
               className={`flex items-center gap-3 rounded-xl px-3 py-3.5 text-sm font-medium transition-colors min-h-[44px] ${
                 pathname === '/team' || pathname.startsWith('/team/')
@@ -110,9 +110,9 @@ export default function BottomNav({ role, plan = 'starter' }: Props) {
             >
               <Users2 className="h-5 w-5 shrink-0" />
               <span className="flex-1">Équipe</span>
-              {!isBusiness && (
+              {!hasTeamAccess && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#FEF3C7] text-[#92400E]">
-                  Business
+                  Pro
                 </span>
               )}
             </Link>

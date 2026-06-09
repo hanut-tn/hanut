@@ -1,5 +1,5 @@
 import { createServerClient } from '@/lib/supabase/server'
-import { getUserContext } from '@/lib/get-context'
+import { getUserContext, getMonthlyOrderCount } from '@/lib/get-context'
 import OrdersClient from '@/components/orders/OrdersClient'
 import { updateOrderStatus, deleteOrder, confirmPendingOrder, cancelPendingOrder, restoreOrder, permanentlyDeleteOrder } from './actions'
 import { createDeliveryFromOrder } from '@/app/(dashboard)/deliveries/actions'
@@ -12,6 +12,8 @@ export default async function OrdersPage() {
   if (!context) return null
 
   const supabase = await createServerClient()
+
+  const monthlyOrderCount = context.plan === 'starter' ? await getMonthlyOrderCount(context.sellerId) : 0
 
   const [{ data: orders, count: ordersCount }, { data: trashOrders }, { data: allStatuses }] = await Promise.all([
     supabase
@@ -62,6 +64,7 @@ export default async function OrdersPage() {
       restoreOrder={restoreOrder}
       permanentlyDeleteOrder={permanentlyDeleteOrder}
       createDeliveryFromOrder={createDeliveryFromOrder}
+      monthlyOrderCount={monthlyOrderCount}
     />
   )
 }

@@ -13,8 +13,8 @@ export async function POST(_request: NextRequest, { params }: Params) {
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   if (context.role !== 'admin') return NextResponse.json({ error: 'Réservé aux admins' }, { status: 403 })
-  if (context.plan !== 'business') {
-    return NextResponse.json({ error: 'Disponible dans le plan Business' }, { status: 403 })
+  if (context.plan !== 'pro' && context.plan !== 'business') {
+    return NextResponse.json({ error: 'Disponible dans le plan Pro' }, { status: 403 })
   }
 
   const { memberId } = await params

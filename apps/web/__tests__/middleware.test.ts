@@ -93,10 +93,38 @@ describe('middleware auth boundaries', () => {
       auth: {
         getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1' } } }),
       },
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: { subscription_end: null } }),
+          }),
+        }),
+      }),
     })
 
     const response = await middleware(requestFor('/dashboard'))
 
     expect(response.headers.get('location')).toBeNull()
+  })
+
+  it('redirects to /billing when demo has expired', async () => {
+    const expiredDate = new Date(Date.now() - 1000).toISOString()
+    supabaseSsrMock.createServerClient.mockReturnValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1' } } }),
+      },
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: { subscription_end: expiredDate } }),
+          }),
+        }),
+      }),
+    })
+
+    const response = await middleware(requestFor('/dashboard'))
+
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe('https://hanut.test/billing')
   })
 })
