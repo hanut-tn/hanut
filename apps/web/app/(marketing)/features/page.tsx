@@ -166,7 +166,7 @@ function DeliveryMockup() {
             <p className="text-xs text-green-700 font-mono mt-0.5">TN-8821-2026</p>
           </div>
         </div>
-        <p className="text-[10px] text-gray-400 text-center">Numéro de suivi transmis au client automatiquement</p>
+        <p className="text-[10px] text-gray-400 text-center">Numéro de suivi à renseigner dans Hanut</p>
       </div>
     </MockupShell>
   )
@@ -279,7 +279,7 @@ const SECTIONS = [
     desc: 'Saisissez une commande en 30 secondes. Suivez chaque statut — confirmée, expédiée, livrée — en temps réel. Fini les carnets et les commandes oubliées.',
     points: [
       'Statuts : En attente, Confirmée, Expédiée, Livrée, Retournée',
-      'Saisie manuelle ou via formulaire public',
+      'Création depuis le dashboard ou via formulaire public',
       'Confirmation en 1 clic',
     ],
     mockup: 'orders',
@@ -291,7 +291,7 @@ const SECTIONS = [
     points: [
       'Page mobile-first optimisée pour la conversion',
       'Catalogue en temps réel',
-      'Confirmation envoyée automatiquement au client',
+      'Lien de suivi généré pour le client',
     ],
     mockup: 'link',
   },
@@ -308,12 +308,12 @@ const SECTIONS = [
   },
   {
     tag: 'Livraisons COD',
-    title: '15+ livreurs tunisiens en 1 clic',
-    desc: 'Créez une expédition chez IntiGo, Navex, Adex ou Aramex directement depuis la commande. Le numéro de tracking est récupéré automatiquement et envoyé au client.',
+    title: '5 transporteurs tunisiens supportés',
+    desc: 'Gérez vos expéditions chez IntiGo, Navex, Adex, Aramex ou Best Delivery directement depuis Hanut. Intégration API en cours pour la création automatique de colis et le statut en temps réel.',
     points: [
       'COD tracké : encaissé / en attente / reversé',
-      'Bon de livraison PDF généré automatiquement',
-      'Suivi en temps réel depuis Hanut',
+      'Frais de livraison trackés par expédition',
+      'Suivi COD reversé par transporteur',
     ],
     mockup: 'delivery',
   },
@@ -330,10 +330,10 @@ const SECTIONS = [
   },
   {
     tag: 'Analytics',
-    title: 'Sachez exactement ce que vous gagnez',
-    desc: 'CA quotidien, hebdomadaire, mensuel. Profit net réel après frais de livraison. Taux de livraison par livreur. Top produits et villes.',
+    title: 'Comprenez vos ventes et vos COD',
+    desc: 'CA quotidien, hebdomadaire, mensuel. Suivi des frais de livraison, COD en attente et taux de livraison par transporteur. Top produits et villes.',
     points: [
-      'Filtrable 7j / 30j / 90j',
+      'Analytics 30 à 180 jours selon le plan',
       'COD en attente par livreur',
       'Top clients et produits par valeur',
     ],
@@ -407,12 +407,12 @@ export default function FeaturesPage() {
           <h2 className="text-3xl font-extrabold text-white mb-4">
             Prêt à tester toutes ces fonctionnalités ?
           </h2>
-          <p className="text-green-200 mb-8">Sans carte bancaire. Annulable à tout moment.</p>
+          <p className="text-green-200 mb-8">Démo Pro 14 jours · Sans carte bancaire · Accès complet dès l&apos;inscription.</p>
           <Link
             href="/register"
             className="inline-flex items-center gap-2 bg-white text-[#0B5E46] hover:bg-green-50 text-base font-bold px-8 py-3.5 rounded-xl transition-colors shadow-lg"
           >
-            Commencer gratuitement
+            Commencer la démo
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>

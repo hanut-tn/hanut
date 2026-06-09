@@ -8,81 +8,76 @@ import { HANUT_CONTACT } from '@/lib/constants'
 type Plan = {
   name: string
   monthly: number
-  annual: number
   desc: string
   badge?: string
   highlighted: boolean
   features: string[]
   cta: string
+  comingSoon?: boolean
 }
 
 const PLANS: Plan[] = [
   {
     name: 'Starter',
     monthly: 39,
-    annual: 31,
     desc: 'Pour débuter et tester',
     highlighted: false,
     features: [
-      '150 commandes / mois',
-      '1 utilisateur',
-      '5 livreurs',
-      '200 SMS / mois',
-      'Lien de commande public',
-      'Support email',
+      'Commandes illimitées',
+      'Catalogue produits illimité',
+      'Lien de commande public /order',
+      'Suivi commande client /track',
+      'Gestion stock avec historique des mouvements',
+      'Fiche client + CRM basique',
+      'Gestion livraisons COD (5 transporteurs)',
+      'Dashboard analytics 30 jours',
+      'Support WhatsApp',
     ],
-    cta: 'Commencer gratuitement',
+    cta: 'Démarrer la démo Pro',
   },
   {
     name: 'Pro',
     monthly: 79,
-    annual: 63,
     desc: 'Pour les vendeurs actifs',
     badge: 'Le plus populaire',
     highlighted: true,
     features: [
-      'Commandes illimitées',
-      '2 utilisateurs',
-      '15+ livreurs',
-      'SMS illimités',
-      'Fiche client enrichie',
-      'Analytics avancés',
-      'Export CSV',
-      'Support WhatsApp prioritaire',
+      'Tout Starter inclus',
+      'Analytics 180 jours + comparaison période',
+      'Export CSV commandes et analytics',
+      'Équipe jusqu\'à 3 membres',
+      'Top produits, clients et villes',
+      'Support prioritaire WhatsApp',
     ],
     cta: 'Choisir Pro',
   },
   {
     name: 'Business',
-    monthly: 149,
-    annual: 119,
-    desc: 'Pour les équipes qui scalent',
+    monthly: 0,
+    desc: 'En cours de préparation',
+    badge: 'Bientôt disponible',
     highlighted: false,
+    comingSoon: true,
     features: [
-      'Tout Pro inclus',
-      '5 utilisateurs',
-      'Multi-boutiques',
-      'Accès API',
-      'Rapport fiscal',
-      'Support dédié',
+      'Aperçu : multi-boutiques',
+      'Aperçu : accès API',
+      'Aperçu : équipe illimitée',
+      'Aperçu : rapport fiscal',
     ],
-    cta: 'Choisir Business',
+    cta: 'Être notifié',
   },
 ]
 
 const COMPARE_ROWS = [
-  { label: 'Commandes / mois', values: ['150', 'Illimité', 'Illimité'] },
-  { label: 'Utilisateurs', values: ['1', '2', '5'] },
-  { label: 'Livreurs', values: ['5', '15+', '15+'] },
-  { label: 'SMS', values: ['200 / mois', 'Illimité', 'Illimité'] },
-  { label: 'Lien de commande public', values: ['✓', '✓', '✓'] },
-  { label: 'Fiche client enrichie', values: ['—', '✓', '✓'] },
-  { label: 'Analytics avancés', values: ['—', '✓', '✓'] },
-  { label: 'Export CSV', values: ['—', '✓', '✓'] },
-  { label: 'Multi-boutiques', values: ['—', '—', '✓'] },
-  { label: 'Accès API', values: ['—', '—', '✓'] },
-  { label: 'Rapport fiscal', values: ['—', '—', '✓'] },
-  { label: 'Support', values: ['Email', 'WhatsApp prioritaire', 'Dédié'] },
+  { label: 'Commandes', values: ['Illimitées', 'Illimitées', 'Bientôt'] },
+  { label: 'Analytics', values: ['30 jours', '180 jours', 'Bientôt'] },
+  { label: 'Équipe', values: ['—', '3 membres', 'Bientôt'] },
+  { label: 'Lien de commande public', values: ['✓', '✓', 'Bientôt'] },
+  { label: 'Gestion stock', values: ['✓', '✓', 'Bientôt'] },
+  { label: 'Livraisons COD', values: ['✓', '✓', 'Bientôt'] },
+  { label: 'Export CSV', values: ['—', '✓', 'Bientôt'] },
+  { label: 'Top produits / clients / villes', values: ['—', '✓', 'Bientôt'] },
+  { label: 'Support', values: ['WhatsApp', 'WhatsApp prioritaire', 'Bientôt'] },
 ]
 
 const FAQ = [
@@ -99,12 +94,8 @@ const FAQ = [
     a: "Le paiement se fait par virement bancaire ou mobile money (eDinar, Paymee). Contactez-nous sur WhatsApp pour activer votre plan. Activation sous 24h garantie.",
   },
   {
-    q: 'Puis-je tester avant de payer ?',
-    a: "Contactez-nous sur WhatsApp pour une démonstration personnalisée. On vous aide à configurer votre boutique avant que vous ne vous engagiez.",
-  },
-  {
-    q: 'Que se passe-t-il si je dépasse mes commandes ?',
-    a: "Vous recevez une notification dès que vous approchez de la limite. Vous pouvez upgrader à tout moment. On ne bloque pas vos commandes en cours.",
+    q: "Comment fonctionne la période d'essai ?",
+    a: "Toute inscription vous donne automatiquement accès au plan Pro pendant 14 jours, sans carte bancaire. Pas d'action requise — la démo commence dès que vous créez votre compte.",
   },
 ]
 
@@ -113,8 +104,55 @@ function getPricingWhatsAppUrl(planName: string, price: number): string {
   return `${HANUT_CONTACT.whatsappUrl}?text=${encodeURIComponent(message)}`
 }
 
+function BusinessWaitlist() {
+  const [email, setEmail] = useState('')
+  const [done, setDone] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!email) return
+    setLoading(true)
+    try {
+      await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, plan: 'business' }),
+      })
+    } finally {
+      setDone(true)
+      setLoading(false)
+    }
+  }
+
+  if (done) {
+    return (
+      <p className="text-center text-sm text-gray-500 py-3">Merci ! On vous prévient en priorité dès l&apos;ouverture.</p>
+    )
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-2">
+      <input
+        type="email"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+        placeholder="votre@email.com"
+        required
+        className="w-full text-sm px-3 py-2.5 rounded-xl border border-gray-200 text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300"
+      />
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full py-3 rounded-xl font-semibold text-sm bg-[#0B5E46] hover:bg-green-900 text-white transition-colors disabled:opacity-60"
+      >
+        {loading ? 'Envoi…' : 'Être notifié en priorité'}
+      </button>
+    </form>
+  )
+}
+
 export default function PricingPage() {
-  const [annual, setAnnual] = useState(false)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
 
   return (
@@ -126,23 +164,11 @@ export default function PricingPage() {
           <h1 className="text-4xl sm:text-5xl font-extrabold text-[#1C1917] leading-tight tracking-tight mb-5">
             Des tarifs pensés pour les vendeurs tunisiens
           </h1>
-          <p className="text-lg text-gray-500 mb-8">Sans engagement. Changez de plan quand vous voulez.</p>
-
-          {/* Toggle */}
-          <div className="flex items-center justify-center gap-3">
-            <span className={`text-sm font-medium ${!annual ? 'text-[#1C1917]' : 'text-gray-400'}`}>Mensuel</span>
-            <button
-              onClick={() => setAnnual(v => !v)}
-              className={`relative w-12 h-6 rounded-full transition-colors ${annual ? 'bg-[#16A34A]' : 'bg-gray-200'}`}
-              aria-label="Basculer annuel/mensuel"
-            >
-              <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${annual ? 'translate-x-7' : 'translate-x-1'}`} />
-            </button>
-            <span className={`text-sm font-medium ${annual ? 'text-[#1C1917]' : 'text-gray-400'}`}>
-              Annuel
-              <span className="ml-1.5 text-xs font-bold text-[#16A34A] bg-green-50 px-2 py-0.5 rounded-full">-20%</span>
-            </span>
+          <div className="inline-flex items-center gap-2 bg-green-50 border border-green-100 text-[#0B5E46] text-sm font-medium px-4 py-1.5 rounded-full mb-6">
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            Bêta privée · Démo Pro 14 jours · Aucune carte bancaire
           </div>
+          <p className="text-lg text-gray-500 mb-8">Sans engagement. Activation accompagnée sur WhatsApp.</p>
         </div>
       </section>
 
@@ -160,7 +186,7 @@ export default function PricingPage() {
                 }`}
               >
                 {plan.badge && (
-                  <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-bold px-4 py-1 rounded-full whitespace-nowrap bg-[#16A34A] text-white">
+                  <span className={`absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-bold px-4 py-1 rounded-full whitespace-nowrap ${plan.comingSoon ? 'bg-gray-400 text-white' : 'bg-[#16A34A] text-white'}`}>
                     {plan.badge}
                   </span>
                 )}
@@ -170,30 +196,34 @@ export default function PricingPage() {
                     {plan.name}
                   </p>
                   <p className={`text-xs mb-3 ${plan.highlighted ? 'text-green-200' : 'text-gray-400'}`}>{plan.desc}</p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-black">{annual ? plan.annual : plan.monthly}</span>
-                    <span className={`text-sm ${plan.highlighted ? 'text-green-200' : 'text-gray-400'}`}>DT / mois</span>
-                  </div>
-                  {annual && (
-                    <p className={`text-xs mt-1 ${plan.highlighted ? 'text-green-300' : 'text-green-600'}`}>
-                      Facturé annuellement
-                    </p>
+                  {plan.comingSoon ? (
+                    <p className="text-sm text-gray-400 italic">Prix à venir</p>
+                  ) : (
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-4xl font-black">{plan.monthly}</span>
+                      <span className={`text-sm ${plan.highlighted ? 'text-green-200' : 'text-gray-400'}`}>DT / mois</span>
+                    </div>
                   )}
                 </div>
 
+                {plan.comingSoon && (
+                  <p className="text-xs text-gray-400 font-semibold mb-2 uppercase tracking-wide">Aperçu</p>
+                )}
                 <ul className="space-y-2.5 flex-1 mb-7">
                   {plan.features.map(f => (
                     <li key={f} className="flex items-start gap-2.5 text-sm">
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 mt-0.5">
-                        <circle cx="8" cy="8" r="7" fill={plan.highlighted ? 'rgba(74,222,128,0.15)' : '#DCFCE7'} />
-                        <path d="M5 8L7 10L11 6" stroke={plan.highlighted ? '#4ADE80' : '#16A34A'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx="8" cy="8" r="7" fill={plan.highlighted ? 'rgba(74,222,128,0.15)' : plan.comingSoon ? '#F3F4F6' : '#DCFCE7'} />
+                        <path d="M5 8L7 10L11 6" stroke={plan.highlighted ? '#4ADE80' : plan.comingSoon ? '#9CA3AF' : '#16A34A'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
-                      <span className={plan.highlighted ? 'text-green-50' : 'text-gray-600'}>{f}</span>
+                      <span className={plan.highlighted ? 'text-green-50' : plan.comingSoon ? 'text-gray-400' : 'text-gray-600'}>{f}</span>
                     </li>
                   ))}
                 </ul>
 
-                {plan.name === 'Starter' ? (
+                {plan.comingSoon ? (
+                  <BusinessWaitlist />
+                ) : plan.name === 'Starter' ? (
                   <Link
                     href="/register"
                     className="w-full text-center py-3 rounded-xl font-semibold text-sm transition-colors bg-[#0B5E46] hover:bg-green-900 text-white"
@@ -202,7 +232,7 @@ export default function PricingPage() {
                   </Link>
                 ) : (
                   <a
-                    href={getPricingWhatsAppUrl(plan.name, annual ? plan.annual : plan.monthly)}
+                    href={getPricingWhatsAppUrl(plan.name, plan.monthly)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`w-full py-3 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2 ${
@@ -212,7 +242,7 @@ export default function PricingPage() {
                     }`}
                   >
                     <MessageCircle className="w-4 h-4" />
-                    Choisir ce plan
+                    Choisir Pro
                   </a>
                 )}
               </div>
@@ -231,7 +261,7 @@ export default function PricingPage() {
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Fonctionnalité</th>
                     {PLANS.map(p => (
                       <th key={p.name} className={`px-6 py-3 text-xs font-semibold uppercase tracking-wide ${p.highlighted ? 'text-[#0B5E46]' : 'text-gray-500'}`}>
-                        {p.name}
+                        {p.name}{p.comingSoon ? ' *' : ''}
                       </th>
                     ))}
                   </tr>
@@ -250,6 +280,7 @@ export default function PricingPage() {
                 </tbody>
               </table>
             </div>
+            <p className="px-6 py-3 text-xs text-gray-400 border-t border-gray-100">* Business — Bientôt disponible</p>
           </div>
 
           {/* FAQ */}
@@ -285,13 +316,13 @@ export default function PricingPage() {
       {/* CTA */}
       <section className="py-20 px-4 sm:px-6 bg-[#0B5E46]">
         <div className="max-w-xl mx-auto text-center">
-          <h2 className="text-3xl font-extrabold text-white mb-4">Commencer gratuitement</h2>
-          <p className="text-green-200 mb-8">Sans engagement. Contactez-nous pour commencer.</p>
+          <h2 className="text-3xl font-extrabold text-white mb-4">Démo gratuite 14 jours sur le plan Pro</h2>
+          <p className="text-green-200 mb-8">Sans engagement. Sans carte bancaire. Accès complet au plan Pro dès l&apos;inscription.</p>
           <Link
             href="/register"
             className="inline-flex items-center gap-2 bg-white text-[#0B5E46] hover:bg-green-50 text-base font-bold px-8 py-3.5 rounded-xl transition-colors shadow-lg"
           >
-            Créer mon compte
+            Commencer la démo
           </Link>
         </div>
       </section>

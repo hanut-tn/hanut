@@ -2,11 +2,11 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Livreurs intégrés — Hanut',
-  description: 'IntiGo, Navex, Adex, Aramex, BestDelivery et plus — créez une expédition COD en 1 clic depuis votre tableau de bord Hanut.',
+  title: 'Transporteurs supportés — Hanut',
+  description: 'IntiGo, Navex, Adex, Aramex, Best Delivery — gérez vos livraisons COD et suivez vos reversements depuis votre tableau de bord Hanut.',
   openGraph: {
-    title: 'Livreurs intégrés — IntiGo, Navex, Adex, Aramex',
-    description: 'IntiGo, Navex, Adex, Aramex, BestDelivery et plus — créez une expédition COD en 1 clic.',
+    title: 'Transporteurs supportés — IntiGo, Navex, Adex, Aramex, Best Delivery',
+    description: 'IntiGo, Navex, Adex, Aramex, Best Delivery — gérez vos livraisons COD depuis Hanut.',
     siteName: 'Hanut',
     locale: 'fr_TN',
     type: 'website',
@@ -38,14 +38,14 @@ const CARRIERS: Carrier[] = [
   },
   {
     name: 'Adex',
-    desc: 'Livraison fiable avec suivi en temps réel et collecte COD sécurisée.',
+    desc: 'Livraison fiable avec suivi client et collecte COD sécurisée.',
     coverage: 'Nationale',
     delay: '24-72h',
     integrated: true,
   },
   {
     name: 'Aramex',
-    desc: 'Réseau international avec service national premium et tracking avancé.',
+    desc: 'Réseau international avec service national premium et liens de tracking.',
     coverage: 'Nationale + International',
     delay: '24-48h',
     integrated: true,
@@ -55,28 +55,7 @@ const CARRIERS: Carrier[] = [
     desc: 'Acteur local en plein essor avec des tarifs compétitifs pour le COD.',
     coverage: 'Grand Tunis + régions',
     delay: '48-72h',
-    integrated: false,
-  },
-  {
-    name: 'Maystro',
-    desc: 'Service de messagerie avec spécialisation sur les petits colis e-commerce.',
-    coverage: 'Nationale',
-    delay: '48h',
-    integrated: false,
-  },
-  {
-    name: 'Jump',
-    desc: 'Livraison express same-day sur Tunis et banlieue.',
-    coverage: 'Grand Tunis',
-    delay: 'Same-day',
-    integrated: false,
-  },
-  {
-    name: 'Cogite Express',
-    desc: 'Solution logistique complète avec gestion des retours intégrée.',
-    coverage: 'Nationale',
-    delay: '48-72h',
-    integrated: false,
+    integrated: true,
   },
 ]
 
@@ -89,7 +68,7 @@ const COD_STEPS = [
   {
     num: '02',
     title: 'Hanut tracke',
-    desc: 'Le statut COD (en attente, collecté, reversé) est mis à jour automatiquement dans Hanut.',
+    desc: 'Vous mettez à jour le statut COD directement depuis Hanut : en attente, collecté, reversé.',
   },
   {
     num: '03',
@@ -100,7 +79,6 @@ const COD_STEPS = [
 
 export default function CarriersPage() {
   const integrated = CARRIERS.filter(c => c.integrated)
-  const coming = CARRIERS.filter(c => !c.integrated)
 
   return (
     <div className="bg-[#FAFAF9]">
@@ -109,10 +87,10 @@ export default function CarriersPage() {
         <div className="max-w-3xl mx-auto">
           <p className="text-sm font-semibold text-[#16A34A] uppercase tracking-widest mb-4">Livreurs</p>
           <h1 className="text-4xl sm:text-5xl font-extrabold text-[#1C1917] leading-tight tracking-tight mb-5">
-            15+ livreurs tunisiens intégrés
+            5 transporteurs tunisiens supportés
           </h1>
           <p className="text-lg text-gray-500 leading-relaxed max-w-xl mx-auto">
-            Créez une expédition en 1 clic. Le numéro de tracking arrive automatiquement dans Hanut.
+            Gérez vos expéditions COD depuis Hanut. Intégration API en cours — création de colis et statut automatique directement depuis Hanut.
           </p>
         </div>
       </section>
@@ -153,7 +131,7 @@ export default function CarriersPage() {
         <div className="max-w-5xl mx-auto">
           <h2 className="text-xl font-bold text-[#1C1917] mb-6 flex items-center gap-2">
             <span className="w-2.5 h-2.5 bg-green-500 rounded-full" />
-            Livreurs intégrés
+            Transporteurs supportés
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-12">
             {integrated.map(c => (
@@ -165,7 +143,7 @@ export default function CarriersPage() {
                   </div>
                   <span className="shrink-0 inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-100">
                     <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-                    Intégré
+                    Supporté
                   </span>
                 </div>
                 <div className="flex gap-4 text-xs text-gray-500">
@@ -186,32 +164,14 @@ export default function CarriersPage() {
               </div>
             ))}
           </div>
-
-          {/* Coming soon carriers */}
-          <h2 className="text-xl font-bold text-[#1C1917] mb-6 flex items-center gap-2">
-            <span className="w-2.5 h-2.5 bg-orange-400 rounded-full" />
-            Bientôt disponibles
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {coming.map(c => (
-              <div key={c.name} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 opacity-75">
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div>
-                    <h3 className="font-bold text-[#1C1917] text-lg">{c.name}</h3>
-                    <p className="text-sm text-gray-500 mt-1 leading-relaxed">{c.desc}</p>
-                  </div>
-                  <span className="shrink-0 inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-orange-50 text-orange-700 border border-orange-100">
-                    <span className="w-1.5 h-1.5 bg-orange-400 rounded-full" />
-                    Bientôt
-                  </span>
-                </div>
-                <div className="flex gap-4 text-xs text-gray-400">
-                  <span>{c.coverage}</span>
-                  <span>·</span>
-                  <span>{c.delay}</span>
-                </div>
-              </div>
-            ))}
+          <div className="bg-orange-50 border border-orange-100 rounded-2xl p-6">
+            <h2 className="text-xl font-bold text-[#1C1917] mb-2 flex items-center gap-2">
+              <span className="w-2.5 h-2.5 bg-orange-400 rounded-full" />
+              Intégration API en cours
+            </h2>
+            <p className="text-sm text-gray-500">
+              Création de colis et statut automatique directement depuis Hanut.
+            </p>
           </div>
         </div>
       </section>
@@ -220,14 +180,14 @@ export default function CarriersPage() {
       <section className="py-16 px-4 sm:px-6 bg-[#0B5E46]">
         <div className="max-w-xl mx-auto text-center">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-4">
-            Prêt à créer votre première expédition ?
+            Prêt à gérer vos livraisons COD ?
           </h2>
-          <p className="text-green-200 mb-8">Connectez votre compte livreur et créez une expédition en 30 secondes.</p>
+          <p className="text-green-200 mb-8">Démo Pro 14 jours — sans carte bancaire. Accès complet dès l&apos;inscription.</p>
           <Link
             href="/register"
             className="inline-flex items-center gap-2 bg-white text-[#0B5E46] hover:bg-green-50 text-base font-bold px-8 py-3.5 rounded-xl transition-colors shadow-lg"
           >
-            Commencer gratuitement
+            Commencer la démo
           </Link>
         </div>
       </section>

@@ -4,6 +4,7 @@ import MarketingNavbar from '@/components/marketing/Navbar'
 import MarketingFooter from '@/components/marketing/Footer'
 import PricingToggle from '@/components/marketing/PricingToggle'
 import WaitlistForm from '@/components/marketing/WaitlistForm'
+import { HANUT_CONTACT } from '@/lib/constants'
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -25,8 +26,8 @@ const STEPS = [
   {
     emoji: '✅',
     num: '03',
-    title: 'Le livreur part, le client est informé',
-    desc: "L'expédition est créée chez ton transporteur. Le client reçoit son numéro de suivi automatiquement.",
+    title: 'Le livreur part, le client peut suivre',
+    desc: "Crée la livraison dans Hanut avec le transporteur choisi. Le client peut suivre sa commande sur sa page dédiée.",
   },
 ]
 
@@ -40,7 +41,7 @@ const TESTIMONIALS = [
   },
   {
     quote:
-      'Le suivi automatique a réduit mes appels clients de 70 %. Mes clients savent où est leur colis sans m\'appeler.',
+      'Le lien de suivi a réduit mes appels clients. Mes clients savent où est leur colis sans m\'appeler.',
     name: 'Karim M.',
     role: 'Électronique — Sfax',
     avatar: 'KM',
@@ -262,7 +263,7 @@ function Hero() {
       <div className="relative max-w-4xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 bg-green-50 text-[#0B5E46] text-sm font-semibold px-4 py-1.5 rounded-full mb-8 border border-green-100">
           <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          Conçu pour les vendeurs tunisiens
+          Bêta privée · Démo Pro 14 jours · Aucune carte bancaire
         </div>
 
         <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-extrabold text-[#1C1917] leading-[1.1] tracking-tight mb-6">
@@ -281,7 +282,7 @@ function Hero() {
             href="/register"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#16A34A] hover:bg-green-700 text-white text-base font-semibold px-8 py-3.5 rounded-xl transition-colors shadow-lg shadow-green-200"
           >
-            Essai gratuit — Sans carte bancaire
+            Démo Pro 14 jours — Sans carte bancaire
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
               <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
@@ -319,7 +320,7 @@ function CarrierBand() {
     <div className="border-y border-gray-100 bg-white py-5 px-4">
       <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest shrink-0">
-          Intégré avec
+          Transporteurs supportés
         </p>
         <div className="flex items-center gap-3 flex-wrap justify-center">
           {CARRIERS.map(c => (
@@ -345,8 +346,8 @@ function FeaturesSection() {
     },
     {
       tag: 'Livraisons',
-      headline: 'Créez une expédition en 1 clic chez IntiGo, Navex et plus',
-      body: "Sélectionnez votre transporteur, renseignez l'adresse et Hanut crée l'expédition automatiquement. Le client reçoit son numéro de suivi.",
+      headline: 'Gérez vos livraisons COD avec IntiGo, Navex et plus',
+      body: "Sélectionnez votre transporteur, ajoutez le lien de suivi et gérez tout votre COD depuis Hanut. Intégration API en cours — création de colis et statut automatique directement depuis Hanut.",
       mockup: <DeliveriesMockup />,
     },
     {
@@ -416,7 +417,7 @@ function HowItWorks() {
           <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1C1917] tracking-tight">
             De la commande au COD en 3 étapes
           </h2>
-          <p className="mt-4 text-lg text-gray-500">Simple, rapide, automatisé.</p>
+          <p className="mt-4 text-lg text-gray-500">Simple, rapide, centralisé.</p>
         </div>
 
         <div className="relative">
@@ -523,21 +524,23 @@ function CtaSection() {
           comme un pro ?
         </h2>
         <p className="text-green-200 text-lg mb-10">
-          Rejoignez des centaines de vendeurs tunisiens qui ont simplifié leur gestion.
+          Rejoignez les premiers vendeurs tunisiens en bêta privée. Démo Pro 14 jours incluse.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             href="/register"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-[#0B5E46] hover:bg-green-50 text-base font-bold px-8 py-3.5 rounded-xl transition-colors shadow-lg"
           >
-            Commencer gratuitement
+            Démarrer la démo Pro
           </Link>
-          <Link
-            href="/login"
+          <a
+            href={`${HANUT_CONTACT.whatsappUrl}?text=${encodeURIComponent('Bonjour Hanut, je voudrais une démonstration.')}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="w-full sm:w-auto inline-flex items-center justify-center text-green-100 border border-green-600 hover:border-green-400 hover:text-white text-base font-medium px-8 py-3.5 rounded-xl transition-colors"
           >
             Demander une démo
-          </Link>
+          </a>
         </div>
       </div>
     </section>

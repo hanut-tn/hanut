@@ -12,58 +12,91 @@ type RoadmapItem = {
   eta?: string
 }
 
-const IN_DEV: RoadmapItem[] = [
+const DONE: RoadmapItem[] = [
   {
-    title: 'Automatisations SMS',
-    desc: 'Templates SMS personnalisables envoyés automatiquement à chaque changement de statut de commande.',
-    eta: 'Juillet 2026',
+    title: 'Dashboard commandes',
+    desc: 'Cycle de vie COD complet : Nouvelle, Confirmée, Expédiée, Livrée, Retournée. Historique des statuts.',
   },
   {
-    title: 'Analytics avancés',
-    desc: 'Profit net réel après frais, taux de retour par livreur, heures de pointe, export PDF des rapports.',
-    eta: 'Août 2026',
-  },
-]
-
-const COMING_SOON: RoadmapItem[] = [
-  {
-    title: 'App mobile iOS & Android',
-    desc: 'Notifications push à chaque nouvelle commande, gestion complète depuis votre téléphone.',
+    title: 'Catalogue & stock avec variantes',
+    desc: 'Produits avec variantes (taille, couleur), stock décrémenté automatiquement à chaque commande, historique des mouvements.',
   },
   {
-    title: 'Multi-utilisateurs',
-    desc: 'Invitez votre équipe avec des rôles différents : admin, opérateur, livreur.',
+    title: 'Lien de commande public /order',
+    desc: 'Formulaire mobile-first partageable sur Instagram, WhatsApp, TikTok. Commandes reçues directement dans Hanut.',
+  },
+  {
+    title: 'Suivi commande client /track',
+    desc: 'Page publique de suivi accessible par les clients avec un lien dédié et sécurisé.',
+  },
+  {
+    title: 'Fiche client & CRM',
+    desc: 'Historique complet des commandes, notes internes, CA et taux de livraison par client.',
+  },
+  {
+    title: 'Gestion livraisons COD',
+    desc: '5 transporteurs supportés : IntiGo, Navex, Adex, Aramex, Best Delivery. Suivi COD collecté / reversé.',
+  },
+  {
+    title: 'Analytics 180 jours',
+    desc: 'CA, tendances, comparaison avec la période précédente, top produits, clients et villes.',
   },
   {
     title: 'Export CSV',
-    desc: 'Exportez vos commandes et livraisons en CSV pour vos comptables ou analyses externes.',
+    desc: 'Export des commandes et des données analytics en CSV.',
+  },
+  {
+    title: 'Gestion équipe multi-utilisateurs',
+    desc: 'Invitation de membres avec rôles Admin, Opérateur, Lecture seule. Journal d\'activité non modifiable.',
+  },
+  {
+    title: 'Application mobile (en cours)',
+    desc: 'Le dashboard web est déjà adapté au mobile, avec navigation mobile et écrans optimisés pour les vendeurs sur téléphone.',
+  },
+]
+
+const IN_DEV: RoadmapItem[] = [
+  {
+    title: 'Intégration API transporteurs',
+    desc: 'Création de colis et statut automatique directement depuis Hanut.',
+    eta: 'T3 2026',
+  },
+  {
+    title: 'Notifications SMS client',
+    desc: 'Confirmation de commande et lien de suivi envoyés au client.',
+    eta: 'T3 2026',
+  },
+  {
+    title: 'Application mobile Expo',
+    desc: 'Notifications push à chaque nouvelle commande, gestion complète depuis votre téléphone.',
+    eta: 'T4 2026',
   },
 ]
 
 const PLANNED: RoadmapItem[] = [
   {
-    title: 'Inbox WhatsApp',
-    desc: 'Recevez et répondez aux messages WhatsApp de vos clients directement depuis Hanut.',
+    title: 'Plan Business',
+    desc: 'Multi-boutiques, équipe illimitée, accès API, rapport fiscal. En cours de préparation.',
   },
   {
-    title: 'Salesbot',
-    desc: 'Réponses automatiques aux questions fréquentes de vos clients (horaires, délais, prix).',
+    title: 'Intégration paiement en ligne',
+    desc: 'Konnect / Flouci pour les vendeurs qui veulent proposer le paiement digital en complément du COD.',
   },
   {
-    title: 'Multi-boutiques',
-    desc: 'Gérez plusieurs boutiques distinctes depuis un seul compte Hanut.',
-  },
-  {
-    title: 'Intégrations avancées',
-    desc: 'Google Sheets, Facebook Ads, TikTok Shop — synchronisation automatique de vos données.',
-  },
-  {
-    title: 'Rapports fiscaux',
-    desc: 'Conformité TEIF, génération de factures PDF et rapports mensuels pour votre comptable.',
+    title: 'Marketplace Hanut',
+    desc: 'Vision long terme : connecter les vendeurs Hanut à une marketplace dédiée.',
   },
 ]
 
-function StatusBadge({ status }: { status: 'dev' | 'soon' | 'planned' }) {
+function StatusBadge({ status }: { status: 'done' | 'dev' | 'soon' | 'planned' }) {
+  if (status === 'done') return (
+    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-100">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="shrink-0">
+        <path d="M2 5L4 7L8 3" stroke="#16A34A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+      Livré
+    </span>
+  )
   if (status === 'dev') return (
     <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
       <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
@@ -84,10 +117,13 @@ function StatusBadge({ status }: { status: 'dev' | 'soon' | 'planned' }) {
   )
 }
 
-function RoadmapCard({ item, status }: { item: RoadmapItem; status: 'dev' | 'soon' | 'planned' }) {
+function RoadmapCard({ item, status }: { item: RoadmapItem; status: 'done' | 'dev' | 'soon' | 'planned' }) {
   return (
     <div className={`bg-white rounded-2xl p-5 border shadow-sm transition-shadow hover:shadow-md ${
-      status === 'dev' ? 'border-blue-100' : status === 'soon' ? 'border-orange-100' : 'border-gray-100'
+      status === 'done' ? 'border-green-100' :
+      status === 'dev' ? 'border-blue-100' :
+      status === 'soon' ? 'border-orange-100' :
+      'border-gray-100'
     }`}>
       <StatusBadge status={status} />
       <h3 className="font-bold text-[#1C1917] mt-3 mb-1.5">{item.title}</h3>
@@ -112,15 +148,30 @@ export default function RoadmapPage() {
             Ce qui arrive bientôt sur Hanut
           </h1>
           <p className="text-lg text-gray-500 leading-relaxed">
-            On construit Hanut avec les vendeurs tunisiens. Voilà ce qui est prévu.
+            On construit Hanut avec les vendeurs tunisiens. Voilà ce qui est fait et ce qui arrive.
           </p>
         </div>
       </section>
 
-      {/* Roadmap grid */}
+      {/* Roadmap */}
       <section className="pb-24 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+          {/* Déjà disponible */}
+          <div className="mb-16">
+            <div className="flex items-center gap-2 mb-5">
+              <div className="w-3 h-3 bg-green-500 rounded-full" />
+              <h2 className="font-bold text-[#1C1917]">Déjà disponible</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {DONE.map(item => (
+                <RoadmapCard key={item.title} item={item} status="done" />
+              ))}
+            </div>
+          </div>
+
+          {/* En cours / Prévu */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* En développement */}
             <div>
               <div className="flex items-center gap-2 mb-5">
@@ -130,19 +181,6 @@ export default function RoadmapPage() {
               <div className="space-y-4">
                 {IN_DEV.map(item => (
                   <RoadmapCard key={item.title} item={item} status="dev" />
-                ))}
-              </div>
-            </div>
-
-            {/* Bientôt */}
-            <div>
-              <div className="flex items-center gap-2 mb-5">
-                <div className="w-3 h-3 bg-orange-400 rounded-full" />
-                <h2 className="font-bold text-[#1C1917]">Bientôt</h2>
-              </div>
-              <div className="space-y-4">
-                {COMING_SOON.map(item => (
-                  <RoadmapCard key={item.title} item={item} status="soon" />
                 ))}
               </div>
             </div>
