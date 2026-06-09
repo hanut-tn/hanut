@@ -12,7 +12,7 @@ export type ProfileInput = {
 export async function updateProfile(input: ProfileInput) {
   const context = await getUserContext()
   if (!context) throw new Error('Non autorisé')
-  if (context.role !== 'admin') throw new Error('Réservé aux admins')
+  if (!context.isSeller) throw new Error('Réservé au propriétaire')
 
   const serviceClient = createServiceClient()
   const { error } = await serviceClient
@@ -31,7 +31,7 @@ export async function updateProfile(input: ProfileInput) {
 export async function updateSlug(slug: string) {
   const context = await getUserContext()
   if (!context) throw new Error('Non autorisé')
-  if (context.role !== 'admin') throw new Error('Réservé aux admins')
+  if (!context.isSeller) throw new Error('Réservé au propriétaire')
 
   const cleaned = slug
     .toLowerCase()
@@ -60,7 +60,7 @@ export async function updateSlug(slug: string) {
 export async function checkSlugAvailability(slug: string): Promise<boolean> {
   const context = await getUserContext()
   if (!context) return false
-  if (context.role !== 'admin') return false
+  if (!context.isSeller) return false
 
   const cleaned = slug
     .toLowerCase()

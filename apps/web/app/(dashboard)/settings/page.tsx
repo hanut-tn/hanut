@@ -13,7 +13,7 @@ export default async function SettingsPage({ searchParams }: Props) {
   const { tab } = await searchParams
   const context = await getUserContext()
   if (!context) return null
-  if (context.role !== 'admin') redirect('/orders')
+  if (!context.isSeller) redirect('/orders')
 
   const serviceClient = createServiceClient()
 

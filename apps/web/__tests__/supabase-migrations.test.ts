@@ -19,6 +19,7 @@ describe('Supabase migrations', () => {
   const onboarding = migration('20260603_add_onboarding.sql')
   const rateLimits = migration('20260603_add_rate_limits.sql')
   const orderSearch = migration('20260603_search_orders_rpc.sql')
+  const sellersRls = migration('20260609_fix_sellers_rls.sql')
   const stockVariantConsistency = migration('20260609_stock_variant_consistency.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
@@ -158,5 +159,17 @@ describe('Supabase migrations', () => {
     expect(stockVariantConsistency).toMatch(/CREATE OR REPLACE FUNCTION cancel_pending_order_with_stock/i)
     expect(stockVariantConsistency).toMatch(/CREATE OR REPLACE FUNCTION soft_delete_order_with_stock/i)
     expect(stockVariantConsistency).toMatch(/CREATE OR REPLACE FUNCTION restore_trashed_order_with_stock/i)
+  })
+
+  it('locks sellers RLS to owners and active team read access', () => {
+    expect(sellersRls).toMatch(/ALTER TABLE sellers ENABLE ROW LEVEL SECURITY/i)
+    expect(sellersRls).toMatch(/DROP POLICY IF EXISTS %I ON sellers/i)
+    expect(sellersRls).toMatch(/CREATE POLICY "sellers_select_owner_or_active_team"/i)
+    expect(sellersRls).toMatch(/id = auth\.uid\(\)/i)
+    expect(sellersRls).toMatch(/get_team_role\(id\) IN \('admin', 'operator', 'readonly'\)/i)
+    expect(sellersRls).toMatch(/CREATE POLICY "sellers_insert_own_profile"/i)
+    expect(sellersRls).toMatch(/WITH CHECK \(id = auth\.uid\(\)\)/i)
+    expect(sellersRls).toMatch(/CREATE POLICY "sellers_update_owner_only"/i)
+    expect(sellersRls).not.toMatch(/FOR DELETE/i)
   })
 })

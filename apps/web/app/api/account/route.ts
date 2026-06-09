@@ -9,7 +9,7 @@ function failure(message: string, status = 500) {
 export async function DELETE(request: Request) {
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
-  if (context.role !== 'admin') return NextResponse.json({ error: 'Réservé aux admins' }, { status: 403 })
+  if (!context.isSeller) return NextResponse.json({ error: 'Réservé au propriétaire' }, { status: 403 })
 
   const body = (await request.json().catch(() => null)) as { email?: unknown } | null
   const confirmationEmail = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
