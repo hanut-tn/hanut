@@ -8,6 +8,7 @@ import { Check, ChevronRight, Package, User, ClipboardList } from 'lucide-react'
 import type { Product } from '@hanut/types'
 import type { CreateOrderInput } from '@/app/(dashboard)/orders/actions'
 import { TUNISIAN_GOVERNORATES, isValidTunisianPhone } from '@/lib/constants'
+import { getVariantLabel, hasVariantStock } from '@/lib/variants'
 
 type CustomerSuggestion = {
   id: string
@@ -58,6 +59,11 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
   const [error, setError] = useState<string | null>(null)
 
   const selectedProduct = products.find(p => p.id === productId)
+  const hasVariants = (selectedProduct?.variants.length ?? 0) > 0
+  const selectedVariant = hasVariants
+    ? selectedProduct?.variants.find((v, index) => getVariantLabel(v, index) === variant)
+    : undefined
+  const maxQty = selectedVariant ? selectedVariant.qty : (selectedProduct?.stock ?? 99)
 
   const filteredProducts = productSearch
     ? products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
@@ -67,7 +73,14 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
     if (selectedProduct) setCodAmount(selectedProduct.price * quantity)
   }, [selectedProduct, quantity])
 
-  useEffect(() => { setVariant('') }, [productId])
+  useEffect(() => {
+    setVariant('')
+    setQuantity(1)
+  }, [productId])
+
+  useEffect(() => {
+    if (selectedVariant) setQuantity(q => Math.min(q, selectedVariant.qty))
+  }, [selectedVariant])
 
   function onSearchChange(value: string) {
     setSearch(value)
@@ -112,12 +125,16 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
     }
     if (n === 2) {
       if (!productId) return setError('Sélectionnez un produit.')
+      if (hasVariants && !variant) return setError('Sélectionnez une variante.')
+      if (selectedProduct && quantity > maxQty) return setError(`Stock disponible : ${maxQty} unité(s).`)
     }
     setStep(n)
   }
 
   function handleSubmit() {
     if (!productId) return setError('Sélectionnez un produit.')
+    if (hasVariants && !variant) return setError('Sélectionnez une variante.')
+    if (selectedProduct && quantity > maxQty) return setError(`Stock disponible : ${maxQty} unité(s).`)
     if (!customerName.trim()) return setError('Le nom du client est obligatoire.')
     if (!phone.trim()) return setError('Le téléphone est obligatoire.')
     setError(null)
@@ -351,16 +368,18 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
           </div>
 
           <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto pr-1 sm:grid-cols-3">
-            {filteredProducts.map(p => (
+            {filteredProducts.map(p => {
+              const available = p.variants.length > 0 ? hasVariantStock(p.variants) : p.stock > 0
+              return (
               <button
                 key={p.id}
                 type="button"
-                disabled={p.stock === 0}
+                disabled={!available}
                 onClick={() => { setProductId(p.id); setCodAmount('') }}
                 className={`relative text-left p-3 rounded-xl border-2 transition-all ${
                   productId === p.id
                     ? 'border-[#16A34A] bg-green-50'
-                    : p.stock === 0
+                    : !available
                       ? 'border-[#E7E5E4] opacity-50 cursor-not-allowed'
                       : 'border-[#E7E5E4] hover:border-[#D6D3D1] hover:bg-[#FAFAF9]'
                 }`}
@@ -384,41 +403,39 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
                 )}
                 <p className="text-xs font-semibold text-[#1C1917] truncate">{p.name}</p>
                 <p className="text-xs text-[#16A34A] font-medium">{p.price} DT</p>
-                {p.stock === 0 && <p className="text-xs text-red-500">Rupture</p>}
+                {!available && <p className="text-xs text-red-500">Rupture</p>}
                 {productId === p.id && (
                   <div className="absolute top-2 right-2 w-5 h-5 bg-[#16A34A] rounded-full flex items-center justify-center">
                     <Check className="w-3 h-3 text-white" />
                   </div>
                 )}
               </button>
-            ))}
+              )
+            })}
           </div>
 
           {selectedProduct && selectedProduct.variants.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-[#1C1917] mb-1">Variante</label>
               <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setVariant('')}
-                  className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
-                    !variant ? 'bg-[#16A34A] text-white border-[#16A34A]' : 'border-[#E7E5E4] text-[#78716C] hover:border-[#D6D3D1]'
-                  }`}
-                >
-                  Aucune
-                </button>
                 {selectedProduct.variants.map((v, i) => {
-                  const label = [v.size, v.color].filter(Boolean).join(' / ') || `Variante ${i + 1}`
+                  const label = getVariantLabel(v, i)
+                  const out = v.qty <= 0
                   return (
                     <button
                       key={i}
                       type="button"
+                      disabled={out}
                       onClick={() => setVariant(label)}
                       className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
-                        variant === label ? 'bg-[#16A34A] text-white border-[#16A34A]' : 'border-[#E7E5E4] text-[#78716C] hover:border-[#D6D3D1]'
+                        out
+                          ? 'border-[#E7E5E4] text-[#A8A29E] opacity-50 line-through cursor-not-allowed'
+                          : variant === label
+                            ? 'bg-[#16A34A] text-white border-[#16A34A]'
+                            : 'border-[#E7E5E4] text-[#78716C] hover:border-[#D6D3D1]'
                       }`}
                     >
-                      {label}
+                      {label} <span className="text-xs opacity-70">({v.qty})</span>
                     </button>
                   )
                 })}
@@ -433,9 +450,9 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
                 className="input"
                 type="number"
                 min="1"
-                max={selectedProduct?.stock ?? 99}
+                max={maxQty}
                 value={quantity}
-                onChange={e => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                onChange={e => setQuantity(Math.min(maxQty, Math.max(1, parseInt(e.target.value) || 1)))}
               />
             </div>
             <div>

@@ -19,6 +19,7 @@ describe('Supabase migrations', () => {
   const onboarding = migration('20260603_add_onboarding.sql')
   const rateLimits = migration('20260603_add_rate_limits.sql')
   const orderSearch = migration('20260603_search_orders_rpc.sql')
+  const stockVariantConsistency = migration('20260609_stock_variant_consistency.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -144,5 +145,18 @@ describe('Supabase migrations', () => {
     expect(orderSearch).toMatch(
       /GRANT EXECUTE ON FUNCTION search_orders\(UUID, TEXT, UUID\[\], INTEGER\) TO authenticated, service_role;/i
     )
+  })
+
+  it('keeps variant stock and global stock synchronized in the latest stock RPCs', () => {
+    expect(stockVariantConsistency).toMatch(/CREATE OR REPLACE FUNCTION variant_label/i)
+    expect(stockVariantConsistency).toMatch(/CREATE OR REPLACE FUNCTION sum_variant_stock/i)
+    expect(stockVariantConsistency).toMatch(/CREATE OR REPLACE FUNCTION create_order_with_stock/i)
+    expect(stockVariantConsistency).toMatch(/RAISE EXCEPTION 'Variante obligatoire'/i)
+    expect(stockVariantConsistency).toMatch(/stock = v_new_stock/i)
+    expect(stockVariantConsistency).toMatch(/INSERT INTO stock_movements/i)
+    expect(stockVariantConsistency).toMatch(/variant_name/i)
+    expect(stockVariantConsistency).toMatch(/CREATE OR REPLACE FUNCTION cancel_pending_order_with_stock/i)
+    expect(stockVariantConsistency).toMatch(/CREATE OR REPLACE FUNCTION soft_delete_order_with_stock/i)
+    expect(stockVariantConsistency).toMatch(/CREATE OR REPLACE FUNCTION restore_trashed_order_with_stock/i)
   })
 })

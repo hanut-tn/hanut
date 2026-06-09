@@ -8,8 +8,6 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 import type { OrderStatus } from '@hanut/types'
 import { DELETABLE_STATUSES, ORDER_STATUS_LABELS } from '@/lib/constants'
 
-const RESERVED_STOCK_STATUSES: OrderStatus[] = ['pending', 'new', 'confirmed']
-
 export type CreateOrderInput = {
   customer_id?: string
   customer_name: string
@@ -32,11 +30,12 @@ export async function createOrder(input: CreateOrderInput) {
 
   const { data: product } = await supabase
     .from('products')
-    .select('name, stock')
+    .select('name')
     .eq('id', input.product_id)
+    .eq('seller_id', context.sellerId)
     .single()
 
-  const { data: newOrderId, error } = await supabase.rpc('create_order_with_stock', {
+  const { error } = await supabase.rpc('create_order_with_stock', {
     p_seller_id: context.sellerId,
     p_product_id: input.product_id,
     p_quantity: input.quantity,
@@ -49,6 +48,7 @@ export async function createOrder(input: CreateOrderInput) {
     p_cod_amount: input.cod_amount,
     p_notes: input.notes ?? null,
     p_status: 'new',
+    p_changed_by: context.userId,
   })
   if (error) {
     Sentry.captureException(new Error(error.message), {
@@ -58,31 +58,7 @@ export async function createOrder(input: CreateOrderInput) {
     throw new Error(error.message)
   }
 
-  if (newOrderId) {
-    await supabase.from('order_status_history').insert({
-      order_id: newOrderId as string,
-      status: 'new',
-      changed_by: context.userId,
-    })
-  }
-
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
-
-  // Log du mouvement de stock (décrémentation par commande)
-  if (newOrderId) {
-    await supabase.from('stock_movements').insert({
-      seller_id: context.sellerId,
-      product_id: input.product_id,
-      quantity_before: product?.stock ?? null,
-      quantity_after: product ? product.stock - input.quantity : null,
-      delta: -input.quantity,
-      movement_type: 'order',
-      order_id: newOrderId as string,
-      notes: `Commande créée`,
-      created_by: context.userId,
-      created_by_name: seller?.name ?? '',
-    })
-  }
 
   await logActivity({
     sellerId: context.sellerId,
@@ -146,59 +122,14 @@ export async function cancelPendingOrder(id: string) {
 
   const supabase = await createServerClient()
 
-  const { data: order } = await supabase
-    .from('orders')
-    .select('product_id, quantity, status')
-    .eq('id', id)
-    .eq('seller_id', context.sellerId)
-    .single()
-
-  if (!order) throw new Error('Commande introuvable')
-  if (order.status !== 'pending') throw new Error('Seules les commandes en attente peuvent être annulées ici')
-
-  const { data: product } = await supabase
-    .from('products')
-    .select('stock')
-    .eq('id', order.product_id)
-    .single()
-
-  let cancelStockBefore: number | null = null
-  if (product) {
-    cancelStockBefore = product.stock
-    await supabase.from('products')
-      .update({ stock: product.stock + order.quantity })
-      .eq('id', order.product_id)
-      .eq('seller_id', context.sellerId)
-  }
-
-  const { error } = await supabase.from('orders')
-    .update({ status: 'returned' })
-    .eq('id', id)
-    .eq('seller_id', context.sellerId)
+  const { error } = await supabase.rpc('cancel_pending_order_with_stock', {
+    p_seller_id: context.sellerId,
+    p_order_id: id,
+    p_changed_by: context.userId,
+  })
   if (error) throw new Error(error.message)
 
-  await supabase.from('order_status_history').insert({
-    order_id: id,
-    status: 'returned',
-    changed_by: context.userId,
-  })
-
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
-
-  if (cancelStockBefore !== null) {
-    await supabase.from('stock_movements').insert({
-      seller_id: context.sellerId,
-      product_id: order.product_id,
-      quantity_before: cancelStockBefore,
-      quantity_after: cancelStockBefore + order.quantity,
-      delta: order.quantity,
-      movement_type: 'order_cancel',
-      order_id: id,
-      notes: 'Commande annulée',
-      created_by: context.userId,
-      created_by_name: seller?.name ?? '',
-    })
-  }
 
   await logActivity({
     sellerId: context.sellerId,
@@ -239,48 +170,15 @@ export async function deleteOrder(id: string): Promise<OrderMutationResult> {
     return { error: 'Une commande expédiée ne peut pas être supprimée. Attendez la livraison ou le retour.' }
   }
 
-  const { error } = await supabase.from('orders')
-    .update({ deleted_at: new Date().toISOString(), archived_by: context.userId })
-    .eq('id', id)
-    .eq('seller_id', context.sellerId)
-    .is('deleted_at', null)
+  const { error } = await supabase.rpc('soft_delete_order_with_stock', {
+    p_seller_id: context.sellerId,
+    p_order_id: id,
+    p_archived_by: context.userId,
+  })
   if (error) return { error: error.message }
-
-  // Restaurer le stock pour les commandes encore réservées.
-  let deleteStockRestored: { productId: string; before: number; after: number } | null = null
-  if (RESERVED_STOCK_STATUSES.includes(order.status as OrderStatus) && order.product_id) {
-    const { data: product } = await supabase
-      .from('products')
-      .select('stock')
-      .eq('id', order.product_id)
-      .single()
-    if (product) {
-      const newStock = product.stock + order.quantity
-      await supabase.from('products')
-        .update({ stock: newStock })
-        .eq('id', order.product_id)
-        .eq('seller_id', context.sellerId)
-      deleteStockRestored = { productId: order.product_id, before: product.stock, after: newStock }
-    }
-  }
 
   const customer = Array.isArray(order.customer) ? order.customer[0] : order.customer
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
-
-  if (deleteStockRestored) {
-    await supabase.from('stock_movements').insert({
-      seller_id: context.sellerId,
-      product_id: deleteStockRestored.productId,
-      quantity_before: deleteStockRestored.before,
-      quantity_after: deleteStockRestored.after,
-      delta: order.quantity,
-      movement_type: 'order_cancel',
-      order_id: id,
-      notes: 'Commande déplacée en corbeille',
-      created_by: context.userId,
-      created_by_name: seller?.name ?? '',
-    })
-  }
 
   await logActivity({
     sellerId: context.sellerId,
@@ -306,65 +204,12 @@ export async function restoreOrder(id: string): Promise<OrderMutationResult> {
 
   const supabase = await createServerClient()
 
-  const { data: order } = await supabase
-    .from('orders')
-    .select('status, product_id, quantity, deleted_at')
-    .eq('id', id)
-    .eq('seller_id', context.sellerId)
-    .not('deleted_at', 'is', null)
-    .single()
-
-  if (!order) return { error: 'Commande introuvable dans la corbeille' }
-
-  const deletedAt = new Date(order.deleted_at as string)
-  const restoreDeadline = deletedAt.getTime() + 30 * 24 * 60 * 60 * 1000
-  if (Date.now() > restoreDeadline) {
-    return { error: 'Cette commande ne peut plus être restaurée après 30 jours dans la corbeille.' }
-  }
-
-  const shouldReserveStock = RESERVED_STOCK_STATUSES.includes(order.status as OrderStatus) && order.product_id
-  let previousStock: number | null = null
-
-  if (shouldReserveStock) {
-    const { data: product } = await supabase
-      .from('products')
-      .select('stock')
-      .eq('id', order.product_id)
-      .eq('seller_id', context.sellerId)
-      .single()
-
-    if (!product) return { error: 'Produit introuvable pour restaurer cette commande.' }
-    if (product.stock < order.quantity) {
-      return {
-        error: `Stock insuffisant pour restaurer cette commande. Il reste ${product.stock} unité${product.stock > 1 ? 's' : ''} disponible${product.stock > 1 ? 's' : ''}.`,
-      }
-    }
-
-    previousStock = product.stock
-    const { error: stockError } = await supabase
-      .from('products')
-      .update({ stock: product.stock - order.quantity })
-      .eq('id', order.product_id)
-      .eq('seller_id', context.sellerId)
-
-    if (stockError) return { error: stockError.message }
-  }
-
-  const { error } = await supabase.from('orders')
-    .update({ deleted_at: null, archived_by: null })
-    .eq('id', id)
-    .eq('seller_id', context.sellerId)
-    .not('deleted_at', 'is', null)
-  if (error) {
-    if (shouldReserveStock && previousStock !== null) {
-      await supabase
-        .from('products')
-        .update({ stock: previousStock })
-        .eq('id', order.product_id)
-        .eq('seller_id', context.sellerId)
-    }
-    return { error: error.message }
-  }
+  const { error } = await supabase.rpc('restore_trashed_order_with_stock', {
+    p_seller_id: context.sellerId,
+    p_order_id: id,
+    p_restored_by: context.userId,
+  })
+  if (error) return { error: error.message }
 
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 

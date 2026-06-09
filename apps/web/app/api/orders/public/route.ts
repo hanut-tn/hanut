@@ -6,6 +6,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import type { RateLimitResult } from '@/lib/rate-limit'
 import { formatTunisianPhone, isValidTunisianPhone } from '@/lib/constants'
+import { getVariantLabel } from '@/lib/variants'
 
 const PublicOrderSchema = z.object({
   slug: z.string().min(1, 'Boutique invalide'),
@@ -103,15 +104,15 @@ async function handlePublicOrder(req: Request) {
   }
 
   // Validation variante
-  type ProductVariant = { size?: string; color?: string; qty: number }
+  type ProductVariant = { size?: string; color?: string; name?: string; qty: number }
   const productVariants = (product.variants ?? []) as ProductVariant[]
   if (productVariants.length > 0) {
     if (!variant) {
       return NextResponse.json({ error: 'Veuillez choisir une variante' }, { status: 400 })
     }
     const variantLabel = variant
-    const matched = productVariants.find(v => {
-      const label = [v.size, v.color].filter(Boolean).join(' / ')
+    const matched = productVariants.find((v, index) => {
+      const label = getVariantLabel(v, index)
       return label === variantLabel
     })
     if (!matched) {
@@ -135,24 +136,19 @@ async function handlePublicOrder(req: Request) {
     p_cod_amount: null,
     p_notes: notes ?? null,
     p_status: 'pending',
+    p_changed_by: null,
   })
 
   if (error || !orderId) {
     const message = error?.message ?? 'Erreur lors de la création de la commande'
     const status = message.includes('introuvable')
       ? 404
-      : message.includes('insuffisant') || message.includes('invalide') || message.includes('obligatoire')
+      : message.includes('insuffisant') || message.includes('invalide') || message.includes('obligatoire') || message.includes('stock')
         ? 400
         : 500
 
     return NextResponse.json({ error: message }, { status })
   }
-
-  await supabase.from('order_status_history').insert({
-    order_id: orderId,
-    status: 'pending',
-    changed_by: null,
-  })
 
   const { data: orderRow } = await supabase
     .from('orders')

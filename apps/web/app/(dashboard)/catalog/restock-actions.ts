@@ -4,6 +4,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { revalidatePath, revalidateTag } from 'next/cache'
+import { getVariantLabel } from '@/lib/variants'
 
 export type RestockOrderInput = {
   totalQuantity: number
@@ -16,12 +17,8 @@ export type RestockOrderInput = {
 
 export type CostUpdateMode = 'wac' | 'new' | 'keep'
 
-type ProductVariant = { size?: string; color?: string; qty: number }
+type ProductVariant = { size?: string; color?: string; name?: string; qty: number }
 type VariantRestock = { variant: string; quantity: number }
-
-function variantLabel(v: ProductVariant, index: number) {
-  return [v.size, v.color].filter(Boolean).join(' / ') || `Variante ${index + 1}`
-}
 
 export async function createRestockOrder(
   productId: string,
@@ -121,10 +118,13 @@ export async function receiveRestockOrder(
 
   const variants = (product.variants ?? []) as ProductVariant[]
   const variantsQuantities = (restock.variants_quantities ?? []) as VariantRestock[]
+  if (variants.length > 0 && variantsQuantities.length === 0) {
+    return { error: 'Ce produit a des variantes. Renseignez les quantités reçues par variante.' }
+  }
   const hasVariantRestock = variants.length > 0 && variantsQuantities.length > 0
   const updatedVariants = hasVariantRestock
     ? variants.map((v, index) => {
-        const qty = variantsQuantities.find(item => item.variant === variantLabel(v, index))?.quantity ?? 0
+        const qty = variantsQuantities.find(item => item.variant === getVariantLabel(v, index))?.quantity ?? 0
         return { ...v, qty: v.qty + Math.max(0, qty) }
       })
     : null

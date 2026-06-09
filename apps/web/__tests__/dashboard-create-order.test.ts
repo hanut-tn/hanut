@@ -122,6 +122,7 @@ describe('createOrder dashboard action', () => {
         p_cod_amount: 120,
         p_notes: 'Client VIP',
         p_status: 'new',
+        p_changed_by: 'user-1',
       })
     )
     expect(serverMock.revalidatePath).toHaveBeenCalledWith('/orders')

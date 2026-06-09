@@ -14,6 +14,7 @@ import type { ProductInput, StockAdjustmentInput } from '@/app/(dashboard)/catal
 import type { RestockOrderInput, CostUpdateMode } from '@/app/(dashboard)/catalog/restock-actions'
 import ProductModal from './ProductModal'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { getVariantLabel } from '@/lib/variants'
 
 type RecentOrder = {
   id: string
@@ -73,10 +74,6 @@ type Props = {
   receiveRestockOrder: (restockId: string, mode: CostUpdateMode) => Promise<{ error?: string }>
   cancelRestockOrder: (restockId: string) => Promise<{ error?: string }>
   syncProductStock: (productId: string) => Promise<{ error?: string; newStock?: number }>
-}
-
-function getVariantLabel(v: ProductVariant, i: number) {
-  return [v.size, v.color].filter(Boolean).join(' / ') || `Variante ${i + 1}`
 }
 
 const MOVEMENT_ICONS: Record<StockMovement['movement_type'], React.ElementType> = {
@@ -208,7 +205,10 @@ export default function ProductDetailClient({
   const summaryDelta = newStockPreview - currentStock
   const canConfirm = (() => {
     if (isPlanned) return effectiveQty > 0
-    if (adjustType === 'correction') return adjustQty >= 0 && adjustNotes.trim().length > 0
+    if (adjustType === 'correction') {
+      if (hasVariants) return Object.keys(variantAdjs).length > 0 && adjustNotes.trim().length > 0
+      return adjustQty >= 0 && adjustNotes.trim().length > 0
+    }
     if (adjustType === 'loss') return effectiveQty > 0 && effectiveQty <= currentStock && adjustNotes.trim().length > 0
     if (adjustType === 'return') return effectiveQty > 0 && effectiveQty <= currentStock
     return effectiveQty > 0
@@ -589,7 +589,7 @@ export default function ProductDetailClient({
                 {currentVariants.map((v, i) => (
                   <div key={i} className="flex items-center justify-between py-2 border-b border-[#E7E5E4] last:border-0">
                     <span className="text-sm text-[#1C1917]">
-                      {[v.size, v.color].filter(Boolean).join(' — ') || `Variante ${i + 1}`}
+                      {getVariantLabel(v, i)}
                     </span>
                     <span className="text-sm font-medium text-[#1C1917]">{v.qty} unités</span>
                   </div>

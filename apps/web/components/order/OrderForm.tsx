@@ -5,6 +5,7 @@ import Image from 'next/image'
 import type { Product } from '@hanut/types'
 import { PackageX, Package, Copy, ExternalLink } from 'lucide-react'
 import { TUNISIAN_GOVERNORATES, isValidTunisianPhone, formatTunisianPhone } from '@/lib/constants'
+import { getVariantLabel } from '@/lib/variants'
 
 type Props = {
   sellerSlug: string
@@ -13,12 +14,7 @@ type Props = {
 }
 
 type Submitted = { orderId: string; fullId: string; trackingToken: string | null }
-type ProductVariant = Product['variants'][number]
 type StockErrorScope = 'product' | 'variant'
-
-function getVariantLabel(variant: ProductVariant, index: number) {
-  return [variant.size, variant.color].filter(Boolean).join(' / ') || `Variante ${index + 1}`
-}
 
 function getVariantKey(productId: string, label: string) {
   return `${productId}::${label}`

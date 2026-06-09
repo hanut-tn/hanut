@@ -5,6 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { revalidatePath, revalidateTag } from 'next/cache'
+import { getVariantLabel, sumVariantStock } from '@/lib/variants'
 
 export type ProductVariant = { size?: string; color?: string; qty: number }
 
@@ -31,7 +32,7 @@ export async function upsertProduct(input: ProductInput): Promise<{ error?: stri
     name: input.name,
     price: input.price,
     cost: input.cost ?? null,
-    stock: input.stock,
+    stock: input.variants.length > 0 ? sumVariantStock(input.variants) : input.stock,
     low_stock_alert: input.low_stock_alert,
     variants: input.variants,
     image_url: input.image_url ?? null,
@@ -222,7 +223,7 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
     const result: Variant[] = []
     for (let i = 0; i < variants.length; i++) {
       const v = variants[i]
-      const label = [v.size, v.color].filter(Boolean).join(' / ') || `Variante ${i + 1}`
+      const label = getVariantLabel(v, i)
       const adj = input.variantAdjustments.find(a => a.label === label)
       if (!adj) { result.push(v); continue }
       let newQty: number
@@ -242,6 +243,8 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
     updatedVariants = result
     newStock = updatedVariants.reduce((s, v) => s + v.qty, 0)
     delta = newStock - product.stock
+  } else if (hasVariants) {
+    return { error: 'Ce produit a des variantes. Ajustez le stock variante par variante.' }
   } else {
     if (input.type === 'restock') {
       delta = input.quantity

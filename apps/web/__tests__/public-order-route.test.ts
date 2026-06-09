@@ -40,10 +40,6 @@ type SingleQuery = {
   single: Mock
 }
 
-type InsertQuery = {
-  insert: Mock
-}
-
 type RpcResult = {
   data: string | null
   error: { message: string } | null
@@ -79,31 +75,25 @@ function createSingleQuery(data: unknown): SingleQuery {
   return query
 }
 
-function createInsertQuery(): InsertQuery {
-  return { insert: vi.fn().mockResolvedValue({ error: null }) }
-}
-
 function mockSupabase(
   seller: Seller | null,
   rpcResult: RpcResult,
-  product: { id: string } | null = { id: 'product-1' }
+  product: { id: string; variants?: { size?: string; color?: string; name?: string; qty: number }[] } | null = { id: 'product-1' }
 ) {
   const sellerQuery = createSingleQuery(seller)
   const productQuery = createSingleQuery(product)
   const orderQuery = createSingleQuery({ tracking_token: 'test-tracking-token' })
-  const historyQuery = createInsertQuery()
   const rpc = vi.fn().mockResolvedValue(rpcResult)
   const from = vi.fn((table: string) => {
     if (table === 'sellers') return sellerQuery
     if (table === 'products') return productQuery
     if (table === 'orders') return orderQuery
-    if (table === 'order_status_history') return historyQuery
     throw new Error(`Unexpected table: ${table}`)
   })
 
   serviceMock.createServiceClient.mockReturnValue({ from, rpc })
 
-  return { from, rpc, sellerQuery, productQuery, orderQuery, historyQuery }
+  return { from, rpc, sellerQuery, productQuery, orderQuery }
 }
 
 describe('POST /api/orders/public', () => {
@@ -113,7 +103,7 @@ describe('POST /api/orders/public', () => {
   })
 
   it('creates a pending order through the transactional RPC', async () => {
-    const { rpc, sellerQuery, productQuery, historyQuery } = mockSupabase(
+    const { rpc, sellerQuery, productQuery } = mockSupabase(
       { id: 'seller-1', name: 'Demo Shop' },
       { data: 'order-1', error: null }
     )
@@ -140,18 +130,14 @@ describe('POST /api/orders/public', () => {
         p_cod_amount: null,
         p_notes: 'Appeler avant livraison',
         p_status: 'pending',
+        p_changed_by: null,
       })
     )
-    expect(historyQuery.insert).toHaveBeenCalledWith({
-      order_id: 'order-1',
-      status: 'pending',
-      changed_by: null,
-    })
     expect(cacheMock.revalidateTag).toHaveBeenCalledWith('dashboard')
   })
 
   it('normalizes formatted Tunisian phone numbers before calling the RPC', async () => {
-    const { rpc, historyQuery } = mockSupabase(
+    const { rpc } = mockSupabase(
       { id: 'seller-1', name: 'Demo Shop' },
       { data: 'order-1', error: null }
     )
@@ -163,11 +149,6 @@ describe('POST /api/orders/public', () => {
       'create_order_with_stock',
       expect.objectContaining({ p_customer_phone: '22222222' })
     )
-    expect(historyQuery.insert).toHaveBeenCalledWith({
-      order_id: 'order-1',
-      status: 'pending',
-      changed_by: null,
-    })
     expect(cacheMock.revalidateTag).toHaveBeenCalledWith('dashboard')
   })
 
@@ -231,6 +212,50 @@ describe('POST /api/orders/public', () => {
 
     expect(response.status).toBe(404)
     await expect(response.json()).resolves.toEqual({ error: 'Produit introuvable' })
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('requires a variant when the product has variants', async () => {
+    const { rpc } = mockSupabase(
+      { id: 'seller-1', name: 'Demo Shop' },
+      { data: 'order-1', error: null },
+      { id: 'product-1', variants: [{ size: 'M', color: 'Rouge', qty: 3 }] }
+    )
+
+    const response = await POST(jsonRequest(validBody()))
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: 'Veuillez choisir une variante' })
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('accepts fallback variant labels such as Variante 1', async () => {
+    const { rpc } = mockSupabase(
+      { id: 'seller-1', name: 'Demo Shop' },
+      { data: 'order-1', error: null },
+      { id: 'product-1', variants: [{ qty: 3 }] }
+    )
+
+    const response = await POST(jsonRequest(validBody({ variant: 'Variante 1' })))
+
+    expect(response.status).toBe(200)
+    expect(rpc).toHaveBeenCalledWith(
+      'create_order_with_stock',
+      expect.objectContaining({ p_variant: 'Variante 1' })
+    )
+  })
+
+  it('rejects quantities above the selected variant stock before calling the RPC', async () => {
+    const { rpc } = mockSupabase(
+      { id: 'seller-1', name: 'Demo Shop' },
+      { data: 'order-1', error: null },
+      { id: 'product-1', variants: [{ size: 'M', color: 'Rouge', qty: 1 }] }
+    )
+
+    const response = await POST(jsonRequest(validBody({ variant: 'M / Rouge', quantity: 2 })))
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: 'Stock insuffisant pour cette variante' })
     expect(rpc).not.toHaveBeenCalled()
   })
 
