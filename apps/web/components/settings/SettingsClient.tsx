@@ -10,7 +10,7 @@ import { HANUT_CONTACT } from '@/lib/constants'
 const PLAN_CONFIG = {
   starter:  { label: 'Starter',  color: 'bg-gray-100 text-gray-700',         price: '39 DT/mois' },
   pro:      { label: 'Pro',      color: 'bg-blue-100 text-blue-700',          price: '79 DT/mois' },
-  business: { label: 'Business', color: 'bg-[#0B5E46] text-white',            price: '149 DT/mois' },
+  business: { label: 'Business', color: 'bg-[#0B5E46] text-white',            price: 'Bientôt' },
 }
 
 const PLANS: {
@@ -25,12 +25,15 @@ const PLANS: {
     label: 'Starter',
     price: '39 DT / mois',
     features: [
-      '150 commandes / mois',
-      '1 utilisateur',
-      '5 livreurs',
-      '200 SMS / mois',
-      'Lien de commande public',
-      'Support email',
+      'Commandes illimitées',
+      'Catalogue produits illimité',
+      'Lien de commande public /order',
+      'Suivi commande client /track',
+      'Gestion stock avec historique des mouvements',
+      'Fiche client + CRM basique',
+      'Gestion livraisons COD (5 transporteurs)',
+      'Dashboard analytics 30 jours',
+      'Support WhatsApp',
     ],
   },
   {
@@ -38,26 +41,24 @@ const PLANS: {
     label: 'Pro',
     price: '79 DT / mois',
     features: [
-      'Commandes illimitées',
-      '2 utilisateurs',
-      '15+ livreurs',
-      'SMS illimités',
-      'Analytics avancés',
-      'Export CSV',
-      'Support WhatsApp prioritaire',
+      'Tout Starter inclus',
+      'Analytics 180 jours + comparaison période',
+      'Export CSV commandes et analytics',
+      'Équipe jusqu\'à 3 membres',
+      'Top produits, clients et villes',
+      'Support prioritaire WhatsApp',
     ],
     recommended: true,
   },
   {
     key: 'business',
     label: 'Business',
-    price: '149 DT / mois',
+    price: 'Prix à venir',
     features: [
-      'Tout Pro inclus',
-      '5 utilisateurs',
-      'Multi-boutiques',
-      'Accès API',
-      'Rapport fiscal',
+      'Aperçu : multi-boutiques',
+      'Aperçu : équipe illimitée',
+      'Aperçu : accès API',
+      'Aperçu : rapport fiscal',
       'Support dédié',
     ],
   },
@@ -70,7 +71,7 @@ type UpgradePlan = PlanOption & { key: UpgradePlanKey }
 function getWhatsAppMessage(plan: UpgradePlanKey, vendorName: string): string {
   const messages = {
     pro: `Bonjour Hanut, je suis ${vendorName} et je voudrais passer au plan Pro (79 DT/mois). Pouvez-vous m'aider ?`,
-    business: `Bonjour Hanut, je suis ${vendorName} et je voudrais passer au plan Business (149 DT/mois). Pouvez-vous m'aider ?`,
+    business: `Bonjour Hanut, je suis ${vendorName} et je suis intéressé par le plan Business. Pouvez-vous m'informer de sa disponibilité ?`,
   }
   return encodeURIComponent(messages[plan])
 }
