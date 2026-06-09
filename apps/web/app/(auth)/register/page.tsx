@@ -4,17 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-
-function generateSlug(name: string): string {
-  return (
-    name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'boutique'
-  )
-}
+import { TurnstileWidget, isTurnstileEnabled } from '@/components/ui/TurnstileWidget'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -26,59 +16,45 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0)
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { name: shopName, phone } },
-    })
-
-    if (signUpError) {
-      setError(signUpError.message)
+    if (isTurnstileEnabled() && !turnstileToken) {
+      setError('Vérification anti-spam échouée. Réessayez.')
       setLoading(false)
       return
     }
 
-    if (!data.user) {
-      setError('Erreur lors de la création du compte.')
+    const response = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        shop_name: shopName.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim() || undefined,
+        password,
+        turnstile_token: turnstileToken || undefined,
+      }),
+    }).catch(() => null)
+
+    if (!response) {
+      setError('Erreur réseau. Vérifiez votre connexion et réessayez.')
+      setTurnstileToken('')
+      setTurnstileResetKey(key => key + 1)
       setLoading(false)
       return
     }
 
-    // Generate slug from shop name, retry with -2/-3 on unique conflict
-    const baseSlug = generateSlug(shopName)
-    let inserted = false
-
-    for (let attempt = 0; attempt < 10; attempt++) {
-      const slug = attempt === 0 ? baseSlug : `${baseSlug}-${attempt + 1}`
-      const { error: profileError } = await supabase.from('sellers').insert({
-        id: data.user.id,
-        email,
-        name: shopName,
-        phone: phone || null,
-        slug,
-      })
-
-      if (!profileError) {
-        inserted = true
-        break
-      }
-
-      // 23505 = unique_violation — try next slug
-      if (profileError.code !== '23505') {
-        setError(profileError.message)
-        setLoading(false)
-        return
-      }
-    }
-
-    if (!inserted) {
-      setError('Impossible de créer le profil. Réessayez.')
+    const data = await response.json().catch(() => ({} as { error?: string; session?: { access_token: string; refresh_token: string } | null }))
+    if (!response.ok) {
+      setError(data.error ?? 'Erreur lors de la création du compte.')
+      setTurnstileToken('')
+      setTurnstileResetKey(key => key + 1)
       setLoading(false)
       return
     }
@@ -89,6 +65,7 @@ export default function RegisterPage() {
       return
     }
 
+    await supabase.auth.setSession(data.session)
     router.push('/')
     router.refresh()
   }
@@ -166,7 +143,11 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <button type="submit" disabled={loading} className="btn-primary w-full">
+        {isTurnstileEnabled() && (
+          <TurnstileWidget onVerify={setTurnstileToken} resetKey={turnstileResetKey} />
+        )}
+
+        <button type="submit" disabled={loading || (isTurnstileEnabled() && !turnstileToken)} className="btn-primary w-full">
           {loading ? 'Création...' : 'Créer mon compte'}
         </button>
       </form>

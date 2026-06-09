@@ -14,6 +14,10 @@ const cacheMock = vi.hoisted(() => ({
   revalidateTag: vi.fn(),
 }))
 
+const turnstileMock = vi.hoisted(() => ({
+  verifyTurnstileToken: vi.fn(),
+}))
+
 vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: serviceMock.createServiceClient,
 }))
@@ -25,6 +29,10 @@ vi.mock('@/lib/rate-limit', () => ({
 
 vi.mock('next/cache', () => ({
   revalidateTag: cacheMock.revalidateTag,
+}))
+
+vi.mock('@/lib/turnstile', () => ({
+  verifyTurnstileToken: turnstileMock.verifyTurnstileToken,
 }))
 
 import { POST } from '../app/api/orders/public/route'
@@ -63,6 +71,7 @@ function validBody(overrides: Record<string, unknown> = {}) {
     product_id: 'product-1',
     quantity: 2,
     notes: 'Appeler avant livraison',
+    turnstile_token: 'turnstile-token',
     ...overrides,
   }
 }
@@ -100,6 +109,7 @@ describe('POST /api/orders/public', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     rateLimitMock.checkRateLimit.mockResolvedValue({ allowed: true, remaining: 9, resetIn: 3600 })
+    turnstileMock.verifyTurnstileToken.mockResolvedValue(true)
   })
 
   it('creates a pending order through the transactional RPC', async () => {
@@ -113,6 +123,7 @@ describe('POST /api/orders/public', () => {
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ success: true, order_id: 'order-1', tracking_token: 'test-tracking-token' })
     expect(rateLimitMock.checkRateLimit).toHaveBeenCalledWith('127.0.0.1', 'orders_public', 10, 60)
+    expect(turnstileMock.verifyTurnstileToken).toHaveBeenCalledWith('turnstile-token', '127.0.0.1')
     expect(sellerQuery.eq).toHaveBeenCalledWith('slug', 'demo-shop')
     expect(productQuery.eq).toHaveBeenCalledWith('id', 'product-1')
     expect(productQuery.eq).toHaveBeenCalledWith('seller_id', 'seller-1')
@@ -160,6 +171,18 @@ describe('POST /api/orders/public', () => {
     expect(response.status).toBe(429)
     expect(response.headers.get('Retry-After')).toBe('120')
     expect(response.headers.get('X-RateLimit-Remaining')).toBe('0')
+    expect(serviceMock.createServiceClient).not.toHaveBeenCalled()
+    expect(cacheMock.revalidateTag).not.toHaveBeenCalled()
+  })
+
+  it('rejects missing or invalid Turnstile tokens before touching the database', async () => {
+    turnstileMock.verifyTurnstileToken.mockResolvedValue(false)
+
+    const response = await POST(jsonRequest(validBody({ turnstile_token: undefined })))
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: 'Vérification anti-spam échouée. Réessayez.' })
+    expect(turnstileMock.verifyTurnstileToken).toHaveBeenCalledWith('', '127.0.0.1')
     expect(serviceMock.createServiceClient).not.toHaveBeenCalled()
     expect(cacheMock.revalidateTag).not.toHaveBeenCalled()
   })

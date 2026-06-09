@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import type { RateLimitResult } from '@/lib/rate-limit'
+import { verifyTurnstileToken } from '@/lib/turnstile'
 import { formatTunisianPhone, isValidTunisianPhone } from '@/lib/constants'
 import { getVariantLabel } from '@/lib/variants'
 
@@ -18,6 +19,7 @@ const PublicOrderSchema = z.object({
   variant: z.string().optional(),
   quantity: z.coerce.number().int().min(1, 'Quantité minimum : 1').max(99, 'Quantité maximum : 99'),
   notes: z.string().max(500).optional(),
+  turnstile_token: z.string().optional(),
 })
 
 export async function POST(req: Request) {
@@ -70,7 +72,12 @@ async function handlePublicOrder(req: Request) {
     return NextResponse.json({ error: msg }, { status: 400 })
   }
 
-  const { slug, customer_name, customer_phone, customer_address, customer_city, product_id, variant, quantity: qty, notes } = parsed.data
+  const { slug, customer_name, customer_phone, customer_address, customer_city, product_id, variant, quantity: qty, notes, turnstile_token } = parsed.data
+
+  const turnstileOk = await verifyTurnstileToken(turnstile_token ?? '', ip)
+  if (!turnstileOk) {
+    return NextResponse.json({ error: 'Vérification anti-spam échouée. Réessayez.' }, { status: 400 })
+  }
 
   // Normalisation téléphone tunisien : strip non-chiffres + préfixe 216 → 8 chiffres
   const customerPhone = formatTunisianPhone(customer_phone)

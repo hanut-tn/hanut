@@ -6,6 +6,7 @@ import type { Product } from '@hanut/types'
 import { PackageX, Package, Copy, ExternalLink } from 'lucide-react'
 import { TUNISIAN_GOVERNORATES, isValidTunisianPhone, formatTunisianPhone } from '@/lib/constants'
 import { getVariantLabel } from '@/lib/variants'
+import { TurnstileWidget, isTurnstileEnabled } from '@/components/ui/TurnstileWidget'
 
 type Props = {
   sellerSlug: string
@@ -39,6 +40,8 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
   const [exhaustedVariantKeys, setExhaustedVariantKeys] = useState<Set<string>>(new Set())
   const [submitted, setSubmitted] = useState<Submitted | null>(null)
   const [phoneError, setPhoneError] = useState<string | null>(null)
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0)
 
   const visibleProducts = initialProducts.filter(p => {
     if (exhaustedIds.has(p.id)) return false
@@ -109,6 +112,10 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
       setError(`Stock disponible : ${maxQty} unité(s).`)
       return
     }
+    if (isTurnstileEnabled() && !turnstileToken) {
+      setError('Vérification anti-spam échouée. Réessayez.')
+      return
+    }
 
     const phoneDigits = phone.replace(/\D/g, '')
 
@@ -127,6 +134,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
           variant: variant || undefined,
           quantity,
           notes: notes.trim() || undefined,
+          turnstile_token: turnstileToken || undefined,
         }),
       })
 
@@ -157,11 +165,15 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         } else {
           setError(msg)
         }
+        setTurnstileToken('')
+        setTurnstileResetKey(key => key + 1)
         return
       }
       setSubmitted({ orderId: (data.order_id as string).slice(0, 8).toUpperCase(), fullId: data.order_id as string, trackingToken: (data.tracking_token as string | null) ?? null })
     } catch {
       setError('Erreur réseau. Vérifiez votre connexion et réessayez.')
+      setTurnstileToken('')
+      setTurnstileResetKey(key => key + 1)
     } finally {
       setLoading(false)
     }
@@ -217,6 +229,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
             setSubmitted(null)
             setName(''); setPhone(''); setCity(''); setAddress('')
             setProductId(''); setVariant(''); setQuantity(1); setNotes('')
+            setTurnstileToken(''); setTurnstileResetKey(key => key + 1)
           }}
           className="min-h-[44px] touch-manipulation text-sm font-medium text-[#16A34A] hover:underline"
         >
@@ -453,7 +466,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
       )}
 
       {/* Erreur stock */}
-	      {stockError && (
+      {stockError && (
 	        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
 	          <PackageX className="text-red-500 w-6 h-6 shrink-0 mt-0.5" />
 	          <div className="flex-1">
@@ -482,9 +495,15 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         </div>
       )}
 
+      {isTurnstileEnabled() && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+          <TurnstileWidget onVerify={setTurnstileToken} resetKey={turnstileResetKey} />
+        </div>
+      )}
+
       <button
         type="submit"
-        disabled={loading}
+        disabled={loading || (isTurnstileEnabled() && !turnstileToken)}
         className="h-12 w-full touch-manipulation bg-[#16A34A] hover:bg-green-700 disabled:opacity-60 text-white font-bold rounded-2xl text-base transition-colors shadow-lg shadow-green-200"
       >
         {loading ? 'Envoi en cours…' : 'Passer la commande'}
