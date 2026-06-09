@@ -4,13 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import type { Product } from '@hanut/types'
 import { PackageX, Package, Copy, ExternalLink } from 'lucide-react'
-
-const GOUVERNORATS = [
-  'Ariana', 'Béja', 'Ben Arous', 'Bizerte', 'Gabès', 'Gafsa',
-  'Jendouba', 'Kairouan', 'Kasserine', 'Kébili', 'Kef', 'Mahdia',
-  'Manouba', 'Médenine', 'Monastir', 'Nabeul', 'Sfax', 'Sidi Bouzid',
-  'Siliana', 'Sousse', 'Tataouine', 'Tozeur', 'Tunis', 'Zaghouan',
-]
+import { TUNISIAN_GOVERNORATES, isValidTunisianPhone, formatTunisianPhone } from '@/lib/constants'
 
 type Props = {
   sellerSlug: string
@@ -48,6 +42,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
   const [exhaustedIds, setExhaustedIds] = useState<Set<string>>(new Set())
   const [exhaustedVariantKeys, setExhaustedVariantKeys] = useState<Set<string>>(new Set())
   const [submitted, setSubmitted] = useState<Submitted | null>(null)
+  const [phoneError, setPhoneError] = useState<string | null>(null)
 
   const visibleProducts = initialProducts.filter(p => {
     if (exhaustedIds.has(p.id)) return false
@@ -87,9 +82,14 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
     }
   }, [selectedVariant])
 
-  function validatePhone(v: string) {
-    const digits = v.replace(/\D/g, '')
-    return digits.length === 8
+  function handlePhoneChange(value: string) {
+    const cleaned = formatTunisianPhone(value)
+    setPhone(cleaned)
+    if (cleaned.length === 8 && !isValidTunisianPhone(cleaned)) {
+      setPhoneError('Numéro tunisien invalide. Ex: 22 123 456')
+    } else {
+      setPhoneError(null)
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -97,8 +97,8 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
     setError(null)
     setStockError(null)
 
-    if (!validatePhone(phone)) {
-      setError('Numéro de téléphone invalide. Entrez 8 chiffres (ex: 20 123 456).')
+    if (!isValidTunisianPhone(phone)) {
+      setError('Numéro de téléphone invalide. Entrez 8 chiffres (ex: 22 123 456).')
       return
     }
     if (!productId) {
@@ -267,16 +267,18 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
               +216
             </span>
             <input
-              className="min-w-0 flex-1 border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
+              className={`min-w-0 flex-1 border rounded-xl px-4 py-3 text-base outline-none focus:ring-2 transition ${phoneError ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-gray-200 focus:border-[#16A34A] focus:ring-green-100'}`}
               type="tel"
               value={phone}
-              onChange={e => setPhone(e.target.value)}
-              placeholder="20 123 456"
+              onChange={e => handlePhoneChange(e.target.value)}
+              placeholder="22 123 456"
+              maxLength={8}
               required
               inputMode="numeric"
               autoComplete="tel"
             />
           </div>
+          {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
         </div>
 
         <div>
@@ -288,7 +290,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
             required
           >
             <option value="">Sélectionner…</option>
-            {GOUVERNORATS.map(g => (
+            {TUNISIAN_GOVERNORATES.map(g => (
               <option key={g} value={g}>{g}</option>
             ))}
           </select>

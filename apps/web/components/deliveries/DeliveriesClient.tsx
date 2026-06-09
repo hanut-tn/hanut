@@ -59,6 +59,7 @@ function DeliveryMobileCard({
   onToggle,
   onEdit,
   onDelete,
+  onComplete,
   selectionMode = false,
   isSelected = false,
   onSelect,
@@ -68,6 +69,7 @@ function DeliveryMobileCard({
   onToggle: (delivery: Delivery, field: 'cod_collected' | 'cod_reversed') => void
   onEdit: (delivery: Delivery) => void
   onDelete: (delivery: Delivery) => void
+  onComplete: (delivery: Delivery) => void
   selectionMode?: boolean
   isSelected?: boolean
   onSelect?: (id: string) => void
@@ -138,6 +140,22 @@ function DeliveryMobileCard({
           ) : (
             <span className="text-xs text-[#78716C]">{delivery.tracking_number ?? delivery.carrier_status}</span>
           )}
+        </div>
+      )}
+
+      {/* Badge incomplet + bouton compléter */}
+      {!delivery.tracking_number && !selectionMode && (
+        <div className="mt-2 flex items-center gap-2">
+          <span className="bg-amber-50 text-amber-700 border border-amber-200 text-xs px-2 py-0.5 rounded-full font-medium">
+            Incomplet
+          </span>
+          <button
+            type="button"
+            onClick={e => { e.stopPropagation(); onComplete(delivery) }}
+            className="border border-[#16A34A] text-[#16A34A] hover:bg-[#F0FDF4] rounded-lg px-3 py-1 text-xs font-medium transition-colors"
+          >
+            Compléter
+          </button>
         </div>
       )}
 
@@ -225,6 +243,11 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
 
   const [confirmDelete, setConfirmDelete] = useState<Delivery | null>(null)
 
+  const [completeModal, setCompleteModal] = useState<Delivery | null>(null)
+  const [completeTracking, setCompleteTracking] = useState('')
+  const [completeFee, setCompleteFee] = useState<number | ''>(0)
+  const [completeError, setCompleteError] = useState<string | null>(null)
+
   const router = useRouter()
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -307,8 +330,37 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
     startTransition(async () => {
       try {
         await updateDelivery(d.id, { [field]: newValue })
+        if (field === 'cod_collected' && newValue) setToast('✓ COD collecté · Commande marquée comme livrée')
+        else if (field === 'cod_reversed' && newValue) setToast('✓ COD reversé · Fonds reçus')
       } catch (err) {
         setAllDeliveries(list => list.map(del => del.id === d.id ? { ...del, [field]: prevValue } : del))
+        setToast(`Erreur : ${err instanceof Error ? err.message : 'Veuillez réessayer.'}`)
+      }
+    })
+  }
+
+  function openComplete(d: Delivery) {
+    setCompleteTracking(d.tracking_number ?? '')
+    setCompleteFee(d.fee ?? 0)
+    setCompleteError(null)
+    setCompleteModal(d)
+  }
+
+  function handleComplete(e: React.FormEvent) {
+    e.preventDefault()
+    if (!completeModal) return
+    if (!completeTracking.trim()) { setCompleteError('Le numéro de suivi est requis'); return }
+    const d = completeModal
+    const tracking = completeTracking.trim()
+    const fee = completeFee === '' ? null : Number(completeFee) || null
+    setAllDeliveries(list => list.map(del => del.id === d.id ? { ...del, tracking_number: tracking, fee: fee ?? undefined } : del))
+    setCompleteModal(null)
+    startTransition(async () => {
+      try {
+        await updateDelivery(d.id, { tracking_number: tracking, fee })
+        setToast('✓ Livraison complétée')
+      } catch (err) {
+        setAllDeliveries(list => list.map(del => del.id === d.id ? { ...del, tracking_number: d.tracking_number, fee: d.fee } : del))
         setToast(`Erreur : ${err instanceof Error ? err.message : 'Veuillez réessayer.'}`)
       }
     })
@@ -517,6 +569,7 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
                 onToggle={handleToggle}
                 onEdit={openEdit}
                 onDelete={setConfirmDelete}
+                onComplete={openComplete}
                 selectionMode={selectionMode}
                 isSelected={selectedIds.has(d.id)}
                 onSelect={toggleSelection}
@@ -609,6 +662,18 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
                             {d.tracking_number}
                             <ExternalLink className="w-3 h-3 shrink-0" />
                           </a>
+                        ) : !selectionMode ? (
+                          <div className="flex items-center gap-2">
+                            <span className="bg-amber-50 text-amber-700 border border-amber-200 text-xs px-2 py-0.5 rounded-full font-medium">
+                              Incomplet
+                            </span>
+                            <button
+                              onClick={e => { e.stopPropagation(); openComplete(d) }}
+                              className="text-xs border border-[#16A34A] text-[#16A34A] hover:bg-[#F0FDF4] rounded px-2 py-0.5 transition-colors"
+                            >
+                              Compléter
+                            </button>
+                          </div>
                         ) : (
                           <span className="text-[#78716C]">—</span>
                         )}
@@ -846,6 +911,60 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
                 {isPending ? 'Suppression...' : 'Supprimer'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL Compléter livraison ── */}
+      {completeModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+            <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-[#1C1917]">Compléter la livraison</h3>
+                <p className="text-xs text-[#78716C] mt-0.5">
+                  {getOrder(completeModal)?.customer?.name} · {getCarrierConfig(completeModal.carrier).label}
+                </p>
+              </div>
+              <button type="button" onClick={() => setCompleteModal(null)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C]">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={handleComplete} className="flex min-h-0 flex-1 flex-col">
+              <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
+                <div>
+                  <label className="block text-sm font-medium text-[#1C1917] mb-1">N° de suivi *</label>
+                  <input
+                    className="input font-mono"
+                    value={completeTracking}
+                    onChange={e => { setCompleteTracking(e.target.value); setCompleteError(null) }}
+                    placeholder="TN-IG-847291"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#1C1917] mb-1">Frais de livraison (DT)</label>
+                  <input
+                    className="input text-base"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={completeFee}
+                    onChange={e => setCompleteFee(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                    placeholder="0.00"
+                  />
+                </div>
+                {completeError && (
+                  <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{completeError}</p>
+                )}
+              </div>
+              <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
+                <button type="button" onClick={() => setCompleteModal(null)} className="btn-secondary flex-1">Annuler</button>
+                <button type="submit" disabled={isPending} className="btn-primary flex-1">
+                  {isPending ? 'Enregistrement...' : 'Enregistrer'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

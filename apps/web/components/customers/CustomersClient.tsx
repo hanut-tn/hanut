@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Users, Search, Tag, ArrowUpDown, ChevronDown } from 'lucide-react'
 import type { CustomerInput } from '@/app/(dashboard)/customers/actions'
 import { initials } from '@/lib/utils'
+import { TUNISIAN_GOVERNORATES } from '@/lib/constants'
 
 const TAG_COLORS = [
   'bg-blue-100 text-blue-700',
@@ -593,13 +594,11 @@ export default function CustomersClient({ customers, initialTotal, stats, update
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#1C1917] mb-1">Ville</label>
-                  <input
-                    className="input"
-                    value={editCity}
-                    onChange={e => setEditCity(e.target.value)}
-                    placeholder="Tunis, Sfax…"
-                  />
+                  <label className="block text-sm font-medium text-[#1C1917] mb-1">Gouvernorat</label>
+                  <select className="input bg-white" value={editCity} onChange={e => setEditCity(e.target.value)}>
+                    <option value="">Sélectionner…</option>
+                    {TUNISIAN_GOVERNORATES.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
                 </div>
               </div>
               {editMsg && (

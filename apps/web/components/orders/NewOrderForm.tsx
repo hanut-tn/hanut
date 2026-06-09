@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { Check, ChevronRight, Package, User, ClipboardList } from 'lucide-react'
 import type { Product } from '@hanut/types'
 import type { CreateOrderInput } from '@/app/(dashboard)/orders/actions'
+import { TUNISIAN_GOVERNORATES, isValidTunisianPhone } from '@/lib/constants'
 
 type CustomerSuggestion = {
   id: string
@@ -106,6 +107,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
     setError(null)
     if (n === 1) {
       if (!phone.trim()) return setError('Le téléphone est obligatoire.')
+      if (!isValidTunisianPhone(phone)) return setError('Numéro tunisien invalide. Ex: 22 123 456')
       if (!customerName.trim()) return setError('Le nom du client est obligatoire.')
     }
     if (n === 2) {
@@ -314,8 +316,11 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
               <input className="input" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} placeholder="Rue, numéro…" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1C1917] mb-1">Ville</label>
-              <input className="input" value={customerCity} onChange={e => setCustomerCity(e.target.value)} placeholder="Tunis, Sfax…" />
+              <label className="block text-sm font-medium text-[#1C1917] mb-1">Gouvernorat</label>
+              <select className="input bg-white" value={customerCity} onChange={e => setCustomerCity(e.target.value)}>
+                <option value="">Sélectionner…</option>
+                {TUNISIAN_GOVERNORATES.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
             </div>
           </div>
 

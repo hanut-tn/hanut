@@ -2,6 +2,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import OrdersClient from '@/components/orders/OrdersClient'
 import { updateOrderStatus, deleteOrder, confirmPendingOrder, cancelPendingOrder, restoreOrder, permanentlyDeleteOrder } from './actions'
+import { createDeliveryFromOrder } from '@/app/(dashboard)/deliveries/actions'
 
 type Orders = Parameters<typeof OrdersClient>[0]['orders']
 type TrashOrders = Parameters<typeof OrdersClient>[0]['trashOrders']
@@ -60,6 +61,7 @@ export default async function OrdersPage() {
       cancelPendingOrder={cancelPendingOrder}
       restoreOrder={restoreOrder}
       permanentlyDeleteOrder={permanentlyDeleteOrder}
+      createDeliveryFromOrder={createDeliveryFromOrder}
     />
   )
 }

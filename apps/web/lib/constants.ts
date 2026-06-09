@@ -1,5 +1,25 @@
 import type { CarrierName, OrderStatus } from '@hanut/types'
 
+export const TUNISIAN_GOVERNORATES = [
+  'Ariana', 'Béja', 'Ben Arous', 'Bizerte', 'Gabès', 'Gafsa',
+  'Jendouba', 'Kairouan', 'Kasserine', 'Kébili', 'Le Kef', 'Mahdia',
+  'La Manouba', 'Médenine', 'Monastir', 'Nabeul', 'Sfax', 'Sidi Bouzid',
+  'Siliana', 'Sousse', 'Tataouine', 'Tozeur', 'Tunis', 'Zaghouan',
+] as const
+
+export type TunisianGovernorate = typeof TUNISIAN_GOVERNORATES[number]
+
+// Premiers chiffres valides : 2x (Ooredoo), 4x (Orange), 5x (Ooredoo), 7x (Telecom/fixes), 9x (Ooredoo)
+export const TUNISIAN_PHONE_REGEX = /^[2457912][0-9]{7}$/
+
+export function formatTunisianPhone(phone: string): string {
+  return phone.replace(/\s/g, '').replace(/^(\+216|00216)/, '')
+}
+
+export function isValidTunisianPhone(phone: string): boolean {
+  return TUNISIAN_PHONE_REGEX.test(formatTunisianPhone(phone))
+}
+
 type OrderStatusConfig = {
   label: string
   bg: string

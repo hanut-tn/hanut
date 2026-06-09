@@ -72,9 +72,89 @@ export async function updateDelivery(id: string, input: UpdateDeliveryInput) {
   const { error } = await supabase.from('deliveries').update(patch).eq('id', id)
   if (error) throw new Error(error.message)
 
+  // Amélioration 5 : COD collecté → commande "Livrée"
+  if (input.cod_collected === true) {
+    const { data: delivery } = await supabase
+      .from('deliveries').select('order_id').eq('id', id).single()
+
+    if (delivery?.order_id) {
+      await supabase.from('orders')
+        .update({ status: 'delivered' })
+        .eq('id', delivery.order_id)
+        .eq('seller_id', context.sellerId)
+
+      await supabase.from('order_status_history').insert({
+        order_id: delivery.order_id,
+        status: 'delivered',
+        changed_by: context.userId,
+      })
+
+      const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
+      await logActivity({
+        sellerId: context.sellerId,
+        userId: context.userId,
+        userName: seller?.name ?? context.userId,
+        actionType: 'order_status_changed',
+        entityType: 'order',
+        entityId: delivery.order_id,
+        description: 'commande marquée comme livrée (COD collecté)',
+      })
+    }
+  }
+
   revalidatePath('/deliveries')
+  revalidatePath('/orders')
   revalidatePath('/dashboard')
   revalidateTag('dashboard')
+}
+
+export async function createDeliveryFromOrder(
+  orderId: string,
+  carrier: string,
+  tracking: string | undefined,
+  fee: number,
+): Promise<{ error?: string }> {
+  const context = await getUserContext()
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+
+  const supabase = await createServerClient()
+
+  const { error: deliveryError } = await supabase.from('deliveries').insert({
+    order_id: orderId,
+    carrier,
+    tracking_number: tracking ?? null,
+    fee: fee > 0 ? fee : null,
+  })
+  if (deliveryError) return { error: deliveryError.message }
+
+  const { error: orderError } = await supabase.from('orders')
+    .update({ status: 'shipped' })
+    .eq('id', orderId)
+    .eq('seller_id', context.sellerId)
+  if (orderError) return { error: orderError.message }
+
+  await supabase.from('order_status_history').insert({
+    order_id: orderId, status: 'shipped', changed_by: context.userId,
+  })
+
+  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
+  await logActivity({
+    sellerId: context.sellerId,
+    userId: context.userId,
+    userName: seller?.name ?? context.userId,
+    actionType: 'delivery_created',
+    entityType: 'order',
+    entityId: orderId,
+    description: `a expédié une commande via ${carrier}${tracking ? ` (${tracking})` : ''}`,
+    metadata: { carrier, tracking },
+  })
+
+  revalidatePath('/deliveries')
+  revalidatePath('/orders')
+  revalidatePath('/dashboard')
+  revalidateTag('dashboard')
+  return {}
 }
 
 export async function deleteDelivery(id: string): Promise<{ error?: string }> {
