@@ -4,7 +4,8 @@ import { useState, useTransition, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import type { CustomerInput } from '@/app/(dashboard)/customers/actions'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { X } from 'lucide-react'
+import { X, Lock } from 'lucide-react'
+import { getUpgradeWhatsAppUrl } from '@/lib/constants'
 
 const TAG_SUGGESTIONS = ['VIP', 'Fidèle', 'Retours fréquents', 'À risque', 'Nouveau']
 
@@ -55,10 +56,11 @@ type Props = {
   orders: Order[]
   totalOrders: number
   stats: Stats
+  plan?: string
   updateCustomer: (id: string, input: CustomerInput) => Promise<{ error?: string }>
 }
 
-export default function CustomerDetail({ customer, orders: initialOrders, totalOrders, stats, updateCustomer }: Props) {
+export default function CustomerDetail({ customer, orders: initialOrders, totalOrders, stats, plan, updateCustomer }: Props) {
   const [isPending, startTransition] = useTransition()
 
   // Edit modal
@@ -257,6 +259,22 @@ export default function CustomerDetail({ customer, orders: initialOrders, totalO
       </div>
 
       {/* ── TAGS + NOTES ── */}
+      {plan === 'starter' ? (
+        <div className="card p-5 flex items-center gap-3">
+          <Lock className="w-5 h-5 shrink-0 text-[#78716C]" />
+          <div>
+            <p className="text-sm font-medium text-[#1C1917]">Tags et notes disponibles sur le plan Pro</p>
+            <a
+              href={getUpgradeWhatsAppUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-[#16A34A] font-medium hover:underline"
+            >
+              Passer au plan Pro →
+            </a>
+          </div>
+        </div>
+      ) : (
       <div className="flex flex-col gap-4 lg:flex-row">
         {/* Tags */}
         <div className="card p-5 lg:flex-1">
@@ -350,6 +368,7 @@ export default function CustomerDetail({ customer, orders: initialOrders, totalO
           />
         </div>
       </div>
+      )}
 
       {/* ── HISTORIQUE COMMANDES ── */}
       <div className="card overflow-hidden">

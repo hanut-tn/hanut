@@ -41,10 +41,14 @@ function createUpdateChain(error: { message: string } | null = null): UpdateChai
   return chain
 }
 
-function mockContext(sellerId: string | null, role: 'admin' | 'operator' | 'readonly' = 'admin') {
+function mockContext(
+  sellerId: string | null,
+  role: 'admin' | 'operator' | 'readonly' = 'admin',
+  plan: 'starter' | 'pro' | 'business' = 'business'
+) {
   contextMock.getUserContext.mockResolvedValue(
     sellerId
-      ? { userId: 'user-1', sellerId, role, isSeller: role === 'admin', plan: 'business' }
+      ? { userId: 'user-1', sellerId, role, isSeller: role === 'admin', plan }
       : null
   )
 }
@@ -110,6 +114,19 @@ describe('customer tags and notes API', () => {
 
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toEqual({ error: 'Aucune donnée à mettre à jour' })
+    expect(chain.update).not.toHaveBeenCalled()
+  })
+
+  it('blocks tags and notes updates on the Starter plan', async () => {
+    mockContext('seller-1', 'admin', 'starter')
+    const { chain } = mockServerClient()
+
+    const response = await PUT(jsonRequest({ tags: ['VIP'] }), {
+      params: Promise.resolve({ id: 'customer-1' }),
+    })
+
+    expect(response.status).toBe(403)
+    await expect(response.json()).resolves.toEqual({ error: 'PLAN_REQUIRED' })
     expect(chain.update).not.toHaveBeenCalled()
   })
 })

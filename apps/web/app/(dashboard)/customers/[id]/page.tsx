@@ -62,6 +62,7 @@ export default async function CustomerDetailPage({ params }: Props) {
       orders={orderList.slice(0, 10) as CustomerOrders}
       totalOrders={order_count}
       stats={{ total_spent, order_count, delivery_rate, favorite_product }}
+      plan={context.plan}
       updateCustomer={updateCustomer}
     />
   )

@@ -175,6 +175,10 @@ export async function deleteOrder(id: string): Promise<OrderMutationResult> {
 
   if (!order) return { error: 'Commande introuvable' }
 
+  if (order.status === 'delivered' || order.status === 'returned') {
+    return { error: 'CANNOT_DELETE' }
+  }
+
   if (!DELETABLE_STATUSES.includes(order.status as OrderStatus)) {
     return { error: 'Une commande expédiée ne peut pas être supprimée. Attendez la livraison ou le retour.' }
   }

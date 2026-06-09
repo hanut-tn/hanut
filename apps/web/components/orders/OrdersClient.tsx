@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import type { OrderStatus, CarrierName } from '@hanut/types'
 import type { UserRole } from '@/lib/get-context'
-import { DELETABLE_STATUSES, ORDER_STATUS_LABELS, CARRIER_NAMES, CARRIER_CONFIG } from '@/lib/constants'
+import { DELETABLE_STATUSES, ORDER_STATUS_LABELS, CARRIER_NAMES, CARRIER_CONFIG, PLAN_LIMITS, getUpgradeWhatsAppUrl } from '@/lib/constants'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { relativeDate, initials } from '@/lib/utils'
 
@@ -92,6 +92,13 @@ function Highlight({ text, query }: { text: string; query: string }) {
       {text.slice(idx + query.length)}
     </>
   )
+}
+
+function orderActionErrorMessage(error: string) {
+  if (error === 'CANNOT_DELETE') {
+    return 'Les commandes livrées ou retournées ne peuvent pas être supprimées.'
+  }
+  return error
 }
 
 type DateFilter = 'today' | 'yesterday' | 'week' | 'month' | '30days' | '90days' | 'all'
@@ -574,7 +581,7 @@ export default function OrdersClient({
         setLocalTrashOrders(prevTrash)
         setDateOrders(prevDateOrders)
         setDateTotal(prevDateTotal)
-        setActionError(result.error)
+        setActionError(orderActionErrorMessage(result.error))
       } else {
         showToast('✓ Commande déplacée dans la corbeille')
       }
@@ -853,6 +860,41 @@ export default function OrdersClient({
           {actionError}
         </div>
       )}
+
+      {/* Compteur mensuel — Starter uniquement */}
+      {plan === 'starter' && tab !== 'trash' && (() => {
+        const limit = PLAN_LIMITS.starter.ordersPerMonth
+        const pct = Math.min(100, Math.round((monthlyOrderCount / limit) * 100))
+        const barColor = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-[#16A34A]'
+        const textColor = pct >= 90 ? 'text-red-600' : pct >= 70 ? 'text-amber-600' : 'text-[#78716C]'
+        return (
+          <div className="bg-white border border-[#E7E5E4] rounded-xl px-4 py-3 flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-3">
+              <span className={`text-sm font-medium ${textColor}`}>
+                {monthlyOrderCount >= limit
+                  ? 'Limite atteinte — Passe au plan Pro pour des commandes illimitées'
+                  : pct >= 90
+                    ? `Plus que ${limit - monthlyOrderCount} commande${limit - monthlyOrderCount > 1 ? 's' : ''} disponible${limit - monthlyOrderCount > 1 ? 's' : ''} ce mois`
+                    : `${monthlyOrderCount} / ${limit} commandes ce mois`
+                }
+              </span>
+              {monthlyOrderCount >= limit && (
+                <a
+                  href={getUpgradeWhatsAppUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 text-xs font-semibold text-[#16A34A] hover:underline whitespace-nowrap"
+                >
+                  Passer au Pro →
+                </a>
+              )}
+            </div>
+            <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Liste commandes */}
       {tab !== 'trash' && (

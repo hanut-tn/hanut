@@ -30,7 +30,7 @@ vi.mock('@/lib/activity', () => ({
 }))
 
 vi.mock('@/lib/constants', () => ({
-  DELETABLE_STATUSES: ['new', 'pending', 'returned'],
+  DELETABLE_STATUSES: ['pending', 'new', 'confirmed'],
   ORDER_STATUS_LABELS: {
     pending: 'En attente', new: 'Nouveau', confirmed: 'Confirmé',
     shipped: 'Expédié', delivered: 'Livré', returned: 'Retourné',

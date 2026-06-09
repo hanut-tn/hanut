@@ -37,8 +37,8 @@ type CarrierConfig = {
   bg: string
 }
 
-// 'shipped' est bloqué — commande en cours de livraison ne peut pas être supprimée
-export const DELETABLE_STATUSES: OrderStatus[] = ['pending', 'new', 'confirmed', 'delivered', 'returned']
+// Seuls ces statuts sont déplaçables en corbeille — shipped, delivered et returned sont protégés
+export const DELETABLE_STATUSES: OrderStatus[] = ['pending', 'new', 'confirmed']
 
 export const ORDER_STATUSES = ['pending', 'new', 'confirmed', 'shipped', 'delivered', 'returned'] as const satisfies readonly OrderStatus[]
 

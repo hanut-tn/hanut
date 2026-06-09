@@ -86,7 +86,16 @@ export async function PUT(req: Request, { params }: Params) {
 
   const supabase = await createServerClient()
 
-  const body = await req.json()
+  const body = await req.json().catch(() => null)
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return NextResponse.json({ error: 'Corps de requête invalide' }, { status: 400 })
+  }
+
+  // Bloquer les modifications tags/notes pour le plan Starter
+  if (context.plan === 'starter' && ('tags' in body || 'notes' in body)) {
+    return NextResponse.json({ error: 'PLAN_REQUIRED' }, { status: 403 })
+  }
+
   const update: Record<string, unknown> = {}
   if ('tags' in body) update.tags = body.tags
   if ('notes' in body) update.notes = body.notes
