@@ -131,7 +131,7 @@ function BusinessWaitlist() {
 
   if (done) {
     return (
-      <p className="text-center text-sm text-gray-500 py-3">Merci ! On vous prévient en priorité dès l&apos;ouverture.</p>
+      <p className="text-center text-sm text-gray-500 py-3">Vous serez notifié dès l&apos;ouverture du plan Business.</p>
     )
   }
 
@@ -200,9 +200,7 @@ export default function PricingPage() {
                     {plan.name}
                   </p>
                   <p className={`text-xs mb-3 ${plan.highlighted ? 'text-green-200' : 'text-gray-400'}`}>{plan.desc}</p>
-                  {plan.comingSoon ? (
-                    <p className="text-sm text-gray-400 italic">Prix à venir</p>
-                  ) : (
+                  {plan.comingSoon ? null : (
                     <div className="flex items-baseline gap-1">
                       <span className="text-4xl font-black">{plan.monthly}</span>
                       <span className={`text-sm ${plan.highlighted ? 'text-green-200' : 'text-gray-400'}`}>DT / mois</span>

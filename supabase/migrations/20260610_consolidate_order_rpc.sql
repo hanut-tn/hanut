@@ -53,7 +53,7 @@ BEGIN
   IF p_quantity IS NULL OR p_quantity < 1 THEN RAISE EXCEPTION 'Quantité invalide'; END IF;
   IF v_customer_name IS NULL THEN RAISE EXCEPTION 'Nom client obligatoire'; END IF;
   IF v_customer_phone IS NULL THEN RAISE EXCEPTION 'Téléphone client obligatoire'; END IF;
-  IF p_status NOT IN ('pending', 'new', 'confirmed', 'shipped', 'delivered', 'returned') THEN
+  IF p_status NOT IN ('pending', 'new', 'confirmed', 'shipped', 'delivered', 'returned', 'cancelled') THEN
     RAISE EXCEPTION 'Statut de commande invalide';
   END IF;
 

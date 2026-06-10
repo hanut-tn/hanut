@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {
   CheckCircle2, Circle, Package, Truck, ExternalLink, MapPin, RefreshCw, RotateCcw,
+  XCircle,
 } from 'lucide-react'
 import { getCarrierConfig } from '@/lib/constants'
 import type { CarrierName } from '@hanut/types'
@@ -16,6 +17,7 @@ const STATUS_MESSAGE: Record<string, string> = {
   shipped:   'Votre colis est en route ! Livraison prévue sous 24–48h.',
   delivered: 'Votre commande a été livrée. Merci pour votre confiance !',
   returned:  "Votre commande a été retournée. Contactez le vendeur pour plus d'informations.",
+  cancelled: 'Votre commande a été annulée. Contactez le vendeur pour plus d’informations.',
 }
 
 const TRACKING_STEPS = [
@@ -123,6 +125,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
   const currentStatus  = data.status
   const currentStepIdx = getCurrentStepIndex(currentStatus)
   const isReturned     = currentStatus === 'returned'
+  const isCancelled    = currentStatus === 'cancelled'
 
   const statusMap = new Map<string, string>()
   for (const h of data.status_history) {
@@ -132,7 +135,11 @@ export default function TrackingClient({ initialData, orderId }: Props) {
     statusMap.set(currentStatus, data.created_at)
   }
 
-  const timelineSteps = isReturned ? TRACKING_STEPS.slice(0, 3) : TRACKING_STEPS
+  const timelineSteps = isReturned
+    ? TRACKING_STEPS.slice(0, 3)
+    : isCancelled
+      ? TRACKING_STEPS.slice(0, 1)
+      : TRACKING_STEPS
 
   const carrier       = data.delivery?.carrier as CarrierName | undefined
   const trackingUrl   = data.delivery?.tracking_url ?? null
@@ -194,6 +201,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
         <div className={`rounded-xl px-4 py-3 text-sm font-medium ${
           currentStatus === 'delivered' ? 'bg-[#F0FDF4] text-[#166534] border border-[#BBF7D0]'
           : currentStatus === 'returned' ? 'bg-red-50 text-red-700 border border-red-200'
+          : currentStatus === 'cancelled' ? 'bg-gray-50 text-gray-700 border border-gray-200'
           : 'bg-blue-50 text-blue-700 border border-blue-200'
         }`}>
           {STATUS_MESSAGE[currentStatus] ?? 'Statut en cours de mise à jour.'}
@@ -241,13 +249,23 @@ export default function TrackingClient({ initialData, orderId }: Props) {
                 </div>
               )
             })}
-            {isReturned && (
-              <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg mt-2">
-                <RotateCcw className="w-5 h-5 text-red-500 flex-shrink-0" />
+            {(isReturned || isCancelled) && (
+              <div className={`flex items-center gap-3 p-3 rounded-lg mt-2 ${
+                isCancelled ? 'bg-gray-50 border border-gray-200' : 'bg-red-50 border border-red-200'
+              }`}>
+                {isCancelled ? (
+                  <XCircle className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                ) : (
+                  <RotateCcw className="w-5 h-5 text-red-500 flex-shrink-0" />
+                )}
                 <div>
-                  <p className="text-sm font-semibold text-red-700">Commande retournée</p>
-                  {statusMap.get('returned') && (
-                    <p className="text-xs text-red-500 mt-0.5">{formatDate(statusMap.get('returned')!)}</p>
+                  <p className={`text-sm font-semibold ${isCancelled ? 'text-gray-700' : 'text-red-700'}`}>
+                    {isCancelled ? 'Commande annulée' : 'Commande retournée'}
+                  </p>
+                  {statusMap.get(currentStatus) && (
+                    <p className={`text-xs mt-0.5 ${isCancelled ? 'text-gray-500' : 'text-red-500'}`}>
+                      {formatDate(statusMap.get(currentStatus)!)}
+                    </p>
                   )}
                 </div>
               </div>

@@ -55,13 +55,12 @@ const PLANS: {
   {
     key: 'business',
     label: 'Business',
-    price: 'Prix à venir',
+    price: '',
     features: [
       'Aperçu : multi-boutiques',
       'Aperçu : équipe illimitée',
       'Aperçu : accès API',
       'Aperçu : rapport fiscal',
-      'Support dédié',
     ],
   },
 ]
@@ -830,9 +829,13 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
                   )}
                   <div className="mb-3">
                     <p className="font-bold text-gray-900">{plan.label}</p>
-                    <p className={`font-semibold text-lg mt-0.5 ${plan.recommended ? 'text-brand-600' : 'text-gray-800'}`}>
-                      {plan.price}
-                    </p>
+                    {plan.price ? (
+                      <p className={`font-semibold text-lg mt-0.5 ${plan.recommended ? 'text-brand-600' : 'text-gray-800'}`}>
+                        {plan.price}
+                      </p>
+                    ) : (
+                      <p className="font-semibold text-sm mt-1 text-gray-500">Bientôt disponible</p>
+                    )}
                   </div>
                   <ul className="space-y-1.5 flex-1 mb-4">
                     {plan.features.map(f => (
@@ -860,7 +863,9 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
                         <MessageCircle className="w-4 h-4 shrink-0" />
                         <span className="min-w-0 text-center leading-tight">
                           <span className="block whitespace-nowrap">Passer au plan {whatsappPlan.label}</span>
-                          <span className="block text-xs font-normal opacity-90">{whatsappPlan.price.replace(' / ', '/')}</span>
+                          {whatsappPlan.price && (
+                            <span className="block text-xs font-normal opacity-90">{whatsappPlan.price.replace(' / ', '/')}</span>
+                          )}
                         </span>
                       </button>
                       <p className="text-xs text-[#78716C] text-center mt-3 flex items-center justify-center gap-1">

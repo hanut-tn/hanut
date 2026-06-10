@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import {
   ArrowLeft, Clock, CheckCircle, Truck, Package, RotateCcw,
-  MapPin, Phone, ShoppingBag, Copy,
+  MapPin, Phone, ShoppingBag, Copy, XCircle,
 } from 'lucide-react'
 import type { OrderStatus } from '@hanut/types'
 import { DELETABLE_STATUSES, ORDER_STATUS_LABELS } from '@/lib/constants'
@@ -22,6 +22,7 @@ const TIMELINE_ICONS: Record<string, React.ElementType> = {
   shipped:   Truck,
   delivered: CheckCircle,
   returned:  RotateCcw,
+  cancelled: XCircle,
 }
 
 function formatDate(dateStr: string): string {
@@ -143,6 +144,9 @@ export default function OrderDetail({
   }
   if (status === 'returned') {
     timelineItems.push({ icon: RotateCcw, label: 'Retournée', active: true })
+  }
+  if (status === 'cancelled') {
+    timelineItems.push({ icon: XCircle, label: 'Annulée', active: true })
   }
 
   return (

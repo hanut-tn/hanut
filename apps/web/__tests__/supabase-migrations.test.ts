@@ -24,6 +24,9 @@ describe('Supabase migrations', () => {
   const uniqueDeliveryOrder = migration('20260610_add_unique_delivery_order.sql')
   const orderCountTrigger = migration('20260610_fix_order_count_trigger.sql')
   const orderUnitCost = migration('20260610_add_order_unit_cost.sql')
+  const consolidatedOrderRpc = migration('20260610_consolidate_order_rpc.sql')
+  const cancelledStatus = migration('20260611_add_cancelled_status.sql')
+  const stockSyncTrigger = migration('20260611_add_stock_sync_trigger.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -204,5 +207,31 @@ describe('Supabase migrations', () => {
     expect(orderUnitCost).toMatch(/orders_unit_cost_nonnegative CHECK \(unit_cost >= 0\)/i)
     expect(orderUnitCost).toMatch(/quantity, cod_amount, unit_cost, notes, status, tracking_token/i)
     expect(orderUnitCost).toMatch(/p_quantity, v_cod_amount, COALESCE\(v_product\.cost, 0\), v_notes, p_status/i)
+  })
+
+  it('consolidates the final order RPC with unit cost, tracking token, and cancelled status support', () => {
+    expect(consolidatedOrderRpc).toMatch(/DROP FUNCTION IF EXISTS create_order_with_stock/i)
+    expect(consolidatedOrderRpc).toMatch(/SECURITY DEFINER/i)
+    expect(consolidatedOrderRpc).toMatch(/SET search_path = public/i)
+    expect(consolidatedOrderRpc).toMatch(/quantity, cod_amount, unit_cost, notes, status, tracking_token/i)
+    expect(consolidatedOrderRpc).toMatch(/replace\(gen_random_uuid\(\)::text, '-', ''\)/i)
+    expect(consolidatedOrderRpc).toMatch(/'cancelled'/i)
+    expect(consolidatedOrderRpc).toMatch(/GRANT EXECUTE ON FUNCTION create_order_with_stock[\s\S]+TO authenticated, service_role;/i)
+  })
+
+  it('adds cancelled orders without counting them as returns', () => {
+    expect(cancelledStatus).toMatch(/ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_status_check/i)
+    expect(cancelledStatus).toMatch(/'cancelled'/i)
+    expect(cancelledStatus).toMatch(/CREATE OR REPLACE FUNCTION cancel_pending_order_with_stock/i)
+    expect(cancelledStatus).toMatch(/SET status = 'cancelled'/i)
+    expect(cancelledStatus).toMatch(/VALUES \(p_order_id, 'cancelled', p_changed_by\)/i)
+  })
+
+  it('syncs product stock from variant quantities in the database', () => {
+    expect(stockSyncTrigger).toMatch(/CREATE OR REPLACE FUNCTION sync_stock_from_variants/i)
+    expect(stockSyncTrigger).toMatch(/NEW\.stock := v_total_stock/i)
+    expect(stockSyncTrigger).toMatch(/BEFORE UPDATE OF variants/i)
+    expect(stockSyncTrigger).toMatch(/EXECUTE FUNCTION sync_stock_from_variants\(\)/i)
+    expect(stockSyncTrigger).toMatch(/UPDATE products\s+SET stock =/i)
   })
 })

@@ -20,6 +20,7 @@ const TABS: { label: string; value: OrderStatus | 'all' }[] = [
   { label: 'Expédiées',  value: 'shipped' },
   { label: 'Livrées',    value: 'delivered' },
   { label: 'Retournées', value: 'returned' },
+  { label: 'Annulées',   value: 'cancelled' },
 ]
 
 type Order = {
@@ -466,7 +467,8 @@ export default function OrdersClient({
     confirmed: '✓ Commande confirmée',
     shipped:   '✓ Commande expédiée',
     delivered: '✓ Commande livrée',
-    returned:  '✓ Commande annulée',
+    returned:  '✓ Commande retournée',
+    cancelled: '✓ Commande annulée',
   }
 
   function handleStatus(orderId: string, status: OrderStatus) {
@@ -504,14 +506,14 @@ export default function OrdersClient({
   }
 
   function handleCancel(orderId: string) {
-    applyOptimisticStatus(orderId, 'returned', 'pending')
+    applyOptimisticStatus(orderId, 'cancelled', 'pending')
     setUpdatingId(orderId)
     startTransition(async () => {
       try {
         await cancelPendingOrder(orderId)
         showToast('✓ Commande annulée')
       } catch {
-        applyOptimisticStatus(orderId, 'pending', 'returned')
+        applyOptimisticStatus(orderId, 'pending', 'cancelled')
         showToast('Erreur. Veuillez réessayer.')
       } finally {
         setUpdatingId(null)

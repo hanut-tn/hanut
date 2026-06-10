@@ -467,25 +467,28 @@ export default function ProductDetailClient({
 
             {/* Sync badge */}
             {hasVariants && currentVariants.reduce((s, v) => s + v.qty, 0) !== currentStock && (
-              <div className="flex items-center justify-between rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
-                <p className="text-xs text-amber-700 font-medium flex items-center gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                  Stock désynchronisé avec les variantes
-                </p>
-                <button
-                  onClick={() => {
-                    startTransition(async () => {
-                      const result = await syncProductStock(product.id)
-                      if (result.newStock !== undefined) setCurrentStock(result.newStock)
-                    })
-                  }}
-                  disabled={isPending}
-                  className="text-xs text-amber-800 hover:text-amber-900 font-semibold flex items-center gap-1 disabled:opacity-50"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  Synchroniser
-                </button>
-              </div>
+              <>
+                {/* Redondant depuis trg_sync_stock_from_variants — conservé comme sécurité manuelle */}
+                <div className="flex items-center justify-between rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
+                  <p className="text-xs text-amber-700 font-medium flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    Stock désynchronisé avec les variantes
+                  </p>
+                  <button
+                    onClick={() => {
+                      startTransition(async () => {
+                        const result = await syncProductStock(product.id)
+                        if (result.newStock !== undefined) setCurrentStock(result.newStock)
+                      })
+                    }}
+                    disabled={isPending}
+                    className="text-xs text-amber-800 hover:text-amber-900 font-semibold flex items-center gap-1 disabled:opacity-50"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Synchroniser
+                  </button>
+                </div>
+              </>
             )}
 
             {/* Réapprovisionnements planifiés */}

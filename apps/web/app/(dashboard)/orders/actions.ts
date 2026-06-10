@@ -149,7 +149,7 @@ export async function cancelPendingOrder(id: string) {
     actionType: 'order_status_changed',
     entityType: 'order',
     entityId: id,
-    description: `a annulé une commande en attente (statut → Retournée)`,
+    description: `a annulé une commande en attente (statut → Annulée)`,
   })
 
   revalidatePath('/orders')
@@ -175,7 +175,7 @@ export async function deleteOrder(id: string): Promise<OrderMutationResult> {
 
   if (!order) return { error: 'Commande introuvable' }
 
-  if (order.status === 'delivered' || order.status === 'returned') {
+  if (order.status === 'delivered' || order.status === 'returned' || order.status === 'cancelled') {
     return { error: 'CANNOT_DELETE' }
   }
 

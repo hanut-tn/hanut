@@ -37,10 +37,10 @@ type CarrierConfig = {
   bg: string
 }
 
-// Seuls ces statuts sont déplaçables en corbeille — shipped, delivered et returned sont protégés
+// Seuls ces statuts sont déplaçables en corbeille — shipped, delivered, returned et cancelled sont protégés
 export const DELETABLE_STATUSES: OrderStatus[] = ['pending', 'new', 'confirmed']
 
-export const ORDER_STATUSES = ['pending', 'new', 'confirmed', 'shipped', 'delivered', 'returned'] as const satisfies readonly OrderStatus[]
+export const ORDER_STATUSES = ['pending', 'new', 'confirmed', 'shipped', 'delivered', 'returned', 'cancelled'] as const satisfies readonly OrderStatus[]
 
 export const ORDER_STATUS_CONFIG: Record<OrderStatus, OrderStatusConfig> = {
   pending:   { label: 'En attente', bg: 'bg-amber-50',  text: 'text-amber-700',  border: 'border-amber-200',  dot: 'bg-amber-500'  },
@@ -49,6 +49,7 @@ export const ORDER_STATUS_CONFIG: Record<OrderStatus, OrderStatusConfig> = {
   shipped:   { label: 'Expédiée',   bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
   delivered: { label: 'Livrée',     bg: 'bg-green-50',  text: 'text-green-700',  border: 'border-green-200',  dot: 'bg-green-500'  },
   returned:  { label: 'Retournée',  bg: 'bg-red-50',    text: 'text-red-700',    border: 'border-red-200',    dot: 'bg-red-500'    },
+  cancelled: { label: 'Annulée',    bg: 'bg-gray-50',   text: 'text-gray-600',   border: 'border-gray-200',   dot: 'bg-gray-400'   },
 }
 
 const FALLBACK_ORDER_STATUS_CONFIG: OrderStatusConfig = {

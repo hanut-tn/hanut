@@ -3,7 +3,16 @@ import { getUserContext } from '@/lib/get-context'
 import { createServerClient } from '@/lib/supabase/server'
 import type { OrderStatus } from '@hanut/types'
 
-const VALID_STATUSES: (OrderStatus | 'all')[] = ['all', 'pending', 'new', 'confirmed', 'shipped', 'delivered', 'returned']
+const VALID_STATUSES: (OrderStatus | 'all')[] = [
+  'all',
+  'pending',
+  'new',
+  'confirmed',
+  'shipped',
+  'delivered',
+  'returned',
+  'cancelled',
+]
 
 export async function GET(req: NextRequest) {
   const context = await getUserContext()

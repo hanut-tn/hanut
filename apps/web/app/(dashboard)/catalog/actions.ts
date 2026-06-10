@@ -264,8 +264,11 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
     }
   }
 
-  const productUpdate: Record<string, unknown> = { stock: newStock }
-  if (updatedVariants) productUpdate.variants = updatedVariants
+  // Le trigger trg_sync_stock_from_variants recalcule automatiquement products.stock
+  // depuis la somme des variantes — pas besoin de le définir explicitement ici.
+  const productUpdate: Record<string, unknown> = updatedVariants
+    ? { variants: updatedVariants }
+    : { stock: newStock }
 
   if (input.type === 'restock' && input.unitCost != null && input.unitCost > 0 && input.costUpdateMode !== 'keep') {
     const mode = input.costUpdateMode ?? 'new'
