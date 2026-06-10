@@ -38,7 +38,28 @@ export async function createDelivery(input: CreateDeliveryInput): Promise<{ erro
 
   const supabase = await createServerClient()
 
-  // Vérification applicative : filet de sécurité en plus de la contrainte DB UNIQUE partielle.
+  // Vérification 1 : la commande existe, appartient au vendeur et est dans un statut valide.
+  // Statuts autorisés : 'confirmed' (flux normal via modal commandes) et 'shipped'
+  // (flux manuel : commande déjà expédiée sans livraison associée).
+  const { data: order } = await supabase
+    .from('orders')
+    .select('id, status')
+    .eq('id', input.order_id)
+    .eq('seller_id', context.sellerId)
+    .is('deleted_at', null)
+    .maybeSingle()
+
+  if (!order) {
+    return { error: 'Commande introuvable.' }
+  }
+
+  if (order.status !== 'confirmed' && order.status !== 'shipped') {
+    return {
+      error: 'Impossible de créer une livraison — la commande doit être en statut "Confirmée" ou "Expédiée".',
+    }
+  }
+
+  // Vérification 2 : absence de livraison active (cohérence avec contrainte UNIQUE DB partielle).
   const { data: existing } = await supabase
     .from('deliveries')
     .select('id')
