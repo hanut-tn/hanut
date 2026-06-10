@@ -28,16 +28,19 @@ export default async function TeamPage() {
 
   // Fetch last_sign_in_at for each active member
   const members = (membersRes.data ?? []) as TeamMember[]
-  const userIds = members.map(m => m.user_id).filter(Boolean) as string[]
+  const userIds = [...new Set(members.map(m => m.user_id).filter(Boolean) as string[])]
 
   const lastSignInMap: Record<string, string | null> = {}
   if (userIds.length > 0) {
-    const { data: authUsers } = await serviceClient.auth.admin.listUsers({ perPage: 1000 })
-    if (authUsers?.users) {
-      for (const u of authUsers.users) {
-        if (userIds.includes(u.id)) {
-          lastSignInMap[u.id] = u.last_sign_in_at ?? null
-        }
+    // getUserById en parallèle : O(max latency) pour N membres,
+    // contre O(tous les users de l'app) avec listUsers({ perPage: 1000 }).
+    const userResults = await Promise.allSettled(
+      userIds.map(id => serviceClient.auth.admin.getUserById(id))
+    )
+    for (const result of userResults) {
+      if (result.status === 'fulfilled' && !result.value.error && result.value.data.user) {
+        const u = result.value.data.user
+        lastSignInMap[u.id] = u.last_sign_in_at ?? null
       }
     }
   }
