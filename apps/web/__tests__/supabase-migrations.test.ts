@@ -27,6 +27,8 @@ describe('Supabase migrations', () => {
   const consolidatedOrderRpc = migration('20260610_consolidate_order_rpc.sql')
   const cancelledStatus = migration('20260611_add_cancelled_status.sql')
   const stockSyncTrigger = migration('20260611_add_stock_sync_trigger.sql')
+  const storageRls = migration('20260611_fix_storage_rls.sql')
+  const operatorDeleteRls = migration('20260611_fix_operator_delete_rls.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -233,5 +235,26 @@ describe('Supabase migrations', () => {
     expect(stockSyncTrigger).toMatch(/BEFORE UPDATE OF variants/i)
     expect(stockSyncTrigger).toMatch(/EXECUTE FUNCTION sync_stock_from_variants\(\)/i)
     expect(stockSyncTrigger).toMatch(/UPDATE products\s+SET stock =/i)
+  })
+
+  it('scopes product image storage writes to the effective seller folder', () => {
+    expect(storageRls).toMatch(/DROP POLICY IF EXISTS "product_images_authenticated_upload"/i)
+    expect(storageRls).toMatch(/DROP POLICY IF EXISTS "product_images_seller_upload"/i)
+    expect(storageRls).toMatch(/CREATE POLICY "product_images_seller_upload"/i)
+    expect(storageRls).toMatch(/CREATE POLICY "product_images_seller_update"/i)
+    expect(storageRls).toMatch(/CREATE POLICY "product_images_seller_delete"/i)
+    expect(storageRls).toMatch(/\(storage\.foldername\(name\)\)\[1\] = public\.get_seller_id\(\)::text/i)
+    expect(storageRls).toMatch(/CREATE POLICY "product_images_public_read"/i)
+  })
+
+  it('restricts destructive deletes to the seller owner at the database layer', () => {
+    expect(operatorDeleteRls).toMatch(/CREATE OR REPLACE FUNCTION is_seller_admin/i)
+    expect(operatorDeleteRls).toMatch(/WHERE id = auth\.uid\(\) AND id = p_seller_id/i)
+    expect(operatorDeleteRls).toMatch(/DROP POLICY IF EXISTS "orders_team_delete" ON orders/i)
+    expect(operatorDeleteRls).toMatch(/DROP POLICY IF EXISTS "customers_team_delete" ON customers/i)
+    expect(operatorDeleteRls).toMatch(/DROP POLICY IF EXISTS "products_team_delete" ON products/i)
+    expect(operatorDeleteRls).toMatch(/DROP POLICY IF EXISTS "deliveries_team_delete" ON deliveries/i)
+    expect(operatorDeleteRls).toMatch(/AND is_seller_admin\(seller_id\)/i)
+    expect(operatorDeleteRls).not.toMatch(/FOR DELETE[\s\S]+can_write_seller/i)
   })
 })

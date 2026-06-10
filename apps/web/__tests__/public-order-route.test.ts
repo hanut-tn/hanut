@@ -40,6 +40,8 @@ import { POST } from '../app/api/orders/public/route'
 type Seller = {
   id: string
   name: string
+  plan?: string
+  subscription_end?: string | null
 }
 
 type SingleQuery = {
@@ -197,6 +199,24 @@ describe('POST /api/orders/public', () => {
 
     expect(response.status).toBe(404)
     await expect(response.json()).resolves.toEqual({ error: 'Boutique introuvable' })
+    expect(rpc).not.toHaveBeenCalled()
+    expect(cacheMock.revalidateTag).not.toHaveBeenCalled()
+  })
+
+  it('rejects orders for shops with an expired demo or subscription', async () => {
+    const expiredDate = new Date(Date.now() - 1000).toISOString()
+    const { rpc } = mockSupabase(
+      { id: 'seller-1', name: 'Demo Shop', plan: 'pro', subscription_end: expiredDate },
+      { data: 'order-1', error: null }
+    )
+
+    const response = await POST(jsonRequest(validBody()))
+
+    expect(response.status).toBe(403)
+    await expect(response.json()).resolves.toEqual({
+      error: 'Cette boutique n\'accepte plus de commandes pour le moment.',
+      code: 'SHOP_INACTIVE',
+    })
     expect(rpc).not.toHaveBeenCalled()
     expect(cacheMock.revalidateTag).not.toHaveBeenCalled()
   })

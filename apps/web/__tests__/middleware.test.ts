@@ -48,6 +48,9 @@ describe('middleware auth boundaries', () => {
       '/contact',
       '/api/contact',
       '/api/waitlist',
+      '/api/auth/register',
+      '/api/auth/callback',
+      '/api/auth/callback?code=abc123',
     ]
 
     for (const path of publicPaths) {

@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/service'
-import { getClientIp } from '@/lib/rate-limit'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { verifyTurnstileToken } from '@/lib/turnstile'
 
 const RegisterSchema = z.object({
@@ -34,6 +34,14 @@ function publicAuthClient() {
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req.headers)
+
+  const { allowed } = await checkRateLimit(ip, 'auth_register', 5, 60).catch(() => ({ allowed: true }))
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Trop de tentatives. Réessayez dans une minute.' },
+      { status: 429 }
+    )
+  }
 
   const rawBody = await req.json().catch(() => null)
   const parsed = RegisterSchema.safeParse(rawBody)

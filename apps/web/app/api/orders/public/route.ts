@@ -96,12 +96,22 @@ async function handlePublicOrder(req: Request) {
   // Vérification slug → vendeur
   const { data: seller } = await supabase
     .from('sellers')
-    .select('id, name, plan')
+    .select('id, name, plan, subscription_end')
     .eq('slug', slug)
     .single()
 
   if (!seller) {
     return NextResponse.json({ error: 'Boutique introuvable' }, { status: 404 })
+  }
+
+  if (seller.subscription_end && new Date(seller.subscription_end) < new Date()) {
+    return NextResponse.json(
+      {
+        error: 'Cette boutique n\'accepte plus de commandes pour le moment.',
+        code: 'SHOP_INACTIVE',
+      },
+      { status: 403 }
+    )
   }
 
   // Vérification limite mensuelle Starter

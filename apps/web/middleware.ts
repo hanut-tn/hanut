@@ -19,6 +19,8 @@ const PUBLIC_PATHS = [
   '/order',
   '/track',
   '/billing',
+  '/api/auth/register',
+  '/api/auth/callback',
   '/api/contact',
   '/api/waitlist',
   '/api/orders/public',
