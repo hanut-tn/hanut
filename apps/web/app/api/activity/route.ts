@@ -11,12 +11,12 @@ export async function GET(request: NextRequest) {
   if (context.plan !== 'business') return NextResponse.json({ error: 'Disponible dans le plan Business' }, { status: 403 })
 
   const { searchParams } = new URL(request.url)
-  const limit = Math.min(parseInt(searchParams.get('limit') ?? '20'), 100)
-  const offset = parseInt(searchParams.get('offset') ?? '0')
+  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') ?? '20') || 20))
+  const offset = Math.max(0, parseInt(searchParams.get('offset') ?? '0') || 0)
   const userId = searchParams.get('userId')
   const actionType = searchParams.get('actionType')
   const actionTypes = searchParams.get('actionTypes')?.split(',').map(v => v.trim()).filter(Boolean) ?? []
-  const days = parseInt(searchParams.get('days') ?? '0')
+  const days = Math.min(365, Math.max(1, parseInt(searchParams.get('days') ?? '30') || 30))
 
   const serviceClient = createServiceClient()
   let query = serviceClient

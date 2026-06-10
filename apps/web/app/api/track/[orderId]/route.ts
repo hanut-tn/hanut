@@ -57,7 +57,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     : null
 
   return NextResponse.json({
-    order_id: order.id.slice(0, 8).toUpperCase(),
+    order_id: orderId.slice(0, 8).toUpperCase(),
     status: order.status,
     created_at: order.created_at,
     product_name: product?.name ?? '',

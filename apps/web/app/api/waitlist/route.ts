@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import type { RateLimitResult } from '@/lib/rate-limit'
+
+const WaitlistSchema = z.object({
+  email: z.string().email(),
+})
 
 export async function POST(req: Request) {
   const ip = getClientIp(req.headers)
@@ -23,21 +28,25 @@ export async function POST(req: Request) {
     )
   }
 
+  let rawBody: unknown
   try {
-    const { email } = await req.json()
-    if (!email || typeof email !== 'string' || !email.includes('@')) {
-      return NextResponse.json({ error: 'Email invalide' }, { status: 400 })
-    }
-    const supabase = createServiceClient()
-    const { error } = await supabase.from('waitlist').insert({ email: email.trim().toLowerCase() })
-    if (error) {
-      if (error.code === '23505') {
-        return NextResponse.json({ message: 'Déjà inscrit !' })
-      }
-      return NextResponse.json({ error: "Erreur lors de l'inscription" }, { status: 500 })
-    }
-    return NextResponse.json({ message: 'Inscrit avec succès !' })
+    rawBody = await req.json()
   } catch {
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    return NextResponse.json({ error: 'Corps de requête invalide' }, { status: 400 })
   }
+
+  const parsed = WaitlistSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Email invalide' }, { status: 400 })
+  }
+
+  const supabase = createServiceClient()
+  const { error } = await supabase.from('waitlist').insert({ email: parsed.data.email.trim().toLowerCase() })
+  if (error) {
+    if (error.code === '23505') {
+      return NextResponse.json({ message: 'Déjà inscrit !' })
+    }
+    return NextResponse.json({ error: "Erreur lors de l'inscription" }, { status: 500 })
+  }
+  return NextResponse.json({ message: 'Inscrit avec succès !' })
 }

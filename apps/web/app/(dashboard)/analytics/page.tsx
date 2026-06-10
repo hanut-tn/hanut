@@ -48,8 +48,15 @@ export default async function AnalyticsPage() {
   // Starter : 30j → 3 000 commandes max. Pro/Business : 180j → 10 000 max.
   const limit = context.plan === 'starter' ? 3000 : 10000
 
+  const now = new Date().toISOString()
+  const summaryPeriod = 30 as const
+  const summaryCutoff = new Date()
+  summaryCutoff.setDate(summaryCutoff.getDate() - summaryPeriod)
+  summaryCutoff.setHours(0, 0, 0, 0)
+  const summaryIso = summaryCutoff.toISOString()
+
   // Cast as unknown to prevent TypeScript from hanging on Supabase join generics.
-  const [{ data: ordersRaw }, { data: deliveriesRaw }] = (await Promise.all([
+  const [{ data: ordersRaw }, { data: deliveriesRaw }, { data: summaryRaw }] = (await Promise.all([
     supabase
       .from('orders')
       .select('id, cod_amount, quantity, unit_cost, status, created_at, product:products(id, name), customer:customers(id, name, city)')
@@ -66,10 +73,28 @@ export default async function AnalyticsPage() {
       .gte('created_at', iso)
       .order('created_at', { ascending: false })
       .limit(limit),
-  ])) as unknown as [{ data: AnalyticsOrderRow[] | null }, { data: AnalyticsDeliveryRow[] | null }]
+    // Agrégats financiers côté serveur : exacts même si orders est tronqué.
+    // Ils couvrent la période par défaut affichée dans le client (30 jours).
+    supabase.rpc('get_analytics_summary', {
+      p_seller_id: context.sellerId,
+      p_start: summaryIso,
+      p_end: now,
+    }),
+  ])) as unknown as [{ data: AnalyticsOrderRow[] | null }, { data: AnalyticsDeliveryRow[] | null }, { data: unknown }]
 
   // Détection de troncature : si on a atteint la limite, les données sont incomplètes.
   const truncated = (ordersRaw?.length ?? 0) >= limit
+
+  const summary = summaryRaw && typeof summaryRaw === 'object' ? summaryRaw as {
+    total_revenue: number
+    total_fees: number
+    total_cost: number
+    order_count: number
+    shipped_count: number
+    delivered_count: number
+    returned_count: number
+    cancelled_count: number
+  } : null
 
   // Filtre applicatif de sécurité (en complément du RLS sur deliveries).
   const sellerDeliveries = (deliveriesRaw ?? []).filter(d => {
@@ -84,6 +109,8 @@ export default async function AnalyticsPage() {
       plan={context.plan}
       truncated={truncated}
       orderLimit={limit}
+      summary={summary}
+      summaryPeriod={summaryPeriod}
     />
   )
 }

@@ -30,6 +30,8 @@ describe('Supabase migrations', () => {
   const storageRls = migration('20260611_fix_storage_rls.sql')
   const operatorDeleteRls = migration('20260611_fix_operator_delete_rls.sql')
   const invitationToken = migration('20260611_add_invitation_token.sql')
+  const analyticsRpc = migration('20260612_add_analytics_rpc.sql')
+  const stockTriggerFix = migration('20260612_fix_stock_trigger.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -265,5 +267,23 @@ describe('Supabase migrations', () => {
     expect(invitationToken).toMatch(/ON team_members\(invitation_token\)/i)
     expect(invitationToken).toMatch(/WHERE invitation_token IS NOT NULL/i)
     expect(invitationToken).not.toMatch(/invitation_token TEXT UNIQUE/i)
+  })
+
+  it('protects the analytics summary RPC from cross-seller reads and duplicate fees', () => {
+    expect(analyticsRpc).toMatch(/CREATE OR REPLACE FUNCTION get_analytics_summary/i)
+    expect(analyticsRpc).toMatch(/SECURITY DEFINER/i)
+    expect(analyticsRpc).toMatch(/current_setting\('request\.jwt\.claim\.role', true\)/i)
+    expect(analyticsRpc).toMatch(/get_team_role\(p_seller_id\) IN \('admin', 'operator', 'readonly'\)/i)
+    expect(analyticsRpc).toMatch(/RAISE EXCEPTION 'Non autorise'/i)
+    expect(analyticsRpc).toMatch(/delivery_fees AS/i)
+    expect(analyticsRpc).toMatch(/GROUP BY d\.order_id/i)
+    expect(analyticsRpc).toMatch(/COUNT\(\*\) FILTER \(WHERE o\.status = 'shipped'\)/i)
+    expect(analyticsRpc).not.toMatch(/LEFT JOIN deliveries d ON d\.order_id = o\.id AND d\.cod_collected = true/i)
+  })
+
+  it('treats negative variant quantities as zero when syncing product stock', () => {
+    expect(stockTriggerFix).toMatch(/CREATE OR REPLACE FUNCTION sync_stock_from_variants/i)
+    expect(stockTriggerFix).toMatch(/GREATEST\(0, \(v->>'qty'\)::INTEGER\)/i)
+    expect(stockTriggerFix).toMatch(/NEW\.stock := v_total_stock/i)
   })
 })

@@ -128,6 +128,31 @@ describe('middleware auth boundaries', () => {
     expect(response.headers.get('location')).toBe('https://hanut.test/billing')
   })
 
+  it('allows /api/auth/callback without session', async () => {
+    const response = await middleware(requestFor('/api/auth/callback'))
+    expect(response.headers.get('location')).toBeNull()
+    expect(supabaseSsrMock.createServerClient).not.toHaveBeenCalled()
+  })
+
+  it('allows /api/auth/register without session', async () => {
+    const response = await middleware(requestFor('/api/auth/register'))
+    expect(response.headers.get('location')).toBeNull()
+    expect(supabaseSsrMock.createServerClient).not.toHaveBeenCalled()
+  })
+
+  it('redirects /dashboard to /login without session', async () => {
+    supabaseSsrMock.createServerClient.mockReturnValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
+      },
+    })
+
+    const response = await middleware(requestFor('/dashboard'))
+
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe('https://hanut.test/login')
+  })
+
   it('redirects team members to /billing when the owner seller demo has expired', async () => {
     const expiredDate = new Date(Date.now() - 1000).toISOString()
     const ownerQuery = chainMaybeSingle(null)

@@ -29,12 +29,25 @@ type Delivery = {
   order?: DeliveryOrder | DeliveryOrder[] | null
 }
 
+type AnalyticsSummary = {
+  total_revenue: number
+  total_fees: number
+  total_cost: number
+  order_count: number
+  shipped_count: number
+  delivered_count: number
+  returned_count: number
+  cancelled_count: number
+}
+
 type Props = {
   orders: Order[]
   deliveries: Delivery[]
   plan: 'starter' | 'pro' | 'business'
   truncated?: boolean
   orderLimit?: number
+  summary?: AnalyticsSummary | null
+  summaryPeriod?: Period
 }
 
 type Period = 7 | 30 | 90
@@ -57,7 +70,7 @@ function getDeliveryOrder(d: Delivery): DeliveryOrder | null {
   return o ?? null
 }
 
-export default function AnalyticsClient({ orders, deliveries, plan, truncated, orderLimit }: Props) {
+export default function AnalyticsClient({ orders, deliveries, plan, truncated, orderLimit, summary, summaryPeriod }: Props) {
   const [period, setPeriod] = useState<Period>(30)
   const [chartMode, setChartMode] = useState<ChartMode>('orders')
   const [selectedCarrier, setSelectedCarrier] = useState<string | null>(null)
@@ -161,24 +174,30 @@ export default function AnalyticsClient({ orders, deliveries, plan, truncated, o
     [deliveries, prevCutoff, cutoff]
   )
 
-  const delivered    = filtered.filter(o => o.status === 'delivered')
-  const revenue      = delivered.reduce((s, o) => s + o.cod_amount, 0)
-  const totalOrders  = filtered.length
-  const closedOrders = filtered.filter(o => ['shipped', 'delivered', 'returned'].includes(o.status))
-  const deliveryRate = closedOrders.length > 0
-    ? Math.round(delivered.length / closedOrders.length * 100) : 0
-  const returnRate   = closedOrders.length > 0
-    ? Math.round(filtered.filter(o => o.status === 'returned').length / closedOrders.length * 100) : 0
+  const delivered = filtered.filter(o => o.status === 'delivered')
+  const serverSummary = !customMode && summaryPeriod === period ? summary : null
+  const totalOrders = serverSummary?.order_count ?? filtered.length
+  const shippedCount = serverSummary?.shipped_count ?? filtered.filter(o => o.status === 'shipped').length
+  const deliveredCount = serverSummary?.delivered_count ?? delivered.length
+  const returnedCount = serverSummary?.returned_count ?? filtered.filter(o => o.status === 'returned').length
+  const closedCount = shippedCount + deliveredCount + returnedCount
+  const deliveryRate = closedCount > 0
+    ? Math.round(deliveredCount / closedCount * 100) : 0
+  const returnRate   = closedCount > 0
+    ? Math.round(returnedCount / closedCount * 100) : 0
   const codPending   = filtered
     .filter(o => ['pending', 'new', 'confirmed', 'shipped'].includes(o.status))
     .reduce((s, o) => s + o.cod_amount, 0)
 
-  const totalFees = filteredDeliveries.reduce((s, d) => {
+  // KPIs financiers : utiliser les agrégats serveur uniquement pour la période
+  // exacte qu'ils couvrent. Les autres filtres restent calculés côté client.
+  const revenue   = serverSummary?.total_revenue ?? delivered.reduce((s, o) => s + o.cod_amount, 0)
+  const totalFees = serverSummary?.total_fees    ?? filteredDeliveries.reduce((s, d) => {
     const o = getDeliveryOrder(d)
     return o?.status === 'delivered' ? s + (d.fee ?? 0) : s
   }, 0)
-  const totalCost = delivered.reduce((s, o) => s + (o.unit_cost ?? 0) * (o.quantity ?? 1), 0)
-  const profit = revenue - totalFees - totalCost
+  const totalCost = serverSummary?.total_cost    ?? delivered.reduce((s, o) => s + (o.unit_cost ?? 0) * (o.quantity ?? 1), 0)
+  const profit    = revenue - totalFees - totalCost
 
   // true si au moins une commande livrée n'a pas de coût d'achat renseigné
   const hasMissingCost = delivered.some(o => (o.unit_cost ?? 0) === 0)
@@ -331,7 +350,7 @@ export default function AnalyticsClient({ orders, deliveries, plan, truncated, o
   const maxDailyRevenue = Math.max(...dailyData.map(d => d.revenue), 1)
 
   const KPI_ITEMS = [
-    { label: 'CA encaissé',    value: `${revenue.toFixed(0)} DT`,    sub: `${delivered.length} livrée${delivered.length !== 1 ? 's' : ''}`, icon: Banknote,    valueClass: 'text-[#16A34A]', trend: trendDir(revenue, prevRevenue),      trendText: trendLabel(revenue, prevRevenue) },
+    { label: 'CA encaissé',    value: `${revenue.toFixed(0)} DT`,    sub: `${deliveredCount} livrée${deliveredCount !== 1 ? 's' : ''}`, icon: Banknote,    valueClass: 'text-[#16A34A]', trend: trendDir(revenue, prevRevenue),      trendText: trendLabel(revenue, prevRevenue) },
     { label: 'Profit net',     value: `${profit.toFixed(0)} DT`,     sub: totalCost > 0 ? `Frais: ${totalFees.toFixed(0)} · Coût: ${totalCost.toFixed(0)} DT` : `Frais: ${totalFees.toFixed(0)} DT`, icon: TrendingUp,  valueClass: 'text-[#0B5E46]', trend: trendDir(profit, prevProfit),        trendText: trendLabel(profit, prevProfit) },
     { label: 'Commandes',      value: String(totalOrders),            sub: 'sur la période',                                                 icon: ShoppingBag, valueClass: 'text-[#1C1917]', trend: trendDir(totalOrders, prevTotalOrders), trendText: trendLabel(totalOrders, prevTotalOrders) },
     { label: 'Taux livraison', value: `${deliveryRate}%`,             sub: `Retours: ${returnRate}%`,                                        icon: Truck,       valueClass: 'text-[#1C1917]', trend: trendDir(deliveryRate, prevDeliveryRate), trendText: trendLabel(deliveryRate, prevDeliveryRate) },

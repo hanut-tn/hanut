@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import type { RateLimitResult } from '@/lib/rate-limit'
+
+const ContactSchema = z.object({
+  name:    z.string().min(2).max(100),
+  email:   z.string().email(),
+  message: z.string().min(10).max(2000),
+})
 
 export async function POST(req: Request) {
   const ip = getClientIp(req.headers)
@@ -23,25 +30,28 @@ export async function POST(req: Request) {
     )
   }
 
+  let rawBody: unknown
   try {
-    const { name, email, message } = await req.json()
-    if (!name || !email || !message) {
-      return NextResponse.json({ error: 'Tous les champs sont requis' }, { status: 400 })
-    }
-    if (!email.includes('@')) {
-      return NextResponse.json({ error: 'Email invalide' }, { status: 400 })
-    }
-    const supabase = createServiceClient()
-    const { error } = await supabase.from('contact_messages').insert({
-      name: String(name).trim(),
-      email: String(email).trim().toLowerCase(),
-      message: String(message).trim(),
-    })
-    if (error) {
-      return NextResponse.json({ error: "Erreur lors de l'envoi" }, { status: 500 })
-    }
-    return NextResponse.json({ message: 'Message envoyé !' })
+    rawBody = await req.json()
   } catch {
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    return NextResponse.json({ error: 'Corps de requête invalide' }, { status: 400 })
   }
+
+  const parsed = ContactSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? 'Données invalides'
+    return NextResponse.json({ error: msg }, { status: 400 })
+  }
+
+  const { name, email, message } = parsed.data
+  const supabase = createServiceClient()
+  const { error } = await supabase.from('contact_messages').insert({
+    name: name.trim(),
+    email: email.trim().toLowerCase(),
+    message: message.trim(),
+  })
+  if (error) {
+    return NextResponse.json({ error: "Erreur lors de l'envoi" }, { status: 500 })
+  }
+  return NextResponse.json({ message: 'Message envoyé !' })
 }
