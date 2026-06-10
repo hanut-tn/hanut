@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
+import { checkOrigin } from '@/lib/csrf'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -77,6 +78,7 @@ export async function GET(req: Request, { params }: Params) {
 }
 
 export async function PUT(req: Request, { params }: Params) {
+  if (!checkOrigin(req)) return NextResponse.json({ error: 'Origine non autorisée.' }, { status: 403 })
   const { id } = await params
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })

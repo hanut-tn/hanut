@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { z } from 'zod'
+import { checkOrigin } from '@/lib/csrf'
 import { createServerClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
@@ -38,6 +39,7 @@ export async function GET() {
 
 // POST /api/team — inviter un nouveau membre
 export async function POST(request: NextRequest) {
+  if (!checkOrigin(request)) return NextResponse.json({ error: 'Origine non autorisée.' }, { status: 403 })
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   if (context.role !== 'admin') return NextResponse.json({ error: 'Réservé aux admins' }, { status: 403 })

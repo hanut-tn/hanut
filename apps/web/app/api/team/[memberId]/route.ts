@@ -3,12 +3,14 @@ import type { NextRequest } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
+import { checkOrigin } from '@/lib/csrf'
 
 // PATCH /api/team/[memberId] — changer le rôle
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ memberId: string }> }
 ) {
+  if (!checkOrigin(request)) return NextResponse.json({ error: 'Origine non autorisée.' }, { status: 403 })
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   if (context.role !== 'admin') return NextResponse.json({ error: 'Réservé aux admins' }, { status: 403 })
@@ -66,9 +68,10 @@ export async function PATCH(
 
 // DELETE /api/team/[memberId] — supprimer un membre
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ memberId: string }> }
 ) {
+  if (!checkOrigin(request)) return NextResponse.json({ error: 'Origine non autorisée.' }, { status: 403 })
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   if (context.role !== 'admin') return NextResponse.json({ error: 'Réservé aux admins' }, { status: 403 })

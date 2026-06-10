@@ -48,6 +48,8 @@ vi.mock('@/lib/constants', () => ({
 
 import { createOrder, deleteOrder } from '../app/(dashboard)/orders/actions'
 import type { CreateOrderInput } from '../app/(dashboard)/orders/actions'
+import { deleteProduct } from '../app/(dashboard)/catalog/actions'
+import { deleteCustomer } from '../app/(dashboard)/customers/actions'
 
 function mockContext(role: 'admin' | 'operator' | 'readonly') {
   contextMock.getUserContext.mockResolvedValue({
@@ -119,5 +121,68 @@ describe('role-based permissions', () => {
 
     expect(result.error).toBe('Action réservée aux admins et opérateurs')
     expect(serverMock.createServerClient).not.toHaveBeenCalled()
+  })
+
+  it('operator cannot delete a delivered order', async () => {
+    mockContext('operator')
+
+    const result = await deleteOrder('delivered-order-id')
+
+    expect(result.error).toBe('Seuls les admins peuvent supprimer des commandes')
+    expect(serverMock.createServerClient).not.toHaveBeenCalled()
+  })
+
+  it('operator cannot delete a product', async () => {
+    mockContext('operator')
+
+    const result = await deleteProduct('product-id')
+
+    expect(result.error).toBe('Seuls les admins peuvent supprimer des produits')
+    expect(serverMock.createServerClient).not.toHaveBeenCalled()
+  })
+
+  it('operator cannot delete a customer', async () => {
+    mockContext('operator')
+
+    const result = await deleteCustomer('customer-id')
+
+    expect(result.error).toBe('Seuls les admins peuvent supprimer des clients')
+    expect(serverMock.createServerClient).not.toHaveBeenCalled()
+  })
+
+  it('admin can soft-delete a pending order', async () => {
+    mockContext('admin')
+
+    const orderQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: { status: 'pending', cod_amount: 50, product_id: 'p-1', quantity: 1, customer: { name: 'Fatima' } },
+      }),
+    }
+    const sellerQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: { name: 'Boutique' } }),
+    }
+    const rpc = vi.fn().mockResolvedValue({ error: null })
+    serverMock.createServerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'orders') return orderQuery
+        if (table === 'sellers') return sellerQuery
+        throw new Error(`Unexpected table: ${table}`)
+      }),
+      rpc,
+    })
+
+    const result = await deleteOrder('pending-order-id')
+
+    expect(result.error).toBeUndefined()
+    expect(rpc).toHaveBeenCalledWith('soft_delete_order_with_stock', expect.objectContaining({
+      p_seller_id: 'seller-1',
+      p_order_id: 'pending-order-id',
+    }))
+    expect(serverMock.revalidatePath).toHaveBeenCalledWith('/orders')
   })
 })

@@ -2,6 +2,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { NextRequest, NextResponse } from 'next/server'
+import { checkOrigin } from '@/lib/csrf'
 
 type OnboardingAction = 'link_copied' | 'first_order' | 'complete' | 'dismiss'
 
@@ -10,6 +11,7 @@ function isOnboardingAction(action: unknown): action is OnboardingAction {
 }
 
 export async function PATCH(req: NextRequest) {
+  if (!checkOrigin(req)) return NextResponse.json({ error: 'Origine non autorisée.' }, { status: 403 })
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!context.isSeller) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

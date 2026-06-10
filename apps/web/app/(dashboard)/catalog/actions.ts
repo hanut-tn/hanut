@@ -81,7 +81,7 @@ export async function upsertProduct(input: ProductInput): Promise<{ error?: stri
 export async function deleteProduct(id: string): Promise<{ error?: string }> {
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
-  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  if (context.role !== 'admin') return { error: 'Seuls les admins peuvent supprimer des produits' }
 
   const supabase = await createServerClient()
 
