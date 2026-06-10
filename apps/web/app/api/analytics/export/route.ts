@@ -1,7 +1,14 @@
 import { getUserContext } from '@/lib/get-context'
 import { createServerClient } from '@/lib/supabase/server'
 
-type OrderRow = { id: string; cod_amount: number; status: string; created_at: string }
+type OrderRow = {
+  id: string
+  cod_amount: number
+  quantity: number
+  unit_cost: number
+  status: string
+  created_at: string
+}
 type DeliveryRow = {
   fee: number | null
   order: { id: string; status: string; seller_id: string; deleted_at: string | null } | null
@@ -63,7 +70,7 @@ export async function GET(req: Request) {
   const [{ data: ordersRaw }, { data: deliveriesRaw }] = (await Promise.all([
     supabase
       .from('orders')
-      .select('id, cod_amount, status, created_at')
+      .select('id, cod_amount, quantity, unit_cost, status, created_at')
       .eq('seller_id', context.sellerId)
       .is('deleted_at', null)
       .gte('created_at', cutoff.toISOString())
@@ -96,18 +103,19 @@ export async function GET(req: Request) {
     const shipped = dayOrders.filter(o => ['shipped', 'delivered', 'returned'].includes(o.status))
     const revenue = delivered.reduce((s, o) => s + o.cod_amount, 0)
     const fees = delivered.reduce((s, o) => s + (feeByOrderId[o.id] ?? 0), 0)
-    const profit = revenue - fees
+    const costs = delivered.reduce((s, o) => s + (o.unit_cost ?? 0) * (o.quantity ?? 1), 0)
+    const profit = revenue - fees - costs
     const deliveryRate = shipped.length > 0 ? Math.round((delivered.length / shipped.length) * 100) : 0
     const codPending = dayOrders
       .filter(o => ['pending', 'new', 'confirmed', 'shipped'].includes(o.status))
       .reduce((s, o) => s + o.cod_amount, 0)
 
-    rows.push(`${dateStr},${dayOrders.length},${revenue.toFixed(2)},${profit.toFixed(2)},${deliveryRate}%,${codPending.toFixed(2)}`)
+    rows.push(`${dateStr},${dayOrders.length},${revenue.toFixed(2)},${costs.toFixed(2)},${fees.toFixed(2)},${profit.toFixed(2)},${deliveryRate}%,${codPending.toFixed(2)}`)
     cursor.setDate(cursor.getDate() + 1)
   }
 
   const BOM = '﻿'
-  const header = 'Date,Commandes,CA livré,Profit net,Taux livraison,COD en attente'
+  const header = 'Date,Commandes,CA livré,Coût produits,Frais livraison,Profit net,Taux livraison,COD en attente'
   const csv = BOM + [header, ...rows].join('\n')
 
   return new Response(csv, {

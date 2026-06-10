@@ -23,6 +23,7 @@ describe('Supabase migrations', () => {
   const stockVariantConsistency = migration('20260609_stock_variant_consistency.sql')
   const uniqueDeliveryOrder = migration('20260610_add_unique_delivery_order.sql')
   const orderCountTrigger = migration('20260610_fix_order_count_trigger.sql')
+  const orderUnitCost = migration('20260610_add_order_unit_cost.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -192,5 +193,16 @@ describe('Supabase migrations', () => {
     expect(orderCountTrigger).toMatch(/TG_OP = 'DELETE' AND OLD\.customer_id IS NOT NULL AND OLD\.deleted_at IS NULL/i)
     expect(orderCountTrigger).toMatch(/AFTER INSERT OR UPDATE OF deleted_at OR DELETE/i)
     expect(orderCountTrigger).toMatch(/EXECUTE FUNCTION update_customer_order_count\(\)/i)
+  })
+
+  it('snapshots product unit cost on orders for profit analytics', () => {
+    expect(orderUnitCost).toMatch(/ADD COLUMN IF NOT EXISTS unit_cost NUMERIC/i)
+    expect(orderUnitCost).toMatch(/SET unit_cost = COALESCE\(p\.cost, 0\)/i)
+    expect(orderUnitCost).toMatch(/AND o\.unit_cost IS NULL/i)
+    expect(orderUnitCost).toMatch(/ALTER COLUMN unit_cost SET DEFAULT 0/i)
+    expect(orderUnitCost).toMatch(/ALTER COLUMN unit_cost SET NOT NULL/i)
+    expect(orderUnitCost).toMatch(/orders_unit_cost_nonnegative CHECK \(unit_cost >= 0\)/i)
+    expect(orderUnitCost).toMatch(/quantity, cod_amount, unit_cost, notes, status, tracking_token/i)
+    expect(orderUnitCost).toMatch(/p_quantity, v_cod_amount, COALESCE\(v_product\.cost, 0\), v_notes, p_status/i)
   })
 })

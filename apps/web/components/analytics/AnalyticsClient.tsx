@@ -11,6 +11,8 @@ type Customer = { id: string; name: string; city?: string | null }
 type Order = {
   id: string
   cod_amount: number
+  quantity: number
+  unit_cost: number
   status: string
   created_at: string
   product?: Product | Product[] | null
@@ -31,6 +33,8 @@ type Props = {
   orders: Order[]
   deliveries: Delivery[]
   plan: 'starter' | 'pro' | 'business'
+  truncated?: boolean
+  orderLimit?: number
 }
 
 type Period = 7 | 30 | 90
@@ -53,7 +57,7 @@ function getDeliveryOrder(d: Delivery): DeliveryOrder | null {
   return o ?? null
 }
 
-export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
+export default function AnalyticsClient({ orders, deliveries, plan, truncated, orderLimit }: Props) {
   const [period, setPeriod] = useState<Period>(30)
   const [chartMode, setChartMode] = useState<ChartMode>('orders')
   const [selectedCarrier, setSelectedCarrier] = useState<string | null>(null)
@@ -173,7 +177,11 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
     const o = getDeliveryOrder(d)
     return o?.status === 'delivered' ? s + (d.fee ?? 0) : s
   }, 0)
-  const profit = revenue - totalFees
+  const totalCost = delivered.reduce((s, o) => s + (o.unit_cost ?? 0) * (o.quantity ?? 1), 0)
+  const profit = revenue - totalFees - totalCost
+
+  // true si au moins une commande livrée n'a pas de coût d'achat renseigné
+  const hasMissingCost = delivered.some(o => (o.unit_cost ?? 0) === 0)
 
   // Previous period metrics
   const prevDelivered    = prevFiltered.filter(o => o.status === 'delivered')
@@ -186,7 +194,8 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
     const o = getDeliveryOrder(d)
     return o?.status === 'delivered' ? s + (d.fee ?? 0) : s
   }, 0)
-  const prevProfit = prevRevenue - prevTotalFees
+  const prevTotalCost = prevDelivered.reduce((s, o) => s + (o.unit_cost ?? 0) * (o.quantity ?? 1), 0)
+  const prevProfit = prevRevenue - prevTotalFees - prevTotalCost
 
   function trendDir(current: number, prev: number): 'up' | 'down' | 'stable' {
     if (prev === 0) return current > 0 ? 'up' : 'stable'
@@ -323,7 +332,7 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
 
   const KPI_ITEMS = [
     { label: 'CA encaissé',    value: `${revenue.toFixed(0)} DT`,    sub: `${delivered.length} livrée${delivered.length !== 1 ? 's' : ''}`, icon: Banknote,    valueClass: 'text-[#16A34A]', trend: trendDir(revenue, prevRevenue),      trendText: trendLabel(revenue, prevRevenue) },
-    { label: 'Profit net',     value: `${profit.toFixed(0)} DT`,     sub: `Frais: ${totalFees.toFixed(0)} DT`,                              icon: TrendingUp,  valueClass: 'text-[#0B5E46]', trend: trendDir(profit, prevProfit),        trendText: trendLabel(profit, prevProfit) },
+    { label: 'Profit net',     value: `${profit.toFixed(0)} DT`,     sub: totalCost > 0 ? `Frais: ${totalFees.toFixed(0)} · Coût: ${totalCost.toFixed(0)} DT` : `Frais: ${totalFees.toFixed(0)} DT`, icon: TrendingUp,  valueClass: 'text-[#0B5E46]', trend: trendDir(profit, prevProfit),        trendText: trendLabel(profit, prevProfit) },
     { label: 'Commandes',      value: String(totalOrders),            sub: 'sur la période',                                                 icon: ShoppingBag, valueClass: 'text-[#1C1917]', trend: trendDir(totalOrders, prevTotalOrders), trendText: trendLabel(totalOrders, prevTotalOrders) },
     { label: 'Taux livraison', value: `${deliveryRate}%`,             sub: `Retours: ${returnRate}%`,                                        icon: Truck,       valueClass: 'text-[#1C1917]', trend: trendDir(deliveryRate, prevDeliveryRate), trendText: trendLabel(deliveryRate, prevDeliveryRate) },
     { label: 'COD en attente', value: `${codPending.toFixed(0)} DT`,  sub: 'non encore livré',                                              icon: Clock,       valueClass: 'text-amber-600', trend: 'stable' as const, trendText: '' },
@@ -455,6 +464,28 @@ export default function AnalyticsClient({ orders, deliveries, plan }: Props) {
           )}
         </div>
       </div>
+
+      {/* Banner : données tronquées */}
+      {truncated && (
+        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 16 16"><path d="M8 1.333A6.667 6.667 0 1 0 8 14.667 6.667 6.667 0 0 0 8 1.333Zm0 3.334a.667.667 0 1 1 0 1.333.667.667 0 0 1 0-1.333Zm.667 6H7.333V7.333h1.334V10.667Z" fill="currentColor"/></svg>
+          <span>
+            Analytics basées sur vos <strong>{orderLimit?.toLocaleString('fr-TN')}</strong> commandes les plus récentes.{' '}
+            Pour une analyse complète, exportez vos données en CSV.
+          </span>
+        </div>
+      )}
+
+      {/* Banner : coûts d'achat manquants */}
+      {hasMissingCost && (
+        <div className="flex items-start gap-2.5 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+          <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 16 16"><path d="M8 1.333A6.667 6.667 0 1 0 8 14.667 6.667 6.667 0 0 0 8 1.333Zm0 3.334a.667.667 0 1 1 0 1.333.667.667 0 0 1 0-1.333Zm.667 6H7.333V7.333h1.334V10.667Z" fill="currentColor"/></svg>
+          <span>
+            Certains produits livrés n&apos;ont pas de coût d&apos;achat renseigné — le profit peut être surestimé.{' '}
+            <Link href="/catalog" className="font-medium underline underline-offset-2">Renseigner les coûts →</Link>
+          </span>
+        </div>
+      )}
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
