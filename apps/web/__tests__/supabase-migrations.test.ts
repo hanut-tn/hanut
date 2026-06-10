@@ -29,6 +29,7 @@ describe('Supabase migrations', () => {
   const stockSyncTrigger = migration('20260611_add_stock_sync_trigger.sql')
   const storageRls = migration('20260611_fix_storage_rls.sql')
   const operatorDeleteRls = migration('20260611_fix_operator_delete_rls.sql')
+  const invitationToken = migration('20260611_add_invitation_token.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -256,5 +257,13 @@ describe('Supabase migrations', () => {
     expect(operatorDeleteRls).toMatch(/DROP POLICY IF EXISTS "deliveries_team_delete" ON deliveries/i)
     expect(operatorDeleteRls).toMatch(/AND is_seller_admin\(seller_id\)/i)
     expect(operatorDeleteRls).not.toMatch(/FOR DELETE[\s\S]+can_write_seller/i)
+  })
+
+  it('adds unique invitation tokens without making null tokens collide', () => {
+    expect(invitationToken).toMatch(/ADD COLUMN IF NOT EXISTS invitation_token TEXT DEFAULT NULL/i)
+    expect(invitationToken).toMatch(/CREATE UNIQUE INDEX IF NOT EXISTS idx_team_members_invitation_token/i)
+    expect(invitationToken).toMatch(/ON team_members\(invitation_token\)/i)
+    expect(invitationToken).toMatch(/WHERE invitation_token IS NOT NULL/i)
+    expect(invitationToken).not.toMatch(/invitation_token TEXT UNIQUE/i)
   })
 })

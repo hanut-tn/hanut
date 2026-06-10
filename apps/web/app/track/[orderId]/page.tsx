@@ -57,7 +57,7 @@ export default async function TrackPage({ params }: Params) {
     : null
 
   const initialData: TrackData = {
-    full_id:        order.id,
+    order_id:       order.id.slice(0, 8).toUpperCase(),
     status:         order.status,
     created_at:     order.created_at,
     product_name:   product?.name  ?? '',

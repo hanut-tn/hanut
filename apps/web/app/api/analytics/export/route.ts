@@ -11,7 +11,7 @@ type OrderRow = {
 }
 type DeliveryRow = {
   fee: number | null
-  order: { id: string; status: string; seller_id: string; deleted_at: string | null } | null
+  order_id: string
 }
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -66,30 +66,27 @@ export async function GET(req: Request) {
 
   const supabase = await createServerClient()
 
-  // Cast as unknown to prevent TypeScript from hanging on Supabase join generics
-  const [{ data: ordersRaw }, { data: deliveriesRaw }] = (await Promise.all([
-    supabase
-      .from('orders')
-      .select('id, cod_amount, quantity, unit_cost, status, created_at')
-      .eq('seller_id', context.sellerId)
-      .is('deleted_at', null)
-      .gte('created_at', cutoff.toISOString())
-      .lte('created_at', cutoffEnd.toISOString())
-      .order('created_at', { ascending: true }),
-    supabase
-      .from('deliveries')
-      .select('fee, order:orders(id, status, seller_id, deleted_at)')
-      .order('created_at', { ascending: false }),
-  ])) as unknown as [{ data: OrderRow[] | null }, { data: DeliveryRow[] | null }]
+  const { data: ordersRaw } = (await supabase
+    .from('orders')
+    .select('id, cod_amount, quantity, unit_cost, status, created_at')
+    .eq('seller_id', context.sellerId)
+    .is('deleted_at', null)
+    .gte('created_at', cutoff.toISOString())
+    .lte('created_at', cutoffEnd.toISOString())
+    .order('created_at', { ascending: true })) as unknown as { data: OrderRow[] | null }
 
   const orderList = ordersRaw ?? []
 
-  // Map delivery fees by order id for profit calculation
+  // Map delivery fees by order id for profit calculation — bornées par les commandes de la période
   const feeByOrderId: Record<string, number> = {}
-  for (const d of deliveriesRaw ?? []) {
-    const o = Array.isArray(d.order) ? d.order[0] : d.order
-    if (o?.seller_id === context.sellerId && o?.deleted_at === null) {
-      feeByOrderId[o.id] = (feeByOrderId[o.id] ?? 0) + (d.fee ?? 0)
+  if (orderList.length > 0) {
+    const { data: deliveriesRaw } = (await supabase
+      .from('deliveries')
+      .select('fee, order_id')
+      .in('order_id', orderList.map(o => o.id))) as unknown as { data: DeliveryRow[] | null }
+
+    for (const d of deliveriesRaw ?? []) {
+      feeByOrderId[d.order_id] = (feeByOrderId[d.order_id] ?? 0) + (d.fee ?? 0)
     }
   }
 

@@ -12,11 +12,33 @@ export async function PUT(req: Request, { params }: Params) {
     return NextResponse.json({ error: 'Action réservée aux admins et opérateurs' }, { status: 403 })
   }
 
+  const body = await req.json().catch(() => null)
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return NextResponse.json({ error: 'Corps de requête invalide' }, { status: 400 })
+  }
+
   const supabase = await createServerClient()
 
-  const body = await req.json()
   const update: Record<string, unknown> = {}
-  if ('customer_id' in body) update.customer_id = body.customer_id
+
+  if ('customer_id' in body) {
+    if (typeof body.customer_id !== 'string' || body.customer_id.trim() === '') {
+      return NextResponse.json({ error: 'Client invalide.' }, { status: 400 })
+    }
+
+    const { data: customer } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('id', body.customer_id.trim())
+      .eq('seller_id', context.sellerId)
+      .maybeSingle()
+
+    if (!customer) {
+      return NextResponse.json({ error: 'Client introuvable.' }, { status: 404 })
+    }
+
+    update.customer_id = body.customer_id.trim()
+  }
 
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: 'Aucune donnée à mettre à jour' }, { status: 400 })

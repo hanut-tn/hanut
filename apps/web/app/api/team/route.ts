@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { z } from 'zod'
@@ -100,6 +101,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 400 })
   }
 
+  const invitationToken = randomBytes(32).toString('hex')
+
   const { data: member, error: insertError } = await serviceClient
     .from('team_members')
     .insert({
@@ -108,6 +111,7 @@ export async function POST(request: NextRequest) {
       role,
       status: 'pending',
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      invitation_token: invitationToken,
     })
     .select('id')
     .single()
@@ -121,7 +125,7 @@ export async function POST(request: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://hanut.tn'
   const { error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(email, {
     redirectTo: `${appUrl}/api/auth/callback`,
-    data: { invited_by: user?.email, team_role: role },
+    data: { invited_by: user?.email, team_role: role, invitation_token: invitationToken },
   })
 
   if (inviteError) {

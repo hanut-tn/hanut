@@ -42,7 +42,7 @@ function formatDate(iso: string) {
 }
 
 export type TrackData = {
-  full_id: string
+  order_id: string
   status: string
   created_at: string
   product_name: string
@@ -81,7 +81,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
       if (!res.ok) return
       const json = await res.json()
       setData({
-        full_id:       json.full_id,
+        order_id:      json.order_id,
         status:        json.status,
         created_at:    json.created_at,
         product_name:  json.product_name,
@@ -165,7 +165,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
         {/* Carte commande */}
         <div className="bg-white border border-[#E7E5E4] rounded-2xl p-5 shadow-sm space-y-4">
           <div>
-            <p className="text-xs text-[#78716C] font-mono">#{data.full_id.slice(0, 8).toUpperCase()}</p>
+            <p className="text-xs text-[#78716C] font-mono">#{data.order_id}</p>
             <p className="text-xs text-[#78716C] mt-0.5">
               Passée le {new Date(data.created_at).toLocaleDateString('fr-TN', { day: '2-digit', month: 'long', year: 'numeric' })}
             </p>

@@ -20,21 +20,38 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const serviceClient = createServiceClient()
 
-  // Active une invitation en attente si l'utilisateur vient d'accepter un lien d'invitation
-  const { data: pending } = await serviceClient
-    .from('team_members')
-    .select('id, expires_at')
-    .eq('email', user.email!)
-    .eq('status', 'pending')
-    .is('user_id', null)
-    .maybeSingle()
+  // Active une invitation en attente si l'utilisateur vient d'accepter un lien d'invitation.
+  // Lookup par token unique d'abord (évite les conflits multi-boutiques),
+  // fallback sur email pour les anciennes invitations sans token.
+  const invitationToken = user.user_metadata?.invitation_token as string | undefined
+  let pending: { id: string; expires_at: string | null } | null = null
+
+  if (invitationToken) {
+    const { data } = await serviceClient
+      .from('team_members')
+      .select('id, expires_at')
+      .eq('invitation_token', invitationToken)
+      .eq('status', 'pending')
+      .is('user_id', null)
+      .maybeSingle()
+    pending = data
+  } else {
+    const { data } = await serviceClient
+      .from('team_members')
+      .select('id, expires_at')
+      .eq('email', user.email!)
+      .eq('status', 'pending')
+      .is('user_id', null)
+      .maybeSingle()
+    pending = data
+  }
 
   if (pending) {
     const isExpired = pending.expires_at && new Date(pending.expires_at) < new Date()
     if (!isExpired) {
       await serviceClient
         .from('team_members')
-        .update({ user_id: user.id, status: 'active', joined_at: new Date().toISOString() })
+        .update({ user_id: user.id, status: 'active', joined_at: new Date().toISOString(), invitation_token: null })
         .eq('id', pending.id)
     }
   }

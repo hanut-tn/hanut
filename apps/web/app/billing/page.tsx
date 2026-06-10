@@ -16,25 +16,27 @@ function whatsappUrl(plan: 'starter' | 'pro') {
 }
 
 const STARTER_FEATURES = [
-  'Commandes illimitées',
+  '100 commandes / mois',
   'Catalogue produits illimité',
   'Lien public /order/[slug]',
   'Suivi commande client /track',
-  'Gestion stock avec historique',
-  'Fiche client + CRM basique',
+  'Gestion stock en temps réel',
+  'Fiche client',
   'Gestion livraisons COD (5 transporteurs)',
   'Analytics 30 jours',
   'Support WhatsApp',
 ]
 
 const PRO_FEATURES = [
+  'Commandes illimitées',
   'Tout le Starter inclus',
-  'Analytics avancés 180 jours',
-  'Comparaison période précédente',
-  'Export CSV commandes et analytics',
-  'Gestion équipe (3 membres)',
+  'Historique mouvements stock',
+  'Tags et notes clients (CRM)',
+  'Analytics 180 jours + comparaison',
   'Top produits, clients et villes',
-  'Support prioritaire',
+  'Export CSV commandes et analytics',
+  'Équipe jusqu\'à 3 membres',
+  'Support WhatsApp prioritaire',
 ]
 
 function CheckIcon() {
