@@ -1,3 +1,7 @@
+-- DÉPRÉCIÉ : cette version de create_order_with_stock (12 params, sans SECURITY DEFINER)
+-- est remplacée par 20260610_consolidate_order_rpc.sql
+-- Ne pas modifier ce fichier.
+
 -- Create orders and decrement stock atomically.
 
 DO $$

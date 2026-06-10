@@ -1,3 +1,7 @@
+-- DÉPRÉCIÉ : cette version de create_order_with_stock (12 params, sans SECURITY DEFINER)
+-- est remplacée par 20260610_consolidate_order_rpc.sql
+-- Ne pas modifier ce fichier.
+
 -- Fix: remplace gen_random_bytes (pgcrypto, schema extensions) par replace(gen_random_uuid()::text, '-', '')
 -- qui est natif PostgreSQL et respecte SET search_path = public
 

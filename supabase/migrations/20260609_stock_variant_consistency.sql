@@ -1,3 +1,7 @@
+-- DÉPRÉCIÉ : la section create_order_with_stock de ce fichier (13 params, sans unit_cost)
+-- est remplacée par 20260610_consolidate_order_rpc.sql
+-- Ne pas modifier ce fichier.
+
 -- Stock variantes : rendre products.stock cohérent avec SUM(variants[].qty)
 -- et centraliser les mouvements critiques liés aux commandes.
 

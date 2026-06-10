@@ -1,3 +1,7 @@
+-- DÉPRÉCIÉ : la section create_order_with_stock de ce fichier (12 params, sans SECURITY DEFINER)
+-- est remplacée par 20260610_consolidate_order_rpc.sql
+-- Ne pas modifier ce fichier.
+
 -- Add tracking_token to orders for public tracking URLs (replaces UUID exposure)
 ALTER TABLE orders
 ADD COLUMN IF NOT EXISTS tracking_token TEXT UNIQUE DEFAULT NULL;

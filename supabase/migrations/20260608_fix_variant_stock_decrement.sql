@@ -1,3 +1,7 @@
+-- DÉPRÉCIÉ : cette version de create_order_with_stock (12 params, sans SECURITY DEFINER)
+-- est remplacée par 20260610_consolidate_order_rpc.sql
+-- Ne pas modifier ce fichier.
+
 -- Fix create_order_with_stock to also decrement variant qty in products.variants JSONB.
 
 DROP FUNCTION IF EXISTS create_order_with_stock(
