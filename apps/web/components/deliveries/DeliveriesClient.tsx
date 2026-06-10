@@ -34,7 +34,7 @@ type Delivery = {
 type Props = {
   deliveries: Delivery[]
   shippableOrders: OrderInfo[]
-  createDelivery: (input: CreateDeliveryInput) => Promise<void>
+  createDelivery: (input: CreateDeliveryInput) => Promise<{ error?: string }>
   updateDelivery: (id: string, input: UpdateDeliveryInput) => Promise<void>
   deleteDelivery: (id: string) => Promise<{ error?: string }>
 }
@@ -296,12 +296,16 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
     setAddError(null)
     startTransition(async () => {
       try {
-        await createDelivery({
+        const result = await createDelivery({
           order_id: addOrderId,
           carrier: addCarrier,
           tracking_number: addTracking.trim() || undefined,
           fee: addFee === '' ? undefined : addFee,
         })
+        if (result?.error) {
+          setAddError(result.error)
+          return
+        }
         setShowAdd(false)
         setAddOrderId(''); setAddCarrier('intigo'); setAddTracking(''); setAddFee('')
       } catch (err) {

@@ -21,6 +21,8 @@ describe('Supabase migrations', () => {
   const orderSearch = migration('20260603_search_orders_rpc.sql')
   const sellersRls = migration('20260609_fix_sellers_rls.sql')
   const stockVariantConsistency = migration('20260609_stock_variant_consistency.sql')
+  const uniqueDeliveryOrder = migration('20260610_add_unique_delivery_order.sql')
+  const orderCountTrigger = migration('20260610_fix_order_count_trigger.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -171,5 +173,24 @@ describe('Supabase migrations', () => {
     expect(sellersRls).toMatch(/WITH CHECK \(id = auth\.uid\(\)\)/i)
     expect(sellersRls).toMatch(/CREATE POLICY "sellers_update_owner_only"/i)
     expect(sellersRls).not.toMatch(/FOR DELETE/i)
+  })
+
+  it('prevents duplicate active deliveries per order', () => {
+    expect(uniqueDeliveryOrder).toMatch(/row_number\(\) OVER/i)
+    expect(uniqueDeliveryOrder).toMatch(/PARTITION BY order_id/i)
+    expect(uniqueDeliveryOrder).toMatch(/WHERE cod_collected = false/i)
+    expect(uniqueDeliveryOrder).toMatch(/CREATE UNIQUE INDEX idx_unique_active_delivery_per_order/i)
+    expect(uniqueDeliveryOrder).toMatch(/ON deliveries\(order_id\)/i)
+    expect(uniqueDeliveryOrder).toMatch(/WHERE cod_collected = false/i)
+  })
+
+  it('keeps customer order_count in sync with active orders only', () => {
+    expect(orderCountTrigger).toMatch(/CREATE OR REPLACE FUNCTION update_customer_order_count/i)
+    expect(orderCountTrigger).toMatch(/SECURITY DEFINER/i)
+    expect(orderCountTrigger).toMatch(/SET search_path = public/i)
+    expect(orderCountTrigger).toMatch(/TG_OP = 'INSERT' AND NEW\.customer_id IS NOT NULL AND NEW\.deleted_at IS NULL/i)
+    expect(orderCountTrigger).toMatch(/TG_OP = 'DELETE' AND OLD\.customer_id IS NOT NULL AND OLD\.deleted_at IS NULL/i)
+    expect(orderCountTrigger).toMatch(/AFTER INSERT OR UPDATE OF deleted_at OR DELETE/i)
+    expect(orderCountTrigger).toMatch(/EXECUTE FUNCTION update_customer_order_count\(\)/i)
   })
 })

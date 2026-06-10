@@ -21,12 +21,34 @@ export type UpdateDeliveryInput = {
   cod_reversed?: boolean
 }
 
-export async function createDelivery(input: CreateDeliveryInput) {
+function deliveryErrorMessage(message: string) {
+  if (
+    message.includes('idx_unique_active_delivery_per_order') ||
+    message.toLowerCase().includes('duplicate key')
+  ) {
+    return 'Une livraison active existe déjà pour cette commande.'
+  }
+  return message
+}
+
+export async function createDelivery(input: CreateDeliveryInput): Promise<{ error?: string }> {
   const context = await getUserContext()
-  if (!context) throw new Error('Non autorisé')
-  if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
 
   const supabase = await createServerClient()
+
+  // Vérification applicative : filet de sécurité en plus de la contrainte DB UNIQUE partielle.
+  const { data: existing } = await supabase
+    .from('deliveries')
+    .select('id')
+    .eq('order_id', input.order_id)
+    .eq('cod_collected', false)
+    .maybeSingle()
+
+  if (existing) {
+    return { error: 'Une livraison active existe déjà pour cette commande.' }
+  }
 
   const { error } = await supabase.from('deliveries').insert({
     order_id: input.order_id,
@@ -34,7 +56,7 @@ export async function createDelivery(input: CreateDeliveryInput) {
     tracking_number: input.tracking_number || null,
     fee: input.fee ?? null,
   })
-  if (error) throw new Error(error.message)
+  if (error) return { error: deliveryErrorMessage(error.message) }
 
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
@@ -51,6 +73,7 @@ export async function createDelivery(input: CreateDeliveryInput) {
   revalidatePath('/deliveries')
   revalidatePath('/dashboard')
   revalidateTag('dashboard')
+  return {}
 }
 
 export async function updateDelivery(id: string, input: UpdateDeliveryInput) {
@@ -139,7 +162,7 @@ export async function createDeliveryFromOrder(
     if (shipError.message.includes('order_not_shippable')) {
       return { error: 'Cette commande ne peut pas être expédiée.' }
     }
-    return { error: shipError.message }
+    return { error: deliveryErrorMessage(shipError.message) }
   }
 
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
