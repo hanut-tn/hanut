@@ -32,6 +32,7 @@ describe('Supabase migrations', () => {
   const invitationToken = migration('20260611_add_invitation_token.sql')
   const analyticsRpc = migration('20260612_add_analytics_rpc.sql')
   const stockTriggerFix = migration('20260612_fix_stock_trigger.sql')
+  const allowDeleteCancelledOrder = migration('20260612_allow_delete_cancelled_order.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -285,5 +286,22 @@ describe('Supabase migrations', () => {
     expect(stockTriggerFix).toMatch(/CREATE OR REPLACE FUNCTION sync_stock_from_variants/i)
     expect(stockTriggerFix).toMatch(/GREATEST\(0, \(v->>'qty'\)::INTEGER\)/i)
     expect(stockTriggerFix).toMatch(/NEW\.stock := v_total_stock/i)
+  })
+
+  it('allows trashing resolved orders without restoring stock again', () => {
+    expect(allowDeleteCancelledOrder).toMatch(/CREATE OR REPLACE FUNCTION soft_delete_order_with_stock/i)
+    expect(allowDeleteCancelledOrder).toMatch(/current_setting\('request\.jwt\.claim\.role', true\)/i)
+    expect(allowDeleteCancelledOrder).toMatch(/get_team_role\(p_seller_id\) = 'admin'/i)
+    expect(allowDeleteCancelledOrder).toMatch(/RAISE EXCEPTION 'Non autorise'/i)
+    expect(allowDeleteCancelledOrder).toMatch(
+      /v_order\.status NOT IN \('pending', 'new', 'confirmed', 'delivered', 'returned', 'cancelled'\)/i
+    )
+    expect(allowDeleteCancelledOrder).toMatch(/v_seller_plan = 'starter'/i)
+    expect(allowDeleteCancelledOrder).toMatch(/v_order\.status IN \('delivered', 'returned', 'cancelled'\)/i)
+    expect(allowDeleteCancelledOrder).toMatch(/RAISE EXCEPTION 'CANNOT_DELETE'/i)
+    expect(allowDeleteCancelledOrder).toMatch(/IF v_order\.status IN \('pending', 'new', 'confirmed'\) THEN/i)
+    expect(allowDeleteCancelledOrder).toMatch(/PERFORM adjust_order_stock/i)
+    expect(allowDeleteCancelledOrder).not.toMatch(/'shipped'/i)
+    expect(allowDeleteCancelledOrder).toMatch(/GRANT EXECUTE ON FUNCTION soft_delete_order_with_stock\(UUID, UUID, UUID\) TO authenticated, service_role/i)
   })
 })

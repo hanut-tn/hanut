@@ -176,10 +176,14 @@ export async function deleteOrder(id: string): Promise<OrderMutationResult> {
   if (!order) return { error: 'Commande introuvable' }
 
   if (order.status === 'delivered' || order.status === 'returned' || order.status === 'cancelled') {
-    return { error: 'CANNOT_DELETE' }
-  }
-
-  if (!DELETABLE_STATUSES.includes(order.status as OrderStatus)) {
+    // Starter : bloquer pour éviter de libérer du quota mensuel via suppression.
+    // Pro/Business : pas de limite → autoriser le nettoyage des commandes résolues.
+    if (context.plan === 'starter') {
+      return { error: 'CANNOT_DELETE' }
+    }
+  } else if (order.status === 'shipped') {
+    return { error: 'Une commande expédiée ne peut pas être supprimée. Attendez la livraison ou le retour.' }
+  } else if (!DELETABLE_STATUSES.includes(order.status as OrderStatus)) {
     return { error: 'Une commande expédiée ne peut pas être supprimée. Attendez la livraison ou le retour.' }
   }
 

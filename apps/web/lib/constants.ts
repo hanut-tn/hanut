@@ -37,7 +37,8 @@ type CarrierConfig = {
   bg: string
 }
 
-// Seuls ces statuts sont déplaçables en corbeille — shipped, delivered, returned et cancelled sont protégés
+// Statuts actifs dont la suppression restitue le stock.
+// Les commandes résolues (delivered/returned/cancelled) sont gérées séparément selon le plan.
 export const DELETABLE_STATUSES: OrderStatus[] = ['pending', 'new', 'confirmed']
 
 export const ORDER_STATUSES = ['pending', 'new', 'confirmed', 'shipped', 'delivered', 'returned', 'cancelled'] as const satisfies readonly OrderStatus[]

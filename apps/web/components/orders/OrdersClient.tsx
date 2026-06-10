@@ -51,9 +51,11 @@ type TrashOrder = {
   product: OrderProduct | OrderProduct[] | null
 }
 
+type Plan = 'starter' | 'pro' | 'business'
+
 type Props = {
   role: UserRole
-  plan: 'starter' | 'pro' | 'business'
+  plan: Plan
   orders: Order[]
   initialTotal: number
   tabCounts: Record<string, number>
@@ -66,6 +68,14 @@ type Props = {
   permanentlyDeleteOrder: (id: string) => Promise<{ error?: string }>
   createDeliveryFromOrder: (orderId: string, carrier: string, tracking: string | undefined, fee: number) => Promise<{ error?: string }>
   monthlyOrderCount?: number
+}
+
+const RESOLVED_DELETABLE_STATUSES: OrderStatus[] = ['delivered', 'returned', 'cancelled']
+
+function canDeleteOrder(status: OrderStatus, plan: Plan, isAdmin: boolean) {
+  if (!isAdmin) return false
+  if (DELETABLE_STATUSES.includes(status)) return true
+  return plan !== 'starter' && RESOLVED_DELETABLE_STATUSES.includes(status)
 }
 
 function getCustomer(order: Order | TrashOrder) {
@@ -955,7 +965,7 @@ export default function OrdersClient({
                 const isNew = order.status === 'new'
                 const isConfirmed = order.status === 'confirmed'
                 const isShipped = order.status === 'shipped'
-                const canDelete = isAdmin && DELETABLE_STATUSES.includes(order.status)
+                const canDelete = canDeleteOrder(order.status, plan, isAdmin)
                 const ini = customer?.name ? initials(customer.name) : '?'
 
                 const isUpdatingThis = updatingId === order.id
@@ -1088,7 +1098,7 @@ export default function OrdersClient({
                     const isNew = order.status === 'new'
                     const isConfirmed = order.status === 'confirmed'
                     const isShipped = order.status === 'shipped'
-                    const canDelete = isAdmin && DELETABLE_STATUSES.includes(order.status)
+                    const canDelete = canDeleteOrder(order.status, plan, isAdmin)
                     const ini = customer?.name ? initials(customer.name) : '?'
 
                     return (

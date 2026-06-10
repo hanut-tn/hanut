@@ -50,13 +50,13 @@ vi.mock('@/lib/constants', () => ({
 
 import { deleteOrder, restoreOrder, cancelPendingOrder } from '../app/(dashboard)/orders/actions'
 
-function mockAdminContext() {
+function mockAdminContext(plan: 'starter' | 'pro' | 'business' = 'pro') {
   contextMock.getUserContext.mockResolvedValue({
     userId: 'user-1',
     sellerId: 'seller-1',
     role: 'admin',
     isSeller: true,
-    plan: 'pro',
+    plan,
     demoExpiresAt: null,
     demoExpired: false,
     daysLeft: null,
@@ -90,49 +90,65 @@ describe('deleteOrder', () => {
     mockAdminContext()
   })
 
-  it('returns CANNOT_DELETE for a delivered order', async () => {
+  it.each(['delivered', 'returned', 'cancelled'] as const)(
+    'returns CANNOT_DELETE for a %s order on Starter',
+    async status => {
+      mockAdminContext('starter')
+      const rpc = vi.fn()
+      serverMock.createServerClient.mockResolvedValue({
+        from: vi.fn((table: string) => {
+          if (table === 'orders') return makeOrderQuery(status)
+          if (table === 'sellers') return makeSellerQuery()
+          throw new Error(`Unexpected table: ${table}`)
+        }),
+        rpc,
+      })
+
+      const result = await deleteOrder(`order-${status}`)
+
+      expect(result.error).toBe('CANNOT_DELETE')
+      expect(rpc).not.toHaveBeenCalled()
+    }
+  )
+
+  it.each(['delivered', 'returned', 'cancelled'] as const)(
+    'soft-deletes a resolved %s order on Pro',
+    async status => {
+      const rpc = vi.fn().mockResolvedValue({ error: null })
+      serverMock.createServerClient.mockResolvedValue({
+        from: vi.fn((table: string) => {
+          if (table === 'orders') return makeOrderQuery(status)
+          if (table === 'sellers') return makeSellerQuery()
+          throw new Error(`Unexpected table: ${table}`)
+        }),
+        rpc,
+      })
+
+      const result = await deleteOrder(`order-${status}`)
+
+      expect(result.error).toBeUndefined()
+      expect(rpc).toHaveBeenCalledWith('soft_delete_order_with_stock', expect.objectContaining({
+        p_order_id: `order-${status}`,
+        p_seller_id: 'seller-1',
+      }))
+    }
+  )
+
+  it('blocks a shipped order for all plans', async () => {
+    const rpc = vi.fn()
     serverMock.createServerClient.mockResolvedValue({
       from: vi.fn((table: string) => {
-        if (table === 'orders') return makeOrderQuery('delivered')
+        if (table === 'orders') return makeOrderQuery('shipped')
         if (table === 'sellers') return makeSellerQuery()
         throw new Error(`Unexpected table: ${table}`)
       }),
-      rpc: vi.fn(),
+      rpc,
     })
 
-    const result = await deleteOrder('order-delivered')
+    const result = await deleteOrder('order-shipped')
 
-    expect(result.error).toBe('CANNOT_DELETE')
-  })
-
-  it('returns CANNOT_DELETE for a returned order', async () => {
-    serverMock.createServerClient.mockResolvedValue({
-      from: vi.fn((table: string) => {
-        if (table === 'orders') return makeOrderQuery('returned')
-        if (table === 'sellers') return makeSellerQuery()
-        throw new Error(`Unexpected table: ${table}`)
-      }),
-      rpc: vi.fn(),
-    })
-
-    const result = await deleteOrder('order-returned')
-
-    expect(result.error).toBe('CANNOT_DELETE')
-  })
-
-  it('returns CANNOT_DELETE for a cancelled order', async () => {
-    serverMock.createServerClient.mockResolvedValue({
-      from: vi.fn((table: string) => {
-        if (table === 'orders') return makeOrderQuery('cancelled')
-        if (table === 'sellers') return makeSellerQuery()
-        throw new Error(`Unexpected table: ${table}`)
-      }),
-      rpc: vi.fn(),
-    })
-
-    const result = await deleteOrder('order-cancelled')
-
-    expect(result.error).toBe('CANNOT_DELETE')
+    expect(result.error).toBe('Une commande expédiée ne peut pas être supprimée. Attendez la livraison ou le retour.')
+    expect(rpc).not.toHaveBeenCalled()
   })
 
   it('soft-deletes a pending order and revalidates paths', async () => {
