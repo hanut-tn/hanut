@@ -73,19 +73,43 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/login', req.url))
   }
 
-  // Vérification démo expirée — uniquement pour les routes dashboard (pas /billing)
+  // Vérification démo expirée — uniquement pour les routes non-billing.
   if (!pathname.startsWith('/billing')) {
+    // Étape 1 : l'utilisateur est-il owner (sellers.id = user.id) ?
     const { data: seller } = await supabase
       .from('sellers')
       .select('subscription_end')
       .eq('id', user.id)
       .maybeSingle()
 
-    if (seller?.subscription_end) {
-      const expired = new Date(seller.subscription_end) < new Date()
-      if (expired) {
-        return NextResponse.redirect(new URL('/billing', req.url))
+    let subscriptionEnd = seller?.subscription_end ?? null
+
+    // Étape 2 : si pas owner, chercher via team_members pour lire
+    // subscription_end du vendeur principal. Sans ce check, un membre
+    // d'équipe dont le vendeur a une démo expirée peut continuer à accéder
+    // au dashboard indéfiniment.
+    if (!seller) {
+      const { data: membership } = await supabase
+        .from('team_members')
+        .select('seller_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle()
+
+      if (membership?.seller_id) {
+        const { data: ownerSeller } = await supabase
+          .from('sellers')
+          .select('subscription_end')
+          .eq('id', membership.seller_id)
+          .maybeSingle()
+
+        subscriptionEnd = ownerSeller?.subscription_end ?? null
       }
+    }
+
+    // Étape 3 : bloquer si démo expirée.
+    if (subscriptionEnd && new Date(subscriptionEnd) < new Date()) {
+      return NextResponse.redirect(new URL('/billing', req.url))
     }
   }
 

@@ -76,7 +76,13 @@ async function handlePublicOrder(req: Request) {
 
   const turnstileOk = await verifyTurnstileToken(turnstile_token ?? '', ip)
   if (!turnstileOk) {
-    return NextResponse.json({ error: 'Vérification anti-spam échouée. Réessayez.' }, { status: 400 })
+    return NextResponse.json(
+      {
+        error: 'Vérification de sécurité échouée. Veuillez recharger la page et réessayer.',
+        code: 'CAPTCHA_FAILED',
+      },
+      { status: 400 }
+    )
   }
 
   // Normalisation téléphone tunisien : strip non-chiffres + préfixe 216 → 8 chiffres

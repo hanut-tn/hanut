@@ -9,7 +9,19 @@ export async function verifyTurnstileToken(token: string, ip?: string): Promise<
   const secret = process.env.TURNSTILE_SECRET_KEY
 
   if (!secret) {
-    return process.env.NODE_ENV !== 'production'
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(
+        '[Turnstile] TURNSTILE_SECRET_KEY absent — ' +
+        'vérification désactivée en développement.'
+      )
+      return true
+    }
+    console.error(
+      '[Turnstile] TURNSTILE_SECRET_KEY absent en production — ' +
+      'toutes les commandes publiques sont bloquées. ' +
+      'Configurer la variable immédiatement.'
+    )
+    return false
   }
 
   if (!token) return false

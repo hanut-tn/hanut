@@ -17,6 +17,15 @@ function requestFor(pathname: string) {
   return new NextRequest(new URL(pathname, 'https://hanut.test'))
 }
 
+function chainMaybeSingle(data: unknown) {
+  const chain = {
+    select: vi.fn(() => chain),
+    eq: vi.fn(() => chain),
+    maybeSingle: vi.fn().mockResolvedValue({ data }),
+  }
+  return chain
+}
+
 describe('middleware auth boundaries', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -93,13 +102,7 @@ describe('middleware auth boundaries', () => {
       auth: {
         getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1' } } }),
       },
-      from: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            maybeSingle: vi.fn().mockResolvedValue({ data: { subscription_end: null } }),
-          }),
-        }),
-      }),
+      from: vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: null })),
     })
 
     const response = await middleware(requestFor('/dashboard'))
@@ -113,18 +116,43 @@ describe('middleware auth boundaries', () => {
       auth: {
         getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1' } } }),
       },
-      from: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            maybeSingle: vi.fn().mockResolvedValue({ data: { subscription_end: expiredDate } }),
-          }),
-        }),
-      }),
+      from: vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: expiredDate })),
     })
 
     const response = await middleware(requestFor('/dashboard'))
 
     expect(response.status).toBe(307)
     expect(response.headers.get('location')).toBe('https://hanut.test/billing')
+  })
+
+  it('redirects team members to /billing when the owner seller demo has expired', async () => {
+    const expiredDate = new Date(Date.now() - 1000).toISOString()
+    const ownerQuery = chainMaybeSingle(null)
+    const membershipQuery = chainMaybeSingle({ seller_id: 'seller-1' })
+    const sellerQuery = chainMaybeSingle({ subscription_end: expiredDate })
+    let sellerQueryCount = 0
+    const from = vi.fn((table: string) => {
+      if (table === 'sellers') {
+        sellerQueryCount += 1
+        return sellerQueryCount === 1 ? ownerQuery : sellerQuery
+      }
+      if (table === 'team_members') return membershipQuery
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    supabaseSsrMock.createServerClient.mockReturnValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'member-1' } } }),
+      },
+      from,
+    })
+
+    const response = await middleware(requestFor('/dashboard'))
+
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe('https://hanut.test/billing')
+    expect(membershipQuery.eq).toHaveBeenCalledWith('user_id', 'member-1')
+    expect(membershipQuery.eq).toHaveBeenCalledWith('status', 'active')
+    expect(sellerQuery.eq).toHaveBeenCalledWith('id', 'seller-1')
   })
 })

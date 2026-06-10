@@ -1,5 +1,8 @@
 import type { NextConfig } from 'next'
 import { withSentryConfig } from '@sentry/nextjs'
+import { validateEnv } from './lib/env'
+
+validateEnv()
 
 const nextConfig: NextConfig = {
   transpilePackages: ['@hanut/types'],

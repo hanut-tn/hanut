@@ -181,7 +181,10 @@ describe('POST /api/orders/public', () => {
     const response = await POST(jsonRequest(validBody({ turnstile_token: undefined })))
 
     expect(response.status).toBe(400)
-    await expect(response.json()).resolves.toEqual({ error: 'Vérification anti-spam échouée. Réessayez.' })
+    await expect(response.json()).resolves.toEqual({
+      error: 'Vérification de sécurité échouée. Veuillez recharger la page et réessayer.',
+      code: 'CAPTCHA_FAILED',
+    })
     expect(turnstileMock.verifyTurnstileToken).toHaveBeenCalledWith('', '127.0.0.1')
     expect(serviceMock.createServiceClient).not.toHaveBeenCalled()
     expect(cacheMock.revalidateTag).not.toHaveBeenCalled()
