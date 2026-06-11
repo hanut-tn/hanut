@@ -200,7 +200,7 @@ export async function receiveRestockOrder(
 
   revalidatePath(`/catalog/${restock.product_id}`)
   revalidatePath('/dashboard')
-  revalidateTag('dashboard')
+  revalidateTag(`dashboard-${context.sellerId}`)
   return {}
 }
 
@@ -245,6 +245,6 @@ export async function syncProductStock(productId: string): Promise<{ error?: str
 
   revalidatePath(`/catalog/${productId}`)
   revalidatePath('/dashboard')
-  revalidateTag('dashboard')
+  revalidateTag(`dashboard-${context.sellerId}`)
   return { newStock: data as number }
 }

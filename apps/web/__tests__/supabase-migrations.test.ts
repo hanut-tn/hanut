@@ -33,6 +33,9 @@ describe('Supabase migrations', () => {
   const analyticsRpc = migration('20260612_add_analytics_rpc.sql')
   const stockTriggerFix = migration('20260612_fix_stock_trigger.sql')
   const allowDeleteCancelledOrder = migration('20260612_allow_delete_cancelled_order.sql')
+  const customerStatsRpc = migration('20260613_add_customer_stats_rpc.sql')
+  const missingIndexes = migration('20260613_add_missing_indexes.sql')
+  const updateOrderStatusRpc = migration('20260613_add_update_order_status_rpc.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -303,5 +306,38 @@ describe('Supabase migrations', () => {
     expect(allowDeleteCancelledOrder).toMatch(/PERFORM adjust_order_stock/i)
     expect(allowDeleteCancelledOrder).not.toMatch(/'shipped'/i)
     expect(allowDeleteCancelledOrder).toMatch(/GRANT EXECUTE ON FUNCTION soft_delete_order_with_stock\(UUID, UUID, UUID\) TO authenticated, service_role/i)
+  })
+
+  it('protects customer stats aggregation by seller access', () => {
+    expect(customerStatsRpc).toMatch(/CREATE OR REPLACE FUNCTION get_customer_stats/i)
+    expect(customerStatsRpc).toMatch(/SECURITY DEFINER/i)
+    expect(customerStatsRpc).toMatch(/current_setting\('request\.jwt\.claim\.role', true\)/i)
+    expect(customerStatsRpc).toMatch(/get_team_role\(p_seller_id\) IN \('admin', 'operator', 'readonly'\)/i)
+    expect(customerStatsRpc).toMatch(/WHERE o\.customer_id = p_customer_id/i)
+    expect(customerStatsRpc).toMatch(/AND o\.seller_id = p_seller_id/i)
+    expect(customerStatsRpc).toMatch(/AND o\.deleted_at IS NULL/i)
+    expect(customerStatsRpc).toMatch(/REVOKE ALL ON FUNCTION get_customer_stats\(UUID, UUID\) FROM PUBLIC/i)
+  })
+
+  it('adds indexes matching dashboard, analytics, and customer detail queries', () => {
+    expect(missingIndexes).toMatch(/CREATE INDEX IF NOT EXISTS idx_orders_seller_created/i)
+    expect(missingIndexes).toMatch(/ON orders\(seller_id, created_at DESC\)/i)
+    expect(missingIndexes).toMatch(/WHERE deleted_at IS NULL/i)
+    expect(missingIndexes).toMatch(/CREATE INDEX IF NOT EXISTS idx_orders_seller_customer_created/i)
+    expect(missingIndexes).toMatch(/ON orders\(seller_id, customer_id, created_at DESC\)/i)
+    expect(missingIndexes).toMatch(/CREATE INDEX IF NOT EXISTS idx_deliveries_created_at/i)
+  })
+
+  it('updates order status atomically without bypassing seller permissions', () => {
+    expect(updateOrderStatusRpc).toMatch(/CREATE OR REPLACE FUNCTION update_order_status/i)
+    expect(updateOrderStatusRpc).toMatch(/SECURITY DEFINER/i)
+    expect(updateOrderStatusRpc).toMatch(/can_write_seller\(p_seller_id\)/i)
+    expect(updateOrderStatusRpc).toMatch(/RAISE EXCEPTION 'Non autorise'/i)
+    expect(updateOrderStatusRpc).toMatch(/p_new_status NOT IN \('pending', 'new', 'confirmed', 'shipped', 'delivered', 'returned', 'cancelled'\)/i)
+    expect(updateOrderStatusRpc).toMatch(/RAISE EXCEPTION 'INVALID_STATUS'/i)
+    expect(updateOrderStatusRpc).toMatch(/AND deleted_at IS NULL/i)
+    expect(updateOrderStatusRpc).toMatch(/FOR UPDATE/i)
+    expect(updateOrderStatusRpc).toMatch(/VALUES \(p_order_id, p_new_status, v_actor\)/i)
+    expect(updateOrderStatusRpc).toMatch(/REVOKE ALL ON FUNCTION update_order_status\(UUID, UUID, TEXT, UUID\) FROM PUBLIC/i)
   })
 })

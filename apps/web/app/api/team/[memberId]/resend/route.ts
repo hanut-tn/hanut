@@ -1,15 +1,18 @@
+import { randomBytes } from 'crypto'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
+import { checkOrigin } from '@/lib/csrf'
 
 type Params = {
   params: Promise<{ memberId: string }>
 }
 
-export async function POST(_request: NextRequest, { params }: Params) {
+export async function POST(request: NextRequest, { params }: Params) {
+  if (!checkOrigin(request)) return NextResponse.json({ error: 'Origine non autorisée.' }, { status: 403 })
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   if (context.role !== 'admin') return NextResponse.json({ error: 'Réservé aux admins' }, { status: 403 })
@@ -22,7 +25,7 @@ export async function POST(_request: NextRequest, { params }: Params) {
 
   const { data: member } = await serviceClient
     .from('team_members')
-    .select('id, email, role, status')
+    .select('id, email, role, status, invitation_token, invited_at, expires_at')
     .eq('id', memberId)
     .eq('seller_id', context.sellerId)
     .single()
@@ -30,6 +33,26 @@ export async function POST(_request: NextRequest, { params }: Params) {
   if (!member) return NextResponse.json({ error: 'Membre introuvable' }, { status: 404 })
   if (member.status !== 'pending') {
     return NextResponse.json({ error: "Seules les invitations en attente peuvent être renvoyées" }, { status: 400 })
+  }
+
+  const newToken = randomBytes(32).toString('hex')
+  const invitedAt = new Date().toISOString()
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  // Stocker le nouveau token avant d'envoyer l'invitation pour que
+  // le layout puisse l'activer via user_metadata.invitation_token.
+  const { error: updateError } = await serviceClient
+    .from('team_members')
+    .update({
+      invitation_token: newToken,
+      invited_at: invitedAt,
+      expires_at: expiresAt,
+    })
+    .eq('id', member.id)
+    .eq('seller_id', context.sellerId)
+
+  if (updateError) {
+    return NextResponse.json({ error: updateError.message }, { status: 500 })
   }
 
   const supabase = await createServerClient()
@@ -41,26 +64,22 @@ export async function POST(_request: NextRequest, { params }: Params) {
     data: {
       invited_by: user?.email,
       team_role: member.role,
+      invitation_token: newToken,
     },
   })
 
   if (inviteError) {
+    await serviceClient
+      .from('team_members')
+      .update({
+        invitation_token: member.invitation_token ?? null,
+        invited_at: member.invited_at ?? null,
+        expires_at: member.expires_at ?? null,
+      })
+      .eq('id', member.id)
+      .eq('seller_id', context.sellerId)
+
     return NextResponse.json({ error: `Erreur d'invitation : ${inviteError.message}` }, { status: 500 })
-  }
-
-  const invitedAt = new Date().toISOString()
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-
-  const { error: updateError } = await serviceClient
-    .from('team_members')
-    .update({
-      invited_at: invitedAt,
-      expires_at: expiresAt,
-    })
-    .eq('id', member.id)
-
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 })
   }
 
   await logActivity({

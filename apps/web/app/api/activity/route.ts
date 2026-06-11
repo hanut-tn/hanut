@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   if (context.role !== 'admin') return NextResponse.json({ error: 'Réservé aux admins' }, { status: 403 })
-  if (context.plan !== 'business') return NextResponse.json({ error: 'Disponible dans le plan Business' }, { status: 403 })
+  if (context.plan === 'starter') return NextResponse.json({ error: 'Le journal d\'activité est disponible sur les plans Pro et Business.' }, { status: 403 })
 
   const { searchParams } = new URL(request.url)
   const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') ?? '20') || 20))

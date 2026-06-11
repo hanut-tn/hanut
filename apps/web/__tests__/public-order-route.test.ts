@@ -146,7 +146,7 @@ describe('POST /api/orders/public', () => {
         p_changed_by: null,
       })
     )
-    expect(cacheMock.revalidateTag).toHaveBeenCalledWith('dashboard')
+    expect(cacheMock.revalidateTag).toHaveBeenCalledWith('dashboard-seller-1')
   })
 
   it('normalizes formatted Tunisian phone numbers before calling the RPC', async () => {
@@ -162,7 +162,7 @@ describe('POST /api/orders/public', () => {
       'create_order_with_stock',
       expect.objectContaining({ p_customer_phone: '22222222' })
     )
-    expect(cacheMock.revalidateTag).toHaveBeenCalledWith('dashboard')
+    expect(cacheMock.revalidateTag).toHaveBeenCalledWith('dashboard-seller-1')
   })
 
   it('returns 429 when the IP exceeds the public order rate limit', async () => {

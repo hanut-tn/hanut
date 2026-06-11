@@ -93,7 +93,7 @@ export async function createDelivery(input: CreateDeliveryInput): Promise<{ erro
 
   revalidatePath('/deliveries')
   revalidatePath('/dashboard')
-  revalidateTag('dashboard')
+  revalidateTag(`dashboard-${context.sellerId}`)
   return {}
 }
 
@@ -138,7 +138,7 @@ export async function updateDelivery(id: string, input: UpdateDeliveryInput) {
     revalidatePath('/deliveries')
     revalidatePath('/orders')
     revalidatePath('/dashboard')
-    revalidateTag('dashboard')
+    revalidateTag(`dashboard-${context.sellerId}`)
     return
   }
 
@@ -155,7 +155,7 @@ export async function updateDelivery(id: string, input: UpdateDeliveryInput) {
   revalidatePath('/deliveries')
   revalidatePath('/orders')
   revalidatePath('/dashboard')
-  revalidateTag('dashboard')
+  revalidateTag(`dashboard-${context.sellerId}`)
 }
 
 export async function createDeliveryFromOrder(
@@ -201,7 +201,7 @@ export async function createDeliveryFromOrder(
   revalidatePath('/deliveries')
   revalidatePath('/orders')
   revalidatePath('/dashboard')
-  revalidateTag('dashboard')
+  revalidateTag(`dashboard-${context.sellerId}`)
   return {}
 }
 
@@ -251,6 +251,6 @@ export async function deleteDelivery(id: string): Promise<{ error?: string }> {
   revalidatePath('/deliveries')
   revalidatePath('/orders')
   revalidatePath('/dashboard')
-  revalidateTag('dashboard')
+  revalidateTag(`dashboard-${context.sellerId}`)
   return {}
 }

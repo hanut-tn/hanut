@@ -56,7 +56,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     revalidatePath('/dashboard')
-    revalidateTag('dashboard')
+    revalidateTag(`dashboard-${context.sellerId}`)
 
     return NextResponse.json({ success: true })
   }
@@ -71,7 +71,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   revalidatePath('/dashboard')
-  revalidateTag('dashboard')
+  revalidateTag(`dashboard-${context.sellerId}`)
 
   return NextResponse.json({ success: true })
 }

@@ -134,7 +134,7 @@ describe('createOrder dashboard action', () => {
     )
     expect(serverMock.revalidatePath).toHaveBeenCalledWith('/orders')
     expect(serverMock.revalidatePath).toHaveBeenCalledWith('/dashboard')
-    expect(serverMock.revalidateTag).toHaveBeenCalledWith('dashboard')
+    expect(serverMock.revalidateTag).toHaveBeenCalledWith('dashboard-seller-1')
   })
 
   it('surfaces RPC errors and skips revalidation', async () => {

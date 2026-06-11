@@ -144,7 +144,7 @@ describe('PATCH /api/onboarding', () => {
     ])
     expect(updateQuery.eq).toHaveBeenCalledWith('id', 'seller-1')
     expect(cacheMock.revalidatePath).toHaveBeenCalledWith('/dashboard')
-    expect(cacheMock.revalidateTag).toHaveBeenCalledWith('dashboard')
+    expect(cacheMock.revalidateTag).toHaveBeenCalledWith('dashboard-seller-1')
   })
 
   it('marks the first order step as completed while preserving existing steps', async () => {
@@ -168,7 +168,7 @@ describe('PATCH /api/onboarding', () => {
     ])
     expect(updateQuery.eq).toHaveBeenCalledWith('id', 'seller-1')
     expect(cacheMock.revalidatePath).toHaveBeenCalledWith('/dashboard')
-    expect(cacheMock.revalidateTag).toHaveBeenCalledWith('dashboard')
+    expect(cacheMock.revalidateTag).toHaveBeenCalledWith('dashboard-seller-1')
   })
 
   it('surfaces Supabase update errors', async () => {

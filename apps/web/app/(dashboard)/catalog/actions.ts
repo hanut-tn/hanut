@@ -74,7 +74,7 @@ export async function upsertProduct(input: ProductInput): Promise<{ error?: stri
 
   revalidatePath('/catalog')
   if (productId) revalidatePath(`/catalog/${productId}`)
-  revalidateTag('dashboard')
+  revalidateTag(`dashboard-${context.sellerId}`)
   return {}
 }
 
@@ -142,7 +142,7 @@ export async function deleteProduct(id: string): Promise<{ error?: string }> {
   })
 
   revalidatePath('/catalog')
-  revalidateTag('dashboard')
+  revalidateTag(`dashboard-${context.sellerId}`)
   return {}
 }
 
@@ -166,19 +166,25 @@ export async function uploadProductImage(formData: FormData): Promise<{ url?: st
   if (file.size > 5 * 1024 * 1024) return { error: "L'image ne doit pas dépasser 5 Mo" }
 
   const serviceClient = createServiceClient()
-  const path = `${context.sellerId}/${Date.now()}.${ext}`
+  const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').toLowerCase()
+  const filePath = `${context.sellerId}/${Date.now()}_${sanitizedName}`
+
+  // Garantir que le path reste dans le dossier du vendeur même si la logique change.
+  if (!filePath.startsWith(`${context.sellerId}/`)) {
+    return { error: 'Chemin de fichier invalide.' }
+  }
 
   const bytes = await file.arrayBuffer()
 
   const { error: uploadError } = await serviceClient.storage
     .from('product-images')
-    .upload(path, bytes, { contentType: file.type, upsert: false })
+    .upload(filePath, bytes, { contentType: file.type, upsert: false })
 
   if (uploadError) return { error: uploadError.message }
 
   const { data: { publicUrl } } = serviceClient.storage
     .from('product-images')
-    .getPublicUrl(path)
+    .getPublicUrl(filePath)
 
   return { url: publicUrl }
 }
@@ -318,6 +324,6 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
 
   revalidatePath('/catalog')
   revalidatePath(`/catalog/${id}`)
-  revalidateTag('dashboard')
+  revalidateTag(`dashboard-${context.sellerId}`)
   return {}
 }

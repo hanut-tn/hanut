@@ -40,37 +40,38 @@ export async function GET(req: Request, { params }: Params) {
   const total = totalOrders ?? 0
   const hasMore = offset + orderList.length < total
 
-  // Stats require all orders — only compute on first page load
+  // Stats calculées côté serveur via RPC — plus de chargement illimité en mémoire
   if (page === 1) {
-    const { data: allOrders } = await supabase
-      .from('orders')
-      .select('id, cod_amount, status, product:products(id, name)')
-      .eq('customer_id', id)
-      .eq('seller_id', context.sellerId)
-      .is('deleted_at', null)
-
-    const all = allOrders ?? []
-    const delivered = all.filter(o => o.status === 'delivered')
-    const total_spent = delivered.reduce((s: number, o: { cod_amount: number }) => s + o.cod_amount, 0)
-    const order_count = all.length
-    const delivery_rate = order_count > 0 ? Math.round((delivered.length / order_count) * 100) : 0
-
-    const productCounts: Record<string, { name: string; count: number }> = {}
-    for (const o of all) {
-      const p = Array.isArray(o.product) ? o.product[0] : o.product
-      if (p) {
-        if (!productCounts[(p as { id: string }).id]) productCounts[(p as { id: string }).id] = { name: (p as { name: string }).name, count: 0 }
-        productCounts[(p as { id: string }).id].count++
-      }
+    const { data: statsRaw, error: statsError } = await supabase.rpc('get_customer_stats', {
+      p_customer_id: id,
+      p_seller_id: context.sellerId,
+    })
+    if (statsError) {
+      return NextResponse.json({ error: statsError.message }, { status: 500 })
     }
-    const favorite_product = Object.values(productCounts).sort((a, b) => b.count - a.count)[0]?.name ?? null
+
+    const stats = (statsRaw ?? {}) as {
+      total_spent: number
+      order_count: number
+      delivered_count: number
+      returned_count: number
+      cancelled_count: number
+      delivery_rate: number
+      favorite_product: string | null
+      last_order_at: string | null
+    }
 
     return NextResponse.json({
       customer,
       orders: orderList,
       totalOrders: total,
       hasMore,
-      stats: { total_spent, order_count, delivery_rate, favorite_product },
+      stats: {
+        total_spent: stats.total_spent ?? 0,
+        order_count: stats.order_count ?? 0,
+        delivery_rate: stats.delivery_rate ?? 0,
+        favorite_product: stats.favorite_product ?? null,
+      },
     })
   }
 

@@ -197,7 +197,7 @@ async function handlePublicOrder(req: Request) {
     .eq('id', orderId)
     .single()
 
-  revalidateTag('dashboard')
+  revalidateTag(`dashboard-${seller.id}`)
 
   return NextResponse.json({ success: true, order_id: orderId, tracking_token: orderRow?.tracking_token ?? null })
 }

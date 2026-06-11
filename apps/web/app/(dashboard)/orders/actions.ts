@@ -82,7 +82,7 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderMutatio
 
   revalidatePath('/orders')
   revalidatePath('/dashboard')
-  revalidateTag('dashboard')
+  revalidateTag(`dashboard-${context.sellerId}`)
   return {}
 }
 
@@ -93,17 +93,16 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
 
   const supabase = await createServerClient()
 
-  const { error } = await supabase.from('orders')
-    .update({ status })
-    .eq('id', id)
-    .eq('seller_id', context.sellerId)
-  if (error) throw new Error(error.message)
-
-  await supabase.from('order_status_history').insert({
-    order_id: id,
-    status,
-    changed_by: context.userId,
+  const { error } = await supabase.rpc('update_order_status', {
+    p_seller_id: context.sellerId,
+    p_order_id: id,
+    p_new_status: status,
+    p_changed_by: context.userId,
   })
+  if (error) {
+    if (error.message.includes('ORDER_NOT_FOUND')) throw new Error('Commande introuvable.')
+    throw new Error(error.message)
+  }
 
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
@@ -119,7 +118,7 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
 
   revalidatePath('/orders')
   revalidatePath('/dashboard')
-  revalidateTag('dashboard')
+  revalidateTag(`dashboard-${context.sellerId}`)
 }
 
 export async function confirmPendingOrder(id: string) {
@@ -154,7 +153,7 @@ export async function cancelPendingOrder(id: string) {
 
   revalidatePath('/orders')
   revalidatePath('/dashboard')
-  revalidateTag('dashboard')
+  revalidateTag(`dashboard-${context.sellerId}`)
 }
 
 // Soft-delete : déplace la commande en corbeille
@@ -209,7 +208,7 @@ export async function deleteOrder(id: string): Promise<OrderMutationResult> {
 
   revalidatePath('/orders')
   revalidatePath('/dashboard')
-  revalidateTag('dashboard')
+  revalidateTag(`dashboard-${context.sellerId}`)
   return {}
 }
 
@@ -242,7 +241,7 @@ export async function restoreOrder(id: string): Promise<OrderMutationResult> {
 
   revalidatePath('/orders')
   revalidatePath('/dashboard')
-  revalidateTag('dashboard')
+  revalidateTag(`dashboard-${context.sellerId}`)
   return {}
 }
 
@@ -287,6 +286,6 @@ export async function permanentlyDeleteOrder(id: string): Promise<OrderMutationR
 
   revalidatePath('/orders')
   revalidatePath('/dashboard')
-  revalidateTag('dashboard')
+  revalidateTag(`dashboard-${context.sellerId}`)
   return {}
 }
