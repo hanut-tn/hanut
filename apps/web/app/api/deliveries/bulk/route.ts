@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/nextjs'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { checkOrigin } from '@/lib/csrf'
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 
@@ -9,7 +10,8 @@ const BulkDeliverySchema = z.object({
   action: z.enum(['cod_collected', 'cod_reversed']),
 })
 
-export async function PATCH(req: Request) {
+export async function PATCH(req: NextRequest) {
+  if (!checkOrigin(req)) return NextResponse.json({ error: 'Origine non autorisée.' }, { status: 403 })
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   if (context.role === 'readonly') return NextResponse.json({ error: 'Action réservée aux admins et opérateurs' }, { status: 403 })

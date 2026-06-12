@@ -57,7 +57,12 @@ describe('Public order flow', () => {
     const { data: product } = await adminClient.from('products').select('stock').eq('id', productId).single()
     expect(product!.stock).toBe(18)
 
-    // Étape 2 : confirmer
+    // Étape 2 : accepter la commande publique, puis la confirmer.
+    const { error: acceptErr } = await client.rpc('update_order_status', {
+      p_seller_id: sellerId, p_order_id: orderId, p_new_status: 'new', p_changed_by: sellerId,
+    })
+    expect(acceptErr).toBeNull()
+
     const { error: confirmErr } = await client.rpc('update_order_status', {
       p_seller_id: sellerId, p_order_id: orderId, p_new_status: 'confirmed', p_changed_by: sellerId,
     })
@@ -113,6 +118,7 @@ describe('Public order flow', () => {
       .order('changed_at', { ascending: true })
     const statuses = history!.map(h => h.status)
     expect(statuses).toContain('pending')
+    expect(statuses).toContain('new')
     expect(statuses).toContain('confirmed')
     expect(statuses).toContain('shipped')
     expect(statuses).toContain('delivered')

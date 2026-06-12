@@ -182,6 +182,22 @@ async function handlePublicOrder(req: Request) {
 
   if (error || !orderId) {
     const message = error?.message ?? 'Erreur lors de la création de la commande'
+    if (message.includes('LIMIT_REACHED')) {
+      return NextResponse.json(
+        { error: 'Ce vendeur a atteint sa limite de commandes ce mois. Revenez le mois prochain.' },
+        { status: 403 }
+      )
+    }
+    if (message.includes('SHOP_INACTIVE')) {
+      return NextResponse.json(
+        {
+          error: 'Cette boutique n\'accepte plus de commandes pour le moment.',
+          code: 'SHOP_INACTIVE',
+        },
+        { status: 403 }
+      )
+    }
+
     const status = message.includes('introuvable')
       ? 404
       : message.includes('insuffisant') || message.includes('invalide') || message.includes('obligatoire') || message.includes('stock')

@@ -61,6 +61,10 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderMutatio
     p_changed_by: context.userId,
   })
   if (error) {
+    if (error.message.includes('LIMIT_REACHED')) return { error: 'LIMIT_REACHED' }
+    if (error.message.includes('SHOP_INACTIVE')) {
+      return { error: 'Votre abonnement ou votre démo a expiré.' }
+    }
     Sentry.captureException(new Error(error.message), {
       tags: { module: 'orders' },
       extra: { sellerId: context.sellerId },
@@ -101,6 +105,7 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
   })
   if (error) {
     if (error.message.includes('ORDER_NOT_FOUND')) throw new Error('Commande introuvable.')
+    if (error.message.includes('INVALID_TRANSITION')) throw new Error('Cette transition de statut n\'est pas autorisée.')
     throw new Error(error.message)
   }
 

@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUserContext } from '@/lib/get-context'
 import { createServiceClient } from '@/lib/supabase/service'
+import { checkOrigin } from '@/lib/csrf'
 
 const VALID_REQUESTED_PLANS = ['pro', 'business'] as const
 
 export async function POST(req: NextRequest) {
+  if (!checkOrigin(req)) {
+    return NextResponse.json({ error: 'Origine non autorisée.' }, { status: 403 })
+  }
+
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!context.isSeller) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

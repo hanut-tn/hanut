@@ -318,4 +318,33 @@ describe('POST /api/orders/public', () => {
       error: 'Stock insuffisant. Il reste 1 unité(s) disponible(s).',
     })
   })
+
+  it('maps a database-enforced monthly quota race to 403', async () => {
+    mockSupabase(
+      { id: 'seller-1', name: 'Demo Shop', plan: 'pro' },
+      { data: null, error: { message: 'LIMIT_REACHED' } }
+    )
+
+    const response = await POST(jsonRequest(validBody()))
+
+    expect(response.status).toBe(403)
+    await expect(response.json()).resolves.toEqual({
+      error: 'Ce vendeur a atteint sa limite de commandes ce mois. Revenez le mois prochain.',
+    })
+  })
+
+  it('maps a database-enforced subscription expiry to SHOP_INACTIVE', async () => {
+    mockSupabase(
+      { id: 'seller-1', name: 'Demo Shop', plan: 'pro' },
+      { data: null, error: { message: 'SHOP_INACTIVE' } }
+    )
+
+    const response = await POST(jsonRequest(validBody()))
+
+    expect(response.status).toBe(403)
+    await expect(response.json()).resolves.toEqual({
+      error: 'Cette boutique n\'accepte plus de commandes pour le moment.',
+      code: 'SHOP_INACTIVE',
+    })
+  })
 })

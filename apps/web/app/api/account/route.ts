@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
+import { checkOrigin } from '@/lib/csrf'
 import { NextResponse } from 'next/server'
 
 function failure(message: string, status = 500) {
@@ -7,6 +8,10 @@ function failure(message: string, status = 500) {
 }
 
 export async function DELETE(request: Request) {
+  if (!checkOrigin(request)) {
+    return NextResponse.json({ error: 'Origine non autorisée.' }, { status: 403 })
+  }
+
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   if (!context.isSeller) return NextResponse.json({ error: 'Réservé au propriétaire' }, { status: 403 })

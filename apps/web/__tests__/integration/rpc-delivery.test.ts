@@ -36,11 +36,21 @@ beforeEach(async () => {
   productId = product!.id
 
   const client = await authenticateAs(sellerEmail)
-  const { data: oid } = await client.rpc('create_order_with_stock', {
+  const { data: oid, error: createError } = await client.rpc('create_order_with_stock', {
     p_seller_id: sellerId, p_product_id: productId, p_quantity: 1,
     p_customer_name: 'Delivery Customer', p_customer_phone: '21698765432',
-    p_status: 'confirmed',
+    p_status: 'new',
   })
+  if (createError || !oid) throw new Error(`Order setup failed: ${createError?.message}`)
+
+  const { error: confirmError } = await client.rpc('update_order_status', {
+    p_seller_id: sellerId,
+    p_order_id: oid,
+    p_new_status: 'confirmed',
+    p_changed_by: sellerId,
+  })
+  if (confirmError) throw new Error(`Order confirmation failed: ${confirmError.message}`)
+
   orderId = oid as string
 })
 

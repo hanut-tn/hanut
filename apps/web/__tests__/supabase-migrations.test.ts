@@ -38,6 +38,9 @@ describe('Supabase migrations', () => {
   const updateOrderStatusRpc = migration('20260613_add_update_order_status_rpc.sql')
   const customerStatsDeliveryRateFix = migration('20260614_fix_customer_stats_delivery_rate.sql')
   const adjustStockRpc = migration('20260614_add_adjust_stock_rpc.sql')
+  const secureOrderRpc = migration('20260620_secure_order_rpc.sql')
+  const secureDeliveryRpcs = migration('20260621_secure_delivery_rpcs.sql')
+  const statusTransitions = migration('20260622_add_status_transitions.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -366,5 +369,41 @@ describe('Supabase migrations', () => {
     expect(adjustStockRpc).not.toMatch(/v_new_stock := GREATEST\(0, v_product\.stock \+ p_delta\)/i)
     expect(adjustStockRpc).toMatch(/INSERT INTO stock_movements/i)
     expect(adjustStockRpc).toMatch(/REVOKE ALL ON FUNCTION adjust_product_stock\(UUID, UUID, TEXT, INTEGER, TEXT, NUMERIC, TEXT, TEXT, UUID, TEXT\) FROM PUBLIC/i)
+  })
+
+  it('secures order creation against cross-seller access, quota bypass, and forged actors', () => {
+    expect(secureOrderRpc).toMatch(/can_write_seller\(p_seller_id\)/i)
+    expect(secureOrderRpc).toMatch(/p_status NOT IN \('pending', 'new'\)/i)
+    expect(secureOrderRpc).toMatch(/FROM sellers[\s\S]+WHERE id = p_seller_id[\s\S]+FOR UPDATE/i)
+    expect(secureOrderRpc).toMatch(/v_subscription_end IS NOT NULL AND v_subscription_end < now\(\)/i)
+    expect(secureOrderRpc).toMatch(/RAISE EXCEPTION 'SHOP_INACTIVE'/i)
+    expect(secureOrderRpc).toMatch(/v_monthly_orders >= 100/i)
+    expect(secureOrderRpc).toMatch(/RAISE EXCEPTION 'LIMIT_REACHED'/i)
+    expect(secureOrderRpc).toMatch(/ELSE auth\.uid\(\)/i)
+    expect(secureOrderRpc).toMatch(/VALUES \(v_order_id, p_status, v_actor\)/i)
+  })
+
+  it('secures delivery RPCs and keeps the stock helper internal', () => {
+    expect(secureDeliveryRpcs).toMatch(/CREATE OR REPLACE FUNCTION create_delivery_from_order/i)
+    expect(secureDeliveryRpcs).toMatch(/CREATE OR REPLACE FUNCTION mark_delivery_cod_collected/i)
+    expect(secureDeliveryRpcs).toMatch(/CREATE OR REPLACE FUNCTION cancel_pending_order_with_stock/i)
+    expect(secureDeliveryRpcs).toMatch(/CREATE OR REPLACE FUNCTION restore_trashed_order_with_stock/i)
+    expect(secureDeliveryRpcs.match(/can_write_seller\(p_seller_id\)/gi)?.length).toBeGreaterThanOrEqual(3)
+    expect(secureDeliveryRpcs).toMatch(/v_old_status NOT IN \('shipped', 'delivered'\)/i)
+    expect(secureDeliveryRpcs).toMatch(/ELSE auth\.uid\(\)/i)
+    expect(secureDeliveryRpcs).toMatch(
+      /REVOKE EXECUTE ON FUNCTION adjust_order_stock\(UUID, UUID, INTEGER, TEXT, TEXT, UUID\) FROM authenticated/i
+    )
+  })
+
+  it('enforces the order state machine while preserving delivery rollback', () => {
+    expect(statusTransitions).toMatch(/CREATE TABLE IF NOT EXISTS order_status_transitions/i)
+    expect(statusTransitions).toMatch(/\('pending',\s+'new'\)/i)
+    expect(statusTransitions).toMatch(/\('new',\s+'confirmed'\)/i)
+    expect(statusTransitions).toMatch(/\('confirmed',\s+'shipped'\)/i)
+    expect(statusTransitions).toMatch(/\('shipped',\s+'delivered'\)/i)
+    expect(statusTransitions).toMatch(/\('shipped',\s+'returned'\)/i)
+    expect(statusTransitions).toMatch(/\('shipped',\s+'confirmed'\)/i)
+    expect(statusTransitions).toMatch(/RAISE EXCEPTION 'INVALID_TRANSITION:%->%'/i)
   })
 })
