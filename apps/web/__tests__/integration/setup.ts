@@ -9,12 +9,19 @@
  *   SUPABASE_TEST_SERVICE_KEY=<service_role key from supabase start output>
  */
 
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import {
+  createClient,
+  type SupabaseClient,
+  type WebSocketLikeConstructor,
+} from '@supabase/supabase-js'
 import { afterAll } from 'vitest'
+import WebSocket from 'ws'
 
 const SUPABASE_URL = process.env.SUPABASE_TEST_URL ?? 'http://localhost:54321'
 const ANON_KEY     = process.env.SUPABASE_TEST_ANON_KEY ?? ''
 const SERVICE_KEY  = process.env.SUPABASE_TEST_SERVICE_KEY ?? ''
+// ws is runtime-compatible with Realtime, but its constructor overloads are wider.
+const realtimeTransport = WebSocket as unknown as WebSocketLikeConstructor
 
 export const hasIntegrationEnv = Boolean(ANON_KEY && SERVICE_KEY)
 
@@ -37,11 +44,14 @@ function missingClient(name: string): SupabaseClient {
 }
 
 export const anonClient = hasIntegrationEnv
-  ? createClient(SUPABASE_URL, ANON_KEY)
+  ? createClient(SUPABASE_URL, ANON_KEY, {
+      realtime: { transport: realtimeTransport },
+    })
   : missingClient('anonClient')
 
 export const adminClient = hasIntegrationEnv ? createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
+  realtime: { transport: realtimeTransport },
 }) : missingClient('adminClient')
 
 type TestSeller = { id: string; email: string }
@@ -74,7 +84,9 @@ export async function authenticateAs(email: string): Promise<SupabaseClient> {
   if (!hasIntegrationEnv) {
     throw new Error('Integration test Supabase credentials are missing.')
   }
-  const client = createClient(SUPABASE_URL, ANON_KEY)
+  const client = createClient(SUPABASE_URL, ANON_KEY, {
+    realtime: { transport: realtimeTransport },
+  })
   const { error } = await client.auth.signInWithPassword({ email, password: 'Test1234!' })
   if (error) throw new Error(`authenticateAs failed: ${error.message}`)
   return client
