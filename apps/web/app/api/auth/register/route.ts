@@ -13,15 +13,36 @@ const RegisterSchema = z.object({
   turnstile_token: z.string().optional(),
 })
 
+const ARABIC_TO_LATIN: Record<string, string> = {
+  'ا': 'a', 'أ': 'a', 'إ': 'i', 'آ': 'a', 'ب': 'b', 'ت': 't', 'ث': 'th',
+  'ج': 'j', 'ح': 'h', 'خ': 'kh', 'د': 'd', 'ذ': 'dh', 'ر': 'r', 'ز': 'z',
+  'س': 's', 'ش': 'sh', 'ص': 's', 'ض': 'd', 'ط': 't', 'ظ': 'z', 'ع': 'a',
+  'غ': 'gh', 'ف': 'f', 'ق': 'q', 'ك': 'k', 'ل': 'l', 'م': 'm', 'ن': 'n',
+  'ه': 'h', 'و': 'w', 'ي': 'y', 'ى': 'a', 'ة': 'a', 'ء': '', 'ؤ': 'w',
+  'ئ': 'y', 'لا': 'la', 'لأ': 'la', 'لآ': 'la', 'لإ': 'li',
+}
+
 function generateSlug(name: string): string {
-  return (
-    name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'boutique'
-  )
+  // Translittérer les caractères arabes avant normalisation NFD
+  const transliterated = name
+    .split('')
+    .map(char => ARABIC_TO_LATIN[char] ?? char)
+    .join('')
+
+  const slug = transliterated
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 50)
+
+  // Fallback unique garanti si le nom ne produit aucun slug latin valide
+  if (!slug || slug.length < 2) {
+    return `boutique-${Date.now().toString(36)}`
+  }
+
+  return slug
 }
 
 function publicAuthClient() {

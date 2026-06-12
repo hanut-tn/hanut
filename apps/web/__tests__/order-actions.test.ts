@@ -48,7 +48,7 @@ vi.mock('@/lib/constants', () => ({
   },
 }))
 
-import { deleteOrder, restoreOrder, cancelPendingOrder } from '../app/(dashboard)/orders/actions'
+import { deleteOrder, restoreOrder, cancelPendingOrder, cancelOrder } from '../app/(dashboard)/orders/actions'
 
 function mockAdminContext(plan: 'starter' | 'pro' | 'business' = 'pro') {
   contextMock.getUserContext.mockResolvedValue({
@@ -203,6 +203,38 @@ describe('cancelPendingOrder', () => {
     expect(activityMock.logActivity).toHaveBeenCalledWith(
       expect.objectContaining({
         description: expect.not.stringContaining('Retournée'),
+      })
+    )
+  })
+})
+
+describe('cancelOrder', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockAdminContext()
+  })
+
+  it('calls extended cancel RPC and logs with Annulée', async () => {
+    const rpc = vi.fn().mockResolvedValue({ error: null })
+    serverMock.createServerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'sellers') return makeSellerQuery()
+        throw new Error(`Unexpected table: ${table}`)
+      }),
+      rpc,
+    })
+
+    const result = await cancelOrder('order-confirmed')
+
+    expect(result.error).toBeUndefined()
+    expect(rpc).toHaveBeenCalledWith('cancel_order_with_stock', expect.objectContaining({
+      p_order_id: 'order-confirmed',
+      p_seller_id: 'seller-1',
+      p_changed_by: 'user-1',
+    }))
+    expect(activityMock.logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: expect.stringContaining('Annulée'),
       })
     )
   })

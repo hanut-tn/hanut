@@ -48,6 +48,7 @@ describe('middleware auth boundaries', () => {
       '/contact',
       '/api/contact',
       '/api/waitlist',
+      '/api/csp-report',
       '/api/auth/register',
       '/api/auth/callback',
       '/api/auth/callback?code=abc123',

@@ -66,7 +66,7 @@ type Props = {
   hasExistingCustomer: boolean
   updateStatus: (id: string, status: OrderStatus) => Promise<void>
   confirmOrder: (id: string) => Promise<void>
-  cancelOrder: (id: string) => Promise<void>
+  cancelOrder: (id: string) => Promise<void | { error?: string }>
   deleteOrder?: (id: string) => Promise<{ error?: string }>
 }
 
@@ -100,11 +100,15 @@ export default function OrderDetail({
   const estimatedProfit = order.cod_amount - ((product?.cost ?? 0) * order.quantity)
   const shortId = order.id.slice(0, 8).toUpperCase()
 
-  function handleAction(fn: () => Promise<void>) {
+  function handleAction(fn: () => Promise<void | { error?: string }>) {
     setActionError(null)
     startTransition(async () => {
       try {
-        await fn()
+        const result = await fn()
+        if (result && 'error' in result && result.error) {
+          setActionError(result.error)
+          return
+        }
         router.refresh()
       } catch (err: unknown) {
         setActionError(err instanceof Error ? err.message : 'Erreur inconnue')
@@ -351,23 +355,41 @@ export default function OrderDetail({
               )}
 
               {status === 'new' && (
-                <button
-                  onClick={() => handleAction(() => updateStatus(order.id, 'confirmed'))}
-                  disabled={isPending}
-                  className="w-full btn-primary text-sm disabled:opacity-50"
-                >
-                  {isPending ? 'Traitement...' : 'Confirmer la commande'}
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => handleAction(() => updateStatus(order.id, 'confirmed'))}
+                    disabled={isPending}
+                    className="w-full btn-primary text-sm disabled:opacity-50"
+                  >
+                    {isPending ? 'Traitement...' : 'Confirmer la commande'}
+                  </button>
+                  <button
+                    onClick={() => handleAction(() => cancelOrder(order.id))}
+                    disabled={isPending}
+                    className="w-full px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                  >
+                    Annuler la commande
+                  </button>
+                </div>
               )}
 
               {status === 'confirmed' && (
-                <button
-                  onClick={() => handleAction(() => updateStatus(order.id, 'shipped'))}
-                  disabled={isPending}
-                  className="w-full btn-primary text-sm disabled:opacity-50"
-                >
-                  {isPending ? 'Traitement...' : 'Marquer comme expédiée'}
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => handleAction(() => updateStatus(order.id, 'shipped'))}
+                    disabled={isPending}
+                    className="w-full btn-primary text-sm disabled:opacity-50"
+                  >
+                    {isPending ? 'Traitement...' : 'Marquer comme expédiée'}
+                  </button>
+                  <button
+                    onClick={() => handleAction(() => cancelOrder(order.id))}
+                    disabled={isPending}
+                    className="w-full px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                  >
+                    Annuler la commande
+                  </button>
+                </div>
               )}
 
               {status === 'shipped' && (

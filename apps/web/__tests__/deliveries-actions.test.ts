@@ -62,21 +62,28 @@ describe('createDelivery', () => {
   it('creates a delivery for a confirmed order', async () => {
     const orderQuery = makeChain({ id: 'order-1', status: 'confirmed' })
     const noExistingDelivery = makeChain(null)
-    const insertChain = { error: null }
     const sellerQuery = makeChain({ name: 'Boutique' })
+    const rpc = vi.fn().mockResolvedValue({ error: null })
 
     serverMock.createServerClient.mockResolvedValue({
       from: vi.fn((table: string) => {
         if (table === 'orders') return orderQuery
-        if (table === 'deliveries') return { ...noExistingDelivery, insert: vi.fn().mockResolvedValue(insertChain) }
+        if (table === 'deliveries') return noExistingDelivery
         if (table === 'sellers') return sellerQuery
         throw new Error(`Unexpected table: ${table}`)
       }),
+      rpc,
     })
 
     const result = await createDelivery({ order_id: 'order-1', carrier: 'intigo' })
 
     expect(result.error).toBeUndefined()
+    expect(rpc).toHaveBeenCalledWith('create_delivery_from_order', expect.objectContaining({
+      p_seller_id: 'seller-1',
+      p_user_id: 'user-1',
+      p_order_id: 'order-1',
+      p_carrier: 'intigo',
+    }))
   })
 
   it('rejects delivery creation for a pending order', async () => {

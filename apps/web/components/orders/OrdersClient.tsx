@@ -63,7 +63,7 @@ type Props = {
   updateStatus: (id: string, status: OrderStatus) => Promise<void>
   deleteOrder: (id: string) => Promise<{ error?: string }>
   confirmOrder: (id: string) => Promise<void>
-  cancelPendingOrder: (id: string) => Promise<void>
+  cancelOrder: (id: string) => Promise<void | { error?: string }>
   restoreOrder: (id: string) => Promise<{ error?: string }>
   permanentlyDeleteOrder: (id: string) => Promise<{ error?: string }>
   createDeliveryFromOrder: (orderId: string, carrier: string, tracking: string | undefined, fee: number) => Promise<{ error?: string }>
@@ -181,7 +181,7 @@ export default function OrdersClient({
   updateStatus,
   deleteOrder,
   confirmOrder,
-  cancelPendingOrder,
+  cancelOrder,
   restoreOrder,
   permanentlyDeleteOrder,
   createDeliveryFromOrder,
@@ -516,14 +516,21 @@ export default function OrdersClient({
   }
 
   function handleCancel(orderId: string) {
-    applyOptimisticStatus(orderId, 'cancelled', 'pending')
+    const order = findLocalOrder(orderId)
+    const oldStatus = order?.status
+    applyOptimisticStatus(orderId, 'cancelled', oldStatus)
     setUpdatingId(orderId)
     startTransition(async () => {
       try {
-        await cancelPendingOrder(orderId)
+        const result = await cancelOrder(orderId)
+        if (result && 'error' in result && result.error) {
+          if (oldStatus) applyOptimisticStatus(orderId, oldStatus, 'cancelled')
+          showToast(result.error)
+          return
+        }
         showToast('✓ Commande annulée')
       } catch {
-        applyOptimisticStatus(orderId, 'pending', 'cancelled')
+        if (oldStatus) applyOptimisticStatus(orderId, oldStatus, 'cancelled')
         showToast('Erreur. Veuillez réessayer.')
       } finally {
         setUpdatingId(null)
@@ -964,12 +971,13 @@ export default function OrdersClient({
                 const isPendingOrder = order.status === 'pending'
                 const isNew = order.status === 'new'
                 const isConfirmed = order.status === 'confirmed'
+                const isCancellable = isPendingOrder || isNew || isConfirmed
                 const isShipped = order.status === 'shipped'
                 const canDelete = canDeleteOrder(order.status, plan, isAdmin)
                 const ini = customer?.name ? initials(customer.name) : '?'
 
                 const isUpdatingThis = updatingId === order.id
-                const mobileLeadingAction = isPendingOrder ? (
+                const mobileLeadingAction = isCancellable ? (
                   <button
                     onClick={e => { e.stopPropagation(); handleCancel(order.id) }}
                     disabled={isPending || isUpdatingThis}
@@ -1163,7 +1171,7 @@ export default function OrdersClient({
                                 {updatingId === order.id ? <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" /> : 'Confirmer'}
                               </button>
                             )}
-                            {isPendingOrder && (
+                            {(isPendingOrder || isNew || isConfirmed) && (
                               <button
                                 onClick={() => handleCancel(order.id)}
                                 disabled={isPending || updatingId === order.id}

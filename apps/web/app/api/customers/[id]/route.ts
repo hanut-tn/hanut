@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import { checkOrigin } from '@/lib/csrf'
+
+const UpdateCustomerTagsSchema = z.object({
+  tags: z.array(z.string().min(1).max(50)).max(20).optional(),
+  notes: z.string().max(2000).optional(),
+})
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -89,10 +95,18 @@ export async function PUT(req: Request, { params }: Params) {
 
   const supabase = await createServerClient()
 
-  const body = await req.json().catch(() => null)
-  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+  const rawBody = await req.json().catch(() => null)
+  if (!rawBody || typeof rawBody !== 'object' || Array.isArray(rawBody)) {
     return NextResponse.json({ error: 'Corps de requête invalide' }, { status: 400 })
   }
+
+  const parsed = UpdateCustomerTagsSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? 'Données invalides'
+    return NextResponse.json({ error: msg }, { status: 400 })
+  }
+
+  const body = parsed.data
 
   // Bloquer les modifications tags/notes pour le plan Starter
   if (context.plan === 'starter' && ('tags' in body || 'notes' in body)) {

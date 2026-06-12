@@ -18,35 +18,43 @@ export default async function CustomersPage() {
 
   const supabase = await createServerClient()
 
-  const [{ data: customers, count: customersCount }, { data: allOrders }] = await Promise.all([
+  const now = new Date().toISOString()
+
+  const [
+    { data: customers, count: customersCount },
+    { count: orderCount },
+    { data: revenueRaw },
+  ] = await Promise.all([
+    // Pas de JOIN orders — order_count/total_spent viennent des colonnes dénormalisées.
     supabase
       .from('customers')
-      .select(`
-        id, name, phone, address, city, created_at, tags,
-        orders(id, cod_amount, status, created_at)
-      `, { count: 'exact' })
+      .select('id, name, phone, address, city, created_at, tags, order_count, total_spent_calc:total_spent, last_order_at', { count: 'exact' })
       .eq('seller_id', context.sellerId)
-      .is('orders.deleted_at', null)
       .order('name', { ascending: true })
       .range(0, 19),
+    // Nombre total de commandes actives — count only, zéro données chargées.
     supabase
       .from('orders')
-      .select('cod_amount, status')
+      .select('id', { count: 'exact', head: true })
       .eq('seller_id', context.sellerId)
       .is('deleted_at', null),
+    // CA total livré — agrégé en SQL via la RPC get_analytics_summary (all-time).
+    supabase.rpc('get_analytics_summary', {
+      p_seller_id: context.sellerId,
+      p_start:     '2020-01-01T00:00:00.000Z',
+      p_end:       now,
+    }),
   ])
 
-  const orderRows = allOrders ?? []
-  const totalRevenue = orderRows
-    .filter(order => order.status === 'delivered')
-    .reduce((sum, order) => sum + order.cod_amount, 0)
+  type RevenueSummary = { total_revenue?: number }
+  const totalRevenue = ((revenueRaw ?? {}) as RevenueSummary).total_revenue ?? 0
 
   return (
     <CustomersClient
       customers={(customers ?? []) as Customers}
       initialTotal={customersCount ?? 0}
       plan={context.plan}
-      stats={{ totalRevenue, orderCount: orderRows.length }}
+      stats={{ totalRevenue, orderCount: orderCount ?? 0 }}
       updateCustomer={updateCustomer}
       deleteCustomer={deleteCustomer}
     />

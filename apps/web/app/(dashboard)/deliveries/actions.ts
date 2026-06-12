@@ -71,13 +71,30 @@ export async function createDelivery(input: CreateDeliveryInput): Promise<{ erro
     return { error: 'Une livraison active existe déjà pour cette commande.' }
   }
 
-  const { error } = await supabase.from('deliveries').insert({
-    order_id: input.order_id,
-    carrier: input.carrier,
-    tracking_number: input.tracking_number || null,
-    fee: input.fee ?? null,
-  })
-  if (error) return { error: deliveryErrorMessage(error.message) }
+  if (order.status === 'confirmed') {
+    const { error: shipError } = await supabase.rpc('create_delivery_from_order', {
+      p_seller_id: context.sellerId,
+      p_user_id: context.userId,
+      p_order_id: input.order_id,
+      p_carrier: input.carrier,
+      p_tracking_number: input.tracking_number ?? null,
+      p_fee: input.fee ?? null,
+    })
+    if (shipError) {
+      if (shipError.message.includes('order_not_shippable')) {
+        return { error: 'Cette commande ne peut pas être expédiée.' }
+      }
+      return { error: deliveryErrorMessage(shipError.message) }
+    }
+  } else {
+    const { error } = await supabase.from('deliveries').insert({
+      order_id: input.order_id,
+      carrier: input.carrier,
+      tracking_number: input.tracking_number || null,
+      fee: input.fee ?? null,
+    })
+    if (error) return { error: deliveryErrorMessage(error.message) }
+  }
 
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
@@ -144,6 +161,26 @@ export async function updateDelivery(id: string, input: UpdateDeliveryInput) {
     revalidatePath('/dashboard')
     revalidateTag(`dashboard-${context.sellerId}`)
     return
+  }
+
+  // Lire l'état actuel pour bloquer les retours arrière comptables.
+  // La RLS garantit qu'on ne lit que les livraisons du seller connecté.
+  const { data: currentDelivery } = await supabase
+    .from('deliveries')
+    .select('cod_collected, cod_reversed')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (!currentDelivery) throw new Error('Livraison introuvable.')
+
+  if (currentDelivery.cod_collected === true && input.cod_collected === false) {
+    throw new Error(
+      "Impossible d'annuler un COD déjà collecté. Contactez le support si c'est une erreur."
+    )
+  }
+
+  if (currentDelivery.cod_reversed === true && input.cod_reversed === false) {
+    throw new Error("Impossible d'annuler un COD déjà reversé.")
   }
 
   const patch: Record<string, unknown> = { ...input }

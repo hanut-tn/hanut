@@ -33,6 +33,23 @@ type RecentOrder = {
   product: { name: string } | { name: string }[] | null
 }
 
+type AnalyticsSummary = {
+  total_revenue: number
+  total_fees: number
+  total_cost: number
+  order_count: number
+  shipped_count: number
+  delivered_count: number
+  returned_count: number
+  cancelled_count: number
+}
+
+const EMPTY_ANALYTICS: AnalyticsSummary = {
+  total_revenue: 0, total_fees: 0, total_cost: 0,
+  order_count: 0, shipped_count: 0, delivered_count: 0,
+  returned_count: 0, cancelled_count: 0,
+}
+
 // Crée un cache scopé par seller — chaque vendeur a son propre tag.
 // revalidateTag(`dashboard-${sellerId}`) n'invalide que ce vendeur,
 // pas le cache de 500 autres vendeurs actifs.
@@ -44,14 +61,13 @@ function getDashboardData(sellerId: string) {
       const now = new Date()
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
       const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
+      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999)
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
       const [
-        { data: allDelivered },
-        { data: allOrders },
-        { data: lastMonthDelivered },
-        { data: lastMonthOrders },
+        { data: currentStatsRaw },
+        { data: lastMonthStatsRaw },
+        { count: codPendingCount },
         { data: weeklyOrders },
         { data: recentOrders },
         { data: seller },
@@ -59,11 +75,33 @@ function getDashboardData(sellerId: string) {
         { count: orderCount },
         { data: stockProducts },
       ] = await Promise.all([
-        supabase.from('orders').select('cod_amount, created_at').eq('seller_id', sellerId).eq('status', 'delivered').is('deleted_at', null).gte('created_at', startOfMonth.toISOString()),
-        supabase.from('orders').select('status').eq('seller_id', sellerId).is('deleted_at', null).gte('created_at', startOfMonth.toISOString()),
-        supabase.from('orders').select('cod_amount').eq('seller_id', sellerId).eq('status', 'delivered').is('deleted_at', null).gte('created_at', startOfLastMonth.toISOString()).lte('created_at', endOfLastMonth.toISOString()),
-        supabase.from('orders').select('status').eq('seller_id', sellerId).is('deleted_at', null).gte('created_at', startOfLastMonth.toISOString()).lte('created_at', endOfLastMonth.toISOString()),
-        supabase.from('orders').select('cod_amount, created_at').eq('seller_id', sellerId).eq('status', 'delivered').is('deleted_at', null).gte('created_at', sevenDaysAgo.toISOString()),
+        // KPIs mois en cours — agrégés en SQL, pas de chargement en mémoire.
+        supabase.rpc('get_analytics_summary', {
+          p_seller_id: sellerId,
+          p_start: startOfMonth.toISOString(),
+          p_end: now.toISOString(),
+        }),
+        // KPIs mois précédent pour les tendances.
+        supabase.rpc('get_analytics_summary', {
+          p_seller_id: sellerId,
+          p_start: startOfLastMonth.toISOString(),
+          p_end: endOfLastMonth.toISOString(),
+        }),
+        // Commandes en transit ce mois (confirmées ou expédiées).
+        supabase.from('orders')
+          .select('id', { count: 'exact', head: true })
+          .eq('seller_id', sellerId)
+          .is('deleted_at', null)
+          .in('status', ['confirmed', 'shipped'])
+          .gte('created_at', startOfMonth.toISOString()),
+        // Graphique 7 jours — déjà filtré par status=delivered, borne de sécurité ajoutée.
+        supabase.from('orders')
+          .select('cod_amount, created_at')
+          .eq('seller_id', sellerId)
+          .eq('status', 'delivered')
+          .is('deleted_at', null)
+          .gte('created_at', sevenDaysAgo.toISOString())
+          .limit(500),
         supabase.from('orders').select('id, cod_amount, status, variant, created_at, customer:customers(name, phone), product:products(name)').eq('seller_id', sellerId).is('deleted_at', null).order('created_at', { ascending: false }).limit(5),
         supabase.from('sellers').select('slug, onboarding_completed, onboarding_steps, onboarding_dismissed_until').eq('id', sellerId).single(),
         supabase.from('products').select('id', { count: 'exact', head: true }).eq('seller_id', sellerId),
@@ -71,7 +109,10 @@ function getDashboardData(sellerId: string) {
         supabase.from('products').select('id, name, stock, low_stock_alert, image_url, price, cost').eq('seller_id', sellerId).order('stock', { ascending: true }).limit(50),
       ])
 
-      return { allDelivered, allOrders, lastMonthDelivered, lastMonthOrders, weeklyOrders, recentOrders, seller, productCount, orderCount, stockProducts }
+      const currentStats = (currentStatsRaw ?? EMPTY_ANALYTICS) as AnalyticsSummary
+      const lastMonthStats = (lastMonthStatsRaw ?? EMPTY_ANALYTICS) as AnalyticsSummary
+
+      return { currentStats, lastMonthStats, codPendingCount, weeklyOrders, recentOrders, seller, productCount, orderCount, stockProducts }
     },
     [`dashboard-${sellerId}`],
     { revalidate: 60, tags: [`dashboard-${sellerId}`] }
@@ -86,23 +127,21 @@ export default async function DashboardPage() {
   if (context.role === 'readonly') return <ReadonlyDashboard context={context} />
 
   const {
-    allDelivered, allOrders, lastMonthDelivered, lastMonthOrders,
+    currentStats, lastMonthStats, codPendingCount,
     weeklyOrders, recentOrders, seller, productCount, orderCount, stockProducts,
   } = await getDashboardData(context.sellerId)()
 
-  // Current month KPIs
-  const revenue = ((allDelivered ?? []) as { cod_amount: number }[]).reduce((s, o) => s + o.cod_amount, 0)
-  const all = (allOrders ?? []) as { status: string }[]
-  const shipped = all.filter(o => ['shipped', 'delivered', 'returned'].includes(o.status)).length
-  const deliveryRate = shipped > 0 ? Math.round((all.filter(o => o.status === 'delivered').length / shipped) * 100) : 0
-  const ordersThisMonth = all.length
+  // Current month KPIs — calculés depuis la RPC (agrégats SQL, pas de tableau en mémoire)
+  const revenue = currentStats.total_revenue
+  const ordersThisMonth = currentStats.order_count
+  const shippedTotal = currentStats.shipped_count + currentStats.delivered_count + currentStats.returned_count
+  const deliveryRate = shippedTotal > 0 ? Math.round(currentStats.delivered_count / shippedTotal * 100) : 0
 
   // Last month KPIs for trend
-  const lastRevenue = ((lastMonthDelivered ?? []) as { cod_amount: number }[]).reduce((s, o) => s + o.cod_amount, 0)
-  const lastAll = (lastMonthOrders ?? []) as { status: string }[]
-  const lastShipped = lastAll.filter(o => ['shipped', 'delivered', 'returned'].includes(o.status)).length
-  const lastDeliveryRate = lastShipped > 0 ? Math.round((lastAll.filter(o => o.status === 'delivered').length / lastShipped) * 100) : 0
-  const lastOrdersCount = lastAll.length
+  const lastRevenue = lastMonthStats.total_revenue
+  const lastOrdersCount = lastMonthStats.order_count
+  const lastShippedTotal = lastMonthStats.shipped_count + lastMonthStats.delivered_count + lastMonthStats.returned_count
+  const lastDeliveryRate = lastShippedTotal > 0 ? Math.round(lastMonthStats.delivered_count / lastShippedTotal * 100) : 0
 
   function trend(current: number, previous: number): 'up' | 'down' | 'flat' {
     if (previous === 0) return current > 0 ? 'up' : 'flat'
@@ -133,8 +172,8 @@ export default async function DashboardPage() {
   const hasWeeklyData = chartData.some(d => d.value > 0)
   const onboardingSteps = seller?.onboarding_steps as { link_copied?: boolean; first_order?: boolean } | null
 
-  // COD pending (orders confirmed or shipped — not yet delivered/reversed)
-  const codPending = all.filter(o => ['confirmed', 'shipped'].includes(o.status)).length
+  // COD pending — count query scopée ce mois (même périmètre que l'ancienne formule)
+  const codPending = codPendingCount ?? 0
   const lowStockProducts = ((stockProducts ?? []) as Parameters<typeof LowStockWidget>[0]['products'])
     .filter(product => product.stock === 0 || product.stock <= product.low_stock_alert)
     .slice(0, 10)

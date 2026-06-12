@@ -5,11 +5,15 @@ export interface Order {
   seller_id: string
   customer_id: string
   product_id: string
-  variant?: string
+  variant?: string | null
   quantity: number
   cod_amount: number
+  unit_cost: number
   status: OrderStatus
-  notes?: string
+  notes?: string | null
+  tracking_token?: string | null
+  deleted_at?: string | null
+  archived_by?: string | null
   created_at: string
   updated_at: string
   customer?: Customer

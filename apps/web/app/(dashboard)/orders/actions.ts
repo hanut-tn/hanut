@@ -156,6 +156,48 @@ export async function cancelPendingOrder(id: string) {
   revalidateTag(`dashboard-${context.sellerId}`)
 }
 
+// Annuler une commande en statut 'pending', 'new' ou 'confirmed'.
+// Restaure le stock et passe le statut en 'cancelled'.
+export async function cancelOrder(id: string): Promise<OrderMutationResult> {
+  const context = await getUserContext()
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+
+  const supabase = await createServerClient()
+
+  const { error } = await supabase.rpc('cancel_order_with_stock', {
+    p_seller_id:  context.sellerId,
+    p_order_id:   id,
+    p_changed_by: context.userId,
+  })
+
+  if (error) {
+    if (error.message.includes('ORDER_NOT_FOUND')) return { error: 'Commande introuvable.' }
+    if (error.message.includes('CANNOT_CANCEL_STATUS')) {
+      const status = error.message.split(':')[1] ?? ''
+      return { error: `Impossible d'annuler une commande ${status}.` }
+    }
+    return { error: error.message }
+  }
+
+  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
+
+  await logActivity({
+    sellerId: context.sellerId,
+    userId: context.userId,
+    userName: seller?.name ?? context.userId,
+    actionType: 'order_status_changed',
+    entityType: 'order',
+    entityId: id,
+    description: 'a annulé une commande (statut → Annulée)',
+  })
+
+  revalidatePath('/orders')
+  revalidatePath('/dashboard')
+  revalidateTag(`dashboard-${context.sellerId}`)
+  return {}
+}
+
 // Soft-delete : déplace la commande en corbeille
 export async function deleteOrder(id: string): Promise<OrderMutationResult> {
   const context = await getUserContext()

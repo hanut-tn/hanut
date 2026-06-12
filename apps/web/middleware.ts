@@ -23,6 +23,7 @@ const PUBLIC_PATHS = [
   '/api/auth/callback',
   '/api/contact',
   '/api/waitlist',
+  '/api/csp-report',
   '/api/orders/public',
   '/api/track',
   '/legal',

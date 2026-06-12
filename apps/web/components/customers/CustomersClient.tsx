@@ -39,7 +39,7 @@ type Customer = {
   order_count?: number | null
   total_spent_calc?: number | null
   last_order_at?: string | null
-  orders: Order[] | null
+  orders?: Order[] | null
 }
 
 type Props = {
@@ -54,16 +54,21 @@ type Props = {
   deleteCustomer: (id: string) => Promise<{ error?: string }>
 }
 
-function getStats(orders: Order[] | null) {
-  const list = orders ?? []
+function getStats(customer: Customer) {
+  const list = customer.orders ?? []
   const total = list.reduce((s, o) => s + o.cod_amount, 0)
   const delivered = list.filter(o => o.status === 'delivered').reduce((s, o) => s + o.cod_amount, 0)
   const last = list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
-  return { count: list.length, total, delivered, last }
+  return {
+    count: customer.order_count ?? list.length,
+    total,
+    delivered: customer.total_spent_calc ?? delivered,
+    last: customer.last_order_at ? { created_at: customer.last_order_at } : last,
+  }
 }
 
 function CustomerMobileCard({ customer, crmEnabled }: { customer: Customer; crmEnabled: boolean }) {
-  const stats = getStats(customer.orders)
+  const stats = getStats(customer)
   const tags = customer.tags ?? []
   const ini = initials(customer.name)
 
@@ -193,12 +198,12 @@ export default function CustomersClient({ customers, initialTotal, plan, stats, 
     }
     const arr = [...result]
     if (sortBy === 'name') return arr.sort((a, b) => a.name.localeCompare(b.name))
-    if (sortBy === 'total_spent') return arr.sort((a, b) => (b.total_spent_calc ?? getStats(b.orders).delivered) - (a.total_spent_calc ?? getStats(a.orders).delivered))
-    if (sortBy === 'order_count') return arr.sort((a, b) => (b.order_count ?? getStats(b.orders).count) - (a.order_count ?? getStats(a.orders).count))
+    if (sortBy === 'total_spent') return arr.sort((a, b) => getStats(b).delivered - getStats(a).delivered)
+    if (sortBy === 'order_count') return arr.sort((a, b) => getStats(b).count - getStats(a).count)
     if (sortBy === 'last_order') {
       return arr.sort((a, b) => {
-        const aLast = a.last_order_at ?? getStats(a.orders).last?.created_at
-        const bLast = b.last_order_at ?? getStats(b.orders).last?.created_at
+        const aLast = getStats(a).last?.created_at
+        const bLast = getStats(b).last?.created_at
         if (!aLast && !bLast) return 0
         if (!aLast) return 1
         if (!bLast) return -1
@@ -441,7 +446,7 @@ export default function CustomersClient({ customers, initialTotal, plan, stats, 
             </thead>
             <tbody className="divide-y divide-[#E7E5E4]">
               {filtered.map(c => {
-                const stats = getStats(c.orders)
+                const stats = getStats(c)
                 const tags = c.tags ?? []
                 return (
                   <tr
@@ -635,9 +640,9 @@ export default function CustomersClient({ customers, initialTotal, plan, stats, 
             </div>
             <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             <p className="text-sm text-[#78716C] mb-1">{confirmDelete.name} — {confirmDelete.phone}</p>
-            {getStats(confirmDelete.orders).count > 0 && !deleteError && (
+            {getStats(confirmDelete).count > 0 && !deleteError && (
               <p className="text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 mb-4">
-                Ce client a {getStats(confirmDelete.orders).count} commande{getStats(confirmDelete.orders).count > 1 ? 's' : ''}.
+                Ce client a {getStats(confirmDelete).count} commande{getStats(confirmDelete).count > 1 ? 's' : ''}.
                 La suppression sera refusée — supprimez d&apos;abord ses commandes.
               </p>
             )}

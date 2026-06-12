@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext, getMonthlyOrderCount } from '@/lib/get-context'
 import OrdersClient from '@/components/orders/OrdersClient'
-import { updateOrderStatus, deleteOrder, confirmPendingOrder, cancelPendingOrder, restoreOrder, permanentlyDeleteOrder } from './actions'
+import { updateOrderStatus, deleteOrder, confirmPendingOrder, cancelOrder, restoreOrder, permanentlyDeleteOrder } from './actions'
 import { createDeliveryFromOrder } from '@/app/(dashboard)/deliveries/actions'
 
 type Orders = Parameters<typeof OrdersClient>[0]['orders']
@@ -67,7 +67,7 @@ export default async function OrdersPage() {
       updateStatus={updateOrderStatus}
       deleteOrder={deleteOrder}
       confirmOrder={confirmPendingOrder}
-      cancelPendingOrder={cancelPendingOrder}
+      cancelOrder={cancelOrder}
       restoreOrder={restoreOrder}
       permanentlyDeleteOrder={permanentlyDeleteOrder}
       createDeliveryFromOrder={createDeliveryFromOrder}
