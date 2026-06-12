@@ -6,6 +6,12 @@ import { notFound } from 'next/navigation'
 
 type Props = { params: Promise<{ id: string }> }
 type CustomerOrders = Parameters<typeof CustomerDetail>[0]['orders']
+type CustomerStats = {
+  total_spent: number
+  order_count: number
+  delivery_rate: number
+  favorite_product: string | null
+}
 
 export default async function CustomerDetailPage({ params }: Props) {
   const { id } = await params
@@ -23,29 +29,28 @@ export default async function CustomerDetailPage({ params }: Props) {
 
   if (!customer) notFound()
 
-  const { data: orders } = await supabase
-    .from('orders')
-    .select('id, cod_amount, status, variant, quantity, created_at, product:products(id, name)')
-    .eq('customer_id', id)
-    .eq('seller_id', context.sellerId)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
+  const [{ data: orders, count: totalOrders }, { data: statsRaw, error: statsError }] = await Promise.all([
+    supabase
+      .from('orders')
+      .select('id, cod_amount, status, variant, quantity, created_at, product:products(id, name)', { count: 'exact' })
+      .eq('customer_id', id)
+      .eq('seller_id', context.sellerId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .range(0, 9),
+    supabase.rpc('get_customer_stats', {
+      p_customer_id: id,
+      p_seller_id: context.sellerId,
+    }),
+  ])
+
+  if (statsError) {
+    throw new Error(statsError.message)
+  }
 
   const orderList = orders ?? []
-  const delivered = orderList.filter(o => o.status === 'delivered')
-  const total_spent = delivered.reduce((s, o) => s + o.cod_amount, 0)
-  const order_count = orderList.length
-  const delivery_rate = order_count > 0 ? Math.round((delivered.length / order_count) * 100) : 0
-
-  const productCounts: Record<string, { name: string; count: number }> = {}
-  for (const o of orderList) {
-    const p = Array.isArray(o.product) ? o.product[0] : o.product
-    if (p) {
-      if (!productCounts[p.id]) productCounts[p.id] = { name: p.name, count: 0 }
-      productCounts[p.id].count++
-    }
-  }
-  const favorite_product = Object.values(productCounts).sort((a, b) => b.count - a.count)[0]?.name ?? null
+  const stats = (statsRaw ?? {}) as Partial<CustomerStats>
+  const orderCount = totalOrders ?? stats.order_count ?? 0
 
   return (
     <CustomerDetail
@@ -59,9 +64,14 @@ export default async function CustomerDetailPage({ params }: Props) {
         tags: (customer.tags as string[] | null) ?? [],
         notes: customer.notes ?? '',
       }}
-      orders={orderList.slice(0, 10) as CustomerOrders}
-      totalOrders={order_count}
-      stats={{ total_spent, order_count, delivery_rate, favorite_product }}
+      orders={orderList as CustomerOrders}
+      totalOrders={orderCount}
+      stats={{
+        total_spent: stats.total_spent ?? 0,
+        order_count: stats.order_count ?? orderCount,
+        delivery_rate: stats.delivery_rate ?? 0,
+        favorite_product: stats.favorite_product ?? null,
+      }}
       plan={context.plan}
       updateCustomer={updateCustomer}
     />

@@ -36,6 +36,7 @@ describe('Supabase migrations', () => {
   const customerStatsRpc = migration('20260613_add_customer_stats_rpc.sql')
   const missingIndexes = migration('20260613_add_missing_indexes.sql')
   const updateOrderStatusRpc = migration('20260613_add_update_order_status_rpc.sql')
+  const customerStatsDeliveryRateFix = migration('20260614_fix_customer_stats_delivery_rate.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -339,5 +340,15 @@ describe('Supabase migrations', () => {
     expect(updateOrderStatusRpc).toMatch(/FOR UPDATE/i)
     expect(updateOrderStatusRpc).toMatch(/VALUES \(p_order_id, p_new_status, v_actor\)/i)
     expect(updateOrderStatusRpc).toMatch(/REVOKE ALL ON FUNCTION update_order_status\(UUID, UUID, TEXT, UUID\) FROM PUBLIC/i)
+  })
+
+  it('keeps customer delivery rate compatible with the original customer page metric', () => {
+    expect(customerStatsDeliveryRateFix).toMatch(/CREATE OR REPLACE FUNCTION get_customer_stats/i)
+    expect(customerStatsDeliveryRateFix).toMatch(/SECURITY DEFINER/i)
+    expect(customerStatsDeliveryRateFix).toMatch(/get_team_role\(p_seller_id\) IN \('admin', 'operator', 'readonly'\)/i)
+    expect(customerStatsDeliveryRateFix).toMatch(/WITH order_base AS/i)
+    expect(customerStatsDeliveryRateFix).toMatch(/'order_count', COUNT\(\*\)/i)
+    expect(customerStatsDeliveryRateFix).toMatch(/COUNT\(\*\) FILTER \(WHERE status = 'delivered'\)::NUMERIC \/\s*COUNT\(\*\) \* 100/i)
+    expect(customerStatsDeliveryRateFix).toMatch(/REVOKE ALL ON FUNCTION get_customer_stats\(UUID, UUID\) FROM PUBLIC/i)
   })
 })
