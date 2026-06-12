@@ -26,7 +26,7 @@ type UpdateChain = {
 }
 
 function jsonRequest(body: unknown) {
-  return new Request('https://hanut.test/api/customers/customer-1', {
+  return new Request('http://localhost:3000/api/customers/customer-1', {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),

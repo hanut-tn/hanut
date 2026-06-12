@@ -32,7 +32,7 @@ import { PATCH } from '../app/api/onboarding/route'
 type UpdatePayload = Record<string, unknown>
 
 function jsonRequest(body: unknown) {
-  return new Request('https://hanut.test/api/onboarding', {
+  return new Request('http://localhost:3000/api/onboarding', {
     method: 'PATCH',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),

@@ -37,6 +37,7 @@ describe('Supabase migrations', () => {
   const missingIndexes = migration('20260613_add_missing_indexes.sql')
   const updateOrderStatusRpc = migration('20260613_add_update_order_status_rpc.sql')
   const customerStatsDeliveryRateFix = migration('20260614_fix_customer_stats_delivery_rate.sql')
+  const adjustStockRpc = migration('20260614_add_adjust_stock_rpc.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -350,5 +351,20 @@ describe('Supabase migrations', () => {
     expect(customerStatsDeliveryRateFix).toMatch(/'order_count', COUNT\(\*\)/i)
     expect(customerStatsDeliveryRateFix).toMatch(/COUNT\(\*\) FILTER \(WHERE status = 'delivered'\)::NUMERIC \/\s*COUNT\(\*\) \* 100/i)
     expect(customerStatsDeliveryRateFix).toMatch(/REVOKE ALL ON FUNCTION get_customer_stats\(UUID, UUID\) FROM PUBLIC/i)
+  })
+
+  it('adjusts product stock atomically without masking negative stock races', () => {
+    expect(adjustStockRpc).toMatch(/CREATE OR REPLACE FUNCTION adjust_product_stock/i)
+    expect(adjustStockRpc).toMatch(/SECURITY DEFINER/i)
+    expect(adjustStockRpc).toMatch(/can_write_seller\(p_seller_id\)/i)
+    expect(adjustStockRpc).toMatch(/FOR UPDATE/i)
+    expect(adjustStockRpc).toMatch(/variant_label\(elem, ord\) = p_variant_name/i)
+    expect(adjustStockRpc).toMatch(/RAISE EXCEPTION 'VARIANT_NOT_FOUND'/i)
+    expect(adjustStockRpc).toMatch(/RAISE EXCEPTION 'VARIANT_AMBIGUOUS'/i)
+    expect(adjustStockRpc).toMatch(/RAISE EXCEPTION 'INSUFFICIENT_STOCK'/i)
+    expect(adjustStockRpc).not.toMatch(/GREATEST\(0, \(elem->>'qty'\)::INTEGER \+ p_delta\)/i)
+    expect(adjustStockRpc).not.toMatch(/v_new_stock := GREATEST\(0, v_product\.stock \+ p_delta\)/i)
+    expect(adjustStockRpc).toMatch(/INSERT INTO stock_movements/i)
+    expect(adjustStockRpc).toMatch(/REVOKE ALL ON FUNCTION adjust_product_stock\(UUID, UUID, TEXT, INTEGER, TEXT, NUMERIC, TEXT, TEXT, UUID, TEXT\) FROM PUBLIC/i)
   })
 })

@@ -107,7 +107,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           {/* Contenu principal */}
           <div className="flex-1 flex flex-col min-w-0 md:overflow-hidden">
             <TopBar sellerName={displayName} role={context.role} isSeller={context.isSeller} />
-            {context.daysLeft !== null && context.daysLeft <= 4 && context.daysLeft > 0 && (
+            {context.daysLeft !== null && context.daysLeft <= 7 && context.daysLeft >= 0 && (
               <DemoBanner daysLeft={context.daysLeft} />
             )}
             <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 pb-[calc(4rem+env(safe-area-inset-bottom)+1rem)] md:pb-6">

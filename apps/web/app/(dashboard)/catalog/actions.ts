@@ -206,6 +206,7 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
 
   const supabase = await createServerClient()
 
+  // Pré-lecture pour validation applicative (erreurs compréhensibles avant d'appeler la RPC)
   const { data: product } = await supabase.from('products')
     .select('stock, cost, name, variants')
     .eq('id', id)
@@ -220,95 +221,91 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
   if (!Number.isInteger(input.quantity) || input.quantity < 0) return { error: 'Quantité invalide' }
   if (input.unitCost != null && input.unitCost < 0) return { error: "Prix d'achat invalide" }
 
-  // Calculer le nouveau stock et le delta
-  let newStock: number
-  let delta: number
-  let updatedVariants: Variant[] | null = null
+  // Déterminer les appels RPC à effectuer.
+  // Pour les variantes : un appel par variante ajustée (le FOR UPDATE de la RPC protège contre les races).
+  // Pour les produits sans variantes : un seul appel avec p_variant_name = null.
+  type RpcCall = { variantName: string | null; delta: number }
+  const rpcCalls: RpcCall[] = []
 
   if (hasVariants && input.variantAdjustments && input.variantAdjustments.length > 0) {
-    const result: Variant[] = []
     for (let i = 0; i < variants.length; i++) {
       const v = variants[i]
       const label = getVariantLabel(v, i)
       const adj = input.variantAdjustments.find(a => a.label === label)
-      if (!adj) { result.push(v); continue }
-      let newQty: number
+      if (!adj) continue
+
+      let delta: number
       if (input.type === 'correction') {
-        newQty = Math.max(0, adj.value)
+        delta = Math.max(0, adj.value) - v.qty
       } else if (input.type === 'restock') {
-        newQty = v.qty + adj.value
-        if (newQty < 0) return { error: `Stock invalide pour "${label}".` }
+        delta = adj.value
+        if (v.qty + delta < 0) return { error: `Stock invalide pour "${label}".` }
       } else {
-        newQty = v.qty - adj.value
-        if (newQty < 0) {
+        delta = -adj.value
+        if (v.qty + delta < 0) {
           return { error: `Stock insuffisant pour "${label}". Stock actuel : ${v.qty} unité${v.qty !== 1 ? 's' : ''}.` }
         }
       }
-      result.push({ ...v, qty: newQty })
+      rpcCalls.push({ variantName: label, delta })
     }
-    updatedVariants = result
-    newStock = updatedVariants.reduce((s, v) => s + v.qty, 0)
-    delta = newStock - product.stock
+    if (rpcCalls.length === 0) return { error: 'Aucune variante à ajuster.' }
   } else if (hasVariants) {
     return { error: 'Ce produit a des variantes. Ajustez le stock variante par variante.' }
   } else {
+    let delta: number
     if (input.type === 'restock') {
       delta = input.quantity
-      newStock = product.stock + delta
     } else if (input.type === 'correction') {
-      newStock = input.quantity
-      delta = newStock - product.stock
+      delta = input.quantity - product.stock
     } else {
       delta = -input.quantity
-      newStock = product.stock + delta
     }
-
-    if (newStock < 0) {
+    if (product.stock + delta < 0) {
       return {
         error: `Stock insuffisant. Stock actuel : ${product.stock} unité${product.stock !== 1 ? 's' : ''}. Vous ne pouvez pas retirer ${input.quantity} unité${input.quantity !== 1 ? 's' : ''}.`,
       }
     }
+    rpcCalls.push({ variantName: null, delta })
   }
 
-  // Le trigger trg_sync_stock_from_variants recalcule automatiquement products.stock
-  // depuis la somme des variantes — pas besoin de le définir explicitement ici.
-  const productUpdate: Record<string, unknown> = updatedVariants
-    ? { variants: updatedVariants }
-    : { stock: newStock }
+  // Appels RPC atomiques (FOR UPDATE dans la RPC protège contre les races concurrentes)
+  const sellerNameResult = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
+  const sellerName = sellerNameResult.data?.name ?? ''
 
-  if (input.type === 'restock' && input.unitCost != null && input.unitCost > 0 && input.costUpdateMode !== 'keep') {
-    const mode = input.costUpdateMode ?? 'new'
-    if (mode === 'wac') {
-      productUpdate.cost = product.cost && product.stock > 0 && delta > 0
-        ? Math.round(((product.stock * product.cost + delta * input.unitCost) / newStock) * 100) / 100
-        : input.unitCost
-    } else if (mode === 'new') {
-      productUpdate.cost = input.unitCost
+  // Pour WAC 'new' sans passer par la RPC : mettre à jour le coût après les appels RPC
+  const unitCostForRpc = input.type === 'restock' && input.costUpdateMode !== 'keep' && input.costUpdateMode !== 'new'
+    ? (input.unitCost ?? null)
+    : null
+
+  type AdjustStockResult = { stock_before: number; stock_after: number; delta: number }
+  let lastResult: AdjustStockResult | null = null
+
+  for (const call of rpcCalls) {
+    const { data, error: rpcErr } = await supabase.rpc('adjust_product_stock', {
+      p_seller_id: context.sellerId,
+      p_product_id: id,
+      p_variant_name: call.variantName ?? '',
+      p_delta: call.delta,
+      p_movement_type: input.type,
+      p_unit_cost: unitCostForRpc,
+      p_supplier: input.supplier ?? null,
+      p_notes: input.notes ?? null,
+      p_changed_by: context.userId,
+      p_changed_by_name: sellerName,
+    })
+    if (rpcErr) {
+      if (rpcErr.message.includes('PRODUCT_NOT_FOUND')) return { error: 'Produit introuvable.' }
+      return { error: rpcErr.message }
     }
+    lastResult = data as AdjustStockResult
   }
 
-  const { error: upErr } = await supabase.from('products')
-    .update(productUpdate)
-    .eq('id', id).eq('seller_id', context.sellerId)
-  if (upErr) return { error: upErr.message }
+  // Pour 'new' : mettre à jour le coût directement (la RPC gère 'wac', pas 'new')
+  if (input.type === 'restock' && input.unitCost != null && input.unitCost > 0 && input.costUpdateMode === 'new') {
+    await supabase.from('products').update({ cost: input.unitCost }).eq('id', id).eq('seller_id', context.sellerId)
+  }
 
-  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
-  const sellerName = seller?.name ?? ''
-
-  // Log dans stock_movements
-  await supabase.from('stock_movements').insert({
-    seller_id: context.sellerId,
-    product_id: id,
-    quantity_before: product.stock,
-    quantity_after: newStock,
-    delta,
-    movement_type: input.type,
-    unit_cost: input.unitCost ?? null,
-    supplier: input.supplier ?? null,
-    notes: input.notes ?? null,
-    created_by: context.userId,
-    created_by_name: sellerName,
-  })
+  const newStock = lastResult?.stock_after ?? product.stock
 
   const typeLabel = { restock: 'Réapprovisionnement', correction: "Correction d'inventaire", return: 'Retour fournisseur', loss: 'Perte / Casse' }
   await logActivity({
@@ -319,7 +316,7 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
     entityType: 'product',
     entityId: id,
     description: `a ajusté le stock de "${product.name}" : ${product.stock} → ${newStock} (${typeLabel[input.type]})`,
-    metadata: { type: input.type, delta, stockBefore: product.stock, stockAfter: newStock },
+    metadata: { type: input.type, stockBefore: product.stock, stockAfter: newStock },
   })
 
   revalidatePath('/catalog')

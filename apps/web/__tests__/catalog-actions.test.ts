@@ -50,27 +50,13 @@ function mockContext(role: 'admin' | 'operator' | 'readonly' = 'admin') {
   })
 }
 
-function makeUpdateChain(capturedUpdate: { value?: Record<string, unknown> }) {
-  const chain = {
-    update: vi.fn((payload: Record<string, unknown>) => {
-      capturedUpdate.value = payload
-      return chain
-    }),
-    eq: vi.fn().mockReturnThis(),
-    select: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({ data: null }),
-  }
-  return chain
-}
-
 describe('adjustStock', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockContext()
   })
 
-  it('sends only variants (no stock) when adjusting a variant product', async () => {
-    const captured: { value?: Record<string, unknown> } = {}
+  it('calls the stock RPC for variant products without direct product updates', async () => {
     const productQuery = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
@@ -91,20 +77,21 @@ describe('adjustStock', () => {
       eq: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockResolvedValue({ data: { name: 'Boutique' } }),
     }
-    const stockMovements = {
-      insert: vi.fn().mockResolvedValue({ error: null }),
-    }
-    const updateChain = makeUpdateChain(captured)
+    const productUpdate = vi.fn()
+    const rpc = vi.fn().mockResolvedValue({
+      data: { stock_before: 8, stock_after: 10, delta: 2 },
+      error: null,
+    })
 
     serverMock.createServerClient.mockResolvedValue({
       from: vi.fn((table: string) => {
         if (table === 'products') {
-          return { ...productQuery, update: updateChain.update }
+          return { ...productQuery, update: productUpdate }
         }
         if (table === 'sellers') return sellerQuery
-        if (table === 'stock_movements') return stockMovements
         throw new Error(`Unexpected table: ${table}`)
       }),
+      rpc,
     })
 
     const result = await adjustStock('product-1', {
@@ -114,17 +101,16 @@ describe('adjustStock', () => {
     })
 
     expect(result.error).toBeUndefined()
-    // Trigger handles stock sync — only variants sent in the update
-    expect(captured.value).toBeDefined()
-    expect(captured.value).toHaveProperty('variants')
-    expect(captured.value).not.toHaveProperty('stock')
-    const updatedVariants = captured.value!.variants as { size: string; qty: number }[]
-    const sVariant = updatedVariants.find(v => v.size === 'S')
-    expect(sVariant?.qty).toBe(5)
+    expect(productUpdate).not.toHaveBeenCalled()
+    expect(rpc).toHaveBeenCalledWith('adjust_product_stock', expect.objectContaining({
+      p_product_id: 'product-1',
+      p_variant_name: 'S',
+      p_delta: 2,
+      p_unit_cost: null,
+    }))
   })
 
   it('recalculates WAC on restock with costUpdateMode=wac', async () => {
-    const captured: { value?: Record<string, unknown> } = {}
     const productQuery = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
@@ -137,20 +123,21 @@ describe('adjustStock', () => {
       eq: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockResolvedValue({ data: { name: 'Boutique' } }),
     }
-    const stockMovements = {
-      insert: vi.fn().mockResolvedValue({ error: null }),
-    }
-    const updateChain = makeUpdateChain(captured)
+    const productUpdate = vi.fn()
+    const rpc = vi.fn().mockResolvedValue({
+      data: { stock_before: 5, stock_after: 10, delta: 5 },
+      error: null,
+    })
 
     serverMock.createServerClient.mockResolvedValue({
       from: vi.fn((table: string) => {
         if (table === 'products') {
-          return { ...productQuery, update: updateChain.update }
+          return { ...productQuery, update: productUpdate }
         }
         if (table === 'sellers') return sellerQuery
-        if (table === 'stock_movements') return stockMovements
         throw new Error(`Unexpected table: ${table}`)
       }),
+      rpc,
     })
 
     const result = await adjustStock('product-1', {
@@ -161,9 +148,13 @@ describe('adjustStock', () => {
     })
 
     expect(result.error).toBeUndefined()
-    // WAC = (5×10 + 5×20) / 10 = 15
-    expect(captured.value?.cost).toBe(15)
-    expect(captured.value?.stock).toBe(10)
+    expect(productUpdate).not.toHaveBeenCalled()
+    expect(rpc).toHaveBeenCalledWith('adjust_product_stock', expect.objectContaining({
+      p_product_id: 'product-1',
+      p_variant_name: '',
+      p_delta: 5,
+      p_unit_cost: 20,
+    }))
   })
 
   it('blocks readonly role', async () => {

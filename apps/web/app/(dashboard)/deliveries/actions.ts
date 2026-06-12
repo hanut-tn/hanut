@@ -105,6 +105,18 @@ export async function updateDelivery(id: string, input: UpdateDeliveryInput) {
   const supabase = await createServerClient()
 
   if (input.cod_collected === true) {
+    // RPC en premier : si elle échoue, aucune modification partielle n'est appliquée.
+    // Le patch des champs secondaires (tracking, fee) vient après —
+    // une éventuelle erreur de patch laisse le COD marqué mais ces champs
+    // restent modifiables séparément.
+    const { data: orderId, error: rpcError } = await supabase.rpc('mark_delivery_cod_collected', {
+      p_seller_id: context.sellerId,
+      p_user_id: context.userId,
+      p_delivery_id: id,
+    })
+
+    if (rpcError) throw new Error(rpcError.message)
+
     const patch: Record<string, unknown> = {}
     if ('tracking_number' in input) patch.tracking_number = input.tracking_number
     if ('carrier_status' in input) patch.carrier_status = input.carrier_status
@@ -115,14 +127,6 @@ export async function updateDelivery(id: string, input: UpdateDeliveryInput) {
       const { error: patchError } = await supabase.from('deliveries').update(patch).eq('id', id)
       if (patchError) throw new Error(patchError.message)
     }
-
-    const { data: orderId, error: rpcError } = await supabase.rpc('mark_delivery_cod_collected', {
-      p_seller_id: context.sellerId,
-      p_user_id: context.userId,
-      p_delivery_id: id,
-    })
-
-    if (rpcError) throw new Error(rpcError.message)
 
     const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
     await logActivity({
@@ -233,7 +237,13 @@ export async function deleteDelivery(id: string): Promise<{ error?: string }> {
 
   // Remettre la commande en "Confirmée" si elle était en "Expédiée"
   if (order.status === 'shipped') {
-    await supabase.from('orders').update({ status: 'confirmed' }).eq('id', order.id)
+    const { error: statusError } = await supabase.rpc('update_order_status', {
+      p_seller_id: context.sellerId,
+      p_order_id: order.id,
+      p_new_status: 'confirmed',
+      p_changed_by: context.userId,
+    })
+    if (statusError) return { error: statusError.message }
   }
 
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
