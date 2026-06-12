@@ -16,7 +16,10 @@ export default defineConfig({
     environment: 'node',
     globals: false,
     include: ['__tests__/**/*.test.ts'],
-    exclude: ['__tests__/integration/**/*.test.ts'],
+    exclude: [
+      '__tests__/integration/**/*.test.ts',
+      '__tests__/e2e/**/*.test.ts',
+    ],
     restoreMocks: true,
   },
 })

@@ -25,10 +25,24 @@ if (!hasIntegrationEnv) {
   )
 }
 
-export const anonClient  = createClient(SUPABASE_URL, ANON_KEY || 'missing-anon-key')
-export const adminClient = createClient(SUPABASE_URL, SERVICE_KEY || 'missing-service-key', {
+function missingClient(name: string): SupabaseClient {
+  return new Proxy({}, {
+    get() {
+      throw new Error(
+        `${name} is unavailable because SUPABASE_TEST_ANON_KEY or ` +
+        'SUPABASE_TEST_SERVICE_KEY is missing.'
+      )
+    },
+  }) as SupabaseClient
+}
+
+export const anonClient = hasIntegrationEnv
+  ? createClient(SUPABASE_URL, ANON_KEY)
+  : missingClient('anonClient')
+
+export const adminClient = hasIntegrationEnv ? createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
-})
+}) : missingClient('adminClient')
 
 type TestSeller = { id: string; email: string }
 
@@ -57,6 +71,9 @@ export async function createTestSeller(suffix = ''): Promise<TestSeller> {
 }
 
 export async function authenticateAs(email: string): Promise<SupabaseClient> {
+  if (!hasIntegrationEnv) {
+    throw new Error('Integration test Supabase credentials are missing.')
+  }
   const client = createClient(SUPABASE_URL, ANON_KEY)
   const { error } = await client.auth.signInWithPassword({ email, password: 'Test1234!' })
   if (error) throw new Error(`authenticateAs failed: ${error.message}`)
