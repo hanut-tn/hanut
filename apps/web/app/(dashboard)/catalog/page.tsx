@@ -1,3 +1,10 @@
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Catalogue — Hanut',
+  robots: { index: false, follow: false },
+}
+
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import { redirect } from 'next/navigation'

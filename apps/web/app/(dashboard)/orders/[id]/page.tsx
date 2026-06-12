@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import OrderDetail from '@/components/orders/OrderDetail'
@@ -5,6 +6,14 @@ import { notFound } from 'next/navigation'
 import { updateOrderStatus, confirmPendingOrder, cancelPendingOrder, deleteOrder } from '../actions'
 
 type Props = { params: Promise<{ id: string }> }
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params
+  return {
+    title: `Commande #${id.slice(0, 8)} — Hanut`,
+    robots: { index: false, follow: false },
+  }
+}
 
 export default async function OrderDetailPage({ params }: Props) {
   const { id } = await params

@@ -1,3 +1,10 @@
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Abonnement — Hanut',
+  robots: { index: false, follow: false },
+}
+
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getUserContext } from '@/lib/get-context'

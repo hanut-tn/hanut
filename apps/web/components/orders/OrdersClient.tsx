@@ -1193,17 +1193,19 @@ export default function OrdersClient({
                             {canDelete && !isPendingOrder && (
                               <button
                                 onClick={() => { setConfirmDelete(order); setActionError(null) }}
+                                aria-label="Supprimer la commande"
                                 className="w-8 h-8 flex items-center justify-center rounded-lg text-[#A8A29E] hover:text-red-500 hover:bg-red-50 transition-colors"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                               </button>
                             )}
                             <Link
                               href={`/orders/${order.id}`}
                               onClick={e => e.stopPropagation()}
+                              aria-label="Voir le détail de la commande"
                               className="w-8 h-8 flex items-center justify-center rounded-lg text-[#78716C] hover:text-[#1C1917] hover:bg-[#F0F0EF] transition-colors"
                             >
-                              <ChevronRight className="w-4 h-4" />
+                              <ChevronRight className="w-4 h-4" aria-hidden="true" />
                             </Link>
                           </div>
                         </td>
@@ -1409,8 +1411,8 @@ export default function OrdersClient({
                 <h3 className="font-semibold text-[#1C1917]">Expédier la commande</h3>
                 <p className="text-xs text-[#78716C] mt-0.5">{shippingModal.customerName} — {shippingModal.codAmount} DT</p>
               </div>
-              <button onClick={() => setShippingModal(null)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C]">
-                <X className="w-4 h-4" />
+              <button onClick={() => setShippingModal(null)} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C]">
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
             <div className="p-5 space-y-4">

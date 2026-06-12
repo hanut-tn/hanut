@@ -12,6 +12,12 @@ type LogActivityParams = {
   metadata?: object
 }
 
+// Strip Tunisian phone numbers (8 digits starting with 2, 4, 5, 7 or 9) from log descriptions.
+// Defensive layer — descriptions must not contain phone numbers even if callers accidentally include them.
+function sanitizeDescription(desc: string): string {
+  return desc.replace(/\b[24579]\d{7}\b/g, '[TÉLÉPHONE]')
+}
+
 export async function logActivity(params: LogActivityParams): Promise<void> {
   try {
     const serviceClient = createServiceClient()
@@ -24,7 +30,7 @@ export async function logActivity(params: LogActivityParams): Promise<void> {
       action_type: params.actionType,
       entity_type: params.entityType ?? null,
       entity_id: params.entityId ?? null,
-      description: params.description,
+      description: sanitizeDescription(params.description),
       metadata: params.metadata ?? {},
     })
     if (error) {

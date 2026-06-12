@@ -753,17 +753,17 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
                           <div className="flex items-center justify-end gap-1">
                             <button
                               onClick={e => { e.stopPropagation(); openEdit(d) }}
+                              aria-label="Modifier la livraison"
                               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C] transition-colors"
-                              title="Éditer"
                             >
-                              <Pencil className="w-4 h-4" />
+                              <Pencil className="w-4 h-4" aria-hidden="true" />
                             </button>
                             <button
                               onClick={e => { e.stopPropagation(); setConfirmDelete(d) }}
+                              aria-label="Supprimer la livraison"
                               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-[#78716C] hover:text-red-600 transition-colors"
-                              title="Supprimer"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-4 h-4" aria-hidden="true" />
                             </button>
                           </div>
                         )}

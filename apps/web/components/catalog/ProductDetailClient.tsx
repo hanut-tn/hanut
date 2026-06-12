@@ -550,9 +550,10 @@ export default function ProductDetailClient({
                             })
                           }}
                           disabled={isPending}
+                          aria-label="Annuler le réapprovisionnement planifié"
                           className="text-[10px] text-[#78716C] hover:text-red-600 px-1 py-0.5 rounded disabled:opacity-50"
                         >
-                          <X className="w-3 h-3" />
+                          <X className="w-3 h-3" aria-hidden="true" />
                         </button>
                       </div>
                     </div>
@@ -679,8 +680,8 @@ export default function ProductDetailClient({
                     <span className="font-bold text-[#0B5E46]">{currentStock} unité{currentStock !== 1 ? 's' : ''}</span>
                   </p>
                 </div>
-                <button onClick={() => setShowStockModal(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C]">
-                  <X className="w-4 h-4" />
+                <button onClick={() => setShowStockModal(false)} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C]">
+                  <X className="w-4 h-4" aria-hidden="true" />
                 </button>
               </div>
             </div>
