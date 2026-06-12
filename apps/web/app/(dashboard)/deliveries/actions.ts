@@ -21,6 +21,8 @@ export type UpdateDeliveryInput = {
   cod_reversed?: boolean
 }
 
+export type DeliveryMutationResult = { error?: string }
+
 function deliveryErrorMessage(message: string) {
   if (
     message.includes('idx_unique_active_delivery_per_order') ||
@@ -114,10 +116,13 @@ export async function createDelivery(input: CreateDeliveryInput): Promise<{ erro
   return {}
 }
 
-export async function updateDelivery(id: string, input: UpdateDeliveryInput) {
+export async function updateDelivery(
+  id: string,
+  input: UpdateDeliveryInput
+): Promise<DeliveryMutationResult> {
   const context = await getUserContext()
-  if (!context) throw new Error('Non autorisé')
-  if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
 
   const supabase = await createServerClient()
 
@@ -132,7 +137,7 @@ export async function updateDelivery(id: string, input: UpdateDeliveryInput) {
       p_delivery_id: id,
     })
 
-    if (rpcError) throw new Error(rpcError.message)
+    if (rpcError) return { error: deliveryErrorMessage(rpcError.message) }
 
     const patch: Record<string, unknown> = {}
     if ('tracking_number' in input) patch.tracking_number = input.tracking_number
@@ -142,7 +147,7 @@ export async function updateDelivery(id: string, input: UpdateDeliveryInput) {
 
     if (Object.keys(patch).length > 0) {
       const { error: patchError } = await supabase.from('deliveries').update(patch).eq('id', id)
-      if (patchError) throw new Error(patchError.message)
+      if (patchError) return { error: deliveryErrorMessage(patchError.message) }
     }
 
     const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
@@ -160,7 +165,7 @@ export async function updateDelivery(id: string, input: UpdateDeliveryInput) {
     revalidatePath('/orders')
     revalidatePath('/dashboard')
     revalidateTag(`dashboard-${context.sellerId}`)
-    return
+    return {}
   }
 
   // Lire l'état actuel pour bloquer les retours arrière comptables.
@@ -171,16 +176,14 @@ export async function updateDelivery(id: string, input: UpdateDeliveryInput) {
     .eq('id', id)
     .maybeSingle()
 
-  if (!currentDelivery) throw new Error('Livraison introuvable.')
+  if (!currentDelivery) return { error: 'Livraison introuvable.' }
 
   if (currentDelivery.cod_collected === true && input.cod_collected === false) {
-    throw new Error(
-      "Impossible d'annuler un COD déjà collecté. Contactez le support si c'est une erreur."
-    )
+    return { error: "Impossible d'annuler un COD déjà collecté. Contactez le support si c'est une erreur." }
   }
 
   if (currentDelivery.cod_reversed === true && input.cod_reversed === false) {
-    throw new Error("Impossible d'annuler un COD déjà reversé.")
+    return { error: "Impossible d'annuler un COD déjà reversé." }
   }
 
   const patch: Record<string, unknown> = { ...input }
@@ -191,12 +194,13 @@ export async function updateDelivery(id: string, input: UpdateDeliveryInput) {
   }
 
   const { error } = await supabase.from('deliveries').update(patch).eq('id', id)
-  if (error) throw new Error(error.message)
+  if (error) return { error: deliveryErrorMessage(error.message) }
 
   revalidatePath('/deliveries')
   revalidatePath('/orders')
   revalidatePath('/dashboard')
   revalidateTag(`dashboard-${context.sellerId}`)
+  return {}
 }
 
 export async function createDeliveryFromOrder(

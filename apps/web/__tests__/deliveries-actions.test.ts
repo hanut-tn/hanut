@@ -152,12 +152,13 @@ describe('updateDelivery — COD collected', () => {
       rpc,
     })
 
-    await updateDelivery('delivery-1', {
+    const result = await updateDelivery('delivery-1', {
       cod_collected: true,
       tracking_number: 'TRK123',
       fee: 7,
     })
 
+    expect(result.error).toBeUndefined()
     expect(rpc).toHaveBeenCalledWith('mark_delivery_cod_collected', expect.objectContaining({
       p_delivery_id: 'delivery-1',
       p_seller_id: 'seller-1',
@@ -173,8 +174,28 @@ describe('updateDelivery — COD collected', () => {
       rpc,
     })
 
-    await expect(updateDelivery('delivery-1', { cod_collected: true })).rejects.toThrow()
+    const result = await updateDelivery('delivery-1', { cod_collected: true })
+
+    expect(result.error).toBe('DELIVERY_NOT_FOUND')
     expect(patchSpy).not.toHaveBeenCalled()
+  })
+
+  it('returns a handled error when trying to undo an already reversed COD', async () => {
+    const currentDeliveryQuery = makeChain({
+      cod_collected: true,
+      cod_reversed: true,
+    })
+
+    serverMock.createServerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'deliveries') return currentDeliveryQuery
+        throw new Error(`Unexpected table: ${table}`)
+      }),
+    })
+
+    const result = await updateDelivery('delivery-1', { cod_reversed: false })
+
+    expect(result.error).toBe("Impossible d'annuler un COD déjà reversé.")
   })
 })
 

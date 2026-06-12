@@ -7,7 +7,11 @@ import {
   Banknote, Receipt, Pencil, Trash2, CheckSquare, X,
 } from 'lucide-react'
 import type { CarrierName } from '@hanut/types'
-import type { CreateDeliveryInput, UpdateDeliveryInput } from '@/app/(dashboard)/deliveries/actions'
+import type {
+  CreateDeliveryInput,
+  DeliveryMutationResult,
+  UpdateDeliveryInput,
+} from '@/app/(dashboard)/deliveries/actions'
 import { CARRIER_OPTIONS, CARRIER_TRACKING_URLS, getCarrierConfig } from '@/lib/constants'
 import { initials } from '@/lib/utils'
 
@@ -35,7 +39,7 @@ type Props = {
   deliveries: Delivery[]
   shippableOrders: OrderInfo[]
   createDelivery: (input: CreateDeliveryInput) => Promise<{ error?: string }>
-  updateDelivery: (id: string, input: UpdateDeliveryInput) => Promise<void>
+  updateDelivery: (id: string, input: UpdateDeliveryInput) => Promise<DeliveryMutationResult>
   deleteDelivery: (id: string) => Promise<{ error?: string }>
 }
 
@@ -318,12 +322,20 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
     e.preventDefault()
     if (!editDelivery) return
     startTransition(async () => {
-      await updateDelivery(editDelivery.id, {
-        tracking_number: editTracking.trim() || null,
-        carrier_status:  editStatus.trim() || null,
-        fee: editFee === '' ? null : editFee,
-      })
-      setEditDelivery(null)
+      try {
+        const result = await updateDelivery(editDelivery.id, {
+          tracking_number: editTracking.trim() || null,
+          carrier_status:  editStatus.trim() || null,
+          fee: editFee === '' ? null : editFee,
+        })
+        if (result?.error) {
+          setToast(`Erreur : ${result.error}`)
+          return
+        }
+        setEditDelivery(null)
+      } catch (err) {
+        setToast(`Erreur : ${err instanceof Error ? err.message : 'Veuillez réessayer.'}`)
+      }
     })
   }
 
@@ -333,7 +345,12 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
     setAllDeliveries(list => list.map(del => del.id === d.id ? { ...del, [field]: newValue } : del))
     startTransition(async () => {
       try {
-        await updateDelivery(d.id, { [field]: newValue })
+        const result = await updateDelivery(d.id, { [field]: newValue })
+        if (result?.error) {
+          setAllDeliveries(list => list.map(del => del.id === d.id ? { ...del, [field]: prevValue } : del))
+          setToast(`Erreur : ${result.error}`)
+          return
+        }
         if (field === 'cod_collected' && newValue) setToast('✓ COD collecté · Commande marquée comme livrée')
         else if (field === 'cod_reversed' && newValue) setToast('✓ COD reversé · Fonds reçus')
       } catch (err) {
@@ -361,7 +378,13 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
     setCompleteModal(null)
     startTransition(async () => {
       try {
-        await updateDelivery(d.id, { tracking_number: tracking, fee })
+        const result = await updateDelivery(d.id, { tracking_number: tracking, fee })
+        if (result?.error) {
+          setAllDeliveries(list => list.map(del => del.id === d.id ? { ...del, tracking_number: d.tracking_number, fee: d.fee } : del))
+          setCompleteModal(d)
+          setCompleteError(result.error)
+          return
+        }
         setToast('✓ Livraison complétée')
       } catch (err) {
         setAllDeliveries(list => list.map(del => del.id === d.id ? { ...del, tracking_number: d.tracking_number, fee: d.fee } : del))
