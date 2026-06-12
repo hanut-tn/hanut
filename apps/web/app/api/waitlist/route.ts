@@ -3,9 +3,11 @@ import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import type { RateLimitResult } from '@/lib/rate-limit'
+import { verifyTurnstileToken } from '@/lib/turnstile'
 
 const WaitlistSchema = z.object({
-  email: z.string().email(),
+  email:           z.string().email(),
+  turnstile_token: z.string().optional(),
 })
 
 export async function POST(req: Request) {
@@ -38,6 +40,14 @@ export async function POST(req: Request) {
   const parsed = WaitlistSchema.safeParse(rawBody)
   if (!parsed.success) {
     return NextResponse.json({ error: 'Email invalide' }, { status: 400 })
+  }
+
+  const turnstileOk = await verifyTurnstileToken(parsed.data.turnstile_token ?? '', ip)
+  if (!turnstileOk) {
+    return NextResponse.json(
+      { error: 'Vérification de sécurité échouée. Rechargez la page et réessayez.' },
+      { status: 400 }
+    )
   }
 
   const supabase = createServiceClient()

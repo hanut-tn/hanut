@@ -29,6 +29,20 @@ const PUBLIC_PATHS = [
   '/privacy',
 ]
 
+// Edge-compatible base64url → JSON decoder (no Buffer, no Node APIs).
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  try {
+    const base64url = token.split('.')[1]
+    if (!base64url) return {}
+    const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=')
+    const json = atob(padded)
+    return JSON.parse(json) as Record<string, unknown>
+  } catch {
+    return {}
+  }
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
@@ -61,6 +75,7 @@ export async function middleware(req: NextRequest) {
     },
   })
 
+  // getUser() valide le JWT côté Supabase Auth (1 requête réseau, obligatoire).
   const { data: { user } } = await supabase.auth.getUser()
 
   // Utilisateur connecté sur la homepage → dashboard
@@ -77,39 +92,51 @@ export async function middleware(req: NextRequest) {
 
   // Vérification démo expirée — uniquement pour les routes non-billing.
   if (!pathname.startsWith('/billing')) {
-    // Étape 1 : l'utilisateur est-il owner (sellers.id = user.id) ?
-    const { data: seller } = await supabase
-      .from('sellers')
-      .select('subscription_end')
-      .eq('id', user.id)
-      .maybeSingle()
+    // Lire subscription_end depuis les claims JWT (0 requête DB).
+    // getSession() lit le cookie en local, pas de réseau.
+    // Fallback vers les requêtes DB si les claims ne sont pas présents
+    // (JWTs créés avant l'activation du hook).
+    const { data: { session } } = typeof supabase.auth.getSession === 'function'
+      ? await supabase.auth.getSession()
+      : { data: { session: null } }
+    const claims = session?.access_token ? decodeJwtPayload(session.access_token) : {}
+    const hasSubscriptionClaim = Object.prototype.hasOwnProperty.call(claims, 'subscription_end')
+    const subscriptionEndFromClaim = typeof claims.subscription_end === 'string'
+      ? claims.subscription_end
+      : null
 
-    let subscriptionEnd = seller?.subscription_end ?? null
+    let subscriptionEnd: string | null = subscriptionEndFromClaim
 
-    // Étape 2 : si pas owner, chercher via team_members pour lire
-    // subscription_end du vendeur principal. Sans ce check, un membre
-    // d'équipe dont le vendeur a une démo expirée peut continuer à accéder
-    // au dashboard indéfiniment.
-    if (!seller) {
-      const { data: membership } = await supabase
-        .from('team_members')
-        .select('seller_id')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
+    if (!hasSubscriptionClaim) {
+      // Pas de claim → anciens JWTs sans hook. Fallback DB.
+      const { data: seller } = await supabase
+        .from('sellers')
+        .select('subscription_end')
+        .eq('id', user.id)
         .maybeSingle()
 
-      if (membership?.seller_id) {
-        const { data: ownerSeller } = await supabase
-          .from('sellers')
-          .select('subscription_end')
-          .eq('id', membership.seller_id)
+      subscriptionEnd = seller?.subscription_end ?? null
+
+      if (!seller) {
+        const { data: membership } = await supabase
+          .from('team_members')
+          .select('seller_id')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
           .maybeSingle()
 
-        subscriptionEnd = ownerSeller?.subscription_end ?? null
+        if (membership?.seller_id) {
+          const { data: ownerSeller } = await supabase
+            .from('sellers')
+            .select('subscription_end')
+            .eq('id', membership.seller_id)
+            .maybeSingle()
+
+          subscriptionEnd = ownerSeller?.subscription_end ?? null
+        }
       }
     }
 
-    // Étape 3 : bloquer si démo expirée.
     if (subscriptionEnd && new Date(subscriptionEnd) < new Date()) {
       return NextResponse.redirect(new URL('/billing', req.url))
     }

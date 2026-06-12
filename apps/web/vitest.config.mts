@@ -16,6 +16,7 @@ export default defineConfig({
     environment: 'node',
     globals: false,
     include: ['__tests__/**/*.test.ts'],
+    exclude: ['__tests__/integration/**/*.test.ts'],
     restoreMocks: true,
   },
 })

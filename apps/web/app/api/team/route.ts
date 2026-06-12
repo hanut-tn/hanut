@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
   const { data: existingSeller } = await serviceClient
     .from('sellers')
     .select('id')
-    .eq('email', email)
+    .ilike('email', email)
     .maybeSingle()
 
   if (existingSeller) {

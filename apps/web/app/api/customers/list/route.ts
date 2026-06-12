@@ -65,9 +65,8 @@ export async function GET(req: NextRequest) {
 
   const { data: customers, error: customersError } = await supabase
     .from('customers')
-    .select('id, name, phone, address, city, created_at, tags, order_count, orders(id, cod_amount, status, created_at)')
+    .select('id, name, phone, address, city, created_at, tags, order_count')
     .eq('seller_id', context.sellerId)
-    .is('orders.deleted_at', null)
     .in('id', ids)
 
   if (customersError) return NextResponse.json({ error: customersError.message }, { status: 500 })

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { HANUT_CONTACT } from '@/lib/constants'
+import { TurnstileWidget, isTurnstileEnabled } from '@/components/ui/TurnstileWidget'
 
 const FAQ = [
   {
@@ -32,6 +33,8 @@ const FAQ = [
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: '', email: '', message: '' })
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0)
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [msg, setMsg] = useState('')
   const [openFaq, setOpenFaq] = useState<number | null>(null)
@@ -48,7 +51,7 @@ export default function ContactPage() {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, turnstile_token: turnstileToken }),
       })
       const data = await res.json()
       if (res.ok) {
@@ -58,10 +61,12 @@ export default function ContactPage() {
       } else {
         setStatus('error')
         setMsg(data.error ?? 'Une erreur est survenue')
+        setTurnstileResetKey(k => k + 1)
       }
     } catch {
       setStatus('error')
       setMsg('Erreur réseau. Réessayez.')
+      setTurnstileResetKey(k => k + 1)
     }
   }
 
@@ -169,12 +174,15 @@ export default function ContactPage() {
                         placeholder="Décrivez votre question ou problème…"
                       />
                     </div>
+                    {isTurnstileEnabled() && (
+                      <TurnstileWidget onVerify={setTurnstileToken} resetKey={turnstileResetKey} />
+                    )}
                     {status === 'error' && (
                       <p className="text-xs text-red-600">{msg}</p>
                     )}
                     <button
                       type="submit"
-                      disabled={status === 'loading'}
+                      disabled={status === 'loading' || (isTurnstileEnabled() && !turnstileToken)}
                       className="w-full bg-[#16A34A] hover:bg-green-700 text-white font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50"
                     >
                       {status === 'loading' ? 'Envoi...' : 'Envoyer le message'}

@@ -3,11 +3,13 @@ import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import type { RateLimitResult } from '@/lib/rate-limit'
+import { verifyTurnstileToken } from '@/lib/turnstile'
 
 const ContactSchema = z.object({
-  name:    z.string().min(2).max(100),
-  email:   z.string().email(),
-  message: z.string().min(10).max(2000),
+  name:            z.string().min(2).max(100),
+  email:           z.string().email(),
+  message:         z.string().min(10).max(2000),
+  turnstile_token: z.string().optional(),
 })
 
 export async function POST(req: Request) {
@@ -43,7 +45,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: msg }, { status: 400 })
   }
 
-  const { name, email, message } = parsed.data
+  const { name, email, message, turnstile_token } = parsed.data
+
+  const turnstileOk = await verifyTurnstileToken(turnstile_token ?? '', ip)
+  if (!turnstileOk) {
+    return NextResponse.json(
+      { error: 'Vérification de sécurité échouée. Rechargez la page et réessayez.' },
+      { status: 400 }
+    )
+  }
   const supabase = createServiceClient()
   const { error } = await supabase.from('contact_messages').insert({
     name: name.trim(),
