@@ -1,3 +1,8 @@
+-- ⚠️ ORDRE IMPORTANT
+-- Ce fichier doit s'exécuter APRÈS :
+-- 20260602_add_team_members.sql (définit get_seller_id, can_write_seller, get_team_role)
+-- Ne pas renommer ce fichier sans vérifier l'ordre alphabétique final.
+--
 -- ============================================================
 -- Journal d'activité équipe
 -- ============================================================

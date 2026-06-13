@@ -6,6 +6,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { checkOrigin } from '@/lib/csrf'
+import { requireActiveResponse } from '@/lib/assert-active'
 
 type Params = {
   params: Promise<{ memberId: string }>
@@ -19,6 +20,8 @@ export async function POST(request: NextRequest, { params }: Params) {
   if (context.plan !== 'pro' && context.plan !== 'business') {
     return NextResponse.json({ error: 'Disponible dans le plan Pro' }, { status: 403 })
   }
+  const activeCheck = requireActiveResponse(context)
+  if (activeCheck) return activeCheck
 
   const { memberId } = await params
   const serviceClient = createServiceClient()

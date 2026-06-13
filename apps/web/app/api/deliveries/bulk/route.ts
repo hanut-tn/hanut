@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { checkOrigin } from '@/lib/csrf'
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
+import { requireActiveResponse } from '@/lib/assert-active'
 
 const BulkDeliverySchema = z.object({
   ids: z.array(z.string().min(1)).min(1, 'Aucune livraison sélectionnée').max(100, 'Maximum 100 livraisons à la fois'),
@@ -15,6 +16,8 @@ export async function PATCH(req: NextRequest) {
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   if (context.role === 'readonly') return NextResponse.json({ error: 'Action réservée aux admins et opérateurs' }, { status: 403 })
+  const activeCheck = requireActiveResponse(context)
+  if (activeCheck) return activeCheck
 
   let rawBody: unknown
   try {

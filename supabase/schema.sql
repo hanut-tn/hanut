@@ -1,6 +1,29 @@
 -- ============================================================
--- HANUT — Schéma complet Supabase
--- À exécuter dans l'éditeur SQL de Supabase (Project > SQL Editor)
+-- HANUT — Schéma de base Supabase
+-- Ce fichier contient le schéma INITIAL sur lequel les migrations
+-- de supabase/migrations/ sont appliquées dans l'ordre.
+-- NE PAS modifier manuellement — utiliser les migrations.
+--
+-- Divergences connues avec la DB de production (gérées par migrations) :
+--   - deliveries.order_id : schema.sql a UNIQUE total → migration
+--     20260610_add_unique_delivery_order.sql remplace par index UNIQUE
+--     PARTIAL (WHERE cod_collected = false). Correct sur prod.
+--   - orders.status CHECK : manque 'cancelled' → ajouté par
+--     20260611_add_cancelled_status.sql.
+--   - orders : manque unit_cost, tracking_token → ajoutés par migrations.
+--   - customers : manque total_spent, last_order_at → ajoutés par
+--     20260618_materialize_customers_stats.sql.
+--   - create_order_with_stock : version 12 params sans SECURITY DEFINER
+--     → remplacée par migrations 20260610_consolidate_order_rpc.sql
+--     et 20260620_secure_order_rpc.sql.
+--   - Tables manquantes (team_members, stock_movements, etc.) : ajoutées
+--     par leurs migrations respectives.
+--   - Trigger orders_increment_customer_count (+1 inconditionnel sur INSERT)
+--     → supprimé par 20260624_fix_double_order_count_trigger.sql.
+--     Remplacé par trg_update_customer_order_count (20260618) qui gère
+--     INSERT/UPDATE/DELETE et les changements de customer_id.
+--   - order_status_transitions : ajoutée par
+--     20260622_add_status_transitions.sql.
 -- ============================================================
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -125,7 +148,7 @@ CREATE TRIGGER orders_updated_at
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS deliveries (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_id       UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE UNIQUE,
+  order_id       UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   carrier        TEXT NOT NULL
                  CHECK (carrier IN ('intigo', 'navex', 'adex', 'aramex', 'bestdelivery')),
   tracking_number TEXT,

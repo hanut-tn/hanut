@@ -9,6 +9,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { PLAN_LIMITS } from '@/lib/constants'
+import { requireActiveResponse } from '@/lib/assert-active'
 
 const InviteMemberSchema = z.object({
   email: z.string().min(1, 'Email requis').regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Email invalide'),
@@ -57,6 +58,8 @@ export async function POST(request: NextRequest) {
   if (context.plan !== 'pro' && context.plan !== 'business') {
     return NextResponse.json({ error: "La gestion d'équipe est disponible dans le plan Pro" }, { status: 403 })
   }
+  const activeCheck = requireActiveResponse(context)
+  if (activeCheck) return activeCheck
 
   const rawBody = await request.json().catch(() => null)
   if (!rawBody) return NextResponse.json({ error: 'Corps de requête invalide' }, { status: 400 })

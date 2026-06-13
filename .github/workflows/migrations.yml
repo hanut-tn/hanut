@@ -4,13 +4,17 @@ on:
   push:
     branches: [main, develop]
     paths:
+      - '.github/workflows/migrations.yml'
       - 'supabase/migrations/**'
       - 'supabase/schema.sql'
+      - 'supabase/schema.test.sql'
   pull_request:
     branches: [main]
     paths:
+      - '.github/workflows/migrations.yml'
       - 'supabase/migrations/**'
       - 'supabase/schema.sql'
+      - 'supabase/schema.test.sql'
 
 jobs:
   check-migrations:
@@ -47,13 +51,13 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: |
-          psql -h localhost -p 5432 -U postgres -d hanut_test -f supabase/schema.test.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -p 5432 -U postgres -d hanut_test -f supabase/schema.test.sql
 
       - name: Apply base schema
         env:
           PGPASSWORD: postgres
         run: |
-          psql -h localhost -p 5432 -U postgres -d hanut_test -f supabase/schema.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -p 5432 -U postgres -d hanut_test -f supabase/schema.sql
 
       - name: Apply migrations in order
         env:
@@ -62,11 +66,7 @@ jobs:
           echo "Applying migrations..."
           for file in $(ls supabase/migrations/*.sql | sort); do
             echo "→ Applying $file"
-            psql -h localhost -p 5432 -U postgres -d hanut_test -f "$file"
-            if [ $? -ne 0 ]; then
-              echo "❌ Migration failed: $file"
-              exit 1
-            fi
+            psql -v ON_ERROR_STOP=1 -h localhost -p 5432 -U postgres -d hanut_test -f "$file"
             echo "✓ Applied: $file"
           done
           echo "✅ All migrations applied successfully"

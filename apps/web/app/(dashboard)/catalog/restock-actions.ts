@@ -5,6 +5,7 @@ import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { getVariantLabel } from '@/lib/variants'
+import { requireActive } from '@/lib/assert-active'
 
 export type RestockOrderInput = {
   totalQuantity: number
@@ -27,6 +28,8 @@ export async function createRestockOrder(
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
   if (!Number.isInteger(input.totalQuantity) || input.totalQuantity <= 0) {
     return { error: 'Quantité invalide' }
   }
@@ -94,6 +97,8 @@ export async function receiveRestockOrder(
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
 
   const supabase = await createServerClient()
 
@@ -208,6 +213,8 @@ export async function cancelRestockOrder(restockId: string): Promise<{ error?: s
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
 
   const supabase = await createServerClient()
 
@@ -237,6 +244,8 @@ export async function syncProductStock(productId: string): Promise<{ error?: str
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
 
   const supabase = await createServerClient()
 

@@ -1,6 +1,6 @@
-# HANUT_CONTEXT.md
-> Fichier de contexte généré le 2026-06-05 par lecture exhaustive du code source.
-> À mettre à jour après chaque évolution significative de l'architecture.
+# HANUT_CONTEXT.md — Version 2 (2026-06-09)
+> Régénéré par audit complet du code source. Remplace la version précédente.
+> Lecture exhaustive : 22 migrations SQL, 30+ composants, 10 server actions, 20 API routes, 8 tests.
 
 ---
 
@@ -396,10 +396,10 @@ Toutes les tables métier ont RLS activée. Pattern général :
 ```
 20260601_add_missing_app_schema.sql        # slug sellers, tags/notes customers, contraintes, waitlist, contact_messages
 20260601_create_order_with_stock_rpc.sql   # create_order_with_stock()
-20260602_add_activity_logs.sql             # table activity_logs
 20260602_add_orders_soft_delete.sql        # deleted_at + archived_by sur orders
 20260602_add_products_description.sql      # description produits + bucket product-images
 20260602_add_team_members.sql              # team_members, get_seller_id(), get_team_role(), can_write_seller() + RLS
+20260602_z_add_activity_logs.sql           # table activity_logs (après les helpers équipe)
 20260603_add_onboarding.sql                # onboarding_completed + onboarding_steps sur sellers
 20260603_add_rate_limits.sql               # table rate_limits + check_rate_limit()
 20260603_search_orders_rpc.sql             # search_orders()

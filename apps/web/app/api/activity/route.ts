@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
+import { sanitizeDescription } from '@/lib/activity'
+import { checkOrigin } from '@/lib/csrf'
 
 // GET /api/activity?limit=20&offset=0&userId=xxx&actionType=xxx&days=7
 export async function GET(request: NextRequest) {
@@ -52,6 +54,10 @@ const ALLOWED_ACTION_TYPES = [
 
 // POST /api/activity — réservé aux admins, action_type whitelist, seller_id forcé depuis contexte
 export async function POST(request: NextRequest) {
+  if (!checkOrigin(request)) {
+    return NextResponse.json({ error: 'Origine non autorisée.' }, { status: 403 })
+  }
+
   const context = await getUserContext()
   if (!context || context.role !== 'admin') {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
@@ -68,6 +74,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Type d'action non autorisé" }, { status: 400 })
   }
 
+  const description = typeof body.description === 'string'
+    ? sanitizeDescription(body.description).trim().slice(0, 200)
+    : ''
+  if (!description) {
+    return NextResponse.json({ error: 'Description requise' }, { status: 400 })
+  }
+
   const serviceClient = createServiceClient()
 
   const { error } = await serviceClient.from('activity_logs').insert({
@@ -77,7 +90,7 @@ export async function POST(request: NextRequest) {
     action_type: body.action_type,
     entity_type: typeof body.entity_type === 'string' ? body.entity_type : null,
     entity_id: typeof body.entity_id === 'string' ? body.entity_id : null,
-    description: typeof body.description === 'string' ? body.description.slice(0, 200) : null,
+    description,
     metadata: body.metadata && typeof body.metadata === 'object' ? body.metadata : {},
   })
 

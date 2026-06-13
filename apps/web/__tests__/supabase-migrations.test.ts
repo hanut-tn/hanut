@@ -1,3 +1,8 @@
+// ⚠️ Ces tests vérifient le texte des fichiers de migration mais ne détectent
+// pas les problèmes de comportement réel (ordre d'exécution, conflits de triggers).
+// Les tests de comportement sont dans :
+//   __tests__/integration/migrations-sanity.test.ts
+// Exécuter avec : npm run test:integration
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
@@ -13,7 +18,7 @@ describe('Supabase migrations', () => {
   const appSchema = migration('20260601_add_missing_app_schema.sql')
   const orderRpc = migration('20260601_create_order_with_stock_rpc.sql')
   const teamMembers = migration('20260602_add_team_members.sql')
-  const activityLogs = migration('20260602_add_activity_logs.sql')
+  const activityLogs = migration('20260602_z_add_activity_logs.sql')
   const orderSoftDelete = migration('20260602_add_orders_soft_delete.sql')
   const productsDescription = migration('20260602_add_products_description.sql')
   const onboarding = migration('20260603_add_onboarding.sql')
@@ -42,6 +47,8 @@ describe('Supabase migrations', () => {
   const secureDeliveryRpcs = migration('20260621_secure_delivery_rpcs.sql')
   const statusTransitions = migration('20260622_add_status_transitions.sql')
   const codReversalHistory = migration('20260623_add_cod_reversal_history.sql')
+  const doubleOrderCountFix = migration('20260624_fix_double_order_count_trigger.sql')
+  const analyticsExportRpc = migration('20260625_add_analytics_export_rpc.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -211,6 +218,37 @@ describe('Supabase migrations', () => {
     expect(orderCountTrigger).toMatch(/TG_OP = 'DELETE' AND OLD\.customer_id IS NOT NULL AND OLD\.deleted_at IS NULL/i)
     expect(orderCountTrigger).toMatch(/AFTER INSERT OR UPDATE OF deleted_at OR DELETE/i)
     expect(orderCountTrigger).toMatch(/EXECUTE FUNCTION update_customer_order_count\(\)/i)
+  })
+
+  it('removes the legacy double-count trigger only after verifying its replacement', () => {
+    expect(doubleOrderCountFix).toMatch(/BEGIN;/i)
+    expect(doubleOrderCountFix).toMatch(
+      /tgname = 'trg_update_customer_order_count'/i
+    )
+    expect(doubleOrderCountFix).toMatch(
+      /DROP TRIGGER IF EXISTS orders_increment_customer_count ON orders;/i
+    )
+    expect(doubleOrderCountFix).toMatch(
+      /DROP FUNCTION IF EXISTS increment_customer_order_count\(\);/i
+    )
+    expect(doubleOrderCountFix).toMatch(/o\.customer_id = c\.id/i)
+    expect(doubleOrderCountFix).toMatch(/o\.seller_id = c\.seller_id/i)
+    expect(doubleOrderCountFix).toMatch(/o\.deleted_at IS NULL/i)
+    expect(doubleOrderCountFix).toMatch(/COMMIT;/i)
+  })
+
+  it('aggregates analytics exports with guarded seller access and bounded dates', () => {
+    expect(analyticsExportRpc).toMatch(/CREATE OR REPLACE FUNCTION get_analytics_export/i)
+    expect(analyticsExportRpc).toMatch(/SECURITY DEFINER/i)
+    expect(analyticsExportRpc).toMatch(
+      /get_team_role\(p_seller_id\) IN \('admin', 'operator', 'readonly'\)/i
+    )
+    expect(analyticsExportRpc).toMatch(/RAISE EXCEPTION 'INVALID_DATE_RANGE'/i)
+    expect(analyticsExportRpc).toMatch(/INTERVAL '366 days'/i)
+    expect(analyticsExportRpc).toMatch(/GROUP BY o\.created_at::DATE/i)
+    expect(analyticsExportRpc).toMatch(
+      /REVOKE ALL ON FUNCTION get_analytics_export\(UUID, TIMESTAMPTZ, TIMESTAMPTZ\) FROM PUBLIC/i
+    )
   })
 
   it('snapshots product unit cost on orders for profit analytics', () => {

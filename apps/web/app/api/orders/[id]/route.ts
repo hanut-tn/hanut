@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import { checkOrigin } from '@/lib/csrf'
+import { requireActiveResponse } from '@/lib/assert-active'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -13,6 +14,8 @@ export async function PUT(req: Request, { params }: Params) {
   if (context.role === 'readonly') {
     return NextResponse.json({ error: 'Action réservée aux admins et opérateurs' }, { status: 403 })
   }
+  const activeCheck = requireActiveResponse(context)
+  if (activeCheck) return activeCheck
 
   const body = await req.json().catch(() => null)
   if (!body || typeof body !== 'object' || Array.isArray(body)) {

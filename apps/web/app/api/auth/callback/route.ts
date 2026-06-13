@@ -3,6 +3,21 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+function isSafeRedirect(path: string | null): boolean {
+  if (!path) return false
+  if (!path.startsWith('/')) return false
+  if (path.startsWith('//')) return false
+  if (path.startsWith('/\\')) return false
+  if (path.includes(':')) return false
+  if (path.includes('@')) return false
+  try {
+    const url = new URL(path, 'http://localhost')
+    return url.hostname === 'localhost'
+  } catch {
+    return false
+  }
+}
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
@@ -22,6 +37,6 @@ export async function GET(request: NextRequest) {
     await supabase.auth.exchangeCodeForSession(code)
   }
   const next = requestUrl.searchParams.get('next')
-  const redirectPath = next?.startsWith('/') && !next.startsWith('//') ? next : '/'
+  const redirectPath = isSafeRedirect(next) ? next! : '/dashboard'
   return NextResponse.redirect(new URL(redirectPath, requestUrl.origin))
 }

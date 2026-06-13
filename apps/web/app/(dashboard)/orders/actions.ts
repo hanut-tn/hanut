@@ -9,6 +9,7 @@ import type { OrderStatus } from '@hanut/types'
 import { DELETABLE_STATUSES, ORDER_STATUS_LABELS, PLAN_LIMITS } from '@/lib/constants'
 import { getMonthlyOrderCount } from '@/lib/get-context'
 import { isValidTransition } from '@/lib/order-transitions'
+import { requireActive } from '@/lib/assert-active'
 
 export type CreateOrderInput = {
   customer_id?: string
@@ -29,6 +30,8 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderMutatio
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
 
   if (context.plan === 'starter') {
     const count = await getMonthlyOrderCount(context.sellerId)
@@ -95,6 +98,8 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
   const context = await getUserContext()
   if (!context) throw new Error('Non autorisé')
   if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
+  const activeCheck = requireActive(context)
+  if (activeCheck) throw new Error(activeCheck.error)
 
   const supabase = await createServerClient()
 
@@ -152,6 +157,8 @@ export async function cancelPendingOrder(id: string) {
   const context = await getUserContext()
   if (!context) throw new Error('Non autorisé')
   if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
+  const activeCheck = requireActive(context)
+  if (activeCheck) throw new Error(activeCheck.error)
 
   const supabase = await createServerClient()
 
@@ -185,6 +192,8 @@ export async function cancelOrder(id: string): Promise<OrderMutationResult> {
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
 
   const supabase = await createServerClient()
 
@@ -226,6 +235,8 @@ export async function deleteOrder(id: string): Promise<OrderMutationResult> {
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role !== 'admin') return { error: 'Seuls les admins peuvent supprimer des commandes' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
 
   const supabase = await createServerClient()
 
@@ -282,6 +293,8 @@ export async function restoreOrder(id: string): Promise<OrderMutationResult> {
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role !== 'admin') return { error: 'Seuls les admins peuvent restaurer des commandes' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
 
   const supabase = await createServerClient()
 
@@ -315,6 +328,8 @@ export async function permanentlyDeleteOrder(id: string): Promise<OrderMutationR
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role !== 'admin') return { error: 'Seuls les admins peuvent supprimer définitivement des commandes' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
 
   const supabase = await createServerClient()
 

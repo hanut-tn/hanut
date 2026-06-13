@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import { checkOrigin } from '@/lib/csrf'
+import { requireActiveResponse } from '@/lib/assert-active'
 
 const UpdateCustomerTagsSchema = z.object({
   tags: z.array(z.string().min(1).max(50)).max(20).optional(),
@@ -92,6 +93,8 @@ export async function PUT(req: Request, { params }: Params) {
   if (context.role === 'readonly') {
     return NextResponse.json({ error: 'Action réservée aux admins et opérateurs' }, { status: 403 })
   }
+  const activeCheck = requireActiveResponse(context)
+  if (activeCheck) return activeCheck
 
   const supabase = await createServerClient()
 

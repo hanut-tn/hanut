@@ -1,18 +1,6 @@
 import { getUserContext } from '@/lib/get-context'
 import { createServerClient } from '@/lib/supabase/server'
-
-type OrderRow = {
-  id: string
-  cod_amount: number
-  quantity: number
-  unit_cost: number
-  status: string
-  created_at: string
-}
-type DeliveryRow = {
-  fee: number | null
-  order_id: string
-}
+import { requireActiveResponse } from '@/lib/assert-active'
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -25,6 +13,17 @@ function parseDateOnly(value: string): Date | null {
   return date
 }
 
+type ExportRow = {
+  day: string
+  order_count: number
+  revenue: number
+  costs: number
+  fees: number
+  profit: number
+  delivery_rate: number
+  cod_pending: number
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const fromParam = searchParams.get('from')
@@ -33,11 +32,12 @@ export async function GET(req: Request) {
 
   const context = await getUserContext()
   if (!context) return new Response('Non autorisé', { status: 401 })
+  const activeCheck = requireActiveResponse(context)
+  if (activeCheck) return activeCheck
   if (context.plan === 'starter') return new Response('Plan Pro requis', { status: 403 })
 
   let cutoff: Date
   let cutoffEnd: Date
-  let period: number
   let fileLabel: string
 
   if (fromParam || toParam) {
@@ -50,65 +50,62 @@ export async function GET(req: Request) {
     cutoff = fromDate
     cutoffEnd = new Date(toDate)
     cutoffEnd.setUTCHours(23, 59, 59, 999)
-    period = Math.floor((cutoffEnd.getTime() - cutoff.getTime()) / DAY_MS) + 1
+    const period = Math.floor((cutoffEnd.getTime() - cutoff.getTime()) / DAY_MS) + 1
     if (period < 1) return new Response('Période invalide', { status: 400 })
     if (period > 365) return new Response('Période maximum 365 jours', { status: 400 })
     fileLabel = `${fromParam}-${toParam}`
   } else {
-    period    = Number.isFinite(rawPeriod) ? Math.min(180, Math.max(1, rawPeriod)) : 30
-    cutoff    = new Date()
-    cutoff.setDate(cutoff.getDate() - period)
-    cutoff.setHours(0, 0, 0, 0)
-    cutoffEnd = new Date()
-    cutoffEnd.setHours(23, 59, 59, 999)
+    const period = Number.isFinite(rawPeriod) ? Math.min(180, Math.max(1, rawPeriod)) : 30
+    const now = new Date()
+    cutoffEnd = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+      23,
+      59,
+      59,
+      999
+    ))
+    cutoff = new Date(cutoffEnd)
+    cutoff.setUTCDate(cutoff.getUTCDate() - (period - 1))
+    cutoff.setUTCHours(0, 0, 0, 0)
     fileLabel = `${period}j-${new Date().toISOString().split('T')[0]}`
   }
 
   const supabase = await createServerClient()
 
-  const { data: ordersRaw } = (await supabase
-    .from('orders')
-    .select('id, cod_amount, quantity, unit_cost, status, created_at')
-    .eq('seller_id', context.sellerId)
-    .is('deleted_at', null)
-    .gte('created_at', cutoff.toISOString())
-    .lte('created_at', cutoffEnd.toISOString())
-    .order('created_at', { ascending: true })) as unknown as { data: OrderRow[] | null }
+  const { data: dailyStats, error } = await supabase.rpc('get_analytics_export', {
+    p_seller_id: context.sellerId,
+    p_start: cutoff.toISOString(),
+    p_end: cutoffEnd.toISOString(),
+  })
 
-  const orderList = ordersRaw ?? []
+  if (error) return new Response('Erreur lors de l\'export.', { status: 500 })
 
-  // Map delivery fees by order id for profit calculation — bornées par les commandes de la période
-  const feeByOrderId: Record<string, number> = {}
-  if (orderList.length > 0) {
-    const { data: deliveriesRaw } = (await supabase
-      .from('deliveries')
-      .select('fee, order_id')
-      .in('order_id', orderList.map(o => o.id))) as unknown as { data: DeliveryRow[] | null }
-
-    for (const d of deliveriesRaw ?? []) {
-      feeByOrderId[d.order_id] = (feeByOrderId[d.order_id] ?? 0) + (d.fee ?? 0)
-    }
+  // Map jour → données agrégées pour lookup O(1) dans la boucle
+  const statsMap = new Map<string, ExportRow>()
+  for (const row of (dailyStats as ExportRow[] | null) ?? []) {
+    statsMap.set(String(row.day), row)
   }
 
   const rows: string[] = []
   const cursor = new Date(cutoff)
   while (cursor <= cutoffEnd) {
     const dateStr = cursor.toISOString().split('T')[0]
+    const row = statsMap.get(dateStr)
 
-    const dayOrders = orderList.filter(o => o.created_at.startsWith(dateStr))
-    const delivered = dayOrders.filter(o => o.status === 'delivered')
-    const shipped = dayOrders.filter(o => ['shipped', 'delivered', 'returned'].includes(o.status))
-    const revenue = delivered.reduce((s, o) => s + o.cod_amount, 0)
-    const fees = delivered.reduce((s, o) => s + (feeByOrderId[o.id] ?? 0), 0)
-    const costs = delivered.reduce((s, o) => s + (o.unit_cost ?? 0) * (o.quantity ?? 1), 0)
-    const profit = revenue - fees - costs
-    const deliveryRate = shipped.length > 0 ? Math.round((delivered.length / shipped.length) * 100) : 0
-    const codPending = dayOrders
-      .filter(o => ['pending', 'new', 'confirmed', 'shipped'].includes(o.status))
-      .reduce((s, o) => s + o.cod_amount, 0)
+    const orderCount    = row?.order_count    ?? 0
+    const revenue       = Number(row?.revenue      ?? 0)
+    const costs         = Number(row?.costs        ?? 0)
+    const fees          = Number(row?.fees         ?? 0)
+    const profit        = Number(row?.profit       ?? 0)
+    const deliveryRate  = row?.delivery_rate  ?? 0
+    const codPending    = Number(row?.cod_pending   ?? 0)
 
-    rows.push(`${dateStr},${dayOrders.length},${revenue.toFixed(2)},${costs.toFixed(2)},${fees.toFixed(2)},${profit.toFixed(2)},${deliveryRate}%,${codPending.toFixed(2)}`)
-    cursor.setDate(cursor.getDate() + 1)
+    rows.push(
+      `${dateStr},${orderCount},${revenue.toFixed(2)},${costs.toFixed(2)},${fees.toFixed(2)},${profit.toFixed(2)},${deliveryRate}%,${codPending.toFixed(2)}`
+    )
+    cursor.setUTCDate(cursor.getUTCDate() + 1)
   }
 
   const BOM = '﻿'

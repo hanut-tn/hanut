@@ -6,6 +6,7 @@ import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { getVariantLabel, sumVariantStock } from '@/lib/variants'
+import { requireActive } from '@/lib/assert-active'
 
 export type ProductVariant = { size?: string; color?: string; qty: number }
 
@@ -25,6 +26,8 @@ export async function upsertProduct(input: ProductInput): Promise<{ error?: stri
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
 
   const supabase = await createServerClient()
 
@@ -82,6 +85,8 @@ export async function deleteProduct(id: string): Promise<{ error?: string }> {
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role !== 'admin') return { error: 'Seuls les admins peuvent supprimer des produits' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
 
   const supabase = await createServerClient()
 
@@ -150,6 +155,8 @@ export async function uploadProductImage(formData: FormData): Promise<{ url?: st
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
 
   const file = formData.get('file') as File
   if (!file || !file.size) return { error: 'Aucun fichier fourni' }
@@ -203,6 +210,8 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
 
   const supabase = await createServerClient()
 

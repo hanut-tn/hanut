@@ -5,6 +5,7 @@ import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import type { CarrierName } from '@hanut/types'
+import { requireActive } from '@/lib/assert-active'
 
 export type CreateDeliveryInput = {
   order_id: string
@@ -85,6 +86,8 @@ export async function createDelivery(input: CreateDeliveryInput): Promise<{ erro
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
 
   const supabase = await createServerClient()
 
@@ -171,6 +174,8 @@ export async function updateDelivery(
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
 
   const supabase = await createServerClient()
 
@@ -272,6 +277,8 @@ export async function createDeliveryFromOrder(
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
 
   const supabase = await createServerClient()
 
@@ -320,6 +327,8 @@ export async function markCodReversed(
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé.' }
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs.' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
   if (!Number.isFinite(amount) || amount <= 0) return { error: 'Montant de reversement invalide.' }
 
   const supabase = await createServerClient()
@@ -330,6 +339,8 @@ export async function deleteDelivery(id: string): Promise<{ error?: string }> {
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
 
   const supabase = await createServerClient()
 

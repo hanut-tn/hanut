@@ -4,6 +4,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { revalidatePath } from 'next/cache'
+import { requireActive } from '@/lib/assert-active'
 
 export type CustomerInput = {
   name: string
@@ -16,6 +17,8 @@ export async function updateCustomer(id: string, input: CustomerInput): Promise<
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
 
   const supabase = await createServerClient()
 
@@ -53,6 +56,8 @@ export async function deleteCustomer(id: string): Promise<{ error?: string }> {
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role !== 'admin') return { error: 'Seuls les admins peuvent supprimer des clients' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
 
   const supabase = await createServerClient()
 

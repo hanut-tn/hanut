@@ -29,6 +29,7 @@ vi.mock('@/lib/activity', () => ({
 
 import {
   createDelivery,
+  createDeliveryFromOrder,
   deleteDelivery,
   markCodReversed,
   updateDelivery,
@@ -129,6 +130,34 @@ describe('createDelivery', () => {
     const result = await createDelivery({ order_id: 'order-1', carrier: 'intigo' })
 
     expect(result.error).toContain('réservée')
+    expect(serverMock.createServerClient).not.toHaveBeenCalled()
+  })
+})
+
+describe('createDeliveryFromOrder', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockContext()
+  })
+
+  it('blocks shipping when the subscription is expired', async () => {
+    contextMock.getUserContext.mockResolvedValue({
+      userId: 'user-1',
+      sellerId: 'seller-1',
+      role: 'admin',
+      isSeller: true,
+      plan: 'pro',
+      demoExpired: true,
+    })
+
+    const result = await createDeliveryFromOrder(
+      'order-1',
+      'intigo',
+      undefined,
+      0
+    )
+
+    expect(result.error).toContain('Abonnement expiré')
     expect(serverMock.createServerClient).not.toHaveBeenCalled()
   })
 })

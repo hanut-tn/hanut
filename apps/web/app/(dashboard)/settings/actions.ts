@@ -3,6 +3,7 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
 import { revalidatePath } from 'next/cache'
+import { requireActive } from '@/lib/assert-active'
 
 export type ProfileInput = {
   name: string
@@ -13,6 +14,8 @@ export async function updateProfile(input: ProfileInput) {
   const context = await getUserContext()
   if (!context) throw new Error('Non autorisé')
   if (!context.isSeller) throw new Error('Réservé au propriétaire')
+  const activeCheck = requireActive(context)
+  if (activeCheck) throw new Error(activeCheck.error)
 
   const serviceClient = createServiceClient()
   const { error } = await serviceClient
@@ -32,6 +35,8 @@ export async function updateSlug(slug: string) {
   const context = await getUserContext()
   if (!context) throw new Error('Non autorisé')
   if (!context.isSeller) throw new Error('Réservé au propriétaire')
+  const activeCheck = requireActive(context)
+  if (activeCheck) throw new Error(activeCheck.error)
 
   const cleaned = slug
     .toLowerCase()

@@ -66,6 +66,14 @@ La version finale est dans `20260620_secure_order_rpc.sql` :
 | `cancel_order_with_stock` | `20260619_extend_cancel_order.sql` |
 | `soft_delete_order_with_stock` | `20260612_allow_delete_cancelled_order.sql` |
 | `get_analytics_summary` | `20260612_add_analytics_rpc.sql` |
+| `get_analytics_export` | `20260625_add_analytics_export_rpc.sql` |
+
+## Correctifs de cohérence récents
+
+| Fichier | Rôle |
+|---|---|
+| `20260624_fix_double_order_count_trigger.sql` | Supprime le trigger historique qui doublait `customers.order_count` |
+| `20260625_add_analytics_export_rpc.sql` | Agrège l'export analytics par jour avec contrôle d'accès et période bornée |
 
 ## Note sur schema.sql
 

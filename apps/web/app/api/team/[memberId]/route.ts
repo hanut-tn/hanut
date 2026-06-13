@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { checkOrigin } from '@/lib/csrf'
+import { requireActiveResponse } from '@/lib/assert-active'
 
 // PATCH /api/team/[memberId] — changer le rôle
 export async function PATCH(
@@ -17,6 +18,8 @@ export async function PATCH(
   if (context.plan !== 'pro' && context.plan !== 'business') {
     return NextResponse.json({ error: 'Disponible dans le plan Pro' }, { status: 403 })
   }
+  const activeCheck = requireActiveResponse(context)
+  if (activeCheck) return activeCheck
 
   const { memberId } = await params
   const body = await request.json()
@@ -78,6 +81,8 @@ export async function DELETE(
   if (context.plan !== 'pro' && context.plan !== 'business') {
     return NextResponse.json({ error: 'Disponible dans le plan Pro' }, { status: 403 })
   }
+  const activeCheck = requireActiveResponse(context)
+  if (activeCheck) return activeCheck
 
   const { memberId } = await params
   const serviceClient = createServiceClient()
