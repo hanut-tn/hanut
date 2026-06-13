@@ -81,12 +81,17 @@ export default async function PublicOrderPage({ params }: Props) {
 
       {/* Footer */}
       <footer className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-gray-100 py-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] text-center">
-        <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-          <div className="w-4 h-4 bg-[#0B5E46] rounded flex items-center justify-center">
-            <span className="text-white font-bold" style={{ fontSize: '9px' }}>H</span>
-          </div>
-          Propulsé par Hanut
-        </Link>
+        <div className="flex items-center justify-center gap-4">
+          <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+            <div className="w-4 h-4 bg-[#0B5E46] rounded flex items-center justify-center">
+              <span className="text-white font-bold" style={{ fontSize: '9px' }}>H</span>
+            </div>
+            Propulsé par Hanut
+          </Link>
+          <Link href="/privacy" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+            Confidentialité
+          </Link>
+        </div>
       </footer>
     </div>
   )

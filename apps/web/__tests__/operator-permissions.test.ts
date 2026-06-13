@@ -11,6 +11,10 @@ const contextMock = vi.hoisted(() => ({
   getMonthlyOrderCount: vi.fn().mockResolvedValue(0),
 }))
 
+const activityMock = vi.hoisted(() => ({
+  logActivity: vi.fn().mockResolvedValue(undefined),
+}))
+
 vi.mock('@/lib/supabase/server', () => ({
   createServerClient: serverMock.createServerClient,
 }))
@@ -26,7 +30,7 @@ vi.mock('next/cache', () => ({
 }))
 
 vi.mock('@/lib/activity', () => ({
-  logActivity: vi.fn().mockResolvedValue(undefined),
+  logActivity: activityMock.logActivity,
 }))
 
 vi.mock('@sentry/nextjs', () => ({
@@ -49,7 +53,10 @@ vi.mock('@/lib/constants', () => ({
 import { createOrder, deleteOrder } from '../app/(dashboard)/orders/actions'
 import type { CreateOrderInput } from '../app/(dashboard)/orders/actions'
 import { deleteProduct } from '../app/(dashboard)/catalog/actions'
-import { deleteCustomer } from '../app/(dashboard)/customers/actions'
+import {
+  anonymizeCustomer,
+  deleteCustomer,
+} from '../app/(dashboard)/customers/actions'
 
 function mockContext(role: 'admin' | 'operator' | 'readonly') {
   contextMock.getUserContext.mockResolvedValue({
@@ -148,6 +155,46 @@ describe('role-based permissions', () => {
 
     expect(result.error).toBe('Seuls les admins peuvent supprimer des clients')
     expect(serverMock.createServerClient).not.toHaveBeenCalled()
+  })
+
+  it('operator cannot anonymize a customer', async () => {
+    mockContext('operator')
+
+    const result = await anonymizeCustomer('customer-id')
+
+    expect(result.error).toBe('Seuls les admins peuvent anonymiser des clients')
+    expect(serverMock.createServerClient).not.toHaveBeenCalled()
+  })
+
+  it('admin anonymizes through the guarded RPC without logging customer PII', async () => {
+    mockContext('admin')
+
+    const sellerQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: { name: 'Boutique' } }),
+    }
+    const rpc = vi.fn().mockResolvedValue({ error: null })
+    serverMock.createServerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'sellers') return sellerQuery
+        throw new Error(`Unexpected table: ${table}`)
+      }),
+      rpc,
+    })
+
+    const result = await anonymizeCustomer('customer-id')
+
+    expect(result.error).toBeUndefined()
+    expect(rpc).toHaveBeenCalledWith('anonymize_customer', {
+      p_seller_id: 'seller-1',
+      p_customer_id: 'customer-id',
+    })
+    expect(activityMock.logActivity).toHaveBeenCalledWith(expect.objectContaining({
+      entityId: 'customer-id',
+      description: 'a anonymisé les données personnelles d’un client',
+    }))
+    expect(serverMock.revalidatePath).toHaveBeenCalledWith('/customers/customer-id')
   })
 
   it('admin can soft-delete a pending order', async () => {

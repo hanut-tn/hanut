@@ -509,8 +509,11 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         {loading ? 'Envoi en cours…' : 'Passer la commande'}
       </button>
 
-      <p className="text-xs text-center text-gray-400">
-        En passant commande, vous acceptez d&apos;être contacté par le vendeur pour confirmation.
+      <p className="text-xs text-[#78716C] text-center mt-2">
+        En passant cette commande, vous acceptez que vos données personnelles (nom, téléphone, adresse)
+        soient transmises au vendeur pour le traitement de votre commande COD. Conformément à la loi
+        organique n° 2004-63, vous disposez d&apos;un droit d&apos;accès et de rectification.{' '}
+        <a href="/privacy" className="underline hover:text-[#1C1917]">Politique de confidentialité</a>.
       </p>
     </form>
   )

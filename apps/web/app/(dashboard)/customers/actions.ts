@@ -120,3 +120,37 @@ export async function deleteCustomer(id: string): Promise<{ error?: string }> {
   revalidatePath('/customers')
   return {}
 }
+
+export async function anonymizeCustomer(id: string): Promise<{ error?: string }> {
+  const context = await getUserContext()
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role !== 'admin') return { error: 'Seuls les admins peuvent anonymiser des clients' }
+
+  const supabase = await createServerClient()
+
+  const { error } = await supabase.rpc('anonymize_customer', {
+    p_seller_id: context.sellerId,
+    p_customer_id: id,
+  })
+
+  if (error) {
+    if (error.message.includes('CUSTOMER_NOT_FOUND')) return { error: 'Client introuvable.' }
+    return { error: error.message }
+  }
+
+  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
+
+  await logActivity({
+    sellerId: context.sellerId,
+    userId: context.userId,
+    userName: seller?.name ?? context.userId,
+    actionType: 'customer_updated',
+    entityType: 'customer',
+    entityId: id,
+    description: 'a anonymisé les données personnelles d’un client',
+  })
+
+  revalidatePath('/customers')
+  revalidatePath(`/customers/${id}`)
+  return {}
+}

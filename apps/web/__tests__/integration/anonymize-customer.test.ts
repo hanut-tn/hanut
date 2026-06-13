@@ -1,0 +1,173 @@
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import {
+  adminClient,
+  authenticateAs,
+  cleanupSeller,
+  createTestSeller,
+  hasIntegrationEnv,
+} from './setup'
+
+const describeIf = hasIntegrationEnv ? describe : describe.skip
+
+describeIf('anonymize_customer RPC', () => {
+  let seller: { id: string; email: string }
+  let customerId: string
+  let orderId: string
+  let operatorId: string
+  let operatorEmail: string
+
+  beforeAll(async () => {
+    seller = await createTestSeller('anonymize-customer')
+
+    const { data: product, error: productError } = await adminClient
+      .from('products')
+      .insert({
+        seller_id: seller.id,
+        name: 'Produit anonymisation',
+        price: 80,
+        cost: 30,
+        stock: 10,
+      })
+      .select('id')
+      .single()
+    if (productError || !product) {
+      throw new Error(`Anonymize product setup failed: ${productError?.message}`)
+    }
+
+    const ownerClient = await authenticateAs(seller.email)
+    const { data: createdOrderId, error: orderError } = await ownerClient.rpc(
+      'create_order_with_stock',
+      {
+        p_seller_id: seller.id,
+        p_product_id: product.id,
+        p_quantity: 1,
+        p_customer_name: 'Client Secret',
+        p_customer_phone: '55123456',
+        p_customer_address: '10 rue privée',
+        p_customer_city: 'Tunis',
+        p_status: 'new',
+      },
+    )
+    if (orderError || !createdOrderId) {
+      throw new Error(`Anonymize order setup failed: ${orderError?.message}`)
+    }
+    orderId = createdOrderId as string
+
+    const { data: order, error: orderLookupError } = await adminClient
+      .from('orders')
+      .select('customer_id')
+      .eq('id', orderId)
+      .single()
+    if (orderLookupError || !order?.customer_id) {
+      throw new Error(`Anonymize customer lookup failed: ${orderLookupError?.message}`)
+    }
+    customerId = order.customer_id
+
+    const { error: logError } = await adminClient.from('activity_logs').insert({
+      seller_id: seller.id,
+      user_id: seller.id,
+      action_type: 'customer_updated',
+      entity_type: 'customer',
+      entity_id: customerId,
+      description: 'a modifié le client Client Secret',
+      metadata: { phone: '55123456' },
+    })
+    if (logError) throw new Error(`Anonymize activity setup failed: ${logError.message}`)
+
+    operatorEmail = `operator-anonymize-${Date.now()}@hanut-test.local`
+    const { data: operatorUser, error: operatorError } = await adminClient.auth.admin.createUser({
+      email: operatorEmail,
+      password: 'Test1234!',
+      email_confirm: true,
+    })
+    if (operatorError || !operatorUser.user) {
+      throw new Error(`Anonymize operator setup failed: ${operatorError?.message}`)
+    }
+    operatorId = operatorUser.user.id
+
+    const { error: memberError } = await adminClient.from('team_members').insert({
+      seller_id: seller.id,
+      user_id: operatorId,
+      email: operatorEmail,
+      role: 'operator',
+      status: 'active',
+      joined_at: new Date().toISOString(),
+    })
+    if (memberError) throw new Error(`Anonymize membership setup failed: ${memberError.message}`)
+  })
+
+  afterAll(async () => {
+    if (operatorId) {
+      await adminClient.from('team_members').delete().eq('user_id', operatorId)
+      await adminClient.auth.admin.deleteUser(operatorId).catch(() => {})
+    }
+    if (seller) await cleanupSeller(seller.id)
+  })
+
+  it('rejects an operator and keeps PII unchanged', async () => {
+    const operatorClient = await authenticateAs(operatorEmail)
+    const { error } = await operatorClient.rpc('anonymize_customer', {
+      p_seller_id: seller.id,
+      p_customer_id: customerId,
+    })
+
+    expect(error).not.toBeNull()
+
+    const { data: customer } = await adminClient
+      .from('customers')
+      .select('name, phone')
+      .eq('id', customerId)
+      .single()
+
+    expect(customer).toMatchObject({
+      name: 'Client Secret',
+      phone: '55123456',
+    })
+  })
+
+  it('anonymizes PII, scrubs audit logs and preserves the order', async () => {
+    const ownerClient = await authenticateAs(seller.email)
+    const { error } = await ownerClient.rpc('anonymize_customer', {
+      p_seller_id: seller.id,
+      p_customer_id: customerId,
+    })
+
+    expect(error).toBeNull()
+
+    const [
+      { data: customer },
+      { data: order },
+      { data: logs },
+    ] = await Promise.all([
+      adminClient
+        .from('customers')
+        .select('name, phone, address, city, notes, tags')
+        .eq('id', customerId)
+        .single(),
+      adminClient
+        .from('orders')
+        .select('id, customer_id')
+        .eq('id', orderId)
+        .single(),
+      adminClient
+        .from('activity_logs')
+        .select('description, metadata')
+        .eq('seller_id', seller.id)
+        .eq('entity_type', 'customer')
+        .eq('entity_id', customerId),
+    ])
+
+    expect(customer).toEqual({
+      name: 'Client anonymisé',
+      phone: '00000000',
+      address: null,
+      city: null,
+      notes: null,
+      tags: [],
+    })
+    expect(order).toEqual({ id: orderId, customer_id: customerId })
+    expect(logs).toEqual([
+      { description: 'Données client anonymisées', metadata: {} },
+    ])
+  })
+})

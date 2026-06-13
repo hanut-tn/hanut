@@ -64,6 +64,7 @@ describe('Supabase migrations', () => {
   const analyticsExportRpc = migration('20260625_add_analytics_export_rpc.sql')
   const apiRolePrivileges = migration('20260626_restore_api_role_privileges.sql')
   const serviceRoleDetection = migration('20260627_fix_service_role_detection.sql')
+  const anonymizeCustomerMigration = migration('20260629_anonymize_customer.sql')
 
   it('base tables migration creates the 5 core tables idempotently before any other migration', () => {
     expect(baseTables).toMatch(/CREATE TABLE IF NOT EXISTS sellers/i)
@@ -458,6 +459,19 @@ describe('Supabase migrations', () => {
     expect(adjustStockDeltaFix).toMatch(/IF NOT is_service_role\(\)/i)
     expect(adjustStockDeltaFix).toMatch(/can_write_seller\(p_seller_id\)/i)
     expect(adjustStockDeltaFix).toMatch(/INSERT INTO stock_movements/i)
+  })
+
+  it('anonymizes customer PII while preserving order history (INPDP loi 2004-63)', () => {
+    expect(anonymizeCustomerMigration).toMatch(/CREATE OR REPLACE FUNCTION anonymize_customer/i)
+    expect(anonymizeCustomerMigration).toMatch(/SECURITY DEFINER/i)
+    expect(anonymizeCustomerMigration).toMatch(/is_service_role\(\)/i)
+    expect(anonymizeCustomerMigration).toMatch(/get_team_role\(p_seller_id\) = 'admin'/i)
+    expect(anonymizeCustomerMigration).toMatch(/name\s+=\s+'Client anonymisé'/i)
+    expect(anonymizeCustomerMigration).toMatch(/phone\s+=\s+'00000000'/i)
+    expect(anonymizeCustomerMigration).toMatch(/tags\s+=\s+ARRAY\[\]::TEXT\[\]/i)
+    expect(anonymizeCustomerMigration).toMatch(/UPDATE activity_logs/i)
+    expect(anonymizeCustomerMigration).toMatch(/RAISE EXCEPTION 'CUSTOMER_NOT_FOUND'/i)
+    expect(anonymizeCustomerMigration).toMatch(/REVOKE ALL ON FUNCTION anonymize_customer\(UUID, UUID\) FROM PUBLIC/i)
   })
 
   it('adjusts product stock atomically without masking negative stock races', () => {

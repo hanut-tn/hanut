@@ -6,6 +6,12 @@ import { logActivity } from '@/lib/activity'
 import { checkOrigin } from '@/lib/csrf'
 import { requireActiveResponse } from '@/lib/assert-active'
 
+// Rôles disponibles : 'admin' | 'operator' | 'readonly'
+// Le propriétaire et les membres actifs ayant déjà le rôle admin peuvent promouvoir
+// un autre membre en admin via cet endpoint.
+// La promotion au rôle 'admin' donne accès aux suppressions, anonymisations et changements
+// de rôle — voir TEAM_ROLES.md pour la matrice complète des permissions.
+
 // PATCH /api/team/[memberId] — changer le rôle
 export async function PATCH(
   request: NextRequest,

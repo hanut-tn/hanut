@@ -734,6 +734,24 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
             </button>
           </div>
 
+          {/* Données et confidentialité */}
+          <div className="card p-5 space-y-2">
+            <div className="flex items-start gap-3">
+              <Info className="w-4 h-4 text-[#78716C] mt-0.5 shrink-0" />
+              <div>
+                <h2 className="font-semibold text-gray-900 mb-1">Données et confidentialité</h2>
+                <p className="text-sm text-[#78716C]">
+                  Vos données sont traitées conformément à la{' '}
+                  <a href="/privacy" className="text-[#16A34A] hover:underline font-medium">
+                    loi organique n° 2004-63
+                  </a>.
+                  {' '}La suppression de votre compte efface définitivement toutes vos données personnelles
+                  et celles de votre boutique.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Danger zone */}
           <div className="card p-5 ring-1 ring-red-200">
             <div className="flex items-center gap-2 mb-2">
