@@ -51,6 +51,7 @@ describe('Supabase migrations', () => {
   const doubleOrderCountFix = migration('20260624_fix_double_order_count_trigger.sql')
   const analyticsExportRpc = migration('20260625_add_analytics_export_rpc.sql')
   const apiRolePrivileges = migration('20260626_restore_api_role_privileges.sql')
+  const serviceRoleDetection = migration('20260627_fix_service_role_detection.sql')
 
   it('base tables migration creates the 5 core tables idempotently before any other migration', () => {
     expect(baseTables).toMatch(/CREATE TABLE IF NOT EXISTS sellers/i)
@@ -275,6 +276,22 @@ describe('Supabase migrations', () => {
     )
     expect(apiRolePrivileges).not.toMatch(/DISABLE ROW LEVEL SECURITY/i)
     expect(apiRolePrivileges).not.toMatch(/BYPASSRLS/i)
+  })
+
+  it('detects service_role across current and legacy PostgREST claim formats', () => {
+    expect(serviceRoleDetection).toMatch(
+      /CREATE OR REPLACE FUNCTION is_service_role\(\)/i
+    )
+    expect(serviceRoleDetection).toMatch(/auth\.role\(\)/i)
+    expect(serviceRoleDetection).toMatch(/request\.jwt\.claim\.role/i)
+    expect(serviceRoleDetection).toMatch(/request\.jwt\.claims/i)
+    expect(serviceRoleDetection).toMatch(
+      /WHEN is_service_role\(\) THEN 'admin'/i
+    )
+    expect(serviceRoleDetection).toMatch(
+      /is_service_role\(\)\s+OR get_team_role\(p_seller_id\) IN \('admin', 'operator'\)/i
+    )
+    expect(serviceRoleDetection).not.toMatch(/ALTER ROLE .*BYPASSRLS/i)
   })
 
   it('snapshots product unit cost on orders for profit analytics', () => {

@@ -56,6 +56,21 @@ describeIf('Migration ordering — team_members functions exist (C1)', () => {
     expect(error).toBeNull()
   })
 
+  it('detects the service role used by integration setup', async () => {
+    const { data, error } = await adminClient.rpc('is_service_role')
+
+    expect(error).toBeNull()
+    expect(data).toBe(true)
+  })
+
+  it('does not treat a normal seller session as service_role', async () => {
+    const sellerClient = await authenticateAs(sellerA.email)
+    const { data, error } = await sellerClient.rpc('is_service_role')
+
+    expect(error).toBeNull()
+    expect(data).toBe(false)
+  })
+
   it('can_write_seller() is callable without "does not exist" error', async () => {
     const { error } = await adminClient.rpc('can_write_seller', {
       p_seller_id: '00000000-0000-0000-0000-000000000000',
