@@ -74,6 +74,7 @@ La version finale est dans `20260620_secure_order_rpc.sql` :
 |---|---|
 | `20260624_fix_double_order_count_trigger.sql` | Supprime le trigger historique qui doublait `customers.order_count` |
 | `20260625_add_analytics_export_rpc.sql` | Agrège l'export analytics par jour avec contrôle d'accès et période bornée |
+| `20260626_restore_api_role_privileges.sql` | Restaure les privilèges SQL PostgREST; la RLS reste l'autorisation par ligne |
 
 ## Note sur schema.sql
 

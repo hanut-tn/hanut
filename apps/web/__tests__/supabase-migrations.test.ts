@@ -50,6 +50,7 @@ describe('Supabase migrations', () => {
   const codReversalHistory = migration('20260623_add_cod_reversal_history.sql')
   const doubleOrderCountFix = migration('20260624_fix_double_order_count_trigger.sql')
   const analyticsExportRpc = migration('20260625_add_analytics_export_rpc.sql')
+  const apiRolePrivileges = migration('20260626_restore_api_role_privileges.sql')
 
   it('base tables migration creates the 5 core tables idempotently before any other migration', () => {
     expect(baseTables).toMatch(/CREATE TABLE IF NOT EXISTS sellers/i)
@@ -260,6 +261,20 @@ describe('Supabase migrations', () => {
     expect(analyticsExportRpc).toMatch(
       /REVOKE ALL ON FUNCTION get_analytics_export\(UUID, TIMESTAMPTZ, TIMESTAMPTZ\) FROM PUBLIC/i
     )
+  })
+
+  it('restores PostgREST table privileges without replacing RLS authorization', () => {
+    expect(apiRolePrivileges).toMatch(
+      /GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO service_role/i
+    )
+    expect(apiRolePrivileges).toMatch(
+      /GRANT SELECT, INSERT, UPDATE, DELETE\s+ON ALL TABLES IN SCHEMA public\s+TO authenticated/i
+    )
+    expect(apiRolePrivileges).toMatch(
+      /ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public/i
+    )
+    expect(apiRolePrivileges).not.toMatch(/DISABLE ROW LEVEL SECURITY/i)
+    expect(apiRolePrivileges).not.toMatch(/BYPASSRLS/i)
   })
 
   it('snapshots product unit cost on orders for profit analytics', () => {

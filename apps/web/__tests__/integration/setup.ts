@@ -75,7 +75,10 @@ export async function createTestSeller(suffix = ''): Promise<TestSeller> {
     subscription_end: trialEnd,
     slug: `test-${suffix}-${Date.now()}`,
   })
-  if (sellerError) throw new Error(`createTestSeller insert failed: ${sellerError.message}`)
+  if (sellerError) {
+    await adminClient.auth.admin.deleteUser(data.user.id).catch(() => {})
+    throw new Error(`createTestSeller insert failed: ${sellerError.message}`)
+  }
 
   return { id: data.user.id, email }
 }
