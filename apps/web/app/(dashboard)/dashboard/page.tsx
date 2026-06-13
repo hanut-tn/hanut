@@ -6,8 +6,15 @@ export const metadata: Metadata = {
 }
 
 import { unstable_cache } from 'next/cache'
+import * as Sentry from '@sentry/nextjs'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
+import {
+  normalizeAnalyticsSummary,
+  summarizeOrders,
+  type AnalyticsOrderRow,
+  type AnalyticsSummary,
+} from '@/lib/dashboard-analytics'
 import Link from 'next/link'
 import {
   ShoppingBag, Banknote, TrendingUp, TrendingDown, Clock,
@@ -33,21 +40,54 @@ type RecentOrder = {
   product: { name: string } | { name: string }[] | null
 }
 
-type AnalyticsSummary = {
-  total_revenue: number
-  total_fees: number
-  total_cost: number
-  order_count: number
-  shipped_count: number
-  delivered_count: number
-  returned_count: number
-  cancelled_count: number
-}
+type ServiceClient = ReturnType<typeof createServiceClient>
 
-const EMPTY_ANALYTICS: AnalyticsSummary = {
-  total_revenue: 0, total_fees: 0, total_cost: 0,
-  order_count: 0, shipped_count: 0, delivered_count: 0,
-  returned_count: 0, cancelled_count: 0,
+async function loadAnalyticsSummary(
+  supabase: ServiceClient,
+  sellerId: string,
+  start: string,
+  end: string,
+): Promise<AnalyticsSummary> {
+  const rpcResult = await supabase.rpc('get_analytics_summary', {
+    p_seller_id: sellerId,
+    p_start: start,
+    p_end: end,
+  })
+  const rpcSummary = normalizeAnalyticsSummary(rpcResult.data)
+
+  if (!rpcResult.error && rpcSummary) return rpcSummary
+
+  const rpcError = rpcResult.error?.message ?? 'La RPC a retourné une réponse vide.'
+  console.error('[dashboard] get_analytics_summary failed, using orders fallback:', rpcError)
+  Sentry.captureException(new Error(`Dashboard analytics RPC failed: ${rpcError}`), {
+    extra: { sellerId, start, end },
+  })
+
+  const fallbackResult = await supabase
+    .from('orders')
+    .select('status, cod_amount, quantity, unit_cost', { count: 'exact' })
+    .eq('seller_id', sellerId)
+    .is('deleted_at', null)
+    .gte('created_at', start)
+    .lte('created_at', end)
+    .limit(10000)
+
+  if (fallbackResult.error) {
+    throw new Error(`Impossible de charger les KPI du dashboard : ${fallbackResult.error.message}`)
+  }
+
+  const rows = (fallbackResult.data ?? []) as AnalyticsOrderRow[]
+  const summary = summarizeOrders(rows)
+  summary.order_count = fallbackResult.count ?? summary.order_count
+
+  if ((fallbackResult.count ?? 0) > rows.length) {
+    Sentry.captureMessage('Dashboard analytics fallback truncated', {
+      level: 'warning',
+      extra: { sellerId, start, end, count: fallbackResult.count, loaded: rows.length },
+    })
+  }
+
+  return summary
 }
 
 // Crée un cache scopé par seller — chaque vendeur a son propre tag.
@@ -65,8 +105,8 @@ function getDashboardData(sellerId: string) {
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
       const [
-        { data: currentStatsRaw },
-        { data: lastMonthStatsRaw },
+        currentStats,
+        lastMonthStats,
         { count: codPendingCount },
         { data: weeklyOrders },
         { data: recentOrders },
@@ -76,17 +116,19 @@ function getDashboardData(sellerId: string) {
         { data: stockProducts },
       ] = await Promise.all([
         // KPIs mois en cours — agrégés en SQL, pas de chargement en mémoire.
-        supabase.rpc('get_analytics_summary', {
-          p_seller_id: sellerId,
-          p_start: startOfMonth.toISOString(),
-          p_end: now.toISOString(),
-        }),
+        loadAnalyticsSummary(
+          supabase,
+          sellerId,
+          startOfMonth.toISOString(),
+          now.toISOString(),
+        ),
         // KPIs mois précédent pour les tendances.
-        supabase.rpc('get_analytics_summary', {
-          p_seller_id: sellerId,
-          p_start: startOfLastMonth.toISOString(),
-          p_end: endOfLastMonth.toISOString(),
-        }),
+        loadAnalyticsSummary(
+          supabase,
+          sellerId,
+          startOfLastMonth.toISOString(),
+          endOfLastMonth.toISOString(),
+        ),
         // Commandes en transit ce mois (confirmées ou expédiées).
         supabase.from('orders')
           .select('id', { count: 'exact', head: true })
@@ -108,9 +150,6 @@ function getDashboardData(sellerId: string) {
         supabase.from('orders').select('id', { count: 'exact', head: true }).eq('seller_id', sellerId).is('deleted_at', null),
         supabase.from('products').select('id, name, stock, low_stock_alert, image_url, price, cost').eq('seller_id', sellerId).order('stock', { ascending: true }).limit(50),
       ])
-
-      const currentStats = (currentStatsRaw ?? EMPTY_ANALYTICS) as AnalyticsSummary
-      const lastMonthStats = (lastMonthStatsRaw ?? EMPTY_ANALYTICS) as AnalyticsSummary
 
       return { currentStats, lastMonthStats, codPendingCount, weeklyOrders, recentOrders, seller, productCount, orderCount, stockProducts }
     },
