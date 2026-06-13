@@ -10,6 +10,7 @@ import { getUserContext, getMonthlyOrderCount } from '@/lib/get-context'
 import OrdersClient from '@/components/orders/OrdersClient'
 import { updateOrderStatus, deleteOrder, confirmPendingOrder, cancelOrder, restoreOrder, permanentlyDeleteOrder } from './actions'
 import { createDeliveryFromOrder } from '@/app/(dashboard)/deliveries/actions'
+import { ORDER_STATUSES } from '@/lib/constants'
 
 type Orders = Parameters<typeof OrdersClient>[0]['orders']
 type TrashOrders = Parameters<typeof OrdersClient>[0]['trashOrders']
@@ -22,7 +23,7 @@ export default async function OrdersPage() {
 
   const monthlyOrderCount = context.plan === 'starter' ? await getMonthlyOrderCount(context.sellerId) : 0
 
-  const [{ data: orders, count: ordersCount }, { data: trashOrders }, { data: allStatuses }] = await Promise.all([
+  const [{ data: orders, count: ordersCount }, { data: trashOrders }, ...statusCountResults] = await Promise.all([
     supabase
       .from('orders')
       .select(
@@ -43,18 +44,22 @@ export default async function OrdersPage() {
           .order('deleted_at', { ascending: false })
       : { data: [] },
 
-    supabase
-      .from('orders')
-      .select('status')
-      .eq('seller_id', context.sellerId)
-      .is('deleted_at', null),
+    // COUNT par statut — une requête HEAD par statut évite de charger toutes les lignes.
+    ...ORDER_STATUSES.map(status =>
+      supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('seller_id', context.sellerId)
+        .eq('status', status)
+        .is('deleted_at', null)
+    ),
   ])
 
   const initialTotal = ordersCount ?? 0
   const tabCounts: Record<string, number> = { all: initialTotal }
-  for (const { status } of allStatuses ?? []) {
-    tabCounts[status] = (tabCounts[status] ?? 0) + 1
-  }
+  ORDER_STATUSES.forEach((status, i) => {
+    tabCounts[status] = statusCountResults[i]?.count ?? 0
+  })
 
   return (
     <OrdersClient

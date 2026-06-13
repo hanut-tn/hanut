@@ -24,6 +24,7 @@ export default async function CatalogPage() {
     .select('*')
     .eq('seller_id', context.sellerId)
     .order('created_at', { ascending: false })
+    .limit(200)
 
   return (
     <CatalogClient

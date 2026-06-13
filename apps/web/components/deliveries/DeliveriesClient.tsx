@@ -241,6 +241,11 @@ export default function DeliveriesClient({
   // État local pour l'optimistic delete
   const [allDeliveries, setAllDeliveries] = useState<Delivery[]>(deliveries)
 
+  // Sync depuis les props après revalidatePath (handleAdd, handleEditSave, etc.)
+  useEffect(() => {
+    setAllDeliveries(deliveries)
+  }, [deliveries])
+
   const [showAdd, setShowAdd] = useState(false)
   const [addOrderId, setAddOrderId] = useState('')
   const [addCarrier, setAddCarrier] = useState<CarrierName>('intigo')

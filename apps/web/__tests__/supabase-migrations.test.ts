@@ -15,6 +15,7 @@ function migration(pathname: string) {
 }
 
 describe('Supabase migrations', () => {
+  const baseTables = migration('20260101_base_tables.sql')
   const appSchema = migration('20260601_add_missing_app_schema.sql')
   const orderRpc = migration('20260601_create_order_with_stock_rpc.sql')
   const teamMembers = migration('20260602_add_team_members.sql')
@@ -49,6 +50,16 @@ describe('Supabase migrations', () => {
   const codReversalHistory = migration('20260623_add_cod_reversal_history.sql')
   const doubleOrderCountFix = migration('20260624_fix_double_order_count_trigger.sql')
   const analyticsExportRpc = migration('20260625_add_analytics_export_rpc.sql')
+
+  it('base tables migration creates the 5 core tables idempotently before any other migration', () => {
+    expect(baseTables).toMatch(/CREATE TABLE IF NOT EXISTS sellers/i)
+    expect(baseTables).toMatch(/CREATE TABLE IF NOT EXISTS products/i)
+    expect(baseTables).toMatch(/CREATE TABLE IF NOT EXISTS customers/i)
+    expect(baseTables).toMatch(/CREATE TABLE IF NOT EXISTS orders/i)
+    expect(baseTables).toMatch(/CREATE TABLE IF NOT EXISTS deliveries/i)
+    expect(baseTables).toMatch(/DROP POLICY IF EXISTS/i)
+    expect(baseTables).toMatch(/DROP TRIGGER IF EXISTS orders_updated_at/i)
+  })
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
