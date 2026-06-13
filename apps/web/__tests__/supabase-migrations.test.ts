@@ -1,8 +1,19 @@
-// ⚠️ Ces tests vérifient le texte des fichiers de migration mais ne détectent
-// pas les problèmes de comportement réel (ordre d'exécution, conflits de triggers).
-// Les tests de comportement sont dans :
+// ⚠️ IMPORTANT — Valeur limitée de ces tests
+//
+// Ces tests vérifient le TEXTE des fichiers de migration
+// (présence de mots-clés, signatures de fonctions).
+// Ils ne détectent PAS :
+// - Les problèmes d'ordre d'exécution (forward-references)
+// - Les conflits de triggers (double comptage)
+// - Le comportement réel des RPCs et policies RLS
+//
+// Les tests de comportement réels sont dans :
 //   __tests__/integration/migrations-sanity.test.ts
 // Exécuter avec : npm run test:integration
+//
+// Ces tests regex sont conservés comme documentation
+// mais ne doivent pas être considérés comme une
+// garantie de bon fonctionnement de la DB.
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
@@ -44,6 +55,7 @@ describe('Supabase migrations', () => {
   const updateOrderStatusRpc = migration('20260613_add_update_order_status_rpc.sql')
   const customerStatsDeliveryRateFix = migration('20260614_fix_customer_stats_delivery_rate.sql')
   const adjustStockRpc = migration('20260614_add_adjust_stock_rpc.sql')
+  const adjustStockDeltaFix = migration('20260628_fix_adjust_stock_delta.sql')
   const secureOrderRpc = migration('20260620_secure_order_rpc.sql')
   const secureDeliveryRpcs = migration('20260621_secure_delivery_rpcs.sql')
   const statusTransitions = migration('20260622_add_status_transitions.sql')
@@ -436,6 +448,15 @@ describe('Supabase migrations', () => {
     expect(customerStatsDeliveryRateFix).toMatch(/'order_count', COUNT\(\*\)/i)
     expect(customerStatsDeliveryRateFix).toMatch(/COUNT\(\*\) FILTER \(WHERE status = 'delivered'\)::NUMERIC \/\s*COUNT\(\*\) \* 100/i)
     expect(customerStatsDeliveryRateFix).toMatch(/REVOKE ALL ON FUNCTION get_customer_stats\(UUID, UUID\) FROM PUBLIC/i)
+  })
+
+  it('rejects zero-delta calls in adjust_product_stock to prevent no-op stock movements', () => {
+    expect(adjustStockDeltaFix).toMatch(/CREATE OR REPLACE FUNCTION adjust_product_stock/i)
+    expect(adjustStockDeltaFix).toMatch(/SECURITY DEFINER/i)
+    expect(adjustStockDeltaFix).toMatch(/p_delta = 0/i)
+    expect(adjustStockDeltaFix).toMatch(/RAISE EXCEPTION 'INVALID_DELTA/i)
+    expect(adjustStockDeltaFix).toMatch(/can_write_seller\(p_seller_id\)/i)
+    expect(adjustStockDeltaFix).toMatch(/INSERT INTO stock_movements/i)
   })
 
   it('adjusts product stock atomically without masking negative stock races', () => {

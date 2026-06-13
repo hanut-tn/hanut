@@ -108,6 +108,8 @@ export const HANUT_CONTACT = {
 
 export const PLAN_LIMITS = {
   starter: {
+    // ⚠️ Synchronisé avec la constante 100 dans supabase/migrations/20260620_secure_order_rpc.sql
+    // (ligne : IF v_monthly_orders >= 100). Changer les deux en même temps.
     ordersPerMonth: 100,
     analyticsDays: 30,
     teamMembers: 0,

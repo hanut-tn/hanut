@@ -1,5 +1,6 @@
 'use server'
 
+import { z } from 'zod'
 import { createServerClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
@@ -7,6 +8,24 @@ import { logActivity } from '@/lib/activity'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { getVariantLabel, sumVariantStock } from '@/lib/variants'
 import { requireActive } from '@/lib/assert-active'
+
+const ProductSchema = z.object({
+  name: z.string().min(1, 'Le nom est obligatoire').max(200, 'Le nom ne doit pas dépasser 200 caractères'),
+  price: z.number().min(0, 'Le prix doit être positif ou nul').max(100000, 'Le prix semble incorrect'),
+  cost: z.number().min(0, 'Le coût doit être positif ou nul').max(100000, 'Le coût semble incorrect').optional().nullable(),
+  stock: z.number().int('Le stock doit être un nombre entier').min(0, 'Le stock doit être positif ou nul'),
+  low_stock_alert: z.number().int().min(0).optional().nullable(),
+  description: z.string().max(2000, 'La description ne doit pas dépasser 2000 caractères').optional().nullable(),
+  variants: z.array(z.object({
+    size: z.string().max(50).optional().nullable(),
+    color: z.string().max(50).optional().nullable(),
+    qty: z.number().int().min(0),
+  })).optional().nullable(),
+})
+
+const UpdateProductSchema = ProductSchema.partial().extend({
+  id: z.string().uuid('ID produit invalide'),
+})
 
 export type ProductVariant = { size?: string; color?: string; qty: number }
 
@@ -28,6 +47,10 @@ export async function upsertProduct(input: ProductInput): Promise<{ error?: stri
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
   const activeCheck = requireActive(context)
   if (activeCheck) return activeCheck
+
+  const schema = input.id ? UpdateProductSchema : ProductSchema
+  const parsed = schema.safeParse(input)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
 
   const supabase = await createServerClient()
 
@@ -277,6 +300,9 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
     rpcCalls.push({ variantName: null, delta })
   }
 
+  const effectiveCalls = rpcCalls.filter(c => c.delta !== 0)
+  if (effectiveCalls.length === 0) return { error: 'Le delta ne peut pas être zéro.' }
+
   // Appels RPC atomiques (FOR UPDATE dans la RPC protège contre les races concurrentes)
   const sellerNameResult = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
   const sellerName = sellerNameResult.data?.name ?? ''
@@ -289,7 +315,7 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
   type AdjustStockResult = { stock_before: number; stock_after: number; delta: number }
   let lastResult: AdjustStockResult | null = null
 
-  for (const call of rpcCalls) {
+  for (const call of effectiveCalls) {
     const { data, error: rpcErr } = await supabase.rpc('adjust_product_stock', {
       p_seller_id: context.sellerId,
       p_product_id: id,

@@ -98,6 +98,70 @@ describeIf('Migration ordering — team_members functions exist (C1)', () => {
 })
 
 // ─────────────────────────────────────────────────────────────
+// Schema integrity — all required tables exist
+// ─────────────────────────────────────────────────────────────
+describeIf('Schema integrity — tables existent', () => {
+  const requiredTables = [
+    'sellers', 'products', 'customers', 'orders',
+    'deliveries', 'team_members', 'activity_logs',
+    'stock_movements', 'order_status_history',
+    'order_status_transitions', 'cod_reversals',
+    'rate_limits', 'waitlist', 'contact_messages',
+    'upgrade_requests',
+  ]
+
+  requiredTables.forEach(table => {
+    it(`table ${table} exists`, async () => {
+      const { error } = await adminClient.from(table).select('*').limit(0)
+      expect(error?.message ?? '').not.toContain('does not exist')
+    })
+  })
+})
+
+// ─────────────────────────────────────────────────────────────
+// Schema integrity — critical RPCs are callable
+// ─────────────────────────────────────────────────────────────
+describeIf('Schema integrity — fonctions existent', () => {
+  it('update_order_status() is callable', async () => {
+    const { error } = await adminClient.rpc('update_order_status', {
+      p_seller_id: '00000000-0000-0000-0000-000000000000',
+      p_order_id:  '00000000-0000-0000-0000-000000000000',
+      p_new_status: 'new',
+      p_changed_by: '00000000-0000-0000-0000-000000000000',
+    })
+    // Returns an error (order not found / unauthorized) but the function must exist
+    expect(error?.message ?? '').not.toContain('does not exist')
+  })
+
+  it('get_analytics_summary() is callable', async () => {
+    const { error } = await adminClient.rpc('get_analytics_summary', {
+      p_seller_id: '00000000-0000-0000-0000-000000000000',
+      p_start: new Date().toISOString(),
+      p_end:   new Date().toISOString(),
+    })
+    expect(error?.message ?? '').not.toContain('does not exist')
+  })
+
+  it('order_status_transitions has valid state machine data', async () => {
+    const { data, error } = await adminClient
+      .from('order_status_transitions')
+      .select('from_status, to_status')
+
+    expect(error).toBeNull()
+    expect(data?.length).toBeGreaterThan(0)
+
+    const transitions = data?.map(t => `${t.from_status}→${t.to_status}`) ?? []
+
+    expect(transitions).toContain('pending→new')
+    expect(transitions).toContain('confirmed→shipped')
+    expect(transitions).toContain('shipped→delivered')
+    // Terminal states must not allow backward transitions
+    expect(transitions).not.toContain('delivered→shipped')
+    expect(transitions).not.toContain('cancelled→pending')
+  })
+})
+
+// ─────────────────────────────────────────────────────────────
 // I1 — customers.order_count increments by 1, not 2
 // ─────────────────────────────────────────────────────────────
 describeIf('Migration trigger — order_count increments exactly once (I1)', () => {
