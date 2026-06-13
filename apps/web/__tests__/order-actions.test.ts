@@ -48,7 +48,13 @@ vi.mock('@/lib/constants', () => ({
   },
 }))
 
-import { deleteOrder, restoreOrder, cancelPendingOrder, cancelOrder } from '../app/(dashboard)/orders/actions'
+import {
+  cancelOrder,
+  cancelPendingOrder,
+  deleteOrder,
+  restoreOrder,
+  updateOrderStatus,
+} from '../app/(dashboard)/orders/actions'
 
 function mockAdminContext(plan: 'starter' | 'pro' | 'business' = 'pro') {
   contextMock.getUserContext.mockResolvedValue({
@@ -83,6 +89,50 @@ function makeSellerQuery() {
     single: vi.fn().mockResolvedValue({ data: { name: 'Boutique Test' } }),
   }
 }
+
+describe('updateOrderStatus', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockAdminContext()
+  })
+
+  it('rejects an invalid transition before calling the RPC', async () => {
+    const rpc = vi.fn()
+    serverMock.createServerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'orders') return makeOrderQuery('pending')
+        if (table === 'sellers') return makeSellerQuery()
+        throw new Error(`Unexpected table: ${table}`)
+      }),
+      rpc,
+    })
+
+    await expect(updateOrderStatus('order-1', 'delivered'))
+      .rejects.toThrow('Cette transition de statut n\'est pas autorisée.')
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('calls the RPC for a valid transition', async () => {
+    const rpc = vi.fn().mockResolvedValue({ error: null })
+    serverMock.createServerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'orders') return makeOrderQuery('new')
+        if (table === 'sellers') return makeSellerQuery()
+        throw new Error(`Unexpected table: ${table}`)
+      }),
+      rpc,
+    })
+
+    await updateOrderStatus('order-1', 'confirmed')
+
+    expect(rpc).toHaveBeenCalledWith('update_order_status', {
+      p_seller_id: 'seller-1',
+      p_order_id: 'order-1',
+      p_new_status: 'confirmed',
+      p_changed_by: 'user-1',
+    })
+  })
+})
 
 describe('deleteOrder', () => {
   beforeEach(() => {

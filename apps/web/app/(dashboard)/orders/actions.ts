@@ -8,6 +8,7 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 import type { OrderStatus } from '@hanut/types'
 import { DELETABLE_STATUSES, ORDER_STATUS_LABELS, PLAN_LIMITS } from '@/lib/constants'
 import { getMonthlyOrderCount } from '@/lib/get-context'
+import { isValidTransition } from '@/lib/order-transitions'
 
 export type CreateOrderInput = {
   customer_id?: string
@@ -96,6 +97,23 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
   if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
 
   const supabase = await createServerClient()
+
+  const { data: currentOrder, error: currentOrderError } = await supabase
+    .from('orders')
+    .select('status')
+    .eq('id', id)
+    .eq('seller_id', context.sellerId)
+    .is('deleted_at', null)
+    .single()
+
+  if (currentOrderError || !currentOrder) {
+    if (currentOrderError?.code === 'PGRST116') throw new Error('Commande introuvable.')
+    throw new Error(currentOrderError?.message ?? 'Commande introuvable.')
+  }
+
+  if (!isValidTransition(currentOrder.status, status)) {
+    throw new Error('Cette transition de statut n\'est pas autorisée.')
+  }
 
   const { error } = await supabase.rpc('update_order_status', {
     p_seller_id: context.sellerId,

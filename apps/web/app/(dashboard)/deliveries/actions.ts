@@ -22,6 +22,8 @@ export type UpdateDeliveryInput = {
 }
 
 export type DeliveryMutationResult = { error?: string }
+type DeliveryContext = NonNullable<Awaited<ReturnType<typeof getUserContext>>>
+type ServerSupabaseClient = Awaited<ReturnType<typeof createServerClient>>
 
 function deliveryErrorMessage(message: string) {
   if (
@@ -31,6 +33,52 @@ function deliveryErrorMessage(message: string) {
     return 'Une livraison active existe déjà pour cette commande.'
   }
   return message
+}
+
+async function recordCodReversal(
+  context: DeliveryContext,
+  supabase: ServerSupabaseClient,
+  deliveryId: string,
+  amount: number,
+  notes?: string
+): Promise<DeliveryMutationResult> {
+  if (!Number.isFinite(amount) || amount <= 0) return { error: 'Montant de reversement invalide.' }
+
+  const { error } = await supabase.rpc('mark_delivery_cod_reversed', {
+    p_delivery_id: deliveryId,
+    p_seller_id: context.sellerId,
+    p_amount: amount,
+    p_notes: notes?.trim().slice(0, 2000) || null,
+    p_reversed_by: context.userId,
+  })
+
+  if (error) {
+    if (error.message.includes('UNAUTHORIZED')) return { error: 'Non autorisé.' }
+    if (error.message.includes('INVALID_REVERSAL_AMOUNT')) return { error: 'Montant de reversement invalide.' }
+    if (error.message.includes('COD_ALREADY_REVERSED')) return { error: 'Ce COD a déjà été reversé.' }
+    if (error.message.includes('DELIVERY_NOT_FOUND_OR_COD_NOT_COLLECTED')) {
+      return { error: 'Livraison introuvable ou COD non encore collecté.' }
+    }
+    return { error: error.message }
+  }
+
+  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
+
+  await logActivity({
+    sellerId: context.sellerId,
+    userId: context.userId,
+    userName: seller?.name ?? context.userId,
+    actionType: 'delivery_cod_reversed',
+    entityType: 'delivery',
+    entityId: deliveryId,
+    description: `a enregistré un reversement COD de ${amount} DT`,
+    metadata: { amount, notes },
+  })
+
+  revalidatePath('/deliveries')
+  revalidatePath('/dashboard')
+  revalidateTag(`dashboard-${context.sellerId}`)
+  return {}
 }
 
 export async function createDelivery(input: CreateDeliveryInput): Promise<{ error?: string }> {
@@ -126,6 +174,20 @@ export async function updateDelivery(
 
   const supabase = await createServerClient()
 
+  // Compatibilité avec les anciens appels updateDelivery({ cod_reversed: true }) :
+  // le reversement passe désormais toujours par la RPC auditée.
+  if (input.cod_reversed === true) {
+    const { data: delivery } = await supabase
+      .from('deliveries')
+      .select('order:orders(cod_amount)')
+      .eq('id', id)
+      .maybeSingle()
+
+    const joinedOrder = Array.isArray(delivery?.order) ? delivery.order[0] : delivery?.order
+    if (!joinedOrder) return { error: 'Livraison introuvable.' }
+    return recordCodReversal(context, supabase, id, joinedOrder.cod_amount)
+  }
+
   if (input.cod_collected === true) {
     // RPC en premier : si elle échoue, aucune modification partielle n'est appliquée.
     // Le patch des champs secondaires (tracking, fee) vient après —
@@ -143,8 +205,6 @@ export async function updateDelivery(
     if ('tracking_number' in input) patch.tracking_number = input.tracking_number
     if ('carrier_status' in input) patch.carrier_status = input.carrier_status
     if ('fee' in input) patch.fee = input.fee
-    if ('cod_reversed' in input) patch.cod_reversed = input.cod_reversed
-
     if (Object.keys(patch).length > 0) {
       const { error: patchError } = await supabase.from('deliveries').update(patch).eq('id', id)
       if (patchError) return { error: deliveryErrorMessage(patchError.message) }
@@ -248,6 +308,22 @@ export async function createDeliveryFromOrder(
   revalidatePath('/dashboard')
   revalidateTag(`dashboard-${context.sellerId}`)
   return {}
+}
+
+// Enregistre un reversement COD avec montant et trace d'audit.
+// Remplace le toggle cod_reversed direct du legacy updateDelivery pour les nouveaux reversements.
+export async function markCodReversed(
+  deliveryId: string,
+  amount: number,
+  notes?: string
+): Promise<DeliveryMutationResult> {
+  const context = await getUserContext()
+  if (!context) return { error: 'Non autorisé.' }
+  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs.' }
+  if (!Number.isFinite(amount) || amount <= 0) return { error: 'Montant de reversement invalide.' }
+
+  const supabase = await createServerClient()
+  return recordCodReversal(context, supabase, deliveryId, amount, notes)
 }
 
 export async function deleteDelivery(id: string): Promise<{ error?: string }> {

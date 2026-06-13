@@ -41,6 +41,7 @@ describe('Supabase migrations', () => {
   const secureOrderRpc = migration('20260620_secure_order_rpc.sql')
   const secureDeliveryRpcs = migration('20260621_secure_delivery_rpcs.sql')
   const statusTransitions = migration('20260622_add_status_transitions.sql')
+  const codReversalHistory = migration('20260623_add_cod_reversal_history.sql')
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
     expect(appSchema).toMatch(/ALTER TABLE sellers\s+ADD COLUMN IF NOT EXISTS slug TEXT;/i)
@@ -405,5 +406,18 @@ describe('Supabase migrations', () => {
     expect(statusTransitions).toMatch(/\('shipped',\s+'returned'\)/i)
     expect(statusTransitions).toMatch(/\('shipped',\s+'confirmed'\)/i)
     expect(statusTransitions).toMatch(/RAISE EXCEPTION 'INVALID_TRANSITION:%->%'/i)
+  })
+
+  it('records COD reversals once through a guarded RPC', () => {
+    expect(codReversalHistory).toMatch(/CREATE TABLE IF NOT EXISTS cod_reversals/i)
+    expect(codReversalHistory).toMatch(/ALTER TABLE cod_reversals ENABLE ROW LEVEL SECURITY/i)
+    expect(codReversalHistory).toMatch(/CREATE UNIQUE INDEX IF NOT EXISTS idx_cod_reversals_delivery_unique/i)
+    expect(codReversalHistory).not.toMatch(/CREATE POLICY "cod_reversals_insert"/i)
+    expect(codReversalHistory).toMatch(/CREATE OR REPLACE FUNCTION mark_delivery_cod_reversed/i)
+    expect(codReversalHistory).toMatch(/can_write_seller\(p_seller_id\)/i)
+    expect(codReversalHistory).toMatch(/FOR UPDATE OF d, o/i)
+    expect(codReversalHistory).toMatch(/RAISE EXCEPTION 'COD_ALREADY_REVERSED'/i)
+    expect(codReversalHistory).toMatch(/RAISE EXCEPTION 'INVALID_REVERSAL_AMOUNT'/i)
+    expect(codReversalHistory).toMatch(/REVOKE ALL ON FUNCTION mark_delivery_cod_reversed/i)
   })
 })

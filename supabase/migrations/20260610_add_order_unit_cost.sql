@@ -1,3 +1,9 @@
+-- ⚠️ DÉPRÉCIÉ (section create_order_with_stock uniquement)
+-- La redéfinition de create_order_with_stock dans ce fichier (13 paramètres)
+-- est remplacée par 20260620_secure_order_rpc.sql (version finale — SECURITY DEFINER + garde).
+-- Le reste de cette migration (colonne unit_cost + backfill) reste actif et indispensable.
+-- Ne pas modifier le bloc CREATE OR REPLACE FUNCTION de ce fichier.
+
 -- Capturer le coût d'achat au moment de la commande (snapshot historique).
 -- Permet de calculer : profit = CA - frais livraison - coût d'achat × quantité.
 

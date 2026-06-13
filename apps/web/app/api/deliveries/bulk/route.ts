@@ -34,10 +34,15 @@ export async function PATCH(req: NextRequest) {
   const supabase = await createServerClient()
 
   // RLS garantit que seules les livraisons du vendeur connecté sont retournées
-  type DeliveryRow = { id: string; cod_collected: boolean; cod_reversed: boolean }
+  type DeliveryRow = {
+    id: string
+    cod_collected: boolean
+    cod_reversed: boolean
+    order: { cod_amount: number } | { cod_amount: number }[] | null
+  }
   const { data: deliveries, error: fetchError } = await supabase
     .from('deliveries')
-    .select('id, cod_collected, cod_reversed')
+    .select('id, cod_collected, cod_reversed, order:orders(cod_amount)')
     .in('id', ids) as unknown as { data: DeliveryRow[] | null; error: unknown }
 
   if (fetchError) return NextResponse.json({ error: 'Erreur base de données' }, { status: 500 })
@@ -45,26 +50,26 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Aucune livraison trouvée' }, { status: 404 })
   }
 
-  let toUpdate: string[]
+  let eligibleDeliveries: DeliveryRow[]
   let skipped: number
   let message: string | null = null
 
   if (action === 'cod_collected') {
     const eligible = deliveries.filter(d => !d.cod_collected)
     skipped = deliveries.length - eligible.length
-    toUpdate = eligible.map(d => d.id)
+    eligibleDeliveries = eligible
   } else {
     // CRITIQUE : ne reverser que les livraisons dont le COD a été collecté
     const eligible = deliveries.filter(d => d.cod_collected && !d.cod_reversed)
     const notCollected = deliveries.filter(d => !d.cod_collected && !d.cod_reversed).length
     skipped = deliveries.length - eligible.length
-    toUpdate = eligible.map(d => d.id)
+    eligibleDeliveries = eligible
     if (notCollected > 0) {
       message = `${notCollected} livraison${notCollected !== 1 ? 's' : ''} ignorée${notCollected !== 1 ? 's' : ''} — COD non collecté`
     }
   }
 
-  if (toUpdate.length === 0) {
+  if (eligibleDeliveries.length === 0) {
     return NextResponse.json({
       updated: 0,
       skipped: deliveries.length,
@@ -75,29 +80,46 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (action === 'cod_collected') {
-    for (const id of toUpdate) {
+    for (const delivery of eligibleDeliveries) {
       const { error: rpcError } = await supabase.rpc('mark_delivery_cod_collected', {
         p_seller_id: context.sellerId,
         p_user_id: context.userId,
-        p_delivery_id: id,
+        p_delivery_id: delivery.id,
       })
       if (rpcError) return NextResponse.json({ error: rpcError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ updated: toUpdate.length, skipped, message })
+    return NextResponse.json({ updated: eligibleDeliveries.length, skipped, message })
   }
 
-  const patch = { cod_reversed: true }
+  let updated = 0
+  for (const delivery of eligibleDeliveries) {
+    const order = Array.isArray(delivery.order) ? delivery.order[0] : delivery.order
+    if (!order || !Number.isFinite(order.cod_amount) || order.cod_amount <= 0) {
+      return NextResponse.json({
+        error: 'Montant COD invalide pour une livraison sélectionnée.',
+        updated,
+        skipped: skipped + eligibleDeliveries.length - updated,
+      }, { status: 409 })
+    }
 
-  const { error: updateError } = await supabase
-    .from('deliveries')
-    .update(patch)
-    .in('id', toUpdate)
-
-  if (updateError) {
-    Sentry.captureException(new Error(updateError.message), { tags: { module: 'deliveries_bulk' } })
-    return NextResponse.json({ error: updateError.message }, { status: 500 })
+    const { error: rpcError } = await supabase.rpc('mark_delivery_cod_reversed', {
+      p_delivery_id: delivery.id,
+      p_seller_id: context.sellerId,
+      p_amount: order.cod_amount,
+      p_notes: 'Reversement groupé',
+      p_reversed_by: context.userId,
+    })
+    if (rpcError) {
+      Sentry.captureException(new Error(rpcError.message), { tags: { module: 'deliveries_bulk' } })
+      return NextResponse.json({
+        error: rpcError.message,
+        updated,
+        skipped: skipped + eligibleDeliveries.length - updated,
+      }, { status: 409 })
+    }
+    updated += 1
   }
 
-  return NextResponse.json({ updated: toUpdate.length, skipped, message })
+  return NextResponse.json({ updated, skipped, message })
 }

@@ -9,7 +9,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import { redirect } from 'next/navigation'
 import DeliveriesClient from '@/components/deliveries/DeliveriesClient'
-import { createDelivery, updateDelivery, deleteDelivery } from './actions'
+import { createDelivery, updateDelivery, deleteDelivery, markCodReversed } from './actions'
 
 type Deliveries = Parameters<typeof DeliveriesClient>[0]['deliveries']
 type ShippableOrders = Parameters<typeof DeliveriesClient>[0]['shippableOrders']
@@ -68,6 +68,7 @@ export default async function DeliveriesPage() {
       )
     `)
     .order('created_at', { ascending: false })
+    .limit(200)
 
   const normalizedDeliveries: Delivery[] = (deliveries ?? []).flatMap(delivery => {
     const order = normalizeOrder(delivery.order)
@@ -99,6 +100,7 @@ export default async function DeliveriesPage() {
     .eq('status', 'shipped')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
+    .limit(100)
 
   const shippableOrders: ShippableOrder[] = (allShipped ?? []).flatMap(order => {
     if (linkedOrderIds.has(order.id)) return []
@@ -121,6 +123,7 @@ export default async function DeliveriesPage() {
       shippableOrders={shippableOrders}
       createDelivery={createDelivery}
       updateDelivery={updateDelivery}
+      markCodReversed={markCodReversed}
       deleteDelivery={deleteDelivery}
     />
   )

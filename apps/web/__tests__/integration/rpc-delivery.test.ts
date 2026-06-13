@@ -132,6 +132,66 @@ describe('mark_delivery_cod_collected', () => {
   })
 })
 
+describe('mark_delivery_cod_reversed', () => {
+  it('records one audited reversal and rejects a duplicate', async () => {
+    const client = await authenticateAs(sellerEmail)
+
+    const { data: deliveryId, error: deliveryError } = await client.rpc('create_delivery_from_order', {
+      p_seller_id: sellerId,
+      p_user_id: sellerId,
+      p_order_id: orderId,
+      p_carrier: 'navex',
+    })
+    expect(deliveryError).toBeNull()
+
+    const { error: collectError } = await client.rpc('mark_delivery_cod_collected', {
+      p_seller_id: sellerId,
+      p_user_id: sellerId,
+      p_delivery_id: deliveryId,
+    })
+    expect(collectError).toBeNull()
+
+    const { data: reversalId, error: reversalError } = await client.rpc('mark_delivery_cod_reversed', {
+      p_delivery_id: deliveryId,
+      p_seller_id: sellerId,
+      p_amount: 80,
+      p_notes: 'Virement reçu',
+      p_reversed_by: sellerId,
+    })
+    expect(reversalError).toBeNull()
+    expect(reversalId).toBeTruthy()
+
+    const { data: delivery } = await adminClient
+      .from('deliveries')
+      .select('cod_reversed, cod_reversed_amount, cod_reversed_at, cod_reversed_by')
+      .eq('id', deliveryId)
+      .single()
+    expect(delivery?.cod_reversed).toBe(true)
+    expect(delivery?.cod_reversed_amount).toBe(80)
+    expect(delivery?.cod_reversed_at).not.toBeNull()
+    expect(delivery?.cod_reversed_by).toBe(sellerId)
+
+    const { data: reversal } = await adminClient
+      .from('cod_reversals')
+      .select('amount, notes, reversed_by')
+      .eq('id', reversalId)
+      .single()
+    expect(reversal).toEqual({
+      amount: 80,
+      notes: 'Virement reçu',
+      reversed_by: sellerId,
+    })
+
+    const { error: duplicateError } = await client.rpc('mark_delivery_cod_reversed', {
+      p_delivery_id: deliveryId,
+      p_seller_id: sellerId,
+      p_amount: 80,
+      p_reversed_by: sellerId,
+    })
+    expect(duplicateError?.message).toContain('COD_ALREADY_REVERSED')
+  })
+})
+
 describe('unique active delivery constraint', () => {
   it('blocks creating two active deliveries for the same order', async () => {
     const client = await authenticateAs(sellerEmail)

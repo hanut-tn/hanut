@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, useState, useTransition } from 'react'
-import { UserCheck, UserPlus, Users2, ShoppingBag, Package, User, Truck, ClipboardList, AlertCircle, AlertTriangle, Check } from 'lucide-react'
+import { UserCheck, UserPlus, Users2, ShoppingBag, Package, User, Truck, ClipboardList, AlertCircle, AlertTriangle, Check, Banknote } from 'lucide-react'
 import type { TeamMember, ActivityLog } from '@/app/(dashboard)/team/page'
 
 const MAX_MEMBERS_BY_PLAN: Record<string, number> = {
@@ -30,6 +30,7 @@ const ACTION_ICONS: Record<string, { Icon: React.ElementType; cls: string; group
   product_deleted:      { Icon: Package,     cls: 'text-orange-600', group: 'Produits' },
   customer_updated:     { Icon: User,        cls: 'text-[#78716C]', group: 'Clients' },
   delivery_created:     { Icon: Truck,       cls: 'text-green-600',  group: 'Livraisons' },
+  delivery_cod_reversed:{ Icon: Banknote,    cls: 'text-green-600',  group: 'Livraisons' },
   member_invited:       { Icon: Users2,      cls: 'text-red-600',    group: 'Équipe' },
   member_removed:       { Icon: Users2,      cls: 'text-red-600',    group: 'Équipe' },
   member_role_changed:  { Icon: Users2,      cls: 'text-red-600',    group: 'Équipe' },
@@ -198,7 +199,7 @@ export default function TeamPageClient({ currentUserId, plan, members: initialMe
       'Commandes':  ['order_created', 'order_confirmed', 'order_status_changed', 'order_deleted'],
       'Produits':   ['product_created', 'product_updated', 'product_deleted'],
       'Clients':    ['customer_updated'],
-      'Livraisons': ['delivery_created'],
+      'Livraisons': ['delivery_created', 'delivery_cod_reversed'],
       'Équipe':     ['member_invited', 'member_removed', 'member_role_changed'],
     }
 

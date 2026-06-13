@@ -46,7 +46,7 @@ const ALLOWED_ACTION_TYPES = [
   'order_deleted', 'order_restored', 'order_permanently_deleted',
   'product_created', 'product_updated', 'product_deleted', 'stock_adjusted',
   'customer_updated', 'customer_deleted',
-  'delivery_created', 'delivery_deleted',
+  'delivery_created', 'delivery_deleted', 'delivery_cod_reversed',
   'member_invited', 'member_removed', 'member_role_changed',
 ] as const
 

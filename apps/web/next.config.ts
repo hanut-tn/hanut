@@ -54,16 +54,13 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // CSP en mode report-only — collecte les violations sans bloquer.
-        // Étape 1 : déployer en report-only, surveiller /api/csp-report pendant 48h.
-        // Étape 2 : remplacer Content-Security-Policy-Report-Only par
-        //           Content-Security-Policy une fois les violations légitimes résolues.
-        // Note : 'unsafe-inline' requis pour Next.js 15 (scripts d'hydratation inline).
-        // La migration vers une CSP stricte avec nonces est l'objectif à long terme.
+        // CSP en mode enforced — bloque les violations et collecte les rapports.
+        // 'unsafe-inline' requis pour Next.js 15 (scripts d'hydratation inline).
+        // report-uri conservé pour détecter les régressions après mises à jour.
         source: '/(.*)',
         headers: [
           {
-            key: 'Content-Security-Policy-Report-Only',
+            key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",

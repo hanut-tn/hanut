@@ -40,6 +40,7 @@ type Props = {
   shippableOrders: OrderInfo[]
   createDelivery: (input: CreateDeliveryInput) => Promise<{ error?: string }>
   updateDelivery: (id: string, input: UpdateDeliveryInput) => Promise<DeliveryMutationResult>
+  markCodReversed: (id: string, amount: number, notes?: string) => Promise<DeliveryMutationResult>
   deleteDelivery: (id: string) => Promise<{ error?: string }>
 }
 
@@ -226,7 +227,14 @@ function DeliveryMobileCard({
   )
 }
 
-export default function DeliveriesClient({ deliveries, shippableOrders, createDelivery, updateDelivery, deleteDelivery }: Props) {
+export default function DeliveriesClient({
+  deliveries,
+  shippableOrders,
+  createDelivery,
+  updateDelivery,
+  markCodReversed,
+  deleteDelivery,
+}: Props) {
   const [tab, setTab] = useState<Tab>('all')
   const [isPending, startTransition] = useTransition()
 
@@ -345,7 +353,12 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
     setAllDeliveries(list => list.map(del => del.id === d.id ? { ...del, [field]: newValue } : del))
     startTransition(async () => {
       try {
-        const result = await updateDelivery(d.id, { [field]: newValue })
+        const order = getOrder(d)
+        const result = field === 'cod_reversed' && newValue
+          ? order
+            ? await markCodReversed(d.id, order.cod_amount)
+            : { error: 'Commande liée introuvable.' }
+          : await updateDelivery(d.id, { [field]: newValue })
         if (result?.error) {
           setAllDeliveries(list => list.map(del => del.id === d.id ? { ...del, [field]: prevValue } : del))
           setToast(`Erreur : ${result.error}`)
@@ -418,7 +431,15 @@ export default function DeliveriesClient({ deliveries, shippableOrders, createDe
         body: JSON.stringify({ ids: Array.from(selectedIds), action }),
       })
       const data = await res.json()
-      if (!res.ok) { setToast(data.error ?? data.message ?? 'Erreur'); return }
+      if (!res.ok) {
+        setToast(data.error ?? data.message ?? 'Erreur')
+        if ((data.updated ?? 0) > 0) {
+          setSelectionMode(false)
+          setSelectedIds(new Set())
+          router.refresh()
+        }
+        return
+      }
       const label = action === 'cod_collected' ? 'COD collecté' : 'COD reversé'
       if (data.skipped > 0 && data.message) {
         setToast(`✓ ${data.updated} mise${data.updated > 1 ? 's' : ''} à jour · ${data.message}`)

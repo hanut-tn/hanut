@@ -27,7 +27,12 @@ vi.mock('@/lib/activity', () => ({
   logActivity: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { createDelivery, updateDelivery, deleteDelivery } from '../app/(dashboard)/deliveries/actions'
+import {
+  createDelivery,
+  deleteDelivery,
+  markCodReversed,
+  updateDelivery,
+} from '../app/(dashboard)/deliveries/actions'
 
 function mockContext(role: 'admin' | 'operator' | 'readonly' = 'admin') {
   contextMock.getUserContext.mockResolvedValue({
@@ -196,6 +201,55 @@ describe('updateDelivery — COD collected', () => {
     const result = await updateDelivery('delivery-1', { cod_reversed: false })
 
     expect(result.error).toBe("Impossible d'annuler un COD déjà reversé.")
+  })
+})
+
+describe('markCodReversed', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockContext()
+  })
+
+  it('records a COD reversal through the audited RPC', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: 'reversal-1', error: null })
+    const sellerQuery = makeChain({ name: 'Boutique' })
+    serverMock.createServerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'sellers') return sellerQuery
+        throw new Error(`Unexpected table: ${table}`)
+      }),
+      rpc,
+    })
+
+    const result = await markCodReversed('delivery-1', 80, 'Virement reçu')
+
+    expect(result.error).toBeUndefined()
+    expect(rpc).toHaveBeenCalledWith('mark_delivery_cod_reversed', {
+      p_delivery_id: 'delivery-1',
+      p_seller_id: 'seller-1',
+      p_amount: 80,
+      p_notes: 'Virement reçu',
+      p_reversed_by: 'user-1',
+    })
+  })
+
+  it('rejects invalid amounts before opening a database client', async () => {
+    const result = await markCodReversed('delivery-1', Number.NaN)
+
+    expect(result.error).toBe('Montant de reversement invalide.')
+    expect(serverMock.createServerClient).not.toHaveBeenCalled()
+  })
+
+  it('maps an already reversed COD to a clear error', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: 'COD_ALREADY_REVERSED' },
+    })
+    serverMock.createServerClient.mockResolvedValue({ from: vi.fn(), rpc })
+
+    const result = await markCodReversed('delivery-1', 80)
+
+    expect(result.error).toBe('Ce COD a déjà été reversé.')
   })
 })
 

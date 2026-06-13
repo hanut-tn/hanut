@@ -9,6 +9,9 @@ export interface Delivery {
   fee?: number
   cod_collected: boolean
   cod_reversed: boolean
+  cod_reversed_at?: string | null
+  cod_reversed_amount?: number
+  cod_reversed_by?: string | null
   created_at: string
   delivered_at?: string
 }
