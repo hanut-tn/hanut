@@ -455,6 +455,7 @@ describe('Supabase migrations', () => {
     expect(adjustStockDeltaFix).toMatch(/SECURITY DEFINER/i)
     expect(adjustStockDeltaFix).toMatch(/p_delta = 0/i)
     expect(adjustStockDeltaFix).toMatch(/RAISE EXCEPTION 'INVALID_DELTA/i)
+    expect(adjustStockDeltaFix).toMatch(/IF NOT is_service_role\(\)/i)
     expect(adjustStockDeltaFix).toMatch(/can_write_seller\(p_seller_id\)/i)
     expect(adjustStockDeltaFix).toMatch(/INSERT INTO stock_movements/i)
   })

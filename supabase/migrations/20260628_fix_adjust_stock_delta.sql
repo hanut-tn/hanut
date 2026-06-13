@@ -27,7 +27,7 @@ DECLARE
   v_quantity_before INTEGER;
   v_new_cost NUMERIC;
 BEGIN
-  IF COALESCE(current_setting('request.jwt.claim.role', true), '') <> 'service_role'
+  IF NOT is_service_role()
     AND NOT COALESCE(can_write_seller(p_seller_id), false)
   THEN
     RAISE EXCEPTION 'Non autorise';

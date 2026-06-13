@@ -38,7 +38,11 @@ vi.mock('@/lib/variants', () => ({
   sumVariantStock: (variants: { qty: number }[]) => variants.reduce((s, v) => s + v.qty, 0),
 }))
 
-import { adjustStock } from '../app/(dashboard)/catalog/actions'
+import {
+  adjustStock,
+  upsertProduct,
+  type ProductInput,
+} from '../app/(dashboard)/catalog/actions'
 
 function mockContext(role: 'admin' | 'operator' | 'readonly' = 'admin') {
   contextMock.getUserContext.mockResolvedValue({
@@ -161,6 +165,41 @@ describe('adjustStock', () => {
     mockContext('readonly')
 
     const result = await adjustStock('product-1', { type: 'restock', quantity: 1 })
+
+    expect(result.error).toBeDefined()
+    expect(serverMock.createServerClient).not.toHaveBeenCalled()
+  })
+})
+
+describe('upsertProduct validation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockContext()
+  })
+
+  it('rejects a whitespace-only product name before opening a DB client', async () => {
+    const result = await upsertProduct({
+      name: '   ',
+      price: 20,
+      cost: null,
+      stock: 5,
+      low_stock_alert: 2,
+      variants: [],
+      image_url: null,
+      description: '',
+    })
+
+    expect(result.error).toBe('Le nom est obligatoire')
+    expect(serverMock.createServerClient).not.toHaveBeenCalled()
+  })
+
+  it('requires the complete product payload when updating', async () => {
+    const incompleteUpdate = {
+      id: '11111111-1111-4111-8111-111111111111',
+      price: 20,
+    } as unknown as ProductInput
+
+    const result = await upsertProduct(incompleteUpdate)
 
     expect(result.error).toBeDefined()
     expect(serverMock.createServerClient).not.toHaveBeenCalled()

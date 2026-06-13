@@ -62,7 +62,7 @@ La version finale est dans `20260620_secure_order_rpc.sql` :
 | Fonction | Fichier |
 |---|---|
 | `set_seller_jwt_claims` (Auth Hook) | `20260616_add_jwt_claims_hook.sql` |
-| `adjust_product_stock` | `20260614_add_adjust_stock_rpc.sql` |
+| `adjust_product_stock` | `20260628_fix_adjust_stock_delta.sql` |
 | `cancel_order_with_stock` | `20260619_extend_cancel_order.sql` |
 | `soft_delete_order_with_stock` | `20260612_allow_delete_cancelled_order.sql` |
 | `get_analytics_summary` | `20260612_add_analytics_rpc.sql` |
@@ -76,6 +76,7 @@ La version finale est dans `20260620_secure_order_rpc.sql` :
 | `20260625_add_analytics_export_rpc.sql` | Agrège l'export analytics par jour avec contrôle d'accès et période bornée |
 | `20260626_restore_api_role_privileges.sql` | Restaure les privilèges SQL PostgREST; la RLS reste l'autorisation par ligne |
 | `20260627_fix_service_role_detection.sql` | Compatibilité du rôle serveur avec les formats de claims PostgREST récents et historiques |
+| `20260628_fix_adjust_stock_delta.sql` | Refuse les ajustements de stock sans effet (`p_delta = 0`) |
 
 ## Note sur schema.sql
 

@@ -9,37 +9,29 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 import { getVariantLabel, sumVariantStock } from '@/lib/variants'
 import { requireActive } from '@/lib/assert-active'
 
+const ProductVariantSchema = z.object({
+  size: z.string().max(50).optional(),
+  color: z.string().max(50).optional(),
+  qty: z.number().int().min(0),
+})
+
 const ProductSchema = z.object({
-  name: z.string().min(1, 'Le nom est obligatoire').max(200, 'Le nom ne doit pas dépasser 200 caractères'),
+  name: z.string().trim().min(1, 'Le nom est obligatoire').max(200, 'Le nom ne doit pas dépasser 200 caractères'),
   price: z.number().min(0, 'Le prix doit être positif ou nul').max(100000, 'Le prix semble incorrect'),
   cost: z.number().min(0, 'Le coût doit être positif ou nul').max(100000, 'Le coût semble incorrect').optional().nullable(),
   stock: z.number().int('Le stock doit être un nombre entier').min(0, 'Le stock doit être positif ou nul'),
-  low_stock_alert: z.number().int().min(0).optional().nullable(),
+  low_stock_alert: z.number().int().min(0),
   description: z.string().max(2000, 'La description ne doit pas dépasser 2000 caractères').optional().nullable(),
-  variants: z.array(z.object({
-    size: z.string().max(50).optional().nullable(),
-    color: z.string().max(50).optional().nullable(),
-    qty: z.number().int().min(0),
-  })).optional().nullable(),
+  variants: z.array(ProductVariantSchema),
+  image_url: z.string().url('URL de l’image invalide').max(2048).optional().nullable(),
 })
 
-const UpdateProductSchema = ProductSchema.partial().extend({
+const UpdateProductSchema = ProductSchema.extend({
   id: z.string().uuid('ID produit invalide'),
 })
 
-export type ProductVariant = { size?: string; color?: string; qty: number }
-
-export type ProductInput = {
-  id?: string
-  name: string
-  price: number
-  cost?: number | null
-  stock: number
-  low_stock_alert: number
-  variants: ProductVariant[]
-  image_url?: string | null
-  description?: string | null
-}
+export type ProductVariant = z.infer<typeof ProductVariantSchema>
+export type ProductInput = z.infer<typeof ProductSchema> & { id?: string }
 
 export async function upsertProduct(input: ProductInput): Promise<{ error?: string }> {
   const context = await getUserContext()
@@ -51,27 +43,31 @@ export async function upsertProduct(input: ProductInput): Promise<{ error?: stri
   const schema = input.id ? UpdateProductSchema : ProductSchema
   const parsed = schema.safeParse(input)
   if (!parsed.success) return { error: parsed.error.issues[0].message }
+  const product = parsed.data
 
   const supabase = await createServerClient()
 
   const payload = {
-    name: input.name,
-    price: input.price,
-    cost: input.cost ?? null,
-    stock: input.variants.length > 0 ? sumVariantStock(input.variants) : input.stock,
-    low_stock_alert: input.low_stock_alert,
-    variants: input.variants,
-    image_url: input.image_url ?? null,
-    description: input.description ?? null,
+    name: product.name,
+    price: product.price,
+    cost: product.cost ?? null,
+    stock: product.variants.length > 0 ? sumVariantStock(product.variants) : product.stock,
+    low_stock_alert: product.low_stock_alert,
+    variants: product.variants,
+    image_url: product.image_url ?? null,
+    description: product.description ?? null,
   }
 
-  const isUpdate = !!input.id
-  let productId = input.id
+  const validatedProductId = 'id' in product && typeof product.id === 'string'
+    ? product.id
+    : undefined
+  const isUpdate = validatedProductId !== undefined
+  let productId: string | undefined = validatedProductId
 
   if (isUpdate) {
     const { error } = await supabase.from('products')
       .update(payload)
-      .eq('id', input.id!)
+      .eq('id', validatedProductId)
       .eq('seller_id', context.sellerId)
     if (error) return { error: error.message }
   } else {
@@ -93,9 +89,9 @@ export async function upsertProduct(input: ProductInput): Promise<{ error?: stri
     entityType: 'product',
     entityId: productId,
     description: isUpdate
-      ? `a modifié le produit ${input.name}`
-      : `a ajouté le produit ${input.name}`,
-    metadata: { price: input.price, stock: input.stock },
+      ? `a modifié le produit ${product.name}`
+      : `a ajouté le produit ${product.name}`,
+    metadata: { price: product.price, stock: payload.stock },
   })
 
   revalidatePath('/catalog')

@@ -65,10 +65,7 @@ export const getUserContext = cacheFn(async (): Promise<UserContext | null> => {
       sellerId: seller.id,
       role: 'admin',
       isSeller: true,
-      // plan ne devrait jamais être NULL : set_demo_trial() force plan = 'pro' à l'inscription
-      // et ALTER COLUMN plan SET DEFAULT 'pro' est dans 20260610_add_demo_trial.sql.
-      // 'pro' est conservé ici pour ne pas bloquer des comptes créés manuellement en DB.
-      plan: (seller.plan ?? 'pro') as UserContext['plan'],
+      plan: seller.plan as UserContext['plan'],
       ...computeDemoStatus(seller.subscription_end ?? null),
     }
   }
@@ -83,19 +80,23 @@ export const getUserContext = cacheFn(async (): Promise<UserContext | null> => {
     .maybeSingle()
 
   if (member) {
-    const { data: sellerData } = await serviceClient
+    const { data: sellerData, error: sellerError } = await serviceClient
       .from('sellers')
       .select('plan, subscription_end')
       .eq('id', member.seller_id)
       .single()
+
+    // Ne jamais attribuer un plan par défaut si la boutique liée est absente
+    // ou inaccessible : sans contexte vendeur fiable, l'accès doit échouer.
+    if (sellerError || !sellerData) return null
 
     return {
       userId: user.id,
       sellerId: member.seller_id,
       role: member.role as UserRole,
       isSeller: false,
-      plan: (sellerData?.plan ?? 'pro') as UserContext['plan'], // voir commentaire ci-dessus
-      ...computeDemoStatus(sellerData?.subscription_end ?? null),
+      plan: sellerData.plan as UserContext['plan'],
+      ...computeDemoStatus(sellerData.subscription_end ?? null),
     }
   }
 

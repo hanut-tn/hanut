@@ -107,13 +107,15 @@ describeIf('Schema integrity — tables existent', () => {
     'stock_movements', 'order_status_history',
     'order_status_transitions', 'cod_reversals',
     'rate_limits', 'waitlist', 'contact_messages',
-    'upgrade_requests',
+    'upgrade_requests', 'restock_orders',
   ]
 
   requiredTables.forEach(table => {
     it(`table ${table} exists`, async () => {
       const { error } = await adminClient.from(table).select('*').limit(0)
-      expect(error?.message ?? '').not.toContain('does not exist')
+      expect(error?.code).not.toBe('42P01')
+      expect(error?.code).not.toBe('PGRST205')
+      expect(error?.message ?? '').not.toMatch(/does not exist|could not find.*table|schema cache/i)
     })
   })
 })
@@ -130,7 +132,8 @@ describeIf('Schema integrity — fonctions existent', () => {
       p_changed_by: '00000000-0000-0000-0000-000000000000',
     })
     // Returns an error (order not found / unauthorized) but the function must exist
-    expect(error?.message ?? '').not.toContain('does not exist')
+    expect(error?.code).not.toBe('PGRST202')
+    expect(error?.message ?? '').not.toMatch(/does not exist|could not find.*function|schema cache/i)
   })
 
   it('get_analytics_summary() is callable', async () => {
@@ -139,7 +142,8 @@ describeIf('Schema integrity — fonctions existent', () => {
       p_start: new Date().toISOString(),
       p_end:   new Date().toISOString(),
     })
-    expect(error?.message ?? '').not.toContain('does not exist')
+    expect(error?.code).not.toBe('PGRST202')
+    expect(error?.message ?? '').not.toMatch(/does not exist|could not find.*function|schema cache/i)
   })
 
   it('order_status_transitions has valid state machine data', async () => {
@@ -148,16 +152,73 @@ describeIf('Schema integrity — fonctions existent', () => {
       .select('from_status, to_status')
 
     expect(error).toBeNull()
-    expect(data?.length).toBeGreaterThan(0)
+    const transitions = (data?.map(t => `${t.from_status}→${t.to_status}`) ?? []).sort()
 
-    const transitions = data?.map(t => `${t.from_status}→${t.to_status}`) ?? []
+    expect(transitions).toEqual([
+      'confirmed→cancelled',
+      'confirmed→shipped',
+      'new→cancelled',
+      'new→confirmed',
+      'pending→cancelled',
+      'pending→new',
+      'shipped→confirmed',
+      'shipped→delivered',
+      'shipped→returned',
+    ].sort())
+  })
+})
 
-    expect(transitions).toContain('pending→new')
-    expect(transitions).toContain('confirmed→shipped')
-    expect(transitions).toContain('shipped→delivered')
-    // Terminal states must not allow backward transitions
-    expect(transitions).not.toContain('delivered→shipped')
-    expect(transitions).not.toContain('cancelled→pending')
+// ─────────────────────────────────────────────────────────────
+// Stock RPC — zero-delta adjustments must not create audit noise
+// ─────────────────────────────────────────────────────────────
+describeIf('Stock RPC — rejects zero delta', () => {
+  let seller: { id: string; email: string }
+  let productId: string
+
+  beforeAll(async () => {
+    seller = await createTestSeller('zero-delta')
+    const { data, error } = await adminClient
+      .from('products')
+      .insert({
+        seller_id: seller.id,
+        name: 'Produit zero delta',
+        price: 20,
+        cost: 10,
+        stock: 5,
+      })
+      .select('id')
+      .single()
+
+    if (error || !data) throw new Error(`Zero-delta setup failed: ${error?.message}`)
+    productId = data.id
+  })
+
+  afterAll(async () => {
+    if (seller) await cleanupSeller(seller.id)
+  })
+
+  it('keeps stock unchanged and creates no movement', async () => {
+    const { error } = await adminClient.rpc('adjust_product_stock', {
+      p_seller_id: seller.id,
+      p_product_id: productId,
+      p_variant_name: '',
+      p_delta: 0,
+      p_movement_type: 'correction',
+      p_changed_by: seller.id,
+      p_changed_by_name: 'Test Seller',
+    })
+
+    expect(error?.message).toContain('INVALID_DELTA')
+
+    const [{ data: product }, { count: movementCount }] = await Promise.all([
+      adminClient.from('products').select('stock').eq('id', productId).single(),
+      adminClient.from('stock_movements')
+        .select('id', { count: 'exact', head: true })
+        .eq('product_id', productId),
+    ])
+
+    expect(product?.stock).toBe(5)
+    expect(movementCount).toBe(0)
   })
 })
 
