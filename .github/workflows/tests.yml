@@ -66,6 +66,36 @@ jobs:
         with:
           version: 2.106.0
 
+      - name: Deduplicate migration version prefixes
+        run: |
+          # supabase start uses leading digits of each filename as the PRIMARY KEY
+          # version in schema_migrations. Same-day migrations share an 8-digit prefix
+          # causing duplicate key errors. Rename them to YYYYMMDDNNNNNN_name.sql so
+          # every version is unique while preserving lexicographic (application) order.
+          set -e
+          MIGRATIONS_DIR="supabase/migrations"
+          declare -A day_count
+          for file in "$MIGRATIONS_DIR"/*.sql; do
+            name=$(basename "$file")
+            day="${name%%_*}"
+            day_count[$day]=$(( ${day_count[$day]:-0} + 1 ))
+          done
+          declare -A day_idx
+          for file in $(ls "$MIGRATIONS_DIR"/*.sql | sort); do
+            name=$(basename "$file")
+            day="${name%%_*}"
+            if [ "${day_count[$day]:-1}" -le 1 ]; then continue; fi
+            idx=${day_idx[$day]:-0}
+            rest="${name#*_}"
+            padded=$(printf "%06d" "$idx")
+            new_name="${day}${padded}_${rest}"
+            if [ "$new_name" != "$name" ]; then
+              mv "$MIGRATIONS_DIR/$name" "$MIGRATIONS_DIR/$new_name"
+              echo "  $name → $new_name"
+            fi
+            day_idx[$day]=$(( idx + 1 ))
+          done
+
       - name: Start Supabase
         run: supabase start
 
