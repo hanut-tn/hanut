@@ -42,3 +42,31 @@ $$ LANGUAGE SQL;
 CREATE OR REPLACE FUNCTION auth.jwt() RETURNS JSONB AS $$
   SELECT '{}'::JSONB;
 $$ LANGUAGE SQL;
+
+-- Schema storage simulé (pour les migrations qui INSERT INTO storage.buckets
+-- et CREATE POLICY ... ON storage.objects)
+CREATE SCHEMA IF NOT EXISTS storage;
+
+CREATE TABLE IF NOT EXISTS storage.buckets (
+  id                 TEXT PRIMARY KEY,
+  name               TEXT NOT NULL,
+  public             BOOLEAN NOT NULL DEFAULT false,
+  file_size_limit    BIGINT,
+  allowed_mime_types TEXT[]
+);
+
+CREATE TABLE IF NOT EXISTS storage.objects (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  bucket_id  TEXT REFERENCES storage.buckets(id) ON DELETE CASCADE,
+  name       TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+-- storage.foldername(name) — retourne les segments du chemin séparés par '/'
+-- Ex : storage.foldername('abc/file.jpg') → ARRAY['abc', 'file.jpg']
+CREATE OR REPLACE FUNCTION storage.foldername(name TEXT)
+RETURNS TEXT[] AS $$
+  SELECT string_to_array(name, '/');
+$$ LANGUAGE SQL IMMUTABLE;
