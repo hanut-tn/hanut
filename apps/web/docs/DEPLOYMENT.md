@@ -126,7 +126,7 @@ Modèle **Confirm signup** :
 Destinations attendues :
 
 - mot de passe oublié → callback sécurisé, puis `/reset-password`
-- invitation équipe → callback sécurisé, puis `/reset-password`
+- invitation équipe → callback sécurisé, puis `/accept-invitation`
 - confirmation d'inscription → `/dashboard`
 
 Après toute modification de ces URLs, générer un nouvel email : un lien déjà

@@ -46,6 +46,7 @@ describe('middleware auth boundaries', () => {
       '/mobile',
       '/roadmap',
       '/contact',
+      '/accept-invitation',
       '/api/contact',
       '/api/waitlist',
       '/api/csp-report',

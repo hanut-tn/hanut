@@ -60,7 +60,7 @@ describe('GET /api/auth/callback', () => {
   it('verifies an invitation token hash before opening the password page', async () => {
     const request = new NextRequest(
       'https://hanut.test/api/auth/callback' +
-      '?next=%2Freset-password&token_hash=invite-token&type=invite',
+      '?next=%2Faccept-invitation&token_hash=invite-token&type=invite',
     )
 
     const response = await GET(request)
@@ -69,14 +69,14 @@ describe('GET /api/auth/callback', () => {
       token_hash: 'invite-token',
       type: 'invite',
     })
-    expect(response.headers.get('location')).toBe('https://hanut.test/reset-password')
+    expect(response.headers.get('location')).toBe('https://hanut.test/accept-invitation')
   })
 
   it('sends an invalid or expired email link back to login', async () => {
     authMock.verifyOtp.mockResolvedValue({ error: new Error('expired') })
     const request = new NextRequest(
       'https://hanut.test/api/auth/callback' +
-      '?next=%2Freset-password&token_hash=expired-token&type=invite',
+      '?next=%2Faccept-invitation&token_hash=expired-token&type=invite',
     )
 
     const response = await GET(request)

@@ -20,7 +20,7 @@ export function getAppOrigin(fallbackOrigin?: string): string {
 }
 
 export function buildAuthCallbackUrl(
-  nextPath: '/dashboard' | '/reset-password',
+  nextPath: '/accept-invitation' | '/dashboard' | '/reset-password',
   fallbackOrigin?: string,
 ): string {
   const callbackUrl = new URL('/api/auth/callback', getAppOrigin(fallbackOrigin))
