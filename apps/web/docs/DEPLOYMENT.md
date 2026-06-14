@@ -95,15 +95,42 @@ Dans **Authentication → URL Configuration** :
    le wildcard du projet Vercel que vous contrôlez, par exemple
    `https://*-votre-equipe.vercel.app/**`.
 
-Dans **Authentication → Email Templates**, les boutons de confirmation,
-d'invitation et de récupération doivent utiliser `{{ .ConfirmationURL }}`.
-Ne pas utiliser `{{ .SiteURL }}`, qui renvoie directement vers la page d'accueil.
+Dans **Authentication → Email Templates**, utiliser des liens `TokenHash`.
+Le simple `{{ .ConfirmationURL }}` n'est pas compatible avec les invitations
+SSR, car l'invitation est créée sur un autre appareil que celui de l'invité.
+
+Modèle **Invite user** :
+
+```html
+<a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=invite">
+  Accepter l'invitation
+</a>
+```
+
+Modèle **Reset password** :
+
+```html
+<a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=recovery">
+  Réinitialiser mon mot de passe
+</a>
+```
+
+Modèle **Confirm signup** :
+
+```html
+<a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=signup">
+  Confirmer mon inscription
+</a>
+```
 
 Destinations attendues :
 
-- mot de passe oublié → `/reset-password`
-- invitation équipe → `/dashboard`
+- mot de passe oublié → callback sécurisé, puis `/reset-password`
+- invitation équipe → callback sécurisé, puis `/reset-password`
 - confirmation d'inscription → `/dashboard`
+
+Après toute modification de ces URLs, générer un nouvel email : un lien déjà
+envoyé conserve toujours son ancienne destination.
 
 ---
 

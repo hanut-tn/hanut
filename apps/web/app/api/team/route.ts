@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
   const { data: seller } = await serviceClient.from('sellers').select('name').eq('id', context.sellerId).single()
 
   const { error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(email, {
-    redirectTo: buildAuthCallbackUrl('/dashboard', request.nextUrl.origin),
+    redirectTo: buildAuthCallbackUrl('/reset-password', request.nextUrl.origin),
     data: { invited_by: user?.email, team_role: role, invitation_token: invitationToken },
   })
 

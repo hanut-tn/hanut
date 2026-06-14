@@ -62,7 +62,7 @@ export async function POST(request: NextRequest, { params }: Params) {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   const { error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(member.email, {
-    redirectTo: buildAuthCallbackUrl('/dashboard', request.nextUrl.origin),
+    redirectTo: buildAuthCallbackUrl('/reset-password', request.nextUrl.origin),
     data: {
       invited_by: user?.email,
       team_role: member.role,

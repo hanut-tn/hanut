@@ -21,11 +21,11 @@ describe('auth redirect URLs', () => {
     ).toBe('https://hanut.tn/api/auth/callback?next=%2Freset-password')
   })
 
-  it('builds the team invitation destination explicitly', () => {
+  it('builds the team invitation callback to set a password', () => {
     process.env.NEXT_PUBLIC_APP_URL = 'https://hanut.tn'
 
-    expect(buildAuthCallbackUrl('/dashboard')).toBe(
-      'https://hanut.tn/api/auth/callback?next=%2Fdashboard',
+    expect(buildAuthCallbackUrl('/reset-password')).toBe(
+      'https://hanut.tn/api/auth/callback?next=%2Freset-password',
     )
   })
 
