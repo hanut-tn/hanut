@@ -36,12 +36,10 @@ export async function updateCustomer(id: string, input: CustomerInput): Promise<
 
   if (error) return { error: error.message }
 
-  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
-
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'customer_updated',
     entityType: 'customer',
     entityId: id,
@@ -106,12 +104,10 @@ export async function deleteCustomer(id: string): Promise<{ error?: string }> {
 
   if (error) return { error: error.message }
 
-  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
-
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'customer_deleted',
     entityType: 'customer',
     entityId: id,
@@ -170,12 +166,10 @@ export async function anonymizeCustomer(id: string): Promise<{ error?: string }>
     return { error: error.message }
   }
 
-  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
-
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'customer_updated',
     entityType: 'customer',
     entityId: id,

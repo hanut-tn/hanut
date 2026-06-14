@@ -57,14 +57,13 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const { data: seller } = await serviceClient.from('sellers').select('name').eq('id', context.sellerId).single()
   const ROLE_LABELS: Record<string, string> = { operator: 'Opérateur', readonly: 'Lecture seule', admin: 'Admin' }
   const memberName = member.name ?? member.email
 
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'member_role_changed',
     entityType: 'team_member',
     entityId: memberId,
@@ -113,13 +112,12 @@ export async function DELETE(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const { data: seller } = await serviceClient.from('sellers').select('name').eq('id', context.sellerId).single()
   const memberName = member.name ?? member.email
 
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'member_removed',
     entityType: 'team_member',
     entityId: memberId,

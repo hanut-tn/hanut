@@ -124,12 +124,11 @@ async function recordCodReversal(
     return { error: error.message }
   }
 
-  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'delivery_cod_reversed',
     entityType: 'delivery',
     entityId: deliveryId,
@@ -206,12 +205,11 @@ export async function createDelivery(input: CreateDeliveryInput): Promise<{ erro
     return { error: deliveryErrorMessage(shipError.message) }
   }
 
-  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'delivery_created',
     entityType: 'delivery',
     description: input.delivery_type === 'self'
@@ -288,11 +286,10 @@ export async function updateDelivery(
       if (patchError) return { error: deliveryErrorMessage(patchError.message) }
     }
 
-    const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
     await logActivity({
       sellerId: context.sellerId,
       userId: context.userId,
-      userName: seller?.name ?? context.userId,
+      userName: context.userName,
       actionType: 'order_status_changed',
       entityType: 'order',
       entityId: typeof orderId === 'string' ? orderId : undefined,
@@ -375,11 +372,10 @@ export async function createDeliveryFromOrder(
     return { error: deliveryErrorMessage(shipError.message) }
   }
 
-  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'delivery_created',
     entityType: 'order',
     entityId: orderId,
@@ -411,16 +407,11 @@ export async function markSelfDeliveryComplete(deliveryId: string): Promise<{ er
   })
   if (error) return { error: deliveryErrorMessage(error.message) }
 
-  const { data: seller } = await supabase
-    .from('sellers')
-    .select('name')
-    .eq('id', context.sellerId)
-    .maybeSingle()
 
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'order_status_changed',
     entityType: 'order',
     entityId: typeof orderId === 'string' ? orderId : undefined,
@@ -487,7 +478,6 @@ export async function deleteDelivery(id: string): Promise<{ error?: string }> {
     if (statusError) return { error: statusError.message }
   }
 
-  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
   const deliveryLabel = delivery.delivery_type === 'self'
     ? 'personnelle'
@@ -496,7 +486,7 @@ export async function deleteDelivery(id: string): Promise<{ error?: string }> {
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'delivery_deleted',
     entityType: 'delivery',
     entityId: id,

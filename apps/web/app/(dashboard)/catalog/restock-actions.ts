@@ -73,12 +73,11 @@ export async function createRestockOrder(
 
   if (error) return { error: error.message }
 
-  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'product_updated',
     entityType: 'product',
     entityId: productId,
@@ -178,7 +177,6 @@ export async function receiveRestockOrder(
     return { error: restockError.message }
   }
 
-  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
   await supabase.from('stock_movements').insert({
     seller_id: context.sellerId,
@@ -190,13 +188,13 @@ export async function receiveRestockOrder(
     notes: 'Réapprovisionnement planifié reçu',
     unit_cost: unitCost,
     created_by: context.userId,
-    created_by_name: seller?.name ?? '',
+    created_by_name: context.userName,
   })
 
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'product_updated',
     entityType: 'product',
     entityId: restock.product_id,

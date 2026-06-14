@@ -22,6 +22,7 @@ export type UserContext = {
   sellerId: string
   role: UserRole
   isSeller: boolean
+  userName: string
   plan: 'starter' | 'pro' | 'business'
   demoExpiresAt: string | null
   demoExpired: boolean
@@ -60,7 +61,7 @@ export const getUserContext = cacheFn(async (): Promise<UserContext | null> => {
   // L'utilisateur est-il un vendeur (owner = toujours admin) ?
   const { data: seller } = await supabase
     .from('sellers')
-    .select('id, plan, subscription_end')
+    .select('id, plan, subscription_end, name, email')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -70,6 +71,7 @@ export const getUserContext = cacheFn(async (): Promise<UserContext | null> => {
       sellerId: seller.id,
       role: 'admin',
       isSeller: true,
+      userName: seller.name ?? seller.email ?? user.id,
       plan: seller.plan as UserContext['plan'],
       ...computeDemoStatus(seller.subscription_end ?? null),
     }
@@ -79,7 +81,7 @@ export const getUserContext = cacheFn(async (): Promise<UserContext | null> => {
   const serviceClient = createServiceClient()
   const { data: member } = await serviceClient
     .from('team_members')
-    .select('seller_id, role')
+    .select('seller_id, role, name, email')
     .eq('user_id', user.id)
     .eq('status', 'active')
     .maybeSingle()
@@ -100,6 +102,7 @@ export const getUserContext = cacheFn(async (): Promise<UserContext | null> => {
       sellerId: member.seller_id,
       role: member.role as UserRole,
       isSeller: false,
+      userName: member.name ?? member.email ?? user.id,
       plan: sellerData.plan as UserContext['plan'],
       ...computeDemoStatus(sellerData.subscription_end ?? null),
     }

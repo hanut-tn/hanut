@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUserContext } from '@/lib/get-context'
 import { createServerClient } from '@/lib/supabase/server'
+import { escapeLikePattern } from '@/lib/utils'
 
 type SortBy = 'name' | 'total_spent' | 'order_count' | 'last_order'
-type CustomerStatsRow = {
-  id: string
-  order_count: number | null
-  total_spent_calc: number | null
-  last_order_at: string | null
-}
 
 export async function GET(req: NextRequest) {
   const context = await getUserContext()
@@ -25,7 +20,6 @@ export async function GET(req: NextRequest) {
       : 'name'
 
   const from = (page - 1) * limit
-  const to = from + limit - 1
 
   const supabase = await createServerClient()
 
@@ -38,55 +32,28 @@ export async function GET(req: NextRequest) {
     }
   })()
 
-  let statsQuery = supabase
+  let query = supabase
     .from('customers_with_stats')
-    .select('id, order_count, total_spent_calc, last_order_at', { count: 'exact' })
+    .select('id, name, phone, address, city, created_at, tags, order_count, total_spent_calc, last_order_at', { count: 'exact' })
     .eq('seller_id', context.sellerId)
     .order(sortConfig.column, { ascending: sortConfig.ascending, nullsFirst: sortConfig.nullsFirst })
     .order('name', { ascending: true })
-    .range(from, to)
+    .range(from, from + limit - 1)
 
-  const safeSearch = search.replace(/[,()]/g, '').slice(0, 100)
+  const safeSearch = escapeLikePattern(search.replace(/[,()]/g, '').slice(0, 100))
   if (safeSearch.length >= 2) {
-    statsQuery = statsQuery.or(`name.ilike.%${safeSearch}%,phone.ilike.%${safeSearch}%`)
+    query = query.or(`name.ilike.%${safeSearch}%,phone.ilike.%${safeSearch}%`)
   }
 
-  const { data: statsRows, count, error } = await statsQuery as unknown as {
-    data: CustomerStatsRow[] | null
-    count: number | null
-    error: { message: string } | null
-  }
+  const { data: customers, count, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  const ids = (statsRows ?? []).map(row => row.id)
-  if (ids.length === 0) {
-    return NextResponse.json({ customers: [], total: count ?? 0, page, limit, hasMore: false })
-  }
-
-  const { data: customers, error: customersError } = await supabase
-    .from('customers')
-    .select('id, name, phone, address, city, created_at, tags, order_count')
-    .eq('seller_id', context.sellerId)
-    .in('id', ids)
-
-  if (customersError) return NextResponse.json({ error: customersError.message }, { status: 500 })
-
-  const statsById = new Map((statsRows ?? []).map(row => [row.id, row]))
-  const customerById = new Map((customers ?? []).map(customer => [customer.id, customer]))
-  const sortedCustomers = ids
-    .map(id => {
-      const customer = customerById.get(id)
-      const stats = statsById.get(id)
-      return customer && stats ? { ...customer, ...stats } : customer
-    })
-    .filter(Boolean)
 
   const total = count ?? 0
   return NextResponse.json({
-    customers: sortedCustomers,
+    customers: customers ?? [],
     total,
     page,
     limit,
-    hasMore: from + ids.length < total,
+    hasMore: from + (customers?.length ?? 0) < total,
   })
 }

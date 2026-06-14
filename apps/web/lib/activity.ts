@@ -56,6 +56,8 @@ async function resolveActivityUserName(
   serviceClient: ReturnType<typeof createServiceClient>,
   params: LogActivityParams
 ) {
+  if (params.userName) return params.userName
+
   const { data: member } = await serviceClient
     .from('team_members')
     .select('name, email')
@@ -71,5 +73,5 @@ async function resolveActivityUserName(
     .eq('id', params.userId)
     .maybeSingle()
 
-  return seller?.name ?? seller?.email ?? params.userName ?? params.userId
+  return seller?.name ?? seller?.email ?? params.userId
 }

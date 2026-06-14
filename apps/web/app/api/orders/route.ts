@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUserContext } from '@/lib/get-context'
 import { createServerClient } from '@/lib/supabase/server'
+import { escapeLikePattern } from '@/lib/utils'
 
 export async function GET(req: NextRequest) {
   const context = await getUserContext()
@@ -12,7 +13,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Retire les caractères qui casseraient la syntaxe du filtre PostgREST
-  const safe = search.replace(/[,()]/g, '').slice(0, 100)
+  const safe = escapeLikePattern(search.replace(/[,()]/g, '').slice(0, 100))
   if (safe.length < 2) return NextResponse.json({ orders: [] })
 
   const supabase = await createServerClient()

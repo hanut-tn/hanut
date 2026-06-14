@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
+import { escapeLikePattern } from '@/lib/utils'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -12,7 +13,7 @@ export async function GET(req: Request) {
 
   const supabase = await createServerClient()
 
-  const safeSearch = search.replace(/[,()]/g, '').slice(0, 100)
+  const safeSearch = escapeLikePattern(search.replace(/[,()]/g, '').slice(0, 100))
   if (safeSearch.length < 2) return NextResponse.json([])
 
   // Computed sorts (total_spent, order_count, last_order) are handled client-side.

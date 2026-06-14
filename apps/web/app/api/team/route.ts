@@ -137,7 +137,6 @@ export async function POST(request: NextRequest) {
 
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const { data: seller } = await serviceClient.from('sellers').select('name').eq('id', context.sellerId).single()
 
   const { error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(email, {
     redirectTo: buildAuthCallbackUrl('/accept-invitation', request.nextUrl.origin),
@@ -154,7 +153,7 @@ export async function POST(request: NextRequest) {
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'member_invited',
     entityType: 'team_member',
     entityId: member.id,

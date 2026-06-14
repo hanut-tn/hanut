@@ -76,12 +76,11 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderMutatio
     return { error: error.message }
   }
 
-  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'order_created',
     entityType: 'order',
     description: `a créé une commande pour ${input.customer_name} (${input.cod_amount} DT)`,
@@ -132,12 +131,11 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
     throw new Error(error.message)
   }
 
-  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'order_status_changed',
     entityType: 'order',
     entityId: id,
@@ -169,12 +167,11 @@ export async function cancelPendingOrder(id: string) {
   })
   if (error) throw new Error(error.message)
 
-  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'order_status_changed',
     entityType: 'order',
     entityId: id,
@@ -212,12 +209,11 @@ export async function cancelOrder(id: string): Promise<OrderMutationResult> {
     return { error: error.message }
   }
 
-  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'order_status_changed',
     entityType: 'order',
     entityId: id,
@@ -270,12 +266,11 @@ export async function deleteOrder(id: string): Promise<OrderMutationResult> {
   if (error) return { error: error.message }
 
   const customer = Array.isArray(order.customer) ? order.customer[0] : order.customer
-  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'order_deleted',
     entityType: 'order',
     entityId: id,
@@ -305,12 +300,11 @@ export async function restoreOrder(id: string): Promise<OrderMutationResult> {
   })
   if (error) return { error: error.message }
 
-  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'order_restored',
     entityType: 'order',
     entityId: id,
@@ -352,12 +346,11 @@ export async function permanentlyDeleteOrder(id: string): Promise<OrderMutationR
   if (error) return { error: error.message }
 
   const customer = Array.isArray(order.customer) ? order.customer[0] : order.customer
-  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'order_permanently_deleted',
     entityType: 'order',
     entityId: id,

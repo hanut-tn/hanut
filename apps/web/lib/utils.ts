@@ -43,6 +43,11 @@ export function formatDT(amount: number | null | undefined): string {
   return `${amount.toFixed(2).replace('.', ',')} DT`
 }
 
+/** Escapes `%` and `_` wildcard characters before use in an `.ilike()` pattern. */
+export function escapeLikePattern(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
+}
+
 /**
  * Formate une date complète en français tunisien
  * Ex: "04 juin 2026"

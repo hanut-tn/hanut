@@ -108,4 +108,22 @@ describe('GET /api/orders search', () => {
     expect(response.status).toBe(500)
     await expect(response.json()).resolves.toEqual({ error: 'RPC failed' })
   })
+
+  it('treats percent and underscore as literal search characters', async () => {
+    mockContext()
+    const { customerQuery, rpc } = mockServerClient()
+
+    const response = await GET(request('50%_promo'))
+
+    expect(response.status).toBe(200)
+    expect(customerQuery.or).toHaveBeenCalledWith(
+      String.raw`name.ilike.%50\%\_promo%,phone.ilike.%50\%\_promo%`,
+    )
+    expect(rpc).toHaveBeenCalledWith('search_orders', {
+      p_seller_id: 'seller-1',
+      p_search: String.raw`50\%\_promo`,
+      p_customer_ids: ['customer-1'],
+      p_limit: 100,
+    })
+  })
 })

@@ -79,12 +79,10 @@ export async function upsertProduct(input: ProductInput): Promise<{ error?: stri
     productId = data.id
   }
 
-  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
-
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: isUpdate ? 'product_updated' : 'product_created',
     entityType: 'product',
     entityId: productId,
@@ -153,12 +151,10 @@ export async function deleteProduct(id: string): Promise<{ error?: string }> {
     .eq('seller_id', context.sellerId)
   if (error) return { error: error.message }
 
-  const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
-
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: seller?.name ?? context.userId,
+    userName: context.userName,
     actionType: 'product_deleted',
     entityType: 'product',
     entityId: id,
@@ -300,9 +296,6 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
   if (effectiveCalls.length === 0) return { error: 'Le delta ne peut pas être zéro.' }
 
   // Appels RPC atomiques (FOR UPDATE dans la RPC protège contre les races concurrentes)
-  const sellerNameResult = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
-  const sellerName = sellerNameResult.data?.name ?? ''
-
   // Pour WAC 'new' sans passer par la RPC : mettre à jour le coût après les appels RPC
   const unitCostForRpc = input.type === 'restock' && input.costUpdateMode !== 'keep' && input.costUpdateMode !== 'new'
     ? (input.unitCost ?? null)
@@ -322,7 +315,7 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
       p_supplier: input.supplier ?? null,
       p_notes: input.notes ?? null,
       p_changed_by: context.userId,
-      p_changed_by_name: sellerName,
+      p_changed_by_name: context.userName,
     })
     if (rpcErr) {
       if (rpcErr.message.includes('PRODUCT_NOT_FOUND')) return { error: 'Produit introuvable.' }
@@ -342,7 +335,7 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
-    userName: sellerName || context.userId,
+    userName: context.userName,
     actionType: 'product_updated',
     entityType: 'product',
     entityId: id,

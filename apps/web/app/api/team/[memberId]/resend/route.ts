@@ -87,6 +87,7 @@ export async function POST(request: NextRequest, { params }: Params) {
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
+    userName: context.userName,
     actionType: 'member_invited',
     entityType: 'team_member',
     entityId: member.id,

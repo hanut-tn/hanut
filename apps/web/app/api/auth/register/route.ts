@@ -103,15 +103,13 @@ export async function POST(req: NextRequest) {
 
   for (let attempt = 0; attempt < 10; attempt++) {
     const slug = attempt === 0 ? baseSlug : `${baseSlug}-${attempt + 1}`
-    const trialEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
     const { error } = await serviceClient.from('sellers').insert({
       id: data.user.id,
       email,
       name: shop_name,
       phone: phone || null,
       slug,
-      plan: 'pro',
-      subscription_end: trialEnd,
+      plan: 'starter',
     })
 
     if (!error) {
@@ -126,6 +124,21 @@ export async function POST(req: NextRequest) {
   if (!inserted) {
     await serviceClient.auth.admin.deleteUser(data.user.id).catch(() => {})
     return NextResponse.json({ error: lastError ?? 'Impossible de créer le profil. Réessayez.' }, { status: 500 })
+  }
+
+  const { error: trialError } = await serviceClient.rpc('set_demo_trial', {
+    p_seller_id: data.user.id,
+  })
+
+  if (trialError) {
+    // L'inscription promet une démo Pro. Ne jamais laisser un compte partiel
+    // en Starter si la RPC d'activation est absente ou échoue.
+    await serviceClient.from('sellers').delete().eq('id', data.user.id)
+    await serviceClient.auth.admin.deleteUser(data.user.id).catch(() => {})
+    return NextResponse.json(
+      { error: "Impossible d'activer la démo Pro. Réessayez." },
+      { status: 500 }
+    )
   }
 
   return NextResponse.json({

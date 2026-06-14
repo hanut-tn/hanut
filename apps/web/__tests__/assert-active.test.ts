@@ -13,6 +13,7 @@ function context(demoExpired: boolean): UserContext {
     sellerId: 'seller-1',
     role: 'admin',
     isSeller: true,
+    userName: 'Test Seller',
     plan: 'pro',
     demoExpiresAt: demoExpired ? '2026-01-01T00:00:00.000Z' : null,
     demoExpired,
