@@ -1,6 +1,6 @@
--- Anonymiser les données PII d'un client (droit à l'effacement, loi organique n° 2004-63).
--- Le client reste en base pour conserver l'intégrité référentielle des commandes.
--- Les champs PII sont écrasés par des valeurs neutres, irréversiblement.
+-- La base historique utilise TEXT[] pour customers.tags, tandis que certains
+-- projets Supabase existants ont cette colonne en JSONB. La RPC doit accepter
+-- les deux représentations sans compromettre l'historique des commandes.
 
 CREATE OR REPLACE FUNCTION anonymize_customer(
   p_seller_id   UUID,
@@ -11,6 +11,8 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+  v_tags_type TEXT;
 BEGIN
   IF NOT is_service_role()
     AND NOT COALESCE(get_team_role(p_seller_id) = 'admin', false)
@@ -24,8 +26,7 @@ BEGIN
     phone   = '00000000',
     address = NULL,
     city    = NULL,
-    notes   = NULL,
-    tags    = ARRAY[]::TEXT[]
+    notes   = NULL
   WHERE id        = p_customer_id
     AND seller_id = p_seller_id;
 
@@ -33,8 +34,25 @@ BEGIN
     RAISE EXCEPTION 'CUSTOMER_NOT_FOUND';
   END IF;
 
-  -- Les anciens journaux liés à ce client ne doivent pas conserver son nom
-  -- ou d'autres données personnelles dans description/metadata.
+  SELECT attribute.atttypid::regtype::TEXT
+  INTO v_tags_type
+  FROM pg_attribute AS attribute
+  WHERE attribute.attrelid = 'public.customers'::regclass
+    AND attribute.attname = 'tags'
+    AND NOT attribute.attisdropped;
+
+  IF v_tags_type = 'jsonb' THEN
+    EXECUTE
+      'UPDATE public.customers SET tags = ''[]''::jsonb WHERE id = $1 AND seller_id = $2'
+      USING p_customer_id, p_seller_id;
+  ELSIF v_tags_type = 'text[]' THEN
+    EXECUTE
+      'UPDATE public.customers SET tags = ARRAY[]::text[] WHERE id = $1 AND seller_id = $2'
+      USING p_customer_id, p_seller_id;
+  ELSE
+    RAISE EXCEPTION 'UNSUPPORTED_CUSTOMER_TAGS_TYPE:%', COALESCE(v_tags_type, 'missing');
+  END IF;
+
   IF to_regclass('public.activity_logs') IS NOT NULL THEN
     UPDATE activity_logs
     SET
@@ -50,5 +68,4 @@ $$;
 REVOKE ALL ON FUNCTION anonymize_customer(UUID, UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION anonymize_customer(UUID, UUID) TO authenticated, service_role;
 
--- Demande à PostgREST de rendre immédiatement la nouvelle RPC disponible.
 NOTIFY pgrst, 'reload schema';

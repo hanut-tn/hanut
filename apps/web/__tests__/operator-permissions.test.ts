@@ -197,6 +197,52 @@ describe('role-based permissions', () => {
     expect(serverMock.revalidatePath).toHaveBeenCalledWith('/customers/customer-id')
   })
 
+  it('returns a clear error when the anonymization RPC is missing from the schema cache', async () => {
+    mockContext('admin')
+
+    const rpc = vi.fn().mockResolvedValue({
+      error: {
+        code: 'PGRST202',
+        message: "Could not find the function public.anonymize_customer in the schema cache",
+      },
+    })
+    serverMock.createServerClient.mockResolvedValue({
+      from: vi.fn(),
+      rpc,
+    })
+
+    const result = await anonymizeCustomer('customer-id')
+
+    expect(result.error).toBe(
+      'L’anonymisation est temporairement indisponible. La migration Supabase doit être appliquée.',
+    )
+    expect(activityMock.logActivity).not.toHaveBeenCalled()
+    expect(serverMock.revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it('returns a clear error when an old anonymization RPC expects TEXT[] tags', async () => {
+    mockContext('admin')
+
+    const rpc = vi.fn().mockResolvedValue({
+      error: {
+        code: '42804',
+        message: 'column "tags" is of type jsonb but expression is of type text[]',
+      },
+    })
+    serverMock.createServerClient.mockResolvedValue({
+      from: vi.fn(),
+      rpc,
+    })
+
+    const result = await anonymizeCustomer('customer-id')
+
+    expect(result.error).toBe(
+      'L’anonymisation doit être mise à jour dans Supabase avant de réessayer.',
+    )
+    expect(activityMock.logActivity).not.toHaveBeenCalled()
+    expect(serverMock.revalidatePath).not.toHaveBeenCalled()
+  })
+
   it('admin can soft-delete a pending order', async () => {
     mockContext('admin')
 

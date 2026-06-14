@@ -65,6 +65,7 @@ describe('Supabase migrations', () => {
   const apiRolePrivileges = migration('20260626_restore_api_role_privileges.sql')
   const serviceRoleDetection = migration('20260627_fix_service_role_detection.sql')
   const anonymizeCustomerMigration = migration('20260629_anonymize_customer.sql')
+  const anonymizeCustomerTagsTypeFix = migration('20260702_fix_anonymize_customer_tags_type.sql')
   const codSummaryMigration = migration('20260630_get_cod_summary.sql')
   const deliveryTypeMigration = migration('20260701_add_delivery_type.sql')
 
@@ -474,6 +475,16 @@ describe('Supabase migrations', () => {
     expect(anonymizeCustomerMigration).toMatch(/UPDATE activity_logs/i)
     expect(anonymizeCustomerMigration).toMatch(/RAISE EXCEPTION 'CUSTOMER_NOT_FOUND'/i)
     expect(anonymizeCustomerMigration).toMatch(/REVOKE ALL ON FUNCTION anonymize_customer\(UUID, UUID\) FROM PUBLIC/i)
+  })
+
+  it('supports both JSONB and TEXT[] customer tags during anonymization', () => {
+    expect(anonymizeCustomerTagsTypeFix).toMatch(/CREATE OR REPLACE FUNCTION anonymize_customer/i)
+    expect(anonymizeCustomerTagsTypeFix).toMatch(/atttypid::regtype::TEXT/i)
+    expect(anonymizeCustomerTagsTypeFix).toMatch(/v_tags_type = 'jsonb'/i)
+    expect(anonymizeCustomerTagsTypeFix).toMatch(/tags = ''\[\]''::jsonb/i)
+    expect(anonymizeCustomerTagsTypeFix).toMatch(/v_tags_type = 'text\[\]'/i)
+    expect(anonymizeCustomerTagsTypeFix).toMatch(/tags = ARRAY\[\]::text\[\]/i)
+    expect(anonymizeCustomerTagsTypeFix).toMatch(/NOTIFY pgrst, 'reload schema'/i)
   })
 
   it('aggregates COD totals for admins without dropping archived receivables', () => {

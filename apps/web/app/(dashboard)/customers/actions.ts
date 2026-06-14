@@ -1,5 +1,6 @@
 'use server'
 
+import * as Sentry from '@sentry/nextjs'
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
@@ -135,6 +136,28 @@ export async function anonymizeCustomer(id: string): Promise<{ error?: string }>
 
   if (error) {
     if (error.message.includes('CUSTOMER_NOT_FOUND')) return { error: 'Client introuvable.' }
+    if (error.code === 'PGRST202' || error.message.includes('schema cache')) {
+      Sentry.captureException(new Error(`anonymize_customer unavailable: ${error.message}`), {
+        tags: { module: 'customer_anonymization' },
+        extra: { sellerId: context.sellerId, customerId: id },
+      })
+      return {
+        error: 'L’anonymisation est temporairement indisponible. La migration Supabase doit être appliquée.',
+      }
+    }
+    if (error.code === '42804' || error.message.includes('column "tags" is of type jsonb')) {
+      Sentry.captureException(new Error(`anonymize_customer tags mismatch: ${error.message}`), {
+        tags: { module: 'customer_anonymization' },
+        extra: { sellerId: context.sellerId, customerId: id },
+      })
+      return {
+        error: 'L’anonymisation doit être mise à jour dans Supabase avant de réessayer.',
+      }
+    }
+    Sentry.captureException(new Error(`anonymize_customer failed: ${error.message}`), {
+      tags: { module: 'customer_anonymization' },
+      extra: { sellerId: context.sellerId, customerId: id },
+    })
     return { error: error.message }
   }
 
