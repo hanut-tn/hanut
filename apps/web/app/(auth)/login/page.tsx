@@ -15,7 +15,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).has('auth_error')) {
+    const params = new URLSearchParams(window.location.search)
+    if (params.has('access_revoked')) {
+      setError("Votre accès à cette équipe a été retiré.")
+    } else if (params.has('auth_error')) {
       setError("Ce lien d'invitation ou de réinitialisation est invalide ou expiré.")
     }
   }, [])

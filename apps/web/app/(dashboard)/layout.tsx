@@ -57,22 +57,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   // Résout le contexte : role + sellerId
-  let context = await getUserContext()
+  const context = await getUserContext()
 
   if (!context) {
-    // Nouveau vendeur — crée le profil (filet de sécurité si l'inscription a été interrompue)
-    const trialEnd = new Date()
-    trialEnd.setDate(trialEnd.getDate() + 14)
-    await supabase.from('sellers').upsert({
-      id: user.id,
-      email: user.email!,
-      name: (user.user_metadata?.name as string | undefined) ?? user.email!.split('@')[0],
-      phone: (user.user_metadata?.phone as string | undefined) ?? null,
-      plan: 'pro',
-      subscription_end: trialEnd.toISOString(),
-    }, { onConflict: 'id', ignoreDuplicates: true })
-    context = { userId: user.id, sellerId: user.id, role: 'admin', isSeller: true, plan: 'pro', demoExpiresAt: null, demoExpired: false, daysLeft: null }
-  } else if (context.isSeller) {
+    // Un utilisateur Auth sans seller ni équipe active n'a plus accès.
+    // Ne jamais créer automatiquement une boutique ici : un ancien membre
+    // supprimé deviendrait sinon propriétaire d'un essai Pro.
+    await supabase.auth.signOut()
+    redirect('/login?access_revoked=1')
+  }
+
+  if (context.isSeller) {
     // Vendeur existant — s'assure que le profil est à jour
     await supabase.from('sellers').upsert({
       id: user.id,
