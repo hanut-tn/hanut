@@ -172,9 +172,9 @@ export async function createDelivery(input: CreateDeliveryInput): Promise<{ erro
     return { error: 'Commande introuvable.' }
   }
 
-  if (order.status !== 'confirmed' && order.status !== 'shipped') {
+  if (order.status !== 'confirmed') {
     return {
-      error: 'Impossible de créer une livraison — la commande doit être en statut "Confirmée" ou "Expédiée".',
+      error: 'Impossible de créer une livraison — la commande doit être en statut "Confirmée". Supprimez la livraison existante pour la recréer.',
     }
   }
 
@@ -189,33 +189,21 @@ export async function createDelivery(input: CreateDeliveryInput): Promise<{ erro
     return { error: 'Une livraison active existe déjà pour cette commande.' }
   }
 
-  if (order.status === 'confirmed') {
-    const { error: shipError } = await supabase.rpc('create_delivery_from_order', {
-      p_seller_id: context.sellerId,
-      p_user_id: context.userId,
-      p_order_id: input.order_id,
-      p_delivery_type: input.delivery_type,
-      p_carrier: validated.carrier ?? null,
-      p_tracking_number: validated.tracking ?? null,
-      p_fee: validated.fee,
-      p_vendor_note: validated.vendorNote ?? null,
-    })
-    if (shipError) {
-      if (shipError.message.includes('order_not_shippable')) {
-        return { error: 'Cette commande ne peut pas être expédiée.' }
-      }
-      return { error: deliveryErrorMessage(shipError.message) }
+  const { error: shipError } = await supabase.rpc('create_delivery_from_order', {
+    p_seller_id: context.sellerId,
+    p_user_id: context.userId,
+    p_order_id: input.order_id,
+    p_delivery_type: input.delivery_type,
+    p_carrier: validated.carrier ?? null,
+    p_tracking_number: validated.tracking ?? null,
+    p_fee: validated.fee,
+    p_vendor_note: validated.vendorNote ?? null,
+  })
+  if (shipError) {
+    if (shipError.message.includes('order_not_shippable')) {
+      return { error: 'Cette commande ne peut pas être expédiée.' }
     }
-  } else {
-    const { error } = await supabase.from('deliveries').insert({
-      order_id: input.order_id,
-      delivery_type: input.delivery_type,
-      carrier: validated.carrier ?? null,
-      tracking_number: validated.tracking ?? null,
-      fee: validated.fee,
-      vendor_note: validated.vendorNote ?? null,
-    })
-    if (error) return { error: deliveryErrorMessage(error.message) }
+    return { error: deliveryErrorMessage(shipError.message) }
   }
 
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()

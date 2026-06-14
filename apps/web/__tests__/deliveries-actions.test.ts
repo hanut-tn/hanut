@@ -125,6 +125,30 @@ describe('createDelivery', () => {
     expect(result.error).toContain('livraison active')
   })
 
+  it('rejects delivery creation for a shipped order — no RPC bypass', async () => {
+    // Reproduit le bug C2 : avant le fix, une commande shipped déclenchait
+    // un INSERT direct sans passer par le RPC (quota plan bypassé, transition non loguée).
+    // Désormais, seul le statut 'confirmed' est accepté.
+    const orderQuery = makeChain({ id: 'order-1', status: 'shipped' })
+
+    const rpc = vi.fn()
+    const insert = vi.fn()
+    serverMock.createServerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'orders') return orderQuery
+        if (table === 'deliveries') return { insert }
+        throw new Error(`Unexpected table: ${table}`)
+      }),
+      rpc,
+    })
+
+    const result = await createDelivery({ order_id: 'order-1', delivery_type: 'carrier', carrier: 'intigo' })
+
+    expect(result.error).toContain('Confirmée')
+    expect(rpc).not.toHaveBeenCalled()
+    expect(insert).not.toHaveBeenCalled()
+  })
+
   it('blocks readonly role', async () => {
     mockContext('readonly')
 

@@ -2,6 +2,7 @@
 
 import Script from 'next/script'
 import { useEffect, useRef, useState } from 'react'
+import { useCspNonce } from '@/components/providers/CspNonceProvider'
 
 type TurnstileApi = {
   render: (
@@ -31,6 +32,7 @@ type Props = {
 const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
 
 export function TurnstileWidget({ onVerify, resetKey = 0 }: Props) {
+  const nonce = useCspNonce()
   const containerRef = useRef<HTMLDivElement>(null)
   const widgetIdRef = useRef<string | null>(null)
   const onVerifyRef = useRef(onVerify)
@@ -74,6 +76,7 @@ export function TurnstileWidget({ onVerify, resetKey = 0 }: Props) {
       <Script
         src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
         strategy="afterInteractive"
+        nonce={nonce}
         onReady={() => setScriptReady(true)}
       />
       <div className="flex justify-center">

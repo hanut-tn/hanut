@@ -40,43 +40,18 @@ const nextConfig: NextConfig = {
             key: 'X-DNS-Prefetch-Control',
             value: 'on',
           },
-        ],
-      },
-      {
-        // HSTS uniquement sur les routes protégées — évite de bloquer
-        // les previews Vercel et les tests locaux en HTTP.
-        source: '/(dashboard|billing|api)(.*)',
-        headers: [
           {
+            // HSTS global. Désactivé hors production pour ne pas bloquer
+            // les previews Vercel (HTTP) et les environnements de développement.
             key: 'Strict-Transport-Security',
-            value: 'max-age=63072000; includeSubDomains; preload',
+            value: process.env.VERCEL_ENV === 'production'
+              ? 'max-age=63072000; includeSubDomains; preload'
+              : 'max-age=0',
           },
         ],
       },
-      {
-        // CSP en mode enforced — bloque les violations et collecte les rapports.
-        // 'unsafe-inline' requis pour Next.js 15 (scripts d'hydratation inline).
-        // report-uri conservé pour détecter les régressions après mises à jour.
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in",
-              "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://challenges.cloudflare.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
-              "frame-src https://challenges.cloudflare.com",
-              "object-src 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-              "report-uri /api/csp-report",
-            ].join('; '),
-          },
-        ],
-      },
+      // La CSP est générée par le middleware (apps/web/middleware.ts) avec un
+      // nonce par requête — elle ne doit pas être dupliquée ici.
     ]
   },
 }

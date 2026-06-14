@@ -63,6 +63,34 @@ describe('middleware auth boundaries', () => {
     expect(supabaseSsrMock.createServerClient).not.toHaveBeenCalled()
   })
 
+  it('forwards the same nonce and CSP to Next.js rendering and the browser', async () => {
+    const response = await middleware(requestFor('/pricing'))
+    const responseCsp = response.headers.get('content-security-policy')
+    const requestCsp = response.headers.get('x-middleware-request-content-security-policy')
+    const requestNonce = response.headers.get('x-middleware-request-x-nonce')
+    const nonceFromCsp = responseCsp?.match(/'nonce-([^']+)'/)?.[1]
+    const scriptSrc = responseCsp
+      ?.split(';')
+      .find(directive => directive.trim().startsWith('script-src'))
+
+    expect(responseCsp).toBeTruthy()
+    expect(requestCsp).toBe(responseCsp)
+    expect(requestNonce).toBe(nonceFromCsp)
+    expect(scriptSrc).toContain("'strict-dynamic'")
+    expect(scriptSrc).not.toContain("'unsafe-inline'")
+    expect(scriptSrc).not.toContain("'unsafe-eval'")
+  })
+
+  it('generates a fresh CSP nonce for every request', async () => {
+    const first = await middleware(requestFor('/pricing'))
+    const second = await middleware(requestFor('/pricing'))
+
+    expect(first.headers.get('x-middleware-request-x-nonce')).toBeTruthy()
+    expect(first.headers.get('x-middleware-request-x-nonce')).not.toBe(
+      second.headers.get('x-middleware-request-x-nonce'),
+    )
+  })
+
   it('redirects authenticated homepage visitors to the dashboard', async () => {
     supabaseSsrMock.createServerClient.mockReturnValue({
       auth: {

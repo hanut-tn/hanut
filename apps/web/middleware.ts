@@ -30,6 +30,40 @@ const PUBLIC_PATHS = [
   '/privacy',
 ]
 
+// Génère un nonce aléatoire 128 bits, compatible Edge runtime (pas de Buffer).
+function buildNonce(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  return btoa(String.fromCharCode(...Array.from(bytes)))
+}
+
+// CSP avec nonce par requête.
+// 'strict-dynamic' autorise les scripts chargés dynamiquement par un script noncé —
+// ce qui permet à Next.js d'hydrater sans 'unsafe-inline'. 'unsafe-eval' reste
+// limité au serveur de développement, comme requis par Next.js.
+function buildCsp(nonce: string): string {
+  const scriptSources = [
+    "'self'",
+    `'nonce-${nonce}'`,
+    "'strict-dynamic'",
+    ...(process.env.NODE_ENV === 'development' ? ["'unsafe-eval'"] : []),
+    'https://challenges.cloudflare.com',
+  ].join(' ')
+
+  return [
+    "default-src 'self'",
+    `script-src ${scriptSources}`,
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in",
+    "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://challenges.cloudflare.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
+    "frame-src https://challenges.cloudflare.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "report-uri /api/csp-report",
+  ].join('; ')
+}
+
 // Edge-compatible base64url → JSON decoder (no Buffer, no Node APIs).
 function decodeJwtPayload(token: string): Record<string, unknown> {
   try {
@@ -47,6 +81,17 @@ function decodeJwtPayload(token: string): Record<string, unknown> {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
+  const nonce = buildNonce()
+  const cspHeader = buildCsp(nonce)
+
+  // Injecter le nonce dans les headers de la requête pour que les RSC
+  // puissent le lire via headers() et l'appliquer à leurs scripts.
+  const reqHeaders = new Headers(req.headers)
+  reqHeaders.set('x-nonce', nonce)
+  // Next.js extrait le nonce depuis la CSP de la requête de rendu. Le header
+  // de réponse seul ne suffit pas à noncer ses scripts d'hydratation.
+  reqHeaders.set('Content-Security-Policy', cspHeader)
+
   const isPublic = PUBLIC_PATHS.some(p =>
     pathname === p || pathname.startsWith(p + '/')
   )
@@ -54,21 +99,29 @@ export async function middleware(req: NextRequest) {
   // Pour la homepage uniquement, vérifier la session pour rediriger les users connectés
   const isHomepage = pathname === '/'
 
-  if (isPublic && !isHomepage) return NextResponse.next()
+  if (isPublic && !isHomepage) {
+    const response = NextResponse.next({ request: { headers: reqHeaders } })
+    response.headers.set('Content-Security-Policy', cspHeader)
+    return response
+  }
 
-  let res = NextResponse.next({ request: req })
+  let res = NextResponse.next({ request: { headers: reqHeaders } })
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  if (!supabaseUrl || !supabaseKey) return NextResponse.next()
+  if (!supabaseUrl || !supabaseKey) {
+    res.headers.set('Content-Security-Policy', cspHeader)
+    return res
+  }
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
       getAll: () => req.cookies.getAll(),
       setAll: (list: { name: string; value: string; options?: object }[]) => {
         list.forEach(({ name, value }) => req.cookies.set(name, value))
-        res = NextResponse.next({ request: req })
+        // Conserver les reqHeaders noncés dans chaque re-création de `res`.
+        res = NextResponse.next({ request: { headers: reqHeaders } })
         list.forEach(({ name, value, options }) =>
           res.cookies.set(name, value, options as never)
         )
@@ -85,7 +138,10 @@ export async function middleware(req: NextRequest) {
   }
 
   // Homepage sans session → landing page
-  if (isHomepage) return res
+  if (isHomepage) {
+    res.headers.set('Content-Security-Policy', cspHeader)
+    return res
+  }
 
   if (!user) {
     return NextResponse.redirect(new URL('/login', req.url))
@@ -105,6 +161,15 @@ export async function middleware(req: NextRequest) {
     const subscriptionEndFromClaim = typeof claims.subscription_end === 'string'
       ? claims.subscription_end
       : null
+
+    // Avertissement dev si le hook JWT n'est pas activé dans Supabase.
+    // Sans ce hook, le middleware fait 3 requêtes DB par requête HTTP protégée.
+    if (!hasSubscriptionClaim && process.env.NODE_ENV === 'development') {
+      console.warn(
+        '[Hanut] Hook JWT Supabase non activé — 3 requêtes DB par requête HTTP. ' +
+        'Activer : Dashboard Supabase → Authentication → Hooks → Custom Access Token → set_seller_jwt_claims.'
+      )
+    }
 
     let subscriptionEnd: string | null = subscriptionEndFromClaim
 
@@ -143,6 +208,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+  res.headers.set('Content-Security-Policy', cspHeader)
   return res
 }
 
