@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useState, useEffect } from 'react'
+import { Fragment, useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle2, Circle } from 'lucide-react'
 
@@ -13,12 +13,13 @@ type Props = {
 
 export default function OnboardingChecklist({ productAdded, linkCopied: initLC, firstOrder, slug }: Props) {
   const router = useRouter()
+  const completedOnMount = useRef(productAdded && initLC && firstOrder).current
   const [linkCopied, setLinkCopied] = useState(initLC)
   const [firstOrderSeen, setFirstOrderSeen] = useState(firstOrder)
   const [dismissed, setDismissed] = useState(false)
   const [celebrating, setCelebrating] = useState(false)
   const [fadingOut, setFadingOut] = useState(false)
-  const [hidden, setHidden] = useState(false)
+  const [hidden, setHidden] = useState(completedOnMount)
 
   const completedCount = [productAdded, linkCopied, firstOrderSeen].filter(Boolean).length
   const allDone = completedCount === 3
@@ -41,19 +42,41 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
   }, [allDone, hidden, dismissed, router])
 
   useEffect(() => {
-    if (!allDone || celebrating || dismissed) return
+    if (!allDone || dismissed) return
+
+    // Persister immédiatement. Auparavant, ce PATCH était placé dans un timer
+    // annulé dès que setCelebrating() déclenchait le nouveau rendu.
+    const controller = new AbortController()
+    void fetch('/api/onboarding', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'complete' }),
+      signal: controller.signal,
+    }).then(response => {
+      if (response.ok) router.refresh()
+    }).catch(() => {})
+
+    // Si les trois étapes étaient déjà terminées au chargement, ne pas rejouer
+    // l'écran de félicitations : la bannière reste invisible.
+    if (completedOnMount) {
+      setHidden(true)
+      return () => controller.abort()
+    }
+
     setCelebrating(true)
-    const timer = setTimeout(() => {
-      fetch('/api/onboarding', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'complete' }),
-      }).catch(() => {})
+    const fadeTimer = setTimeout(() => {
       setFadingOut(true)
-      setTimeout(() => setHidden(true), 500)
+    }, 2500)
+    const hideTimer = setTimeout(() => {
+      setHidden(true)
     }, 3000)
-    return () => clearTimeout(timer)
-  }, [allDone, celebrating, dismissed])
+
+    return () => {
+      controller.abort()
+      clearTimeout(fadeTimer)
+      clearTimeout(hideTimer)
+    }
+  }, [allDone, completedOnMount, dismissed, router])
 
   if (hidden || dismissed) return null
 
