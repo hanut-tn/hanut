@@ -154,6 +154,15 @@ export async function anonymizeCustomer(id: string): Promise<{ error?: string }>
         error: 'L’anonymisation doit être mise à jour dans Supabase avant de réessayer.',
       }
     }
+    if (error.code === '42883' || error.message.includes('operator does not exist: uuid = text')) {
+      Sentry.captureException(new Error(`anonymize_customer entity mismatch: ${error.message}`), {
+        tags: { module: 'customer_anonymization' },
+        extra: { sellerId: context.sellerId, customerId: id },
+      })
+      return {
+        error: 'La fonction d’anonymisation doit être mise à jour dans Supabase avant de réessayer.',
+      }
+    }
     Sentry.captureException(new Error(`anonymize_customer failed: ${error.message}`), {
       tags: { module: 'customer_anonymization' },
       extra: { sellerId: context.sellerId, customerId: id },

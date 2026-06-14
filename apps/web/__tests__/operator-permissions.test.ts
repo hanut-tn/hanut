@@ -243,6 +243,29 @@ describe('role-based permissions', () => {
     expect(serverMock.revalidatePath).not.toHaveBeenCalled()
   })
 
+  it('returns a clear error when activity entity IDs use a different SQL type', async () => {
+    mockContext('admin')
+
+    const rpc = vi.fn().mockResolvedValue({
+      error: {
+        code: '42883',
+        message: 'operator does not exist: uuid = text',
+      },
+    })
+    serverMock.createServerClient.mockResolvedValue({
+      from: vi.fn(),
+      rpc,
+    })
+
+    const result = await anonymizeCustomer('customer-id')
+
+    expect(result.error).toBe(
+      'La fonction d’anonymisation doit être mise à jour dans Supabase avant de réessayer.',
+    )
+    expect(activityMock.logActivity).not.toHaveBeenCalled()
+    expect(serverMock.revalidatePath).not.toHaveBeenCalled()
+  })
+
   it('admin can soft-delete a pending order', async () => {
     mockContext('admin')
 

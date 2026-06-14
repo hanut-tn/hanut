@@ -66,6 +66,7 @@ describe('Supabase migrations', () => {
   const serviceRoleDetection = migration('20260627_fix_service_role_detection.sql')
   const anonymizeCustomerMigration = migration('20260629_anonymize_customer.sql')
   const anonymizeCustomerTagsTypeFix = migration('20260702_fix_anonymize_customer_tags_type.sql')
+  const anonymizeCustomerEntityTypeFix = migration('20260703_fix_anonymize_customer_activity_entity_type.sql')
   const codSummaryMigration = migration('20260630_get_cod_summary.sql')
   const deliveryTypeMigration = migration('20260701_add_delivery_type.sql')
 
@@ -485,6 +486,15 @@ describe('Supabase migrations', () => {
     expect(anonymizeCustomerTagsTypeFix).toMatch(/v_tags_type = 'text\[\]'/i)
     expect(anonymizeCustomerTagsTypeFix).toMatch(/tags = ARRAY\[\]::text\[\]/i)
     expect(anonymizeCustomerTagsTypeFix).toMatch(/NOTIFY pgrst, 'reload schema'/i)
+  })
+
+  it('supports both UUID and TEXT activity entity IDs during anonymization', () => {
+    expect(anonymizeCustomerEntityTypeFix).toMatch(/CREATE OR REPLACE FUNCTION anonymize_customer/i)
+    expect(anonymizeCustomerEntityTypeFix).toMatch(
+      /entity_id::TEXT\s*=\s*p_customer_id::TEXT/i,
+    )
+    expect(anonymizeCustomerEntityTypeFix).toMatch(/UPDATE activity_logs/i)
+    expect(anonymizeCustomerEntityTypeFix).toMatch(/NOTIFY pgrst, 'reload schema'/i)
   })
 
   it('aggregates COD totals for admins without dropping archived receivables', () => {
