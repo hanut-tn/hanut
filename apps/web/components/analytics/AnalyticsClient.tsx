@@ -22,7 +22,8 @@ type Order = {
 type DeliveryOrder = { status: string; cod_amount: number; created_at: string }
 
 type Delivery = {
-  carrier: string
+  delivery_type: 'self' | 'carrier'
+  carrier: string | null
   fee?: number | null
   cod_collected: boolean
   cod_reversed: boolean
@@ -307,17 +308,21 @@ export default function AnalyticsClient({ orders, deliveries, plan, truncated, o
   for (const d of filteredDeliveries) {
     const o = getDeliveryOrder(d)
     if (!o) continue
-    if (!carrierMap[d.carrier]) carrierMap[d.carrier] = { shipped: 0, delivered: 0, codToReverse: 0, codPending: 0, fees: 0 }
-    const c = carrierMap[d.carrier]
+    const deliveryKey = d.delivery_type === 'self' ? 'self' : d.carrier
+    if (!deliveryKey) continue
+    if (!carrierMap[deliveryKey]) carrierMap[deliveryKey] = { shipped: 0, delivered: 0, codToReverse: 0, codPending: 0, fees: 0 }
+    const c = carrierMap[deliveryKey]
     c.shipped += 1
     if (o.status === 'delivered') c.delivered += 1
-    if (d.cod_collected && !d.cod_reversed) c.codToReverse += o.cod_amount
+    if (d.delivery_type === 'carrier' && d.cod_collected && !d.cod_reversed) {
+      c.codToReverse += o.cod_amount
+    }
     if (!d.cod_collected && ['shipped', 'delivered'].includes(o.status)) c.codPending += o.cod_amount
     c.fees += d.fee ?? 0
   }
   const carrierList = Object.entries(carrierMap).map(([key, stats]) => ({
     key,
-    label: getCarrierConfig(key).label,
+    label: key === 'self' ? 'Livraison en personne' : getCarrierConfig(key).label,
     ...stats,
     rate: stats.shipped > 0 ? Math.round((stats.delivered / stats.shipped) * 100) : 0,
   })).sort((a, b) => b.shipped - a.shipped)
@@ -672,11 +677,11 @@ export default function AnalyticsClient({ orders, deliveries, plan, truncated, o
         </div>
       </div>
 
-      {/* Tableau par livreur — Pro uniquement */}
+      {/* Tableau par mode de livraison — Pro uniquement */}
       {plan !== 'starter' && carrierList.length > 0 && (
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-[#E7E5E4]">
-            <h2 className="font-semibold text-[#1C1917] mb-3">Par livreur</h2>
+            <h2 className="font-semibold text-[#1C1917] mb-3">Par mode de livraison</h2>
             {carrierList.length > 1 && (
               <div className="flex flex-wrap gap-2">
                 <button
@@ -705,7 +710,7 @@ export default function AnalyticsClient({ orders, deliveries, plan, truncated, o
             <table className="w-full min-w-[760px] text-sm">
               <thead className="bg-[#FAFAF9] border-b border-[#E7E5E4]">
                 <tr>
-                  {['Livreur', 'Expédiées', 'Livrées', 'Taux', 'COD à reverser', 'COD en attente', 'Frais'].map((h, i) => (
+                  {['Mode', 'Expédiées', 'Livrées', 'Taux', 'COD à reverser', 'COD en attente', 'Frais'].map((h, i) => (
                     <th key={i} className="text-left text-xs font-medium text-[#78716C] uppercase tracking-wide px-5 py-3">
                       {h}
                     </th>

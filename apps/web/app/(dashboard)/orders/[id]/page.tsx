@@ -4,6 +4,7 @@ import { getUserContext } from '@/lib/get-context'
 import OrderDetail from '@/components/orders/OrderDetail'
 import { notFound } from 'next/navigation'
 import { updateOrderStatus, confirmPendingOrder, cancelOrder, deleteOrder } from '../actions'
+import { createDeliveryFromOrder } from '@/app/(dashboard)/deliveries/actions'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -104,6 +105,7 @@ export default async function OrderDetailPage({ params }: Props) {
       confirmOrder={confirmPendingOrder}
       cancelOrder={cancelOrder}
       deleteOrder={deleteOrder}
+      createDeliveryFromOrder={createDeliveryFromOrder}
     />
   )
 }

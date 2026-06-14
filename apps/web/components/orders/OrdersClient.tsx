@@ -4,7 +4,7 @@ import { useState, useMemo, useTransition, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import {
   Search, SearchX, Download, Trash2, ChevronRight, ShoppingBag, Filter,
-  X, Loader2, RotateCcw, ChevronDown, Calendar,
+  X, Loader2, RotateCcw, ChevronDown, Calendar, Truck, User,
 } from 'lucide-react'
 import type { OrderStatus, CarrierName } from '@hanut/types'
 import type { UserRole } from '@/lib/get-context'
@@ -66,7 +66,7 @@ type Props = {
   cancelOrder: (id: string) => Promise<void | { error?: string }>
   restoreOrder: (id: string) => Promise<{ error?: string }>
   permanentlyDeleteOrder: (id: string) => Promise<{ error?: string }>
-  createDeliveryFromOrder: (orderId: string, carrier: string, tracking: string | undefined, fee: number) => Promise<{ error?: string }>
+  createDeliveryFromOrder: (orderId: string, deliveryType: 'self' | 'carrier', carrier: string | undefined, tracking: string | undefined, fee: number, vendorNote?: string) => Promise<{ error?: string }>
   monthlyOrderCount?: number
 }
 
@@ -219,9 +219,11 @@ export default function OrdersClient({
 
   // Modal expédition
   const [shippingModal, setShippingModal] = useState<{ orderId: string; customerName: string; codAmount: number } | null>(null)
+  const [shipType, setShipType] = useState<'self' | 'carrier'>('carrier')
   const [shipCarrier, setShipCarrier] = useState<CarrierName | ''>('')
   const [shipTracking, setShipTracking] = useState('')
   const [shipFee, setShipFee] = useState<number | ''>(0)
+  const [shipVendorNote, setShipVendorNote] = useState('')
   const [shipError, setShipError] = useState<string | null>(null)
 
   // Toast
@@ -540,17 +542,43 @@ export default function OrdersClient({
 
   function openShipModal(order: Order) {
     const customer = getCustomer(order)
+    setShipType('carrier')
     setShipCarrier('')
     setShipTracking('')
     setShipFee(0)
+    setShipVendorNote('')
     setShipError(null)
     setShippingModal({ orderId: order.id, customerName: customer?.name ?? '', codAmount: order.cod_amount })
   }
 
   function confirmShip(skipDetails: boolean) {
     if (!shippingModal) return
-    if (!shipCarrier) { setShipError('Sélectionnez un transporteur'); return }
     const { orderId } = shippingModal
+
+    if (shipType === 'self') {
+      setShippingModal(null)
+      applyOptimisticStatus(orderId, 'shipped', 'confirmed')
+      setUpdatingId(orderId)
+      startTransition(async () => {
+        try {
+          const result = await createDeliveryFromOrder(orderId, 'self', undefined, undefined, 0, shipVendorNote.trim() || undefined)
+          if (result?.error) {
+            applyOptimisticStatus(orderId, 'confirmed', 'shipped')
+            showToast(`Erreur : ${result.error}`)
+          } else {
+            showToast('✓ Commande expédiée · Livraison personnelle créée')
+          }
+        } catch {
+          applyOptimisticStatus(orderId, 'confirmed', 'shipped')
+          showToast('Erreur. Veuillez réessayer.')
+        } finally {
+          setUpdatingId(null)
+        }
+      })
+      return
+    }
+
+    if (!shipCarrier) { setShipError('Sélectionnez un transporteur'); return }
     const carrier = shipCarrier
     const tracking = skipDetails ? undefined : (shipTracking.trim() || undefined)
     const fee = skipDetails ? 0 : (shipFee === '' ? 0 : Number(shipFee))
@@ -559,7 +587,7 @@ export default function OrdersClient({
     setUpdatingId(orderId)
     startTransition(async () => {
       try {
-        const result = await createDeliveryFromOrder(orderId, carrier, tracking, fee)
+        const result = await createDeliveryFromOrder(orderId, 'carrier', carrier, tracking, fee)
         if (result?.error) {
           applyOptimisticStatus(orderId, 'confirmed', 'shipped')
           showToast(`Erreur : ${result.error}`)
@@ -1424,63 +1452,126 @@ export default function OrdersClient({
               </button>
             </div>
             <div className="p-5 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[#1C1917] mb-2">Transporteur *</label>
-                <div className="flex flex-wrap gap-2">
-                  {CARRIER_NAMES.map(c => {
-                    const cfg = CARRIER_CONFIG[c]
-                    const sel = shipCarrier === c
-                    return (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => { setShipCarrier(c); setShipError(null) }}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors min-h-[40px] ${sel ? `${cfg.bg} ${cfg.color} border-current` : 'border-[#E7E5E4] text-[#78716C] hover:border-[#D6D3D1]'}`}
-                      >
-                        {cfg.label}
-                      </button>
-                    )
-                  })}
+              {/* Sélecteur de type */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setShipType('carrier'); setShipError(null) }}
+                  className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium border-2 transition-colors min-h-[40px] ${
+                    shipType === 'carrier'
+                      ? 'border-[#16A34A] bg-[#F0FDF4] text-[#166534]'
+                      : 'border-[#E7E5E4] text-[#78716C] hover:border-[#D6D3D1]'
+                  }`}
+                >
+                  <Truck className="w-4 h-4 shrink-0" />
+                  Transporteur
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShipType('self'); setShipError(null) }}
+                  className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium border-2 transition-colors min-h-[40px] ${
+                    shipType === 'self'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-[#E7E5E4] text-[#78716C] hover:border-[#D6D3D1]'
+                  }`}
+                >
+                  <User className="w-4 h-4 shrink-0" />
+                  En personne
+                </button>
+              </div>
+
+              {/* Formulaire transporteur */}
+              {shipType === 'carrier' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1C1917] mb-2">Transporteur *</label>
+                    <div className="flex flex-wrap gap-2">
+                      {CARRIER_NAMES.map(c => {
+                        const cfg = CARRIER_CONFIG[c]
+                        const sel = shipCarrier === c
+                        return (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => { setShipCarrier(c); setShipError(null) }}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors min-h-[40px] ${sel ? `${cfg.bg} ${cfg.color} border-current` : 'border-[#E7E5E4] text-[#78716C] hover:border-[#D6D3D1]'}`}
+                          >
+                            {cfg.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1C1917] mb-1">N° de suivi</label>
+                    <input
+                      className="input"
+                      value={shipTracking}
+                      onChange={e => setShipTracking(e.target.value)}
+                      placeholder="Optionnel — vous pouvez l'ajouter plus tard"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1C1917] mb-1">Frais de livraison (DT)</label>
+                    <input
+                      className="input text-base"
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={shipFee}
+                      onChange={e => setShipFee(e.target.value === '' ? '' : Number(e.target.value))}
+                      placeholder="0"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Formulaire livraison personnelle */}
+              {shipType === 'self' && (
+                <div>
+                  <label className="block text-sm font-medium text-[#1C1917] mb-1">Message pour le client (optionnel)</label>
+                  <textarea
+                    className="input resize-none text-base md:text-sm"
+                    rows={2}
+                    maxLength={1000}
+                    value={shipVendorNote}
+                    onChange={e => setShipVendorNote(e.target.value)}
+                    placeholder="Ex : Livraison prévue demain matin"
+                  />
+                  <p className="mt-1 text-xs text-[#78716C]">
+                    Visible par le client sur sa page de suivi.
+                  </p>
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#1C1917] mb-1">N° de suivi</label>
-                <input
-                  className="input"
-                  value={shipTracking}
-                  onChange={e => setShipTracking(e.target.value)}
-                  placeholder="Optionnel — vous pouvez l'ajouter plus tard"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#1C1917] mb-1">Frais de livraison (DT)</label>
-                <input
-                  className="input text-base"
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  value={shipFee}
-                  onChange={e => setShipFee(e.target.value === '' ? '' : Number(e.target.value))}
-                  placeholder="0"
-                />
-              </div>
+              )}
+
               {shipError && <p className="text-sm text-red-600">{shipError}</p>}
             </div>
             <div className="flex gap-3 px-5 pb-6">
-              <button
-                onClick={() => confirmShip(true)}
-                disabled={!shipCarrier}
-                className="flex-1 border border-[#E7E5E4] text-[#78716C] rounded-lg px-4 py-2.5 text-sm min-h-[44px] disabled:opacity-40 hover:bg-[#F5F5F4] transition-colors"
-              >
-                Remplir plus tard
-              </button>
-              <button
-                onClick={() => confirmShip(false)}
-                disabled={!shipCarrier}
-                className="flex-1 bg-[#16A34A] hover:bg-[#15803D] text-white rounded-lg px-4 py-2.5 text-sm font-medium min-h-[44px] disabled:opacity-40 transition-colors"
-              >
-                Confirmer l&apos;expédition
-              </button>
+              {shipType === 'carrier' ? (
+                <>
+                  <button
+                    onClick={() => confirmShip(true)}
+                    disabled={!shipCarrier}
+                    className="flex-1 border border-[#E7E5E4] text-[#78716C] rounded-lg px-4 py-2.5 text-sm min-h-[44px] disabled:opacity-40 hover:bg-[#F5F5F4] transition-colors"
+                  >
+                    Remplir plus tard
+                  </button>
+                  <button
+                    onClick={() => confirmShip(false)}
+                    disabled={!shipCarrier}
+                    className="flex-1 bg-[#16A34A] hover:bg-[#15803D] text-white rounded-lg px-4 py-2.5 text-sm font-medium min-h-[44px] disabled:opacity-40 transition-colors"
+                  >
+                    Confirmer l&apos;expédition
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => confirmShip(false)}
+                  className="flex-1 bg-[#16A34A] hover:bg-[#15803D] text-white rounded-lg px-4 py-2.5 text-sm font-medium min-h-[44px] transition-colors"
+                >
+                  Confirmer la livraison personnelle
+                </button>
+              )}
             </div>
           </div>
         </div>

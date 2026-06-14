@@ -32,6 +32,7 @@ import {
   createDeliveryFromOrder,
   deleteDelivery,
   markCodReversed,
+  markSelfDeliveryComplete,
   updateDelivery,
 } from '../app/(dashboard)/deliveries/actions'
 
@@ -81,7 +82,7 @@ describe('createDelivery', () => {
       rpc,
     })
 
-    const result = await createDelivery({ order_id: 'order-1', carrier: 'intigo' })
+    const result = await createDelivery({ order_id: 'order-1', delivery_type: 'carrier', carrier: 'intigo' })
 
     expect(result.error).toBeUndefined()
     expect(rpc).toHaveBeenCalledWith('create_delivery_from_order', expect.objectContaining({
@@ -102,7 +103,7 @@ describe('createDelivery', () => {
       }),
     })
 
-    const result = await createDelivery({ order_id: 'order-1', carrier: 'intigo' })
+    const result = await createDelivery({ order_id: 'order-1', delivery_type: 'carrier', carrier: 'intigo' })
 
     expect(result.error).toContain('Confirmée')
   })
@@ -119,7 +120,7 @@ describe('createDelivery', () => {
       }),
     })
 
-    const result = await createDelivery({ order_id: 'order-1', carrier: 'intigo' })
+    const result = await createDelivery({ order_id: 'order-1', delivery_type: 'carrier', carrier: 'intigo' })
 
     expect(result.error).toContain('livraison active')
   })
@@ -127,7 +128,7 @@ describe('createDelivery', () => {
   it('blocks readonly role', async () => {
     mockContext('readonly')
 
-    const result = await createDelivery({ order_id: 'order-1', carrier: 'intigo' })
+    const result = await createDelivery({ order_id: 'order-1', delivery_type: 'carrier', carrier: 'intigo' })
 
     expect(result.error).toContain('réservée')
     expect(serverMock.createServerClient).not.toHaveBeenCalled()
@@ -152,6 +153,7 @@ describe('createDeliveryFromOrder', () => {
 
     const result = await createDeliveryFromOrder(
       'order-1',
+      'carrier',
       'intigo',
       undefined,
       0
@@ -159,6 +161,154 @@ describe('createDeliveryFromOrder', () => {
 
     expect(result.error).toContain('Abonnement expiré')
     expect(serverMock.createServerClient).not.toHaveBeenCalled()
+  })
+
+  it('rejects invalid delivery fields before opening a database client', async () => {
+    const invalidCarrier = await createDeliveryFromOrder(
+      'order-1',
+      'carrier',
+      'unknown' as never,
+      undefined,
+      0,
+    )
+    const invalidFee = await createDeliveryFromOrder(
+      'order-1',
+      'carrier',
+      'intigo',
+      undefined,
+      100001,
+    )
+    const longTracking = await createDeliveryFromOrder(
+      'order-1',
+      'carrier',
+      'intigo',
+      'A'.repeat(201),
+      0,
+    )
+
+    expect(invalidCarrier.error).toBe('Transporteur invalide.')
+    expect(invalidFee.error).toBe('Frais de livraison invalides.')
+    expect(longTracking.error).toBe('Le numéro de suivi est trop long.')
+    expect(serverMock.createServerClient).not.toHaveBeenCalled()
+  })
+
+  it('normalizes delivery fields before calling the shipping RPC', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: 'delivery-1', error: null })
+    const sellerQuery = makeChain({ name: 'Boutique' })
+    serverMock.createServerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'sellers') return sellerQuery
+        throw new Error(`Unexpected table: ${table}`)
+      }),
+      rpc,
+    })
+
+    const result = await createDeliveryFromOrder(
+      'order-1',
+      'carrier',
+      'navex',
+      '  TRK-123  ',
+      0,
+    )
+
+    expect(result.error).toBeUndefined()
+    expect(rpc).toHaveBeenCalledWith('create_delivery_from_order', {
+      p_seller_id: 'seller-1',
+      p_user_id: 'user-1',
+      p_order_id: 'order-1',
+      p_delivery_type: 'carrier',
+      p_carrier: 'navex',
+      p_tracking_number: 'TRK-123',
+      p_fee: null,
+      p_vendor_note: null,
+    })
+  })
+
+  it('normalizes a personal delivery and keeps only the client message', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: 'delivery-1', error: null })
+    const sellerQuery = makeChain({ name: 'Boutique' })
+    serverMock.createServerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'sellers') return sellerQuery
+        throw new Error(`Unexpected table: ${table}`)
+      }),
+      rpc,
+    })
+
+    const result = await createDeliveryFromOrder(
+      'order-1',
+      'self',
+      'navex',
+      'SHOULD-BE-REMOVED',
+      25,
+      '  Livraison demain matin  ',
+    )
+
+    expect(result.error).toBeUndefined()
+    expect(rpc).toHaveBeenCalledWith('create_delivery_from_order', {
+      p_seller_id: 'seller-1',
+      p_user_id: 'user-1',
+      p_order_id: 'order-1',
+      p_delivery_type: 'self',
+      p_carrier: null,
+      p_tracking_number: null,
+      p_fee: null,
+      p_vendor_note: 'Livraison demain matin',
+    })
+  })
+
+  it('rejects an oversized client message', async () => {
+    const result = await createDeliveryFromOrder(
+      'order-1',
+      'self',
+      undefined,
+      undefined,
+      0,
+      'A'.repeat(1001),
+    )
+
+    expect(result.error).toBe('Le message au client est trop long.')
+    expect(serverMock.createServerClient).not.toHaveBeenCalled()
+  })
+})
+
+describe('markSelfDeliveryComplete', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockContext()
+  })
+
+  it('uses the dedicated atomic RPC', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: 'order-1', error: null })
+    const sellerQuery = makeChain({ name: 'Boutique' })
+    serverMock.createServerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'sellers') return sellerQuery
+        throw new Error(`Unexpected table: ${table}`)
+      }),
+      rpc,
+    })
+
+    const result = await markSelfDeliveryComplete('delivery-1')
+
+    expect(result.error).toBeUndefined()
+    expect(rpc).toHaveBeenCalledWith('mark_self_delivery_complete', {
+      p_seller_id: 'seller-1',
+      p_user_id: 'user-1',
+      p_delivery_id: 'delivery-1',
+    })
+  })
+
+  it('maps a carrier delivery rejection to a clear error', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: 'SELF_DELIVERY_NOT_FOUND' },
+    })
+    serverMock.createServerClient.mockResolvedValue({ from: vi.fn(), rpc })
+
+    const result = await markSelfDeliveryComplete('delivery-1')
+
+    expect(result.error).toBe('Livraison personnelle introuvable.')
   })
 })
 

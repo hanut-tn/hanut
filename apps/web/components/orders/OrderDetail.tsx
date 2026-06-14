@@ -6,10 +6,10 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import {
   ArrowLeft, Clock, CheckCircle, Truck, Package, RotateCcw,
-  MapPin, Phone, ShoppingBag, Copy, XCircle,
+  MapPin, Phone, ShoppingBag, Copy, XCircle, X, User,
 } from 'lucide-react'
 import type { OrderStatus } from '@hanut/types'
-import { DELETABLE_STATUSES, ORDER_STATUS_LABELS } from '@/lib/constants'
+import { DELETABLE_STATUSES, ORDER_STATUS_LABELS, CARRIER_OPTIONS } from '@/lib/constants'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { initials } from '@/lib/utils'
 
@@ -68,6 +68,7 @@ type Props = {
   confirmOrder: (id: string) => Promise<void>
   cancelOrder: (id: string) => Promise<void | { error?: string }>
   deleteOrder?: (id: string) => Promise<{ error?: string }>
+  createDeliveryFromOrder?: (orderId: string, deliveryType: 'self' | 'carrier', carrier: string | undefined, tracking: string | undefined, fee: number, vendorNote?: string) => Promise<{ error?: string }>
 }
 
 export default function OrderDetail({
@@ -83,6 +84,7 @@ export default function OrderDetail({
   confirmOrder,
   cancelOrder,
   deleteOrder,
+  createDeliveryFromOrder,
 }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -91,6 +93,16 @@ export default function OrderDetail({
   const [bannerLoading, setBannerLoading] = useState(false)
   const [bannerDone, setBannerDone] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  // Modal création livraison (status confirmed) — 2 étapes
+  const [showShipModal, setShowShipModal] = useState(false)
+  const [shipStep, setShipStep] = useState<'type' | 'form'>('type')
+  const [shipType, setShipType] = useState<'self' | 'carrier' | ''>('')
+  const [shipCarrier, setShipCarrier] = useState('')
+  const [shipTracking, setShipTracking] = useState('')
+  const [shipFee, setShipFee] = useState<number | ''>(0)
+  const [shipVendorNote, setShipVendorNote] = useState('')
+  const [shipError, setShipError] = useState<string | null>(null)
 
   const status = order.status as OrderStatus
   const canWrite = role !== 'readonly'
@@ -375,13 +387,27 @@ export default function OrderDetail({
 
               {status === 'confirmed' && (
                 <div className="space-y-2">
-                  <button
-                    onClick={() => handleAction(() => updateStatus(order.id, 'shipped'))}
-                    disabled={isPending}
-                    className="w-full btn-primary text-sm disabled:opacity-50"
-                  >
-                    {isPending ? 'Traitement...' : 'Marquer comme expédiée'}
-                  </button>
+                  {createDeliveryFromOrder ? (
+                    <button
+                      onClick={() => {
+                        setShipStep('type'); setShipType(''); setShipCarrier('')
+                        setShipTracking(''); setShipFee(0); setShipVendorNote(''); setShipError(null)
+                        setShowShipModal(true)
+                      }}
+                      disabled={isPending}
+                      className="w-full btn-primary text-sm disabled:opacity-50"
+                    >
+                      Créer une livraison
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleAction(() => updateStatus(order.id, 'shipped'))}
+                      disabled={isPending}
+                      className="w-full btn-primary text-sm disabled:opacity-50"
+                    >
+                      {isPending ? 'Traitement...' : 'Marquer comme expédiée'}
+                    </button>
+                  )}
                   <button
                     onClick={() => handleAction(() => cancelOrder(order.id))}
                     disabled={isPending}
@@ -521,6 +547,197 @@ export default function OrderDetail({
           </div>
         </div>
       </div>
+
+      {/* Modal création livraison — 2 étapes */}
+      {showShipModal && createDeliveryFromOrder && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-md sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+            <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-[#1C1917] text-lg">Créer une livraison</h3>
+                <p className="text-xs text-[#78716C] mt-0.5">{customer?.name} · {order.cod_amount} DT</p>
+              </div>
+              <button type="button" onClick={() => setShowShipModal(false)} className="flex min-h-[44px] w-11 touch-manipulation items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C] transition-colors" aria-label="Fermer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Étape 1 : choix du type */}
+            {shipStep === 'type' && (
+              <>
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+                  <p className="text-sm text-[#78716C] mb-4">Comment voulez-vous livrer cette commande ?</p>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => { setShipType('carrier'); setShipStep('form'); setShipCarrier('') }}
+                      className="flex flex-col items-center gap-3 rounded-xl border-2 border-[#E7E5E4] p-5 text-left hover:border-[#16A34A] hover:bg-[#F0FDF4] transition-colors group"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center group-hover:bg-[#F0FDF4]">
+                        <Truck className="w-5 h-5 text-orange-600 group-hover:text-[#16A34A]" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-[#1C1917] text-sm">Via transporteur</p>
+                        <p className="text-xs text-[#78716C] mt-0.5">IntiGo, Navex, Aramex…</p>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setShipType('self'); setShipStep('form') }}
+                      className="flex flex-col items-center gap-3 rounded-xl border-2 border-[#E7E5E4] p-5 text-left hover:border-blue-500 hover:bg-blue-50 transition-colors group"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                        <User className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-[#1C1917] text-sm">Livraison personnelle</p>
+                        <p className="text-xs text-[#78716C] mt-0.5">Vous livrez vous-même</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+                <div className="sticky bottom-0 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
+                  <button type="button" onClick={() => setShowShipModal(false)} className="btn-secondary min-h-[44px] touch-manipulation w-full">Annuler</button>
+                </div>
+              </>
+            )}
+
+            {/* Étape 2 : formulaire transporteur */}
+            {shipStep === 'form' && shipType === 'carrier' && (
+              <>
+                <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
+                  <button type="button" onClick={() => setShipStep('type')} className="text-sm text-[#78716C] hover:text-[#1C1917] flex items-center gap-1 transition-colors">
+                    ← Retour
+                  </button>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1C1917] mb-1">Transporteur *</label>
+                    <select
+                      className="input min-h-[44px] text-base md:text-sm"
+                      value={shipCarrier}
+                      onChange={e => setShipCarrier(e.target.value)}
+                    >
+                      <option value="">Sélectionner un transporteur…</option>
+                      {CARRIER_OPTIONS.map(c => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-medium text-[#1C1917] mb-1">N° de suivi</label>
+                      <input
+                        className="input min-h-[44px] text-base md:text-sm font-mono"
+                        value={shipTracking}
+                        onChange={e => setShipTracking(e.target.value)}
+                        placeholder="Optionnel"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#1C1917] mb-1">Frais (DT)</label>
+                      <input
+                        className="input min-h-[44px] text-base md:text-sm"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={shipFee}
+                        onChange={e => setShipFee(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                  {shipError && (
+                    <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{shipError}</p>
+                  )}
+                </div>
+                <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
+                  <button type="button" onClick={() => setShipStep('type')} className="btn-secondary min-h-[44px] touch-manipulation flex-1">Retour</button>
+                  <button
+                    type="button"
+                    disabled={isPending || !shipCarrier}
+                    onClick={() => {
+                      if (!shipCarrier) { setShipError('Sélectionnez un transporteur'); return }
+                      const fee = shipFee === '' ? 0 : Number(shipFee)
+                      if (!Number.isFinite(fee) || fee < 0) { setShipError('Frais invalides.'); return }
+                      setShipError(null)
+                      startTransition(async () => {
+                        try {
+                          const result = await createDeliveryFromOrder(order.id, 'carrier', shipCarrier, shipTracking.trim() || undefined, fee)
+                          if (result?.error) { setShipError(result.error); return }
+                          setShowShipModal(false)
+                          router.refresh()
+                        } catch (err: unknown) {
+                          setShipError(err instanceof Error ? err.message : 'Erreur inconnue')
+                        }
+                      })
+                    }}
+                    className="btn-primary min-h-[44px] touch-manipulation flex-1 disabled:opacity-50"
+                  >
+                    {isPending ? 'Création...' : 'Créer la livraison'}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Étape 2 : formulaire livraison personnelle */}
+            {shipStep === 'form' && shipType === 'self' && (
+              <>
+                <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
+                  <button type="button" onClick={() => setShipStep('type')} className="text-sm text-[#78716C] hover:text-[#1C1917] flex items-center gap-1 transition-colors">
+                    ← Retour
+                  </button>
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+                    <p className="text-sm text-blue-800 font-medium">Livraison personnelle</p>
+                    <p className="text-xs text-blue-600 mt-0.5">
+                      Vous allez livrer cette commande vous-même et encaisser le COD directement.
+                      Marquez-la comme &quot;Livré + COD encaissé&quot; depuis la page Livraisons une fois livrée.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1C1917] mb-1">Message pour le client (optionnel)</label>
+                    <textarea
+                      className="input resize-none text-base md:text-sm"
+                      rows={3}
+                      maxLength={1000}
+                      value={shipVendorNote}
+                      onChange={e => setShipVendorNote(e.target.value)}
+                      placeholder="Ex : Livraison prévue demain matin"
+                    />
+                    <p className="mt-1 text-xs text-[#78716C]">
+                      Visible par le client sur sa page de suivi.
+                    </p>
+                  </div>
+                  {shipError && (
+                    <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{shipError}</p>
+                  )}
+                </div>
+                <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
+                  <button type="button" onClick={() => setShipStep('type')} className="btn-secondary min-h-[44px] touch-manipulation flex-1">Retour</button>
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => {
+                      setShipError(null)
+                      startTransition(async () => {
+                        try {
+                          const result = await createDeliveryFromOrder(order.id, 'self', undefined, undefined, 0, shipVendorNote.trim() || undefined)
+                          if (result?.error) { setShipError(result.error); return }
+                          setShowShipModal(false)
+                          router.refresh()
+                        } catch (err: unknown) {
+                          setShipError(err instanceof Error ? err.message : 'Erreur inconnue')
+                        }
+                      })
+                    }}
+                    className="btn-primary min-h-[44px] touch-manipulation flex-1 disabled:opacity-50"
+                  >
+                    {isPending ? 'Création...' : 'Confirmer la livraison'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Modal suppression depuis le détail */}
       {confirmDelete && deleteOrder && (

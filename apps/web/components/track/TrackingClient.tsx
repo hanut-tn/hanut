@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {
   CheckCircle2, Circle, Package, Truck, ExternalLink, MapPin, RefreshCw, RotateCcw,
-  XCircle,
+  XCircle, User, MessageCircle,
 } from 'lucide-react'
 import { getCarrierConfig } from '@/lib/constants'
 import type { CarrierName } from '@hanut/types'
@@ -18,6 +18,13 @@ const STATUS_MESSAGE: Record<string, string> = {
   delivered: 'Votre commande a été livrée. Merci pour votre confiance !',
   returned:  "Votre commande a été retournée. Contactez le vendeur pour plus d'informations.",
   cancelled: 'Votre commande a été annulée. Contactez le vendeur pour plus d’informations.',
+}
+
+function getStatusMessage(status: string, deliveryType: 'self' | 'carrier'): string {
+  if (status === 'shipped' && deliveryType === 'self') {
+    return 'Votre commande est prise en charge directement par la boutique.'
+  }
+  return STATUS_MESSAGE[status] ?? 'Statut en cours de mise à jour.'
 }
 
 const TRACKING_STEPS = [
@@ -53,9 +60,12 @@ export type TrackData = {
   customer_name: string
   customer_city: string | null
   delivery: {
-    carrier: string
+    delivery_type: 'self' | 'carrier'
+    carrier: string | null
     tracking: string | null
     tracking_url: string | null
+    vendor_note: string | null
+    seller_whatsapp: string | null
   } | null
   status_history: { status: string; changed_at: string }[]
 }
@@ -141,6 +151,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
       ? TRACKING_STEPS.slice(0, 1)
       : TRACKING_STEPS
 
+  const deliveryType  = data.delivery?.delivery_type ?? 'carrier'
   const carrier       = data.delivery?.carrier as CarrierName | undefined
   const trackingUrl   = data.delivery?.tracking_url ?? null
   const carrierConfig = carrier ? getCarrierConfig(carrier) : null
@@ -204,7 +215,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
           : currentStatus === 'cancelled' ? 'bg-gray-50 text-gray-700 border border-gray-200'
           : 'bg-blue-50 text-blue-700 border border-blue-200'
         }`}>
-          {STATUS_MESSAGE[currentStatus] ?? 'Statut en cours de mise à jour.'}
+          {getStatusMessage(currentStatus, deliveryType)}
         </div>
 
         {/* Timeline */}
@@ -273,8 +284,39 @@ export default function TrackingClient({ initialData, orderId }: Props) {
           </div>
         </div>
 
-        {/* Tracking livraison */}
-        {data.delivery && (
+        {/* Livraison personnelle */}
+        {data.delivery && deliveryType === 'self' && (
+          <div className="bg-white border border-[#E7E5E4] rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <User className="w-4 h-4 text-blue-600" />
+              <h2 className="text-sm font-semibold text-[#1C1917]">Prise en charge par la boutique</h2>
+            </div>
+            <div className="space-y-3">
+              <p className="text-sm text-[#78716C]">
+                La boutique effectue la livraison directement. Le vendeur vous contactera pour confirmer l&apos;heure et le lieu de livraison.
+              </p>
+              {data.delivery.vendor_note && (
+                <p className="text-sm text-[#1C1917] bg-[#FAFAF9] rounded-lg px-3 py-2 italic">
+                  {data.delivery.vendor_note}
+                </p>
+              )}
+              {data.delivery.seller_whatsapp && (
+                <a
+                  href={data.delivery.seller_whatsapp}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-[#25D366] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#22c55e] transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Contacter le vendeur
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Tracking transporteur */}
+        {data.delivery && deliveryType === 'carrier' && (
           <div className="bg-white border border-[#E7E5E4] rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <Truck className="w-4 h-4 text-[#78716C]" />

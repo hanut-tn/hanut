@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
-import { CARRIER_TRACKING_URLS } from '@/lib/constants'
-import type { CarrierName } from '@hanut/types'
+import { getTrackingUrl, formatTunisianPhone, isValidTunisianPhone } from '@/lib/constants'
 
 type Params = { params: Promise<{ orderId: string }> }
 
@@ -22,7 +21,12 @@ export async function GET(req: NextRequest, { params }: Params) {
 
   const { data: order } = await supabase
     .from('orders')
-    .select('id, status, cod_amount, variant, quantity, created_at, customer:customers(name, city), product:products(name, image_url)')
+    .select(`
+      id, status, cod_amount, variant, quantity, created_at,
+      seller:sellers(phone),
+      customer:customers(name, city),
+      product:products(name, image_url)
+    `)
     .eq('tracking_token', orderId)
     .is('deleted_at', null)
     .single()
@@ -31,15 +35,17 @@ export async function GET(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: 'Commande introuvable' }, { status: 404 })
   }
 
+  type SellerRow   = { phone?: string | null }
   type CustomerRow = { name: string; city?: string | null }
-  type ProductRow = { name: string; image_url?: string | null }
+  type ProductRow  = { name: string; image_url?: string | null }
+  const seller   = (Array.isArray(order.seller)   ? order.seller[0]   : order.seller)   as SellerRow   | null
   const customer = (Array.isArray(order.customer) ? order.customer[0] : order.customer) as CustomerRow | null
-  const product = (Array.isArray(order.product) ? order.product[0] : order.product) as ProductRow | null
+  const product  = (Array.isArray(order.product)  ? order.product[0]  : order.product)  as ProductRow  | null
 
   const [{ data: delivery }, { data: history }] = await Promise.all([
     supabase
       .from('deliveries')
-      .select('carrier, tracking_number')
+      .select('delivery_type, carrier, tracking_number, vendor_note')
       .eq('order_id', order.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -51,27 +57,36 @@ export async function GET(req: NextRequest, { params }: Params) {
       .order('changed_at', { ascending: true }),
   ])
 
-  const carrier = delivery?.carrier as CarrierName | undefined
-  const trackingUrl = carrier && delivery?.tracking_number && CARRIER_TRACKING_URLS[carrier]
-    ? `${CARRIER_TRACKING_URLS[carrier]}${delivery.tracking_number}`
+  const deliveryType = (delivery?.delivery_type ?? 'carrier') as 'self' | 'carrier'
+  const trackingUrl  = deliveryType === 'carrier' && delivery?.carrier && delivery?.tracking_number
+    ? getTrackingUrl(delivery.carrier, delivery.tracking_number)
+    : null
+
+  const rawPhone        = seller?.phone ?? ''
+  const normalizedPhone = formatTunisianPhone(rawPhone)
+  const sellerWhatsapp = isValidTunisianPhone(normalizedPhone)
+    ? `https://wa.me/216${normalizedPhone}`
     : null
 
   return NextResponse.json({
-    order_id: orderId.slice(0, 8).toUpperCase(),
-    status: order.status,
-    created_at: order.created_at,
-    product_name: product?.name ?? '',
+    order_id:      orderId.slice(0, 8).toUpperCase(),
+    status:        order.status,
+    created_at:    order.created_at,
+    product_name:  product?.name ?? '',
     product_image: product?.image_url ?? null,
-    variant: order.variant ?? null,
-    quantity: order.quantity,
-    cod_amount: order.cod_amount,
+    variant:       order.variant ?? null,
+    quantity:      order.quantity,
+    cod_amount:    order.cod_amount,
     customer_name: customer?.name?.split(' ')[0] ?? '',
     customer_city: customer?.city ?? '',
     delivery: delivery
       ? {
-          carrier: delivery.carrier,
-          tracking: delivery.tracking_number ?? null,
-          tracking_url: trackingUrl,
+          delivery_type: deliveryType,
+          carrier:       delivery.carrier ?? null,
+          tracking:      delivery.tracking_number ?? null,
+          tracking_url:  trackingUrl,
+          vendor_note:   delivery.vendor_note ?? null,
+          seller_whatsapp: deliveryType === 'self' ? sellerWhatsapp : null,
         }
       : null,
     status_history: history ?? [],

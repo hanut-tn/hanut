@@ -31,7 +31,8 @@ type DeliveryOrderRow = {
 }
 
 type AnalyticsDeliveryRow = {
-  carrier: string
+  delivery_type: 'self' | 'carrier'
+  carrier: string | null
   fee: number | null
   cod_collected: boolean
   cod_reversed: boolean
@@ -76,7 +77,7 @@ export default async function AnalyticsPage() {
     // créée après la commande, donc ce filtre capture fidèlement la même période.
     supabase
       .from('deliveries')
-      .select('carrier, fee, cod_collected, cod_reversed, order:orders(status, cod_amount, created_at, seller_id, deleted_at)')
+      .select('delivery_type, carrier, fee, cod_collected, cod_reversed, order:orders(status, cod_amount, created_at, seller_id, deleted_at)')
       .gte('created_at', iso)
       .order('created_at', { ascending: false })
       .limit(limit),

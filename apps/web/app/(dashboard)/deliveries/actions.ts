@@ -4,20 +4,24 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { revalidatePath, revalidateTag } from 'next/cache'
-import type { CarrierName } from '@hanut/types'
+import type { CarrierName, DeliveryType } from '@hanut/types'
 import { requireActive } from '@/lib/assert-active'
+import { CARRIER_NAMES } from '@/lib/constants'
 
 export type CreateDeliveryInput = {
   order_id: string
-  carrier: CarrierName
+  delivery_type: DeliveryType
+  carrier?: CarrierName
   tracking_number?: string
   fee?: number
+  vendor_note?: string
 }
 
 export type UpdateDeliveryInput = {
   tracking_number?: string | null
   carrier_status?: string | null
   fee?: number | null
+  vendor_note?: string | null
   cod_collected?: boolean
   cod_reversed?: boolean
 }
@@ -33,7 +37,64 @@ function deliveryErrorMessage(message: string) {
   ) {
     return 'Une livraison active existe déjà pour cette commande.'
   }
+  if (message.includes('INVALID_DELIVERY_TYPE')) return 'Type de livraison invalide.'
+  if (message.includes('INVALID_CARRIER')) return 'Transporteur invalide.'
+  if (message.includes('INVALID_DELIVERY_FEE')) return 'Frais de livraison invalides.'
+  if (message.includes('TRACKING_NUMBER_TOO_LONG')) return 'Le numéro de suivi est trop long.'
+  if (message.includes('VENDOR_NOTE_TOO_LONG')) return 'Le message au client est trop long.'
+  if (message.includes('SELF_DELIVERY_NOT_FOUND')) return 'Livraison personnelle introuvable.'
   return message
+}
+
+function validateDeliveryFields(
+  deliveryType: DeliveryType,
+  carrier: string | undefined,
+  tracking: string | undefined,
+  fee: number | undefined,
+  vendorNote?: string,
+):
+  | {
+      carrier: CarrierName | undefined
+      tracking: string | undefined
+      fee: number | null
+      vendorNote: string | undefined
+      error?: never
+    }
+  | {
+      error: string
+      carrier?: never
+      tracking?: never
+      fee?: never
+      vendorNote?: never
+    } {
+  if (deliveryType !== 'self' && deliveryType !== 'carrier') {
+    return { error: 'Type de livraison invalide.' }
+  }
+  if (deliveryType === 'carrier') {
+    if (!carrier || !CARRIER_NAMES.includes(carrier as CarrierName)) {
+      return { error: 'Transporteur invalide.' }
+    }
+  }
+  if (fee !== undefined && (!Number.isFinite(fee) || fee < 0 || fee > 100000)) {
+    return { error: 'Frais de livraison invalides.' }
+  }
+
+  const normalizedTracking = tracking?.trim()
+  if (normalizedTracking && normalizedTracking.length > 200) {
+    return { error: 'Le numéro de suivi est trop long.' }
+  }
+
+  const normalizedVendorNote = vendorNote?.trim()
+  if (normalizedVendorNote && normalizedVendorNote.length > 1000) {
+    return { error: 'Le message au client est trop long.' }
+  }
+
+  return {
+    carrier: deliveryType === 'carrier' ? (carrier as CarrierName) : undefined,
+    tracking: deliveryType === 'carrier' ? normalizedTracking || undefined : undefined,
+    fee: deliveryType === 'carrier' && fee && fee > 0 ? fee : null,
+    vendorNote: deliveryType === 'self' ? normalizedVendorNote || undefined : undefined,
+  }
 }
 
 async function recordCodReversal(
@@ -88,12 +149,17 @@ export async function createDelivery(input: CreateDeliveryInput): Promise<{ erro
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
   const activeCheck = requireActive(context)
   if (activeCheck) return activeCheck
+  const validated = validateDeliveryFields(
+    input.delivery_type,
+    input.carrier,
+    input.tracking_number,
+    input.fee,
+    input.vendor_note,
+  )
+  if (validated.error) return { error: validated.error }
 
   const supabase = await createServerClient()
 
-  // Vérification 1 : la commande existe, appartient au vendeur et est dans un statut valide.
-  // Statuts autorisés : 'confirmed' (flux normal via modal commandes) et 'shipped'
-  // (flux manuel : commande déjà expédiée sans livraison associée).
   const { data: order } = await supabase
     .from('orders')
     .select('id, status')
@@ -112,7 +178,6 @@ export async function createDelivery(input: CreateDeliveryInput): Promise<{ erro
     }
   }
 
-  // Vérification 2 : absence de livraison active (cohérence avec contrainte UNIQUE DB partielle).
   const { data: existing } = await supabase
     .from('deliveries')
     .select('id')
@@ -129,9 +194,11 @@ export async function createDelivery(input: CreateDeliveryInput): Promise<{ erro
       p_seller_id: context.sellerId,
       p_user_id: context.userId,
       p_order_id: input.order_id,
-      p_carrier: input.carrier,
-      p_tracking_number: input.tracking_number ?? null,
-      p_fee: input.fee ?? null,
+      p_delivery_type: input.delivery_type,
+      p_carrier: validated.carrier ?? null,
+      p_tracking_number: validated.tracking ?? null,
+      p_fee: validated.fee,
+      p_vendor_note: validated.vendorNote ?? null,
     })
     if (shipError) {
       if (shipError.message.includes('order_not_shippable')) {
@@ -142,9 +209,11 @@ export async function createDelivery(input: CreateDeliveryInput): Promise<{ erro
   } else {
     const { error } = await supabase.from('deliveries').insert({
       order_id: input.order_id,
-      carrier: input.carrier,
-      tracking_number: input.tracking_number || null,
-      fee: input.fee ?? null,
+      delivery_type: input.delivery_type,
+      carrier: validated.carrier ?? null,
+      tracking_number: validated.tracking ?? null,
+      fee: validated.fee,
+      vendor_note: validated.vendorNote ?? null,
     })
     if (error) return { error: deliveryErrorMessage(error.message) }
   }
@@ -157,8 +226,10 @@ export async function createDelivery(input: CreateDeliveryInput): Promise<{ erro
     userName: seller?.name ?? context.userId,
     actionType: 'delivery_created',
     entityType: 'delivery',
-    description: `a créé une livraison via ${input.carrier}`,
-    metadata: { carrier: input.carrier, tracking: input.tracking_number },
+    description: input.delivery_type === 'self'
+      ? 'a créé une livraison personnelle'
+      : `a créé une livraison via ${validated.carrier}`,
+    metadata: { delivery_type: input.delivery_type, carrier: validated.carrier, tracking: validated.tracking },
   })
 
   revalidatePath('/deliveries')
@@ -177,11 +248,28 @@ export async function updateDelivery(
   const activeCheck = requireActive(context)
   if (activeCheck) return activeCheck
 
+  if (input.fee !== undefined && input.fee !== null) {
+    if (!Number.isFinite(input.fee) || input.fee < 0 || input.fee > 100000) {
+      return { error: 'Frais de livraison invalides.' }
+    }
+  }
+  const normalizedTracking = input.tracking_number?.trim() || null
+  if (normalizedTracking && normalizedTracking.length > 200) {
+    return { error: 'Le numéro de suivi est trop long.' }
+  }
+  const normalizedVendorNote = input.vendor_note?.trim() || null
+  if (normalizedVendorNote && normalizedVendorNote.length > 1000) {
+    return { error: 'Le message au client est trop long.' }
+  }
+  const normalizedInput: UpdateDeliveryInput = {
+    ...input,
+    ...('tracking_number' in input ? { tracking_number: normalizedTracking } : {}),
+    ...('vendor_note' in input ? { vendor_note: normalizedVendorNote } : {}),
+  }
+
   const supabase = await createServerClient()
 
-  // Compatibilité avec les anciens appels updateDelivery({ cod_reversed: true }) :
-  // le reversement passe désormais toujours par la RPC auditée.
-  if (input.cod_reversed === true) {
+  if (normalizedInput.cod_reversed === true) {
     const { data: delivery } = await supabase
       .from('deliveries')
       .select('order:orders(cod_amount)')
@@ -193,11 +281,7 @@ export async function updateDelivery(
     return recordCodReversal(context, supabase, id, joinedOrder.cod_amount)
   }
 
-  if (input.cod_collected === true) {
-    // RPC en premier : si elle échoue, aucune modification partielle n'est appliquée.
-    // Le patch des champs secondaires (tracking, fee) vient après —
-    // une éventuelle erreur de patch laisse le COD marqué mais ces champs
-    // restent modifiables séparément.
+  if (normalizedInput.cod_collected === true) {
     const { data: orderId, error: rpcError } = await supabase.rpc('mark_delivery_cod_collected', {
       p_seller_id: context.sellerId,
       p_user_id: context.userId,
@@ -207,9 +291,10 @@ export async function updateDelivery(
     if (rpcError) return { error: deliveryErrorMessage(rpcError.message) }
 
     const patch: Record<string, unknown> = {}
-    if ('tracking_number' in input) patch.tracking_number = input.tracking_number
-    if ('carrier_status' in input) patch.carrier_status = input.carrier_status
-    if ('fee' in input) patch.fee = input.fee
+    if ('tracking_number' in normalizedInput) patch.tracking_number = normalizedInput.tracking_number
+    if ('carrier_status' in normalizedInput) patch.carrier_status = normalizedInput.carrier_status
+    if ('fee' in normalizedInput) patch.fee = normalizedInput.fee
+    if ('vendor_note' in normalizedInput) patch.vendor_note = normalizedInput.vendor_note
     if (Object.keys(patch).length > 0) {
       const { error: patchError } = await supabase.from('deliveries').update(patch).eq('id', id)
       if (patchError) return { error: deliveryErrorMessage(patchError.message) }
@@ -233,8 +318,6 @@ export async function updateDelivery(
     return {}
   }
 
-  // Lire l'état actuel pour bloquer les retours arrière comptables.
-  // La RLS garantit qu'on ne lit que les livraisons du seller connecté.
   const { data: currentDelivery } = await supabase
     .from('deliveries')
     .select('cod_collected, cod_reversed')
@@ -243,17 +326,17 @@ export async function updateDelivery(
 
   if (!currentDelivery) return { error: 'Livraison introuvable.' }
 
-  if (currentDelivery.cod_collected === true && input.cod_collected === false) {
+  if (currentDelivery.cod_collected === true && normalizedInput.cod_collected === false) {
     return { error: "Impossible d'annuler un COD déjà collecté. Contactez le support si c'est une erreur." }
   }
 
-  if (currentDelivery.cod_reversed === true && input.cod_reversed === false) {
+  if (currentDelivery.cod_reversed === true && normalizedInput.cod_reversed === false) {
     return { error: "Impossible d'annuler un COD déjà reversé." }
   }
 
-  const patch: Record<string, unknown> = { ...input }
+  const patch: Record<string, unknown> = { ...normalizedInput }
 
-  if (input.cod_collected === false) {
+  if (normalizedInput.cod_collected === false) {
     patch.delivered_at = null
     patch.cod_reversed = false
   }
@@ -270,15 +353,19 @@ export async function updateDelivery(
 
 export async function createDeliveryFromOrder(
   orderId: string,
-  carrier: string,
+  deliveryType: DeliveryType,
+  carrier: string | undefined,
   tracking: string | undefined,
   fee: number,
+  vendorNote?: string,
 ): Promise<{ error?: string }> {
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
   const activeCheck = requireActive(context)
   if (activeCheck) return activeCheck
+  const validated = validateDeliveryFields(deliveryType, carrier, tracking, fee, vendorNote)
+  if (validated.error) return { error: validated.error }
 
   const supabase = await createServerClient()
 
@@ -286,9 +373,11 @@ export async function createDeliveryFromOrder(
     p_seller_id: context.sellerId,
     p_user_id: context.userId,
     p_order_id: orderId,
-    p_carrier: carrier,
-    p_tracking_number: tracking ?? null,
-    p_fee: fee > 0 ? fee : null,
+    p_delivery_type: deliveryType,
+    p_carrier: validated.carrier ?? null,
+    p_tracking_number: validated.tracking ?? null,
+    p_fee: validated.fee,
+    p_vendor_note: validated.vendorNote ?? null,
   })
 
   if (shipError) {
@@ -306,8 +395,10 @@ export async function createDeliveryFromOrder(
     actionType: 'delivery_created',
     entityType: 'order',
     entityId: orderId,
-    description: `a expédié une commande via ${carrier}${tracking ? ` (${tracking})` : ''}`,
-    metadata: { carrier, tracking },
+    description: deliveryType === 'self'
+      ? 'a expédié une commande en livraison personnelle'
+      : `a expédié une commande via ${validated.carrier}${validated.tracking ? ` (${validated.tracking})` : ''}`,
+    metadata: { delivery_type: deliveryType, carrier: validated.carrier, tracking: validated.tracking },
   })
 
   revalidatePath('/deliveries')
@@ -317,8 +408,44 @@ export async function createDeliveryFromOrder(
   return {}
 }
 
-// Enregistre un reversement COD avec montant et trace d'audit.
-// Remplace le toggle cod_reversed direct du legacy updateDelivery pour les nouveaux reversements.
+export async function markSelfDeliveryComplete(deliveryId: string): Promise<{ error?: string }> {
+  const context = await getUserContext()
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
+
+  const supabase = await createServerClient()
+  const { data: orderId, error } = await supabase.rpc('mark_self_delivery_complete', {
+    p_seller_id: context.sellerId,
+    p_user_id: context.userId,
+    p_delivery_id: deliveryId,
+  })
+  if (error) return { error: deliveryErrorMessage(error.message) }
+
+  const { data: seller } = await supabase
+    .from('sellers')
+    .select('name')
+    .eq('id', context.sellerId)
+    .maybeSingle()
+
+  await logActivity({
+    sellerId: context.sellerId,
+    userId: context.userId,
+    userName: seller?.name ?? context.userId,
+    actionType: 'order_status_changed',
+    entityType: 'order',
+    entityId: typeof orderId === 'string' ? orderId : undefined,
+    description: 'livraison personnelle terminée et COD encaissé',
+  })
+
+  revalidatePath('/deliveries')
+  revalidatePath('/orders')
+  revalidatePath('/dashboard')
+  revalidateTag(`dashboard-${context.sellerId}`)
+  return {}
+}
+
 export async function markCodReversed(
   deliveryId: string,
   amount: number,
@@ -346,7 +473,7 @@ export async function deleteDelivery(id: string): Promise<{ error?: string }> {
 
   const { data: delivery } = await supabase
     .from('deliveries')
-    .select('id, cod_collected, carrier, order:orders(id, status, seller_id)')
+    .select('id, cod_collected, carrier, delivery_type, order:orders(id, status, seller_id)')
     .eq('id', id)
     .single()
 
@@ -355,7 +482,6 @@ export async function deleteDelivery(id: string): Promise<{ error?: string }> {
   const order = Array.isArray(delivery.order) ? delivery.order[0] : delivery.order as { id: string; status: string; seller_id: string } | null
   if (!order || order.seller_id !== context.sellerId) return { error: 'Non autorisé' }
 
-  // Bloquer si COD déjà collecté — la trace comptable ne peut pas être effacée
   if (delivery.cod_collected) {
     return { error: 'Impossible de supprimer cette livraison : le COD a déjà été collecté. Marquez-la comme COD reversé avant de la supprimer.' }
   }
@@ -363,7 +489,6 @@ export async function deleteDelivery(id: string): Promise<{ error?: string }> {
   const { error: deleteError } = await supabase.from('deliveries').delete().eq('id', id)
   if (deleteError) return { error: deleteError.message }
 
-  // Remettre la commande en "Confirmée" si elle était en "Expédiée"
   if (order.status === 'shipped') {
     const { error: statusError } = await supabase.rpc('update_order_status', {
       p_seller_id: context.sellerId,
@@ -376,6 +501,10 @@ export async function deleteDelivery(id: string): Promise<{ error?: string }> {
 
   const { data: seller } = await supabase.from('sellers').select('name').eq('id', context.sellerId).maybeSingle()
 
+  const deliveryLabel = delivery.delivery_type === 'self'
+    ? 'personnelle'
+    : (delivery.carrier ?? '')
+
   await logActivity({
     sellerId: context.sellerId,
     userId: context.userId,
@@ -383,7 +512,7 @@ export async function deleteDelivery(id: string): Promise<{ error?: string }> {
     actionType: 'delivery_deleted',
     entityType: 'delivery',
     entityId: id,
-    description: `a supprimé une livraison ${delivery.carrier}${order.status === 'shipped' ? ' (commande remise en "Confirmée")' : ''}`,
+    description: `a supprimé une livraison ${deliveryLabel}${order.status === 'shipped' ? ' (commande remise en "Confirmée")' : ''}`,
   })
 
   revalidatePath('/deliveries')

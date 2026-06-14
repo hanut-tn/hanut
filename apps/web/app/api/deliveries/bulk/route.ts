@@ -39,13 +39,14 @@ export async function PATCH(req: NextRequest) {
   // RLS garantit que seules les livraisons du vendeur connecté sont retournées
   type DeliveryRow = {
     id: string
+    delivery_type: 'self' | 'carrier'
     cod_collected: boolean
     cod_reversed: boolean
     order: { cod_amount: number } | { cod_amount: number }[] | null
   }
   const { data: deliveries, error: fetchError } = await supabase
     .from('deliveries')
-    .select('id, cod_collected, cod_reversed, order:orders(cod_amount)')
+    .select('id, delivery_type, cod_collected, cod_reversed, order:orders(cod_amount)')
     .in('id', ids) as unknown as { data: DeliveryRow[] | null; error: unknown }
 
   if (fetchError) return NextResponse.json({ error: 'Erreur base de données' }, { status: 500 })
@@ -62,14 +63,23 @@ export async function PATCH(req: NextRequest) {
     skipped = deliveries.length - eligible.length
     eligibleDeliveries = eligible
   } else {
-    // CRITIQUE : ne reverser que les livraisons dont le COD a été collecté
-    const eligible = deliveries.filter(d => d.cod_collected && !d.cod_reversed)
+    // Une livraison personnelle est encaissée directement par le vendeur :
+    // aucun reversement transporteur ne doit être créé.
+    const eligible = deliveries.filter(
+      d => d.delivery_type === 'carrier' && d.cod_collected && !d.cod_reversed,
+    )
     const notCollected = deliveries.filter(d => !d.cod_collected && !d.cod_reversed).length
+    const selfDeliveries = deliveries.filter(d => d.delivery_type === 'self').length
     skipped = deliveries.length - eligible.length
     eligibleDeliveries = eligible
+    const reasons: string[] = []
     if (notCollected > 0) {
-      message = `${notCollected} livraison${notCollected !== 1 ? 's' : ''} ignorée${notCollected !== 1 ? 's' : ''} — COD non collecté`
+      reasons.push(`${notCollected} COD non collecté${notCollected !== 1 ? 's' : ''}`)
     }
+    if (selfDeliveries > 0) {
+      reasons.push(`${selfDeliveries} livraison${selfDeliveries !== 1 ? 's' : ''} en personne`)
+    }
+    message = reasons.length > 0 ? `${reasons.join(' · ')} ignoré${skipped !== 1 ? 's' : ''}` : null
   }
 
   if (eligibleDeliveries.length === 0) {
@@ -77,14 +87,17 @@ export async function PATCH(req: NextRequest) {
       updated: 0,
       skipped: deliveries.length,
       message: action === 'cod_reversed'
-        ? 'Aucune livraison éligible. Le COD doit être collecté avant d\'être reversé.'
+        ? message ?? 'Aucune livraison éligible. Le COD doit être collecté avant d\'être reversé.'
         : null,
     }, action === 'cod_reversed' ? { status: 400 } : undefined)
   }
 
   if (action === 'cod_collected') {
     for (const delivery of eligibleDeliveries) {
-      const { error: rpcError } = await supabase.rpc('mark_delivery_cod_collected', {
+      const rpcName = delivery.delivery_type === 'self'
+        ? 'mark_self_delivery_complete'
+        : 'mark_delivery_cod_collected'
+      const { error: rpcError } = await supabase.rpc(rpcName, {
         p_seller_id: context.sellerId,
         p_user_id: context.userId,
         p_delivery_id: delivery.id,

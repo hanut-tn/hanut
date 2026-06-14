@@ -144,3 +144,9 @@ export function getUpgradeWhatsAppUrl(message?: string): string {
   const text = message ?? 'Bonjour, je souhaite passer au plan Pro (79 DT/mois) pour mon compte Hanut.'
   return `${base}?text=${encodeURIComponent(text)}`
 }
+
+export function getTrackingUrl(carrier: string, trackingNumber: string): string | null {
+  const known = CARRIER_NAMES.find(c => c === carrier)
+  if (!known || !trackingNumber) return null
+  return `${CARRIER_TRACKING_URLS[known]}${trackingNumber}`
+}

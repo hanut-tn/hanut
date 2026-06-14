@@ -4,7 +4,7 @@ import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Truck, ExternalLink, CheckCircle2, ArrowDownCircle,
-  Banknote, Receipt, Pencil, Trash2, CheckSquare, X,
+  Banknote, Receipt, Pencil, Trash2, CheckSquare, X, Search, AlertCircle, User,
 } from 'lucide-react'
 import type { CarrierName } from '@hanut/types'
 import type {
@@ -12,7 +12,7 @@ import type {
   DeliveryMutationResult,
   UpdateDeliveryInput,
 } from '@/app/(dashboard)/deliveries/actions'
-import { CARRIER_OPTIONS, CARRIER_TRACKING_URLS, getCarrierConfig } from '@/lib/constants'
+import { CARRIER_OPTIONS, getCarrierConfig, getTrackingUrl } from '@/lib/constants'
 import { initials } from '@/lib/utils'
 
 type OrderInfo = {
@@ -24,15 +24,26 @@ type OrderInfo = {
 
 type Delivery = {
   id: string
-  carrier: CarrierName
-  tracking_number?: string
-  carrier_status?: string
-  fee?: number
+  delivery_type: 'self' | 'carrier'
+  carrier: CarrierName | null
+  tracking_number?: string | null
+  carrier_status?: string | null
+  fee?: number | null
+  vendor_note?: string | null
   cod_collected: boolean
   cod_reversed: boolean
   created_at: string
-  delivered_at?: string
+  delivered_at?: string | null
   order: OrderInfo | OrderInfo[]
+}
+
+type CodSummary = {
+  total_collected_amount: number
+  total_reversed_amount: number
+  pending_reversal_count: number
+  pending_reversal_amount: number
+  total_fees: number
+  total_deliveries: number
 }
 
 type Props = {
@@ -41,7 +52,10 @@ type Props = {
   createDelivery: (input: CreateDeliveryInput) => Promise<{ error?: string }>
   updateDelivery: (id: string, input: UpdateDeliveryInput) => Promise<DeliveryMutationResult>
   markCodReversed: (id: string, amount: number, notes?: string) => Promise<DeliveryMutationResult>
+  markSelfDeliveryComplete: (deliveryId: string) => Promise<{ error?: string }>
   deleteDelivery: (id: string) => Promise<{ error?: string }>
+  codSummary?: CodSummary | null
+  codSummaryUnavailable?: boolean
 }
 
 type Tab = 'all' | 'pending' | 'collected' | 'reversed'
@@ -80,9 +94,10 @@ function DeliveryMobileCard({
   onSelect?: (id: string) => void
 }) {
   const order = getOrder(delivery)
-  const carrier = getCarrierConfig(delivery.carrier)
-  const trackingHref = delivery.tracking_number
-    ? `${CARRIER_TRACKING_URLS[delivery.carrier]}${delivery.tracking_number}`
+  const isSelf = delivery.delivery_type === 'self'
+  const carrierCfg = !isSelf && delivery.carrier ? getCarrierConfig(delivery.carrier) : null
+  const trackingHref = !isSelf && delivery.carrier && delivery.tracking_number
+    ? getTrackingUrl(delivery.carrier, delivery.tracking_number)
     : null
   const ini = order?.customer?.name ? initials(order.customer.name) : '?'
 
@@ -105,7 +120,7 @@ function DeliveryMobileCard({
         </label>
       )}
 
-      {/* Ligne 1 : avatar + infos client + badge transporteur + date */}
+      {/* Ligne 1 : avatar + infos client + badge type + date */}
       <div className="flex items-start gap-3">
         <div className="w-8 h-8 rounded-full bg-[#F0FDF4] text-[#166534] flex items-center justify-center text-xs font-semibold shrink-0 select-none">
           {ini}
@@ -118,17 +133,30 @@ function DeliveryMobileCard({
           </p>
         </div>
         <div className="shrink-0 text-right">
-          <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${carrier.bg} ${carrier.color}`}>
-            {carrier.label}
-          </span>
+          {isSelf ? (
+            <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700">
+              En personne
+            </span>
+          ) : carrierCfg ? (
+            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${carrierCfg.bg} ${carrierCfg.color}`}>
+              {carrierCfg.label}
+            </span>
+          ) : null}
           <p className="text-[10px] text-[#78716C] mt-1">
             {new Date(delivery.created_at).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' })}
           </p>
         </div>
       </div>
 
-      {/* Ligne tracking */}
-      {(delivery.tracking_number || delivery.carrier_status) && (
+      {/* Message visible par le client pour une livraison personnelle */}
+      {isSelf && delivery.vendor_note && (
+        <div className="mt-3 bg-[#FAFAF9] rounded-lg px-3 py-2">
+          <p className="text-xs text-[#78716C] italic">{delivery.vendor_note}</p>
+        </div>
+      )}
+
+      {/* Ligne tracking (transporteur uniquement) */}
+      {!isSelf && (delivery.tracking_number || delivery.carrier_status) && (
         <div className="mt-3 flex items-center gap-2 bg-[#FAFAF9] rounded-lg px-3 py-2">
           <span className="text-xs text-[#78716C] shrink-0">N° suivi :</span>
           {trackingHref ? (
@@ -148,8 +176,8 @@ function DeliveryMobileCard({
         </div>
       )}
 
-      {/* Badge incomplet + bouton compléter */}
-      {!delivery.tracking_number && !selectionMode && (
+      {/* Badge incomplet + bouton compléter (transporteur sans tracking) */}
+      {!isSelf && !delivery.tracking_number && !selectionMode && (
         <div className="mt-2 flex items-center gap-2">
           <span className="bg-amber-50 text-amber-700 border border-amber-200 text-xs px-2 py-0.5 rounded-full font-medium">
             Incomplet
@@ -164,35 +192,55 @@ function DeliveryMobileCard({
         </div>
       )}
 
+      {/* Bouton "Livré + COD encaissé" pour livraison personnelle non collectée */}
+      {isSelf && !delivery.cod_collected && !selectionMode && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onToggle(delivery, 'cod_collected') }}
+          disabled={isPending}
+          className="mt-3 w-full rounded-xl px-3 py-3 text-sm font-medium bg-[#0B5E46] text-white hover:bg-[#0a5240] disabled:opacity-50 transition-colors min-h-[44px] touch-manipulation"
+        >
+          Livré + COD encaissé
+        </button>
+      )}
+
       {/* Ligne COD badges + frais */}
-      {!selectionMode && (
+      {!selectionMode && (isSelf ? delivery.cod_collected : true) && (
         <div className="mt-3 flex items-center gap-2">
           <button
             type="button"
-            onClick={e => { e.stopPropagation(); onToggle(delivery, 'cod_collected') }}
-            disabled={isPending}
+            onClick={e => { e.stopPropagation(); if (!isSelf) onToggle(delivery, 'cod_collected') }}
+            disabled={isPending || isSelf}
             className={`flex-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors min-h-[44px] touch-manipulation ${
               delivery.cod_collected
                 ? 'bg-green-50 text-green-700 border border-green-200'
-                : 'bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-600'
+                : isSelf
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-600'
             }`}
           >
             {delivery.cod_collected ? '✓ COD collecté' : 'COD collecté ?'}
           </button>
-          <button
-            type="button"
-            onClick={e => { e.stopPropagation(); onToggle(delivery, 'cod_reversed') }}
-            disabled={isPending || !delivery.cod_collected}
-            className={`flex-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors min-h-[44px] touch-manipulation ${
-              delivery.cod_reversed
-                ? 'bg-[#F0FDF4] text-[#166534] border border-green-200'
-                : delivery.cod_collected
-                  ? 'bg-gray-100 text-gray-500 hover:bg-[#F0FDF4] hover:text-[#166534]'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            {delivery.cod_reversed ? '✓ COD reversé' : delivery.cod_collected ? 'COD reversé ?' : '—'}
-          </button>
+          {isSelf ? (
+            <span className="flex min-h-[44px] flex-1 items-center justify-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700">
+              Encaissé directement
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); onToggle(delivery, 'cod_reversed') }}
+              disabled={isPending || !delivery.cod_collected}
+              className={`flex-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors min-h-[44px] touch-manipulation ${
+                delivery.cod_reversed
+                  ? 'bg-[#F0FDF4] text-[#166534] border border-green-200'
+                  : delivery.cod_collected
+                    ? 'bg-gray-100 text-gray-500 hover:bg-[#F0FDF4] hover:text-[#166534]'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              {delivery.cod_reversed ? '✓ COD reversé' : delivery.cod_collected ? 'COD reversé ?' : '—'}
+            </button>
+          )}
           <div className="shrink-0 text-right min-w-[40px]">
             <p className="text-sm font-semibold text-[#1C1917]">
               {delivery.fee != null && delivery.fee > 0 ? delivery.fee : '0'}
@@ -233,30 +281,36 @@ export default function DeliveriesClient({
   createDelivery,
   updateDelivery,
   markCodReversed,
+  markSelfDeliveryComplete,
   deleteDelivery,
+  codSummary,
+  codSummaryUnavailable = false,
 }: Props) {
   const [tab, setTab] = useState<Tab>('all')
   const [isPending, startTransition] = useTransition()
+  const [searchText, setSearchText] = useState('')
+  const [carrierFilter, setCarrierFilter] = useState<CarrierName | 'self' | ''>('')
 
-  // État local pour l'optimistic delete
   const [allDeliveries, setAllDeliveries] = useState<Delivery[]>(deliveries)
 
-  // Sync depuis les props après revalidatePath (handleAdd, handleEditSave, etc.)
   useEffect(() => {
     setAllDeliveries(deliveries)
   }, [deliveries])
 
   const [showAdd, setShowAdd] = useState(false)
   const [addOrderId, setAddOrderId] = useState('')
+  const [addDeliveryType, setAddDeliveryType] = useState<'self' | 'carrier'>('carrier')
   const [addCarrier, setAddCarrier] = useState<CarrierName>('intigo')
   const [addTracking, setAddTracking] = useState('')
   const [addFee, setAddFee] = useState<number | ''>('')
+  const [addVendorNote, setAddVendorNote] = useState('')
   const [addError, setAddError] = useState<string | null>(null)
 
   const [editDelivery, setEditDelivery] = useState<Delivery | null>(null)
   const [editTracking, setEditTracking] = useState('')
   const [editStatus, setEditStatus] = useState('')
   const [editFee, setEditFee] = useState<number | ''>('')
+  const [editVendorNote, setEditVendorNote] = useState('')
 
   const [confirmDelete, setConfirmDelete] = useState<Delivery | null>(null)
 
@@ -278,33 +332,57 @@ export default function DeliveriesClient({
   }, [toast])
 
   const filtered = allDeliveries.filter(d => {
-    if (tab === 'pending')   return !d.cod_collected
-    if (tab === 'collected') return d.cod_collected && !d.cod_reversed
-    if (tab === 'reversed')  return d.cod_reversed
+    if (tab === 'pending')   { if (d.cod_collected) return false }
+    else if (tab === 'collected') { if (!d.cod_collected || d.cod_reversed) return false }
+    else if (tab === 'reversed')  { if (!d.cod_reversed) return false }
+
+    if (carrierFilter === 'self' && d.delivery_type !== 'self') return false
+    if (carrierFilter && carrierFilter !== 'self' && d.carrier !== carrierFilter) return false
+
+    const q = searchText.trim().toLocaleLowerCase('fr')
+    if (q) {
+      const order = getOrder(d)
+      const matchesName = order?.customer?.name?.toLocaleLowerCase('fr').includes(q)
+      const matchesPhone = order?.customer?.phone?.includes(q)
+      const matchesProduct = order?.product?.name?.toLocaleLowerCase('fr').includes(q)
+      const matchesTracking = d.tracking_number?.toLocaleLowerCase('fr').includes(q)
+      const matchesVendorNote = d.vendor_note?.toLocaleLowerCase('fr').includes(q)
+      if (!matchesName && !matchesPhone && !matchesProduct && !matchesTracking && !matchesVendorNote) return false
+    }
+
     return true
   })
 
   const counts: Record<Tab, number> = {
     all:       allDeliveries.length,
     pending:   allDeliveries.filter(d => !d.cod_collected).length,
-    collected: allDeliveries.filter(d => d.cod_collected && !d.cod_reversed).length,
-    reversed:  allDeliveries.filter(d => d.cod_reversed).length,
+    collected: allDeliveries.filter(d =>
+      d.cod_collected && (d.delivery_type === 'self' || !d.cod_reversed)
+    ).length,
+    reversed: allDeliveries.filter(d => d.delivery_type === 'carrier' && d.cod_reversed).length,
   }
 
   const totalCollected = allDeliveries
     .filter(d => d.cod_collected)
     .reduce((s, d) => s + (getOrder(d)?.cod_amount ?? 0), 0)
   const totalReversed = allDeliveries
-    .filter(d => d.cod_reversed)
+    .filter(d => d.delivery_type === 'carrier' && d.cod_reversed)
     .reduce((s, d) => s + (getOrder(d)?.cod_amount ?? 0), 0)
   const totalFees = allDeliveries.reduce((s, d) => s + (d.fee ?? 0), 0)
-  const activeCount = allDeliveries.filter(d => !d.cod_reversed).length
+  const displayedTotalCollected = codSummary?.total_collected_amount ?? totalCollected
+  const displayedTotalReversed = codSummary?.total_reversed_amount ?? totalReversed
+  const displayedTotalFees = codSummary?.total_fees ?? totalFees
+  const displayedPendingReversalCount = codSummary?.pending_reversal_count ?? counts.collected
+  const activeCount = allDeliveries.filter(d =>
+    d.delivery_type === 'self' ? !d.cod_collected : !d.cod_reversed
+  ).length
 
   function openEdit(d: Delivery) {
     setEditDelivery(d)
     setEditTracking(d.tracking_number ?? '')
     setEditStatus(d.carrier_status ?? '')
     setEditFee(d.fee ?? '')
+    setEditVendorNote(d.vendor_note ?? '')
   }
 
   function handleAdd(e: React.FormEvent) {
@@ -315,16 +393,19 @@ export default function DeliveriesClient({
       try {
         const result = await createDelivery({
           order_id: addOrderId,
-          carrier: addCarrier,
-          tracking_number: addTracking.trim() || undefined,
+          delivery_type: addDeliveryType,
+          carrier: addDeliveryType === 'carrier' ? addCarrier : undefined,
+          tracking_number: addDeliveryType === 'carrier' ? (addTracking.trim() || undefined) : undefined,
           fee: addFee === '' ? undefined : addFee,
+          vendor_note: addDeliveryType === 'self' ? (addVendorNote.trim() || undefined) : undefined,
         })
         if (result?.error) {
           setAddError(result.error)
           return
         }
         setShowAdd(false)
-        setAddOrderId(''); setAddCarrier('intigo'); setAddTracking(''); setAddFee('')
+        setAddOrderId(''); setAddDeliveryType('carrier'); setAddCarrier('intigo')
+        setAddTracking(''); setAddFee(''); setAddVendorNote('')
       } catch (err) {
         setAddError(err instanceof Error ? err.message : 'Erreur inconnue')
       }
@@ -337,9 +418,15 @@ export default function DeliveriesClient({
     startTransition(async () => {
       try {
         const result = await updateDelivery(editDelivery.id, {
-          tracking_number: editTracking.trim() || null,
-          carrier_status:  editStatus.trim() || null,
-          fee: editFee === '' ? null : editFee,
+          ...(editDelivery.delivery_type === 'carrier'
+            ? {
+                tracking_number: editTracking.trim() || null,
+                carrier_status: editStatus.trim() || null,
+                fee: editFee === '' ? null : editFee,
+              }
+            : {
+                vendor_note: editVendorNote.trim() || null,
+              }),
         })
         if (result?.error) {
           setToast(`Erreur : ${result.error}`)
@@ -359,11 +446,16 @@ export default function DeliveriesClient({
     startTransition(async () => {
       try {
         const order = getOrder(d)
-        const result = field === 'cod_reversed' && newValue
-          ? order
+        let result: { error?: string }
+        if (field === 'cod_reversed' && newValue) {
+          result = order
             ? await markCodReversed(d.id, order.cod_amount)
             : { error: 'Commande liée introuvable.' }
-          : await updateDelivery(d.id, { [field]: newValue })
+        } else if (field === 'cod_collected' && newValue && d.delivery_type === 'self') {
+          result = await markSelfDeliveryComplete(d.id)
+        } else {
+          result = await updateDelivery(d.id, { [field]: newValue })
+        }
         if (result?.error) {
           setAllDeliveries(list => list.map(del => del.id === d.id ? { ...del, [field]: prevValue } : del))
           setToast(`Erreur : ${result.error}`)
@@ -371,6 +463,7 @@ export default function DeliveriesClient({
         }
         if (field === 'cod_collected' && newValue) setToast('✓ COD collecté · Commande marquée comme livrée')
         else if (field === 'cod_reversed' && newValue) setToast('✓ COD reversé · Fonds reçus')
+        router.refresh()
       } catch (err) {
         setAllDeliveries(list => list.map(del => del.id === d.id ? { ...del, [field]: prevValue } : del))
         setToast(`Erreur : ${err instanceof Error ? err.message : 'Veuillez réessayer.'}`)
@@ -392,7 +485,7 @@ export default function DeliveriesClient({
     const d = completeModal
     const tracking = completeTracking.trim()
     const fee = completeFee === '' ? null : Number(completeFee) || null
-    setAllDeliveries(list => list.map(del => del.id === d.id ? { ...del, tracking_number: tracking, fee: fee ?? undefined } : del))
+    setAllDeliveries(list => list.map(del => del.id === d.id ? { ...del, tracking_number: tracking, fee } : del))
     setCompleteModal(null)
     startTransition(async () => {
       try {
@@ -453,12 +546,13 @@ export default function DeliveriesClient({
       } else {
         setToast(`✓ ${data.updated} livraison${data.updated > 1 ? 's' : ''} marquée${data.updated > 1 ? 's' : ''} comme ${label}`)
       }
-      // Mise à jour optimiste du state local pour une réponse UI immédiate
       const affectedIds = new Set(selectedIds)
       setAllDeliveries(prev => prev.map(d => {
         if (!affectedIds.has(d.id)) return d
         if (action === 'cod_collected') return { ...d, cod_collected: true }
-        if (action === 'cod_reversed' && d.cod_collected) return { ...d, cod_reversed: true }
+        if (action === 'cod_reversed' && d.delivery_type === 'carrier' && d.cod_collected) {
+          return { ...d, cod_reversed: true }
+        }
         return d
       }))
       setSelectionMode(false)
@@ -507,12 +601,78 @@ export default function DeliveriesClient({
         </button>
       </div>
 
+      {/* Admin COD summary */}
+      {codSummaryUnavailable && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-3">
+          <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+          <p className="text-sm text-red-700">
+            Le résumé COD exact est temporairement indisponible. Les montants affichés ci-dessous sont limités aux livraisons chargées.
+          </p>
+        </div>
+      )}
+
+      {codSummary && codSummary.pending_reversal_count > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
+          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-800">
+              {codSummary.pending_reversal_amount.toFixed(0)} DT à reverser
+            </p>
+            <p className="text-xs text-amber-600">
+              {codSummary.pending_reversal_count} livraison{codSummary.pending_reversal_count > 1 ? 's' : ''} avec COD collecté non reversé
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Recherche + filtre transporteur */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
+          <input
+            className="min-h-[44px] w-full pl-9 pr-11 py-2 text-base md:text-sm bg-white border border-[#E7E5E4] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#16A34A]/30 focus:border-[#16A34A] transition-all placeholder:text-[#A8A29E]"
+            placeholder="Rechercher client, téléphone, produit, n° suivi…"
+            value={searchText}
+            onChange={e => {
+              setSearchText(e.target.value)
+              setSelectedIds(new Set())
+            }}
+            aria-label="Rechercher une livraison"
+          />
+          {searchText && (
+            <button
+              type="button"
+              onClick={() => setSearchText('')}
+              className="absolute right-0 top-1/2 flex min-h-[44px] w-11 -translate-y-1/2 touch-manipulation items-center justify-center text-[#A8A29E] hover:text-[#78716C] transition-colors"
+              aria-label="Effacer la recherche"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+        <select
+          value={carrierFilter}
+          onChange={e => {
+            setCarrierFilter(e.target.value as CarrierName | 'self' | '')
+            setSelectedIds(new Set())
+          }}
+          className="min-h-[44px] w-full sm:w-52 py-2 px-3 text-base md:text-sm bg-white border border-[#E7E5E4] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#16A34A]/30 focus:border-[#16A34A] transition-all text-[#78716C]"
+          aria-label="Filtrer par transporteur"
+        >
+          <option value="">Tous les modes</option>
+          <option value="self">Livraison en personne</option>
+          {CARRIER_OPTIONS.map(c => (
+            <option key={c.value} value={c.value}>{c.label}</option>
+          ))}
+        </select>
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {[
-          { label: 'COD collecté',   value: `${totalCollected.toFixed(0)} DT`, sub: `${counts.collected} en attente de reversal`, color: 'text-[#16A34A]', Icon: Banknote },
-          { label: 'COD reversé',    value: `${totalReversed.toFixed(0)} DT`,  sub: `${counts.reversed} livraisons soldées`,      color: 'text-[#0B5E46]', Icon: ArrowDownCircle },
-          { label: 'Frais livreurs', value: `${totalFees.toFixed(0)} DT`,      sub: 'total transporteurs',                        color: 'text-[#1C1917]', Icon: Receipt },
+          { label: 'COD collecté',   value: `${displayedTotalCollected.toFixed(0)} DT`, sub: `${displayedPendingReversalCount} en attente de reversement`, color: 'text-[#16A34A]', Icon: Banknote },
+          { label: 'COD reversé',    value: `${displayedTotalReversed.toFixed(0)} DT`,  sub: `${counts.reversed} livraisons soldées`,                 color: 'text-[#0B5E46]', Icon: ArrowDownCircle },
+          { label: 'Frais livreurs', value: `${displayedTotalFees.toFixed(0)} DT`,      sub: 'total transporteurs',                                   color: 'text-[#1C1917]', Icon: Receipt },
         ].map(s => (
           <div key={s.label} className="bg-white border border-[#E7E5E4] rounded-xl p-2 sm:p-5 shadow-sm">
             <div className="flex items-center gap-1.5">
@@ -596,8 +756,21 @@ export default function DeliveriesClient({
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-10 text-center">
           <Truck className="w-12 h-12 mx-auto mb-3 text-[#78716C] opacity-30" />
           <p className="font-semibold text-[#1C1917] text-lg mb-1">
-            {tab === 'all' ? 'Aucune livraison enregistrée' : 'Aucune livraison dans cette catégorie'}
+            {searchText.trim() || carrierFilter
+              ? 'Aucune livraison ne correspond aux filtres'
+              : tab === 'all'
+                ? 'Aucune livraison enregistrée'
+                : 'Aucune livraison dans cette catégorie'}
           </p>
+          {(searchText.trim() || carrierFilter) && (
+            <button
+              type="button"
+              onClick={() => { setSearchText(''); setCarrierFilter('') }}
+              className="mt-3 min-h-[44px] touch-manipulation text-sm font-medium text-[#16A34A] hover:text-[#15803D]"
+            >
+              Effacer les filtres
+            </button>
+          )}
           {tab === 'all' && (
             <p className="text-sm text-[#78716C] mb-5">Créez votre première livraison depuis une commande expédiée</p>
           )}
@@ -647,8 +820,8 @@ export default function DeliveriesClient({
                   )}
                   <th className="text-left text-xs font-semibold text-[#78716C] uppercase tracking-wider px-5 py-3">Client / Produit</th>
                   <th className="text-left text-xs font-semibold text-[#78716C] uppercase tracking-wider px-4 py-3 w-32">Transporteur</th>
-                  <th className="text-left text-xs font-semibold text-[#78716C] uppercase tracking-wider px-4 py-3 w-44">N° suivi</th>
-                  <th className="text-center text-xs font-semibold text-[#78716C] uppercase tracking-wider px-4 py-3 w-32">COD collecté</th>
+                  <th className="text-left text-xs font-semibold text-[#78716C] uppercase tracking-wider px-4 py-3 w-44">N° suivi / Note</th>
+                  <th className="text-center text-xs font-semibold text-[#78716C] uppercase tracking-wider px-4 py-3 w-36">COD collecté</th>
                   <th className="text-center text-xs font-semibold text-[#78716C] uppercase tracking-wider px-4 py-3 w-32">COD reversé</th>
                   <th className="text-right text-xs font-semibold text-[#78716C] uppercase tracking-wider px-4 py-3 w-24">Frais</th>
                   <th className="w-20 px-4 py-3" />
@@ -657,7 +830,11 @@ export default function DeliveriesClient({
               <tbody>
                 {filtered.map(d => {
                   const order = getOrder(d)
-                  const carrier = getCarrierConfig(d.carrier)
+                  const isSelf = d.delivery_type === 'self'
+                  const carrierCfg = !isSelf && d.carrier ? getCarrierConfig(d.carrier) : null
+                  const trackingUrl = !isSelf && d.carrier && d.tracking_number
+                    ? getTrackingUrl(d.carrier, d.tracking_number)
+                    : null
                   const ini = order?.customer?.name ? initials(order.customer.name) : '?'
                   return (
                     <tr
@@ -694,27 +871,46 @@ export default function DeliveriesClient({
 
                       {/* Transporteur */}
                       <td className="px-4 py-4">
-                        <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${carrier.bg} ${carrier.color}`}>
-                          {carrier.label}
-                        </span>
+                        {isSelf ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                            <User className="w-3 h-3" />
+                            En personne
+                          </span>
+                        ) : carrierCfg ? (
+                          <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${carrierCfg.bg} ${carrierCfg.color}`}>
+                            {carrierCfg.label}
+                          </span>
+                        ) : (
+                          <span className="text-[#78716C]">—</span>
+                        )}
                         <p className="text-xs text-[#78716C] mt-1">
                           {new Date(d.created_at).toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' })}
                         </p>
                       </td>
 
-                      {/* N° suivi */}
+                      {/* N° suivi / Note */}
                       <td className="px-4 py-4">
-                        {d.tracking_number ? (
-                          <a
-                            href={`${CARRIER_TRACKING_URLS[d.carrier]}${d.tracking_number}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={e => e.stopPropagation()}
-                            className="font-mono text-sm text-[#16A34A] hover:text-[#0B5E46] flex items-center gap-1"
-                          >
-                            {d.tracking_number}
-                            <ExternalLink className="w-3 h-3 shrink-0" />
-                          </a>
+                        {isSelf ? (
+                          d.vendor_note ? (
+                            <p className="text-xs text-[#78716C] italic max-w-[160px] truncate">{d.vendor_note}</p>
+                          ) : (
+                            <span className="text-[#78716C]">—</span>
+                          )
+                        ) : d.tracking_number ? (
+                          trackingUrl ? (
+                            <a
+                              href={trackingUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={e => e.stopPropagation()}
+                              className="font-mono text-sm text-[#16A34A] hover:text-[#0B5E46] flex items-center gap-1"
+                            >
+                              {d.tracking_number}
+                              <ExternalLink className="w-3 h-3 shrink-0" />
+                            </a>
+                          ) : (
+                            <span className="font-mono text-sm text-[#1C1917]">{d.tracking_number}</span>
+                          )
                         ) : !selectionMode ? (
                           <div className="flex items-center gap-2">
                             <span className="bg-amber-50 text-amber-700 border border-amber-200 text-xs px-2 py-0.5 rounded-full font-medium">
@@ -730,12 +926,21 @@ export default function DeliveriesClient({
                         ) : (
                           <span className="text-[#78716C]">—</span>
                         )}
-                        {d.carrier_status && <p className="text-xs text-[#78716C] mt-0.5">{d.carrier_status}</p>}
+                        {!isSelf && d.carrier_status && <p className="text-xs text-[#78716C] mt-0.5">{d.carrier_status}</p>}
                       </td>
 
                       {/* COD collecté */}
                       <td className="px-4 py-4 text-center">
-                        {selectionMode ? (
+                        {!selectionMode && isSelf && !d.cod_collected ? (
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); handleToggle(d, 'cod_collected') }}
+                            disabled={isPending}
+                            className="whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium bg-[#0B5E46] text-white hover:bg-[#0a5240] disabled:opacity-50 transition-colors"
+                          >
+                            Livré + COD enc.
+                          </button>
+                        ) : selectionMode ? (
                           <span className={`inline-flex whitespace-nowrap rounded-full px-3 py-1 text-xs ${
                             d.cod_collected
                               ? 'bg-green-50 text-green-700 border border-green-200'
@@ -746,12 +951,14 @@ export default function DeliveriesClient({
                         ) : (
                           <button
                             type="button"
-                            onClick={e => { e.stopPropagation(); handleToggle(d, 'cod_collected') }}
-                            disabled={isPending}
+                            onClick={e => { e.stopPropagation(); if (!isSelf) handleToggle(d, 'cod_collected') }}
+                            disabled={isPending || isSelf}
                             className={`whitespace-nowrap rounded-full px-3 py-1 text-xs transition-colors ${
                               d.cod_collected
                                 ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
-                                : 'bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-600'
+                                : isSelf
+                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  : 'bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-600'
                             }`}
                           >
                             {d.cod_collected ? '✓ Collecté' : 'Non collecté'}
@@ -761,7 +968,11 @@ export default function DeliveriesClient({
 
                       {/* COD reversé */}
                       <td className="px-4 py-4 text-center">
-                        {selectionMode ? (
+                        {isSelf ? (
+                          <span className="inline-flex whitespace-nowrap rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs text-blue-700">
+                            Encaissement direct
+                          </span>
+                        ) : selectionMode ? (
                           <span className={`inline-flex whitespace-nowrap rounded-full px-3 py-1 text-xs ${
                             d.cod_reversed
                               ? 'bg-[#F0FDF4] text-[#166534] border border-green-200'
@@ -853,33 +1064,86 @@ export default function DeliveriesClient({
                     })}
                   </select>
                 </div>
+
+                {/* Type de livraison */}
                 <div>
-                  <label className="block text-sm font-medium text-[#1C1917] mb-1">Transporteur *</label>
-                  <select className="input" value={addCarrier} onChange={e => setAddCarrier(e.target.value as CarrierName)} required>
-                    {CARRIER_OPTIONS.map(c => (
-                      <option key={c.value} value={c.value}>{c.label}</option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-[#78716C]">Le numéro de suivi sera utilisé pour le lien de tracking</p>
-                </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <label className="block text-sm font-medium text-[#1C1917] mb-1">N° de suivi</label>
-                    <input className="input font-mono" value={addTracking} onChange={e => setAddTracking(e.target.value)} placeholder="Optionnel" />
+                  <label className="block text-sm font-medium text-[#1C1917] mb-2">Type de livraison *</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAddDeliveryType('carrier')}
+                      className={`flex flex-col items-center gap-1.5 rounded-xl p-3 border-2 transition-colors text-sm font-medium ${
+                        addDeliveryType === 'carrier'
+                          ? 'border-[#16A34A] bg-[#F0FDF4] text-[#166534]'
+                          : 'border-[#E7E5E4] text-[#78716C] hover:border-[#D6D3D1]'
+                      }`}
+                    >
+                      <Truck className="w-5 h-5" />
+                      Via transporteur
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAddDeliveryType('self')}
+                      className={`flex flex-col items-center gap-1.5 rounded-xl p-3 border-2 transition-colors text-sm font-medium ${
+                        addDeliveryType === 'self'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-[#E7E5E4] text-[#78716C] hover:border-[#D6D3D1]'
+                      }`}
+                    >
+                      <User className="w-5 h-5" />
+                      En personne
+                    </button>
                   </div>
+                </div>
+
+                {addDeliveryType === 'carrier' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-[#1C1917] mb-1">Transporteur *</label>
+                      <select className="input" value={addCarrier} onChange={e => setAddCarrier(e.target.value as CarrierName)} required>
+                        {CARRIER_OPTIONS.map(c => (
+                          <option key={c.value} value={c.value}>{c.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="block text-sm font-medium text-[#1C1917] mb-1">N° de suivi</label>
+                        <input className="input font-mono" value={addTracking} onChange={e => setAddTracking(e.target.value)} placeholder="Optionnel" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-[#1C1917] mb-1">Frais (DT)</label>
+                        <input
+                          className="input"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={addFee}
+                          onChange={e => setAddFee(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {addDeliveryType === 'self' && (
                   <div>
-                    <label className="block text-sm font-medium text-[#1C1917] mb-1">Frais (DT)</label>
-                    <input
-                      className="input"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={addFee}
-                      onChange={e => setAddFee(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      placeholder="0.00"
+                    <label className="block text-sm font-medium text-[#1C1917] mb-1">Message pour le client (optionnel)</label>
+                    <textarea
+                      className="input resize-none text-base md:text-sm"
+                      rows={3}
+                      maxLength={1000}
+                      value={addVendorNote}
+                      onChange={e => setAddVendorNote(e.target.value)}
+                      placeholder="Ex : Livraison prévue demain matin"
                     />
+                    <p className="mt-1 text-xs text-[#78716C]">
+                      Visible par le client sur sa page de suivi.
+                    </p>
                   </div>
-                </div>
+                )}
+
                 {addError && (
                   <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{addError}</p>
                 )}
@@ -907,26 +1171,48 @@ export default function DeliveriesClient({
             </div>
             <form onSubmit={handleEditSave} className="flex min-h-0 flex-1 flex-col">
               <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
-                <div>
-                  <label className="block text-sm font-medium text-[#1C1917] mb-1">N° de suivi</label>
-                  <input className="input font-mono" value={editTracking} onChange={e => setEditTracking(e.target.value)} placeholder="EX123456789TN" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#1C1917] mb-1">Statut transporteur</label>
-                  <input className="input" value={editStatus} onChange={e => setEditStatus(e.target.value)} placeholder="En transit, Livré…" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#1C1917] mb-1">Frais de livraison (DT)</label>
-                  <input
-                    className="input"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={editFee}
-                    onChange={e => setEditFee(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                    placeholder="0.00"
-                  />
-                </div>
+                {editDelivery.delivery_type === 'carrier' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-[#1C1917] mb-1">N° de suivi</label>
+                      <input className="input font-mono" value={editTracking} onChange={e => setEditTracking(e.target.value)} placeholder="EX123456789TN" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#1C1917] mb-1">Statut transporteur</label>
+                      <input className="input" value={editStatus} onChange={e => setEditStatus(e.target.value)} placeholder="En transit, Livré…" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#1C1917] mb-1">Frais de livraison (DT)</label>
+                      <input
+                        className="input"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={editFee}
+                        onChange={e => setEditFee(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </>
+                )}
+                {editDelivery.delivery_type === 'self' && (
+                  <div>
+                    <label className="block text-sm font-medium text-[#1C1917] mb-1">
+                      Message pour le client (optionnel)
+                    </label>
+                    <textarea
+                      className="input resize-none text-base md:text-sm"
+                      rows={3}
+                      maxLength={1000}
+                      value={editVendorNote}
+                      onChange={e => setEditVendorNote(e.target.value)}
+                      placeholder="Ex : Livraison prévue demain matin"
+                    />
+                    <p className="mt-1 text-xs text-[#78716C]">
+                      Visible par le client sur sa page de suivi.
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
                 <button type="button" onClick={() => setEditDelivery(null)} className="btn-secondary flex-1">Annuler</button>
@@ -951,7 +1237,8 @@ export default function DeliveriesClient({
             </div>
             <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               <p className="text-sm text-[#78716C]">
-                {getOrder(confirmDelete)?.customer?.name} — {getCarrierConfig(confirmDelete.carrier).label}
+                {getOrder(confirmDelete)?.customer?.name}{' '}
+                — {confirmDelete.delivery_type === 'self' ? 'Livraison personnelle' : (confirmDelete.carrier ? getCarrierConfig(confirmDelete.carrier).label : '—')}
               </p>
             </div>
             <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
@@ -968,7 +1255,7 @@ export default function DeliveriesClient({
         </div>
       )}
 
-      {/* ── MODAL Compléter livraison ── */}
+      {/* ── MODAL Compléter livraison (transporteur uniquement) ── */}
       {completeModal && (
         <div className="fixed inset-0 z-50 bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
           <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
@@ -976,7 +1263,8 @@ export default function DeliveriesClient({
               <div>
                 <h3 className="font-semibold text-[#1C1917]">Compléter la livraison</h3>
                 <p className="text-xs text-[#78716C] mt-0.5">
-                  {getOrder(completeModal)?.customer?.name} · {getCarrierConfig(completeModal.carrier).label}
+                  {getOrder(completeModal)?.customer?.name}
+                  {completeModal.carrier ? ` · ${getCarrierConfig(completeModal.carrier).label}` : ''}
                 </p>
               </div>
               <button type="button" onClick={() => setCompleteModal(null)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C]">
@@ -1022,7 +1310,7 @@ export default function DeliveriesClient({
         </div>
       )}
 
-      {/* Toast confirmation bulk */}
+      {/* Toast */}
       {toast && (
         <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#1C1917] text-white px-4 py-2 rounded-full text-sm shadow-lg whitespace-nowrap pointer-events-none">
           {toast}

@@ -78,6 +78,8 @@ La version finale est dans `20260620_secure_order_rpc.sql` :
 | `20260627_fix_service_role_detection.sql` | Compatibilité du rôle serveur avec les formats de claims PostgREST récents et historiques |
 | `20260628_fix_adjust_stock_delta.sql` | Refuse les ajustements de stock sans effet (`p_delta = 0`) |
 | `20260629_anonymize_customer.sql` | Anonymise les données personnelles client sans supprimer l'historique des commandes |
+| `20260630_get_cod_summary.sql` | Agrège les montants COD et reversements pour les admins |
+| `20260701_add_delivery_type.sql` | Ajoute les livraisons transporteur/en personne et leur finalisation atomique |
 
 ## Note sur schema.sql
 

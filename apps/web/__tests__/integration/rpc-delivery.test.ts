@@ -19,6 +19,14 @@ let sellerEmail: string
 let productId: string
 let orderId: string
 
+type CodSummaryRow = {
+  total_collected_amount: unknown
+  total_reversed_amount: unknown
+  pending_reversal_count: unknown
+  pending_reversal_amount: unknown
+  total_fees: unknown
+}
+
 beforeEach(async () => {
   const seller = await createTestSeller('delivery-rpc')
   sellerId = seller.id
@@ -107,6 +115,87 @@ describe('create_delivery_from_order', () => {
   })
 })
 
+describe('personal delivery lifecycle', () => {
+  it('creates, completes and excludes a personal delivery from carrier reversals', async () => {
+    const client = await authenticateAs(sellerEmail)
+
+    const { data: deliveryId, error: createError } = await client.rpc('create_delivery_from_order', {
+      p_seller_id: sellerId,
+      p_user_id: sellerId,
+      p_order_id: orderId,
+      p_delivery_type: 'self',
+      p_vendor_note: 'Livraison demain matin',
+    })
+    expect(createError).toBeNull()
+
+    const { data: createdDelivery } = await adminClient
+      .from('deliveries')
+      .select('delivery_type, carrier, tracking_number, fee, vendor_note')
+      .eq('id', deliveryId)
+      .single()
+    expect(createdDelivery).toEqual({
+      delivery_type: 'self',
+      carrier: null,
+      tracking_number: null,
+      fee: null,
+      vendor_note: 'Livraison demain matin',
+    })
+
+    const { error: completeError } = await client.rpc('mark_self_delivery_complete', {
+      p_seller_id: sellerId,
+      p_user_id: sellerId,
+      p_delivery_id: deliveryId,
+    })
+    expect(completeError).toBeNull()
+
+    const { data: completedDelivery } = await adminClient
+      .from('deliveries')
+      .select('cod_collected, cod_reversed, delivered_at')
+      .eq('id', deliveryId)
+      .single()
+    expect(completedDelivery?.cod_collected).toBe(true)
+    expect(completedDelivery?.cod_reversed).toBe(false)
+    expect(completedDelivery?.delivered_at).not.toBeNull()
+
+    const { data: order } = await adminClient
+      .from('orders')
+      .select('status')
+      .eq('id', orderId)
+      .single()
+    expect(order?.status).toBe('delivered')
+
+    const { data: summaryData, error: summaryError } = await client
+      .rpc('get_cod_summary', { p_seller_id: sellerId })
+      .single()
+    const summary = summaryData as CodSummaryRow | null
+    expect(summaryError).toBeNull()
+    expect(Number(summary?.total_collected_amount)).toBe(80)
+    expect(Number(summary?.pending_reversal_count)).toBe(0)
+    expect(Number(summary?.pending_reversal_amount)).toBe(0)
+    expect(Number(summary?.total_reversed_amount)).toBe(0)
+  })
+
+  it('rejects completing a carrier delivery through the personal-delivery RPC', async () => {
+    const client = await authenticateAs(sellerEmail)
+
+    const { data: deliveryId, error: createError } = await client.rpc('create_delivery_from_order', {
+      p_seller_id: sellerId,
+      p_user_id: sellerId,
+      p_order_id: orderId,
+      p_carrier: 'intigo',
+    })
+    expect(createError).toBeNull()
+
+    const { error } = await client.rpc('mark_self_delivery_complete', {
+      p_seller_id: sellerId,
+      p_user_id: sellerId,
+      p_delivery_id: deliveryId,
+    })
+
+    expect(error?.message).toContain('SELF_DELIVERY_NOT_FOUND')
+  })
+})
+
 describe('mark_delivery_cod_collected', () => {
   it('marks COD collected and transitions order to delivered atomically', async () => {
     const client = await authenticateAs(sellerEmail)
@@ -189,6 +278,100 @@ describe('mark_delivery_cod_reversed', () => {
       p_reversed_by: sellerId,
     })
     expect(duplicateError?.message).toContain('COD_ALREADY_REVERSED')
+  })
+})
+
+describe('get_cod_summary', () => {
+  it('returns exact totals, keeps archived receivables and uses the audited reversal amount', async () => {
+    const client = await authenticateAs(sellerEmail)
+
+    const { data: deliveryId, error: deliveryError } = await client.rpc('create_delivery_from_order', {
+      p_seller_id: sellerId,
+      p_user_id: sellerId,
+      p_order_id: orderId,
+      p_carrier: 'navex',
+      p_fee: 7,
+    })
+    expect(deliveryError).toBeNull()
+
+    const { error: collectError } = await client.rpc('mark_delivery_cod_collected', {
+      p_seller_id: sellerId,
+      p_user_id: sellerId,
+      p_delivery_id: deliveryId,
+    })
+    expect(collectError).toBeNull()
+
+    const { data: pendingSummary, error: pendingError } = await client
+      .rpc('get_cod_summary', { p_seller_id: sellerId })
+      .single()
+    const pending = pendingSummary as CodSummaryRow | null
+    expect(pendingError).toBeNull()
+    expect(Number(pending?.total_collected_amount)).toBe(80)
+    expect(Number(pending?.pending_reversal_count)).toBe(1)
+    expect(Number(pending?.pending_reversal_amount)).toBe(80)
+    expect(Number(pending?.total_fees)).toBe(7)
+
+    await adminClient
+      .from('orders')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', orderId)
+
+    const { data: archivedSummary, error: archivedError } = await client
+      .rpc('get_cod_summary', { p_seller_id: sellerId })
+      .single()
+    const archived = archivedSummary as CodSummaryRow | null
+    expect(archivedError).toBeNull()
+    expect(Number(archived?.pending_reversal_count)).toBe(1)
+    expect(Number(archived?.pending_reversal_amount)).toBe(80)
+
+    const { error: reversalError } = await client.rpc('mark_delivery_cod_reversed', {
+      p_delivery_id: deliveryId,
+      p_seller_id: sellerId,
+      p_amount: 60,
+      p_reversed_by: sellerId,
+    })
+    expect(reversalError).toBeNull()
+
+    const { data: reversedSummary, error: reversedError } = await client
+      .rpc('get_cod_summary', { p_seller_id: sellerId })
+      .single()
+    const reversed = reversedSummary as CodSummaryRow | null
+    expect(reversedError).toBeNull()
+    expect(Number(reversed?.total_reversed_amount)).toBe(60)
+    expect(Number(reversed?.pending_reversal_count)).toBe(0)
+  })
+
+  it('rejects operators because the summary contains financial totals', async () => {
+    const memberEmail = `cod-operator-${Date.now()}@hanut-test.local`
+    const { data: memberUser, error: userError } = await adminClient.auth.admin.createUser({
+      email: memberEmail,
+      password: 'Test1234!',
+      email_confirm: true,
+    })
+    expect(userError).toBeNull()
+    const memberId = memberUser.user!.id
+
+    try {
+      const { error: memberError } = await adminClient.from('team_members').insert({
+        seller_id: sellerId,
+        user_id: memberId,
+        email: memberEmail,
+        role: 'operator',
+        status: 'active',
+        joined_at: new Date().toISOString(),
+      })
+      expect(memberError).toBeNull()
+
+      const operatorClient = await authenticateAs(memberEmail)
+      const { error } = await operatorClient.rpc('get_cod_summary', {
+        p_seller_id: sellerId,
+      })
+
+      expect(error?.message).toContain('UNAUTHORIZED')
+    } finally {
+      await adminClient.from('team_members').delete().eq('user_id', memberId)
+      await adminClient.auth.admin.deleteUser(memberId)
+    }
   })
 })
 

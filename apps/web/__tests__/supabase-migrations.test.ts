@@ -65,6 +65,8 @@ describe('Supabase migrations', () => {
   const apiRolePrivileges = migration('20260626_restore_api_role_privileges.sql')
   const serviceRoleDetection = migration('20260627_fix_service_role_detection.sql')
   const anonymizeCustomerMigration = migration('20260629_anonymize_customer.sql')
+  const codSummaryMigration = migration('20260630_get_cod_summary.sql')
+  const deliveryTypeMigration = migration('20260701_add_delivery_type.sql')
 
   it('base tables migration creates the 5 core tables idempotently before any other migration', () => {
     expect(baseTables).toMatch(/CREATE TABLE IF NOT EXISTS sellers/i)
@@ -472,6 +474,33 @@ describe('Supabase migrations', () => {
     expect(anonymizeCustomerMigration).toMatch(/UPDATE activity_logs/i)
     expect(anonymizeCustomerMigration).toMatch(/RAISE EXCEPTION 'CUSTOMER_NOT_FOUND'/i)
     expect(anonymizeCustomerMigration).toMatch(/REVOKE ALL ON FUNCTION anonymize_customer\(UUID, UUID\) FROM PUBLIC/i)
+  })
+
+  it('aggregates COD totals for admins without dropping archived receivables', () => {
+    expect(codSummaryMigration).toMatch(/CREATE OR REPLACE FUNCTION get_cod_summary/i)
+    expect(codSummaryMigration).toMatch(/SECURITY DEFINER/i)
+    expect(codSummaryMigration).toMatch(/IF NOT is_service_role\(\)/i)
+    expect(codSummaryMigration).toMatch(/get_team_role\(p_seller_id\) = 'admin'/i)
+    expect(codSummaryMigration).toMatch(/SUM\(d\.cod_reversed_amount\)/i)
+    expect(codSummaryMigration).not.toMatch(/o\.deleted_at IS NULL/i)
+    expect(codSummaryMigration).toMatch(/REVOKE ALL ON FUNCTION get_cod_summary\(UUID\) FROM PUBLIC/i)
+  })
+
+  it('adds personal deliveries without creating false carrier reversals', () => {
+    expect(deliveryTypeMigration).toMatch(/ADD COLUMN IF NOT EXISTS delivery_type/i)
+    expect(deliveryTypeMigration).toMatch(/deliveries_delivery_type_check/i)
+    expect(deliveryTypeMigration).toMatch(/delivery_type = 'self'[\s\S]+carrier IS NULL/i)
+    expect(deliveryTypeMigration).toMatch(/CREATE FUNCTION create_delivery_from_order/i)
+    expect(deliveryTypeMigration).toMatch(/IF NOT is_service_role\(\)/i)
+    expect(deliveryTypeMigration).toMatch(/FOR UPDATE/i)
+    expect(deliveryTypeMigration).toMatch(/CREATE OR REPLACE FUNCTION mark_self_delivery_complete/i)
+    expect(deliveryTypeMigration).toMatch(/d\.delivery_type = 'self'/i)
+    expect(deliveryTypeMigration).toMatch(
+      /d\.delivery_type = 'carrier' AND d\.cod_collected AND NOT d\.cod_reversed/i,
+    )
+    expect(deliveryTypeMigration).toMatch(
+      /REVOKE ALL ON FUNCTION mark_self_delivery_complete\(UUID, UUID, UUID\) FROM PUBLIC/i,
+    )
   })
 
   it('adjusts product stock atomically without masking negative stock races', () => {

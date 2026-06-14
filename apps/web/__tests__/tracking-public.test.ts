@@ -19,16 +19,6 @@ vi.mock('@/lib/rate-limit', () => ({
   getClientIp: rateLimitMock.getClientIp,
 }))
 
-vi.mock('@/lib/constants', () => ({
-  CARRIER_TRACKING_URLS: {
-    intigo: 'https://intigo.tn/tracking/',
-    navex: 'https://navex.tn/tracking/',
-    adex: 'https://adex.tn/tracking/',
-    aramex: 'https://aramex.com/track/',
-    bestdelivery: 'https://best-delivery.tn/tracking/',
-  },
-}))
-
 import { GET } from '../app/api/track/[orderId]/route'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -41,7 +31,7 @@ function makeParams(orderId: string) {
   return { params: Promise.resolve({ orderId }) }
 }
 
-function mockSupabaseOrder(order: unknown) {
+function mockSupabaseOrder(order: unknown, delivery: unknown = null) {
   const orderQuery = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
@@ -53,7 +43,7 @@ function mockSupabaseOrder(order: unknown) {
     eq: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
-    maybeSingle: vi.fn().mockResolvedValue({ data: null }),
+    maybeSingle: vi.fn().mockResolvedValue({ data: delivery }),
   }
   const historyQuery = {
     select: vi.fn().mockReturnThis(),
@@ -115,5 +105,42 @@ describe('GET /api/track/[orderId] — data exposure', () => {
 
     expect(response.status).toBe(400)
     expect(serviceMock.createServiceClient).not.toHaveBeenCalled()
+  })
+
+  it('returns personal delivery instructions with a validated seller WhatsApp link', async () => {
+    mockSupabaseOrder(
+      {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        status: 'shipped',
+        cod_amount: 50,
+        variant: null,
+        quantity: 1,
+        created_at: new Date().toISOString(),
+        seller: { phone: '+216 54 727 060' },
+        customer: { name: 'Fatima Ben Ali', city: 'Tunis' },
+        product: { name: 'Produit', image_url: null },
+      },
+      {
+        delivery_type: 'self',
+        carrier: null,
+        tracking_number: null,
+        vendor_note: 'Livraison demain matin',
+      },
+    )
+
+    const response = await GET(trackRequest('selfdeliverytoken'), makeParams('selfdeliverytoken'))
+    const json = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(json.customer_name).toBe('Fatima')
+    expect(json.delivery).toEqual({
+      delivery_type: 'self',
+      carrier: null,
+      tracking: null,
+      tracking_url: null,
+      vendor_note: 'Livraison demain matin',
+      seller_whatsapp: 'https://wa.me/21654727060',
+    })
+    expect(JSON.stringify(json)).not.toContain('+216 54 727 060')
   })
 })
