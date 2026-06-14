@@ -7,6 +7,7 @@ import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { checkOrigin } from '@/lib/csrf'
 import { requireActiveResponse } from '@/lib/assert-active'
+import { buildAuthCallbackUrl } from '@/lib/auth-redirect'
 
 type Params = {
   params: Promise<{ memberId: string }>
@@ -60,10 +61,8 @@ export async function POST(request: NextRequest, { params }: Params) {
 
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://hanut.tn'
-
   const { error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(member.email, {
-    redirectTo: `${appUrl}/api/auth/callback`,
+    redirectTo: buildAuthCallbackUrl('/dashboard', request.nextUrl.origin),
     data: {
       invited_by: user?.email,
       team_role: member.role,

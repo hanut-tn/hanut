@@ -84,12 +84,36 @@ Si une erreur CSP apparaît après une mise à jour, vérifier le fichier `apps/
 
 ---
 
+### 5. Configurer les redirections Auth Supabase
+
+Dans **Authentication → URL Configuration** :
+
+1. Définir **Site URL** sur la même URL canonique que `NEXT_PUBLIC_APP_URL`.
+2. Ajouter la Redirect URL :
+   `https://votre-domaine/**`
+3. Si les previews Vercel doivent aussi recevoir des emails, ajouter uniquement
+   le wildcard du projet Vercel que vous contrôlez, par exemple
+   `https://*-votre-equipe.vercel.app/**`.
+
+Dans **Authentication → Email Templates**, les boutons de confirmation,
+d'invitation et de récupération doivent utiliser `{{ .ConfirmationURL }}`.
+Ne pas utiliser `{{ .SiteURL }}`, qui renvoie directement vers la page d'accueil.
+
+Destinations attendues :
+
+- mot de passe oublié → `/reset-password`
+- invitation équipe → `/dashboard`
+- confirmation d'inscription → `/dashboard`
+
+---
+
 ## Checklist de déploiement production
 
 - [ ] Variables d'environnement toutes renseignées
 - [ ] Hook JWT activé dans Supabase (voir étape 1)
 - [ ] Migrations appliquées sans erreur
 - [ ] Test création commande publique (Turnstile fonctionnel)
+- [ ] Redirections Auth Supabase configurées et testées
 - [ ] Console navigateur sans erreur CSP
 - [ ] Sentry reçoit les events (tester avec une erreur intentionnelle)
 - [ ] HSTS actif sur toutes les pages (`VERCEL_ENV=production` injecté par Vercel)

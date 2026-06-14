@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { buildAuthCallbackUrl } from '@/lib/auth-redirect'
 
 export default function ForgotPasswordPage() {
   const supabase = createClient()
@@ -16,7 +17,7 @@ export default function ForgotPasswordPage() {
     e.preventDefault()
     setError(null)
     setLoading(true)
-    const redirectTo = `${window.location.origin}/api/auth/callback?next=/reset-password`
+    const redirectTo = buildAuthCallbackUrl('/reset-password', window.location.origin)
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo })
     setLoading(false)
     if (error) {

@@ -10,6 +10,7 @@ import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { PLAN_LIMITS } from '@/lib/constants'
 import { requireActiveResponse } from '@/lib/assert-active'
+import { buildAuthCallbackUrl } from '@/lib/auth-redirect'
 
 const InviteMemberSchema = z.object({
   email: z.string().min(1, 'Email requis').regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Email invalide'),
@@ -138,9 +139,8 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const { data: seller } = await serviceClient.from('sellers').select('name').eq('id', context.sellerId).single()
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://hanut.tn'
   const { error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${appUrl}/api/auth/callback`,
+    redirectTo: buildAuthCallbackUrl('/dashboard', request.nextUrl.origin),
     data: { invited_by: user?.email, team_role: role, invitation_token: invitationToken },
   })
 

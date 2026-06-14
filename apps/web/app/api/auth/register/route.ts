@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { verifyTurnstileToken } from '@/lib/turnstile'
+import { buildAuthCallbackUrl } from '@/lib/auth-redirect'
 
 const RegisterSchema = z.object({
   shop_name: z.string().min(2, 'Nom de boutique trop court').max(100),
@@ -81,7 +82,10 @@ export async function POST(req: NextRequest) {
   const { data, error: signUpError } = await authClient.auth.signUp({
     email,
     password,
-    options: { data: { name: shop_name, phone: phone ?? '' } },
+    options: {
+      emailRedirectTo: buildAuthCallbackUrl('/dashboard', req.nextUrl.origin),
+      data: { name: shop_name, phone: phone ?? '' },
+    },
   })
 
   if (signUpError) {
