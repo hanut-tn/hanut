@@ -51,7 +51,6 @@ export function checkOrigin(request: OriginRequest): boolean {
     toOrigin(publicVercelUrl),
     toOrigin('url' in request ? request.url : null),
     'http://localhost:3000',
-    'http://localhost:3001',
   ].filter((value): value is string => Boolean(value)))
 
   const originHeader = toOrigin(origin)

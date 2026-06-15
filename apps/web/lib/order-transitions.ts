@@ -2,7 +2,8 @@ import type { OrderStatus } from '@hanut/types'
 
 // Valid order status transitions. Must stay in sync with the
 // order_status_transitions table (migration 20260622_add_status_transitions.sql).
-// delivered, returned, cancelled are terminal — no outgoing transitions.
+// delivered and cancelled are terminal. returned can be finalized as cancelled
+// through cancel_order_with_stock, which also restores stock atomically.
 // shipped → confirmed is a system-only rollback used when a delivery is deleted;
 // it is intentionally excluded from getAvailableTransitions (not a user action).
 export const VALID_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
@@ -11,7 +12,7 @@ export const VALID_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   confirmed: ['shipped', 'cancelled'],
   shipped:   ['delivered', 'returned', 'confirmed'],
   delivered: [],
-  returned:  [],
+  returned:  ['cancelled'],
   cancelled: [],
 }
 

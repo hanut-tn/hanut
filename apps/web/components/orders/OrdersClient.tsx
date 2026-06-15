@@ -834,8 +834,8 @@ export default function OrdersClient({
               <Calendar className="w-3 h-3" />
               {DATE_FILTER_LABELS[dateFilter]}
               <span className="text-[#78716C] ml-0.5">· {filteredOrders.length} commande{filteredOrders.length !== 1 ? 's' : ''}</span>
-              <button onClick={() => setDateFilter('all')} className="ml-0.5 hover:text-[#0B5E46] transition-colors">
-                <X className="w-3 h-3" />
+              <button onClick={() => setDateFilter('all')} aria-label="Effacer le filtre de date" className="ml-0.5 hover:text-[#0B5E46] transition-colors">
+                <X className="w-3 h-3" aria-hidden="true" />
               </button>
             </span>
           )}
@@ -848,9 +848,10 @@ export default function OrdersClient({
             Recherche&nbsp;: <strong>{debouncedSearch}</strong>
             <button
               onClick={() => { setSearch(''); setDebouncedSearch(''); setSearchResults(null) }}
+              aria-label="Effacer la recherche"
               className="ml-0.5 hover:text-[#0B5E46] transition-colors"
             >
-              <X className="w-3 h-3" />
+              <X className="w-3 h-3" aria-hidden="true" />
             </button>
           </span>
           {searchResults !== null && !isSearching && (

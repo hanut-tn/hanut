@@ -625,6 +625,11 @@ export default function DeliveriesClient({
         </div>
       )}
 
+      {/* Workflow hint: shipped→cancelled */}
+      <p className="text-xs text-[#A8A29E]">
+        Pour annuler une commande expédiée, ouvrez la fiche commande et marquez-la d&apos;abord comme retournée.
+      </p>
+
       {/* Recherche + filtre transporteur */}
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
@@ -1043,8 +1048,8 @@ export default function DeliveriesClient({
           <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-md sm:rounded-xl sm:border sm:border-[#E7E5E4]">
             <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6 flex items-center justify-between">
               <h3 className="font-semibold text-[#1C1917] text-lg">Nouvelle livraison</h3>
-              <button type="button" onClick={() => setShowAdd(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C] transition-colors">
-                <X className="w-4 h-4" />
+              <button type="button" onClick={() => setShowAdd(false)} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C] transition-colors">
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
             <form onSubmit={handleAdd} className="flex min-h-0 flex-1 flex-col">
@@ -1165,8 +1170,8 @@ export default function DeliveriesClient({
           <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
             <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6 flex items-center justify-between">
               <h3 className="font-semibold text-[#1C1917] text-lg">Modifier la livraison</h3>
-              <button type="button" onClick={() => setEditDelivery(null)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C] transition-colors">
-                <X className="w-4 h-4" />
+              <button type="button" onClick={() => setEditDelivery(null)} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C] transition-colors">
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
             <form onSubmit={handleEditSave} className="flex min-h-0 flex-1 flex-col">
@@ -1231,8 +1236,8 @@ export default function DeliveriesClient({
           <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
             <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6 flex items-center justify-between">
               <h3 className="font-semibold text-[#1C1917]">Supprimer cette livraison ?</h3>
-              <button type="button" onClick={() => setConfirmDelete(null)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C] transition-colors">
-                <X className="w-4 h-4" />
+              <button type="button" onClick={() => setConfirmDelete(null)} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C] transition-colors">
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 sm:p-6">
@@ -1267,8 +1272,8 @@ export default function DeliveriesClient({
                   {completeModal.carrier ? ` · ${getCarrierConfig(completeModal.carrier).label}` : ''}
                 </p>
               </div>
-              <button type="button" onClick={() => setCompleteModal(null)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C]">
-                <X className="w-4 h-4" />
+              <button type="button" onClick={() => setCompleteModal(null)} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C]">
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
             <form onSubmit={handleComplete} className="flex min-h-0 flex-1 flex-col">

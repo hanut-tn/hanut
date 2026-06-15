@@ -434,6 +434,9 @@ export default function OrderDetail({
                   >
                     Marquer comme retournée
                   </button>
+                  <p className="text-xs text-[#A8A29E] text-center pt-1">
+                    Pour annuler une commande expédiée, marquez-la d&apos;abord comme retournée.
+                  </p>
                 </div>
               )}
 
@@ -457,11 +460,11 @@ export default function OrderDetail({
               {status === 'returned' && (
                 <div className="space-y-2">
                   <button
-                    onClick={() => handleAction(() => updateStatus(order.id, 'new'))}
+                    onClick={() => handleAction(() => cancelOrder(order.id))}
                     disabled={isPending}
-                    className="w-full px-4 py-2 text-sm font-medium text-[#78716C] border border-[#E7E5E4] rounded-lg hover:bg-[#FAFAF9] disabled:opacity-50 transition-colors"
+                    className="w-full px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
                   >
-                    {isPending ? 'Traitement...' : 'Remettre en nouvelle'}
+                    {isPending ? 'Traitement...' : 'Annuler et remettre en stock'}
                   </button>
                   {canDelete && (
                     <button

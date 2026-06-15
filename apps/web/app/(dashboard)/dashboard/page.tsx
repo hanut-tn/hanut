@@ -11,8 +11,6 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
 import {
   normalizeAnalyticsSummary,
-  summarizeOrders,
-  type AnalyticsOrderRow,
   type AnalyticsSummary,
 } from '@/lib/dashboard-analytics'
 import Link from 'next/link'
@@ -48,7 +46,7 @@ async function loadAnalyticsSummary(
   start: string,
   end: string,
 ): Promise<AnalyticsSummary> {
-  const rpcResult = await supabase.rpc('get_analytics_summary', {
+  const rpcResult = await supabase.rpc('get_dashboard_kpis', {
     p_seller_id: sellerId,
     p_start: start,
     p_end: end,
@@ -58,36 +56,30 @@ async function loadAnalyticsSummary(
   if (!rpcResult.error && rpcSummary) return rpcSummary
 
   const rpcError = rpcResult.error?.message ?? 'La RPC a retourné une réponse vide.'
-  console.error('[dashboard] get_analytics_summary failed, using orders fallback:', rpcError)
-  Sentry.captureException(new Error(`Dashboard analytics RPC failed: ${rpcError}`), {
+  console.error('[dashboard] get_dashboard_kpis failed, using legacy analytics fallback:', rpcError)
+  Sentry.captureException(new Error(`Dashboard KPI RPC failed: ${rpcError}`), {
     extra: { sellerId, start, end },
   })
 
-  const fallbackResult = await supabase
-    .from('orders')
-    .select('status, cod_amount, quantity, unit_cost', { count: 'exact' })
-    .eq('seller_id', sellerId)
-    .is('deleted_at', null)
-    .gte('created_at', start)
-    .lte('created_at', end)
-    .limit(10000)
+  // Compatibilité pendant le déploiement : l'ancienne RPC reste un agrégat
+  // SQL non borné et évite de casser le dashboard avant application de la
+  // migration 20260704.
+  const legacyResult = await supabase.rpc('get_analytics_summary', {
+    p_seller_id: sellerId,
+    p_start: start,
+    p_end: end,
+  })
 
-  if (fallbackResult.error) {
-    throw new Error(`Impossible de charger les KPI du dashboard : ${fallbackResult.error.message}`)
+  if (legacyResult.error) {
+    throw new Error(`Impossible de charger les KPI du dashboard : ${legacyResult.error.message}`)
   }
 
-  const rows = (fallbackResult.data ?? []) as AnalyticsOrderRow[]
-  const summary = summarizeOrders(rows)
-  summary.order_count = fallbackResult.count ?? summary.order_count
-
-  if ((fallbackResult.count ?? 0) > rows.length) {
-    Sentry.captureMessage('Dashboard analytics fallback truncated', {
-      level: 'warning',
-      extra: { sellerId, start, end, count: fallbackResult.count, loaded: rows.length },
-    })
+  const fallback = normalizeAnalyticsSummary(legacyResult.data)
+  if (!fallback) {
+    throw new Error('Impossible de charger les KPI du dashboard : réponse vide.')
   }
 
-  return summary
+  return fallback
 }
 
 // Crée un cache scopé par seller — chaque vendeur a son propre tag.

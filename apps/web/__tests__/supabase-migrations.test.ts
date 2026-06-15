@@ -69,6 +69,12 @@ describe('Supabase migrations', () => {
   const anonymizeCustomerEntityTypeFix = migration('20260703_fix_anonymize_customer_activity_entity_type.sql')
   const codSummaryMigration = migration('20260630_get_cod_summary.sql')
   const deliveryTypeMigration = migration('20260701_add_delivery_type.sql')
+  const dashboardKpisMigration = migration('20260704_add_dashboard_kpis_rpc.sql')
+  const activityLogIndexesMigration = migration('20260705_add_activity_logs_indexes.sql')
+  const carrierConstraintMigration = migration('20260706_fix_carrier_constraint.sql')
+  const customerCursorMigration = migration('20260707_customers_cursor_page.sql')
+  const teamDowngradeMigration = migration('20260708_team_cleanup_on_downgrade.sql')
+  const returnedOrderWorkflowMigration = migration('20260709_fix_returned_order_workflow.sql')
 
   it('base tables migration creates the 5 core tables idempotently before any other migration', () => {
     expect(baseTables).toMatch(/CREATE TABLE IF NOT EXISTS sellers/i)
@@ -93,6 +99,61 @@ describe('Supabase migrations', () => {
     )
     expect(appSchema).toMatch(/CREATE TABLE IF NOT EXISTS waitlist/i)
     expect(appSchema).toMatch(/CREATE TABLE IF NOT EXISTS contact_messages/i)
+  })
+
+  it('adds an authorized, unbounded SQL aggregate for dashboard KPIs', () => {
+    expect(dashboardKpisMigration).toMatch(/CREATE OR REPLACE FUNCTION get_dashboard_kpis/i)
+    expect(dashboardKpisMigration).toMatch(/SECURITY DEFINER/i)
+    expect(dashboardKpisMigration).toMatch(/get_team_role\(p_seller_id\)/i)
+    expect(dashboardKpisMigration).toMatch(/deleted_at IS NULL/i)
+    expect(dashboardKpisMigration).not.toMatch(/\n\s*LIMIT\s+\d+/i)
+    expect(dashboardKpisMigration).toMatch(/GRANT EXECUTE[\s\S]+authenticated, service_role/i)
+  })
+
+  it('indexes activity logs for entity and user lookups', () => {
+    expect(activityLogIndexesMigration).toMatch(
+      /ON activity_logs\(seller_id, entity_type, entity_id\)/i,
+    )
+    expect(activityLogIndexesMigration).toMatch(
+      /ON activity_logs\(seller_id, user_id, created_at DESC\)/i,
+    )
+  })
+
+  it('rejects incoherent carrier data before enforcing the strict constraint', () => {
+    expect(carrierConstraintMigration).toMatch(/RAISE EXCEPTION/i)
+    expect(carrierConstraintMigration).toMatch(/delivery_type = 'carrier'[\s\S]+carrier IS NOT NULL/i)
+    expect(carrierConstraintMigration).toMatch(
+      /delivery_type = 'self'[\s\S]+tracking_number IS NULL[\s\S]+fee IS NULL/i,
+    )
+  })
+
+  it('paginates customers with stable indexed cursors and portable JSON tags', () => {
+    expect(customerCursorMigration).toMatch(/DROP FUNCTION IF EXISTS get_customers_cursor_page/i)
+    expect(customerCursorMigration).toMatch(/CREATE OR REPLACE FUNCTION get_customers_cursor_page/i)
+    expect(customerCursorMigration).toMatch(/tags\s+JSONB/i)
+    expect(customerCursorMigration).toMatch(/to_jsonb\(c\.tags\)/i)
+    expect(customerCursorMigration).toMatch(/get_team_role\(p_seller_id\)/i)
+    expect(customerCursorMigration).toMatch(/idx_customers_cursor_order_count/i)
+    expect(customerCursorMigration).toMatch(/ORDER BY c\.name ASC, c\.id ASC/i)
+    expect(customerCursorMigration).toMatch(/REVOKE ALL ON FUNCTION get_customers_cursor_page/i)
+  })
+
+  it('suspends team access on downgrade and restores it on upgrade', () => {
+    expect(teamDowngradeMigration).toMatch(/status IN \('pending', 'active', 'suspended'\)/i)
+    expect(teamDowngradeMigration).toMatch(/status = 'suspended'/i)
+    expect(teamDowngradeMigration).toMatch(/restore_team_after_upgrade/i)
+    expect(teamDowngradeMigration).toMatch(/OLD\.plan = 'starter'/i)
+    expect(teamDowngradeMigration).not.toMatch(/DELETE FROM team_members/i)
+  })
+
+  it('finalizes returned orders through the stock-aware cancellation RPC', () => {
+    expect(returnedOrderWorkflowMigration).toMatch(/\('returned', 'cancelled'\)/i)
+    expect(returnedOrderWorkflowMigration).toMatch(/USE_CANCEL_ORDER_RPC/i)
+    expect(returnedOrderWorkflowMigration).toMatch(
+      /v_order\.status NOT IN \('pending', 'new', 'confirmed', 'returned'\)/i,
+    )
+    expect(returnedOrderWorkflowMigration).toMatch(/PERFORM adjust_order_stock/i)
+    expect(returnedOrderWorkflowMigration).toMatch(/Commande retournée puis annulée/i)
   })
 
   it('keeps useful constraints and indexes for the added schema', () => {

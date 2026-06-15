@@ -157,6 +157,62 @@ describe('E2E — Cycle de vie complet d\'une commande', () => {
     expect(order?.status).toBe('cancelled')
   })
 
+  it('retour puis annulation restaure le stock exactement une fois', async () => {
+    const orderId = await createOrder('Test Retour', '55000098', 2)
+    await transitionOrder(orderId, 'confirmed')
+
+    const { error: deliveryError } = await adminClient.rpc('create_delivery_from_order', {
+      p_seller_id: sellerId,
+      p_user_id: sellerId,
+      p_order_id: orderId,
+      p_carrier: 'intigo',
+    })
+    expect(deliveryError).toBeNull()
+
+    const { error: returnError } = await adminClient.rpc('update_order_status', {
+      p_seller_id: sellerId,
+      p_order_id: orderId,
+      p_new_status: 'returned',
+      p_changed_by: sellerId,
+    })
+    expect(returnError).toBeNull()
+
+    const { data: stockBeforeCancellation } = await adminClient
+      .from('products')
+      .select('stock')
+      .eq('id', productId)
+      .single()
+    expect(stockBeforeCancellation?.stock).toBe(INITIAL_STOCK - 2)
+
+    const { error: cancelError } = await adminClient.rpc('cancel_order_with_stock', {
+      p_seller_id: sellerId,
+      p_order_id: orderId,
+      p_changed_by: sellerId,
+    })
+    expect(cancelError).toBeNull()
+
+    const { data: stockAfterCancellation } = await adminClient
+      .from('products')
+      .select('stock')
+      .eq('id', productId)
+      .single()
+    expect(stockAfterCancellation?.stock).toBe(INITIAL_STOCK)
+
+    const { error: duplicateCancelError } = await adminClient.rpc('cancel_order_with_stock', {
+      p_seller_id: sellerId,
+      p_order_id: orderId,
+      p_changed_by: sellerId,
+    })
+    expect(duplicateCancelError?.message).toContain('CANNOT_CANCEL_STATUS:cancelled')
+
+    const { data: stockAfterDuplicate } = await adminClient
+      .from('products')
+      .select('stock')
+      .eq('id', productId)
+      .single()
+    expect(stockAfterDuplicate?.stock).toBe(INITIAL_STOCK)
+  })
+
   it('COD collecté marque la livraison et passe la commande en livré', async () => {
     const orderId = await createOrder('Test COD', '55000088')
     await transitionOrder(orderId, 'confirmed')

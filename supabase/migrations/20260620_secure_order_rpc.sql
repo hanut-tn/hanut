@@ -87,6 +87,8 @@ BEGIN
       AND deleted_at IS NULL
       AND created_at >= date_trunc('month', now());
 
+    -- ⚠️ SYNCHRONISER avec PLAN_LIMITS.starter.ordersPerMonth dans apps/web/lib/constants.ts (actuellement 100).
+    -- Si vous changez cette valeur, changer aussi dans constants.ts ET créer une nouvelle migration.
     IF v_monthly_orders >= 100 THEN
       RAISE EXCEPTION 'LIMIT_REACHED';
     END IF;

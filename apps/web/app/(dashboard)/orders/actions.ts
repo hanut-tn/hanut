@@ -99,6 +99,9 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
   if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
   const activeCheck = requireActive(context)
   if (activeCheck) throw new Error(activeCheck.error)
+  if (status === 'cancelled') {
+    throw new Error('Utilisez l’action d’annulation pour restaurer le stock correctement.')
+  }
 
   const supabase = await createServerClient()
 

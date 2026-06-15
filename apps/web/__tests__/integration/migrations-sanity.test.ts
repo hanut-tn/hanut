@@ -146,6 +146,26 @@ describeIf('Schema integrity — fonctions existent', () => {
     expect(error?.message ?? '').not.toMatch(/does not exist|could not find.*function|schema cache/i)
   })
 
+  it('get_dashboard_kpis() is callable', async () => {
+    const { error } = await adminClient.rpc('get_dashboard_kpis', {
+      p_seller_id: '00000000-0000-0000-0000-000000000000',
+      p_start: new Date().toISOString(),
+      p_end: new Date().toISOString(),
+    })
+    expect(error?.code).not.toBe('PGRST202')
+    expect(error?.message ?? '').not.toMatch(/does not exist|could not find.*function|schema cache/i)
+  })
+
+  it('get_customers_cursor_page() is callable', async () => {
+    const { error } = await adminClient.rpc('get_customers_cursor_page', {
+      p_seller_id: '00000000-0000-0000-0000-000000000000',
+      p_sort_by: 'name',
+      p_limit: 20,
+    })
+    expect(error?.code).not.toBe('PGRST202')
+    expect(error?.message ?? '').not.toMatch(/does not exist|could not find.*function|schema cache/i)
+  })
+
   it('order_status_transitions has valid state machine data', async () => {
     const { data, error } = await adminClient
       .from('order_status_transitions')
@@ -161,10 +181,74 @@ describeIf('Schema integrity — fonctions existent', () => {
       'new→confirmed',
       'pending→cancelled',
       'pending→new',
+      'returned→cancelled',
       'shipped→confirmed',
       'shipped→delivered',
       'shipped→returned',
     ].sort())
+  })
+})
+
+describeIf('Team plan downgrade — access is suspended reversibly', () => {
+  let owner: { id: string; email: string }
+  let member: { id: string; email: string }
+
+  beforeAll(async () => {
+    owner = await createTestSeller('downgrade-owner')
+    member = await createTestSeller('downgrade-member')
+
+    const { error } = await adminClient.from('team_members').insert({
+      seller_id: owner.id,
+      user_id: member.id,
+      email: member.email,
+      role: 'admin',
+      status: 'active',
+      joined_at: new Date().toISOString(),
+    })
+    if (error) throw new Error(`Team downgrade setup failed: ${error.message}`)
+  })
+
+  afterAll(async () => {
+    if (owner) await cleanupSeller(owner.id)
+    if (member) await cleanupSeller(member.id)
+  })
+
+  it('suspends every team role on Starter and restores it on Pro', async () => {
+    const downgrade = await adminClient
+      .from('sellers')
+      .update({ plan: 'starter' })
+      .eq('id', owner.id)
+    expect(downgrade.error).toBeNull()
+
+    const { data: suspended } = await adminClient
+      .from('team_members')
+      .select('status, status_before_suspension')
+      .eq('seller_id', owner.id)
+      .eq('user_id', member.id)
+      .single()
+
+    expect(suspended).toEqual({
+      status: 'suspended',
+      status_before_suspension: 'active',
+    })
+
+    const upgrade = await adminClient
+      .from('sellers')
+      .update({ plan: 'pro' })
+      .eq('id', owner.id)
+    expect(upgrade.error).toBeNull()
+
+    const { data: restored } = await adminClient
+      .from('team_members')
+      .select('status, status_before_suspension')
+      .eq('seller_id', owner.id)
+      .eq('user_id', member.id)
+      .single()
+
+    expect(restored).toEqual({
+      status: 'active',
+      status_before_suspension: null,
+    })
   })
 })
 

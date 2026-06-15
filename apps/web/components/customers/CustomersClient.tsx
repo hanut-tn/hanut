@@ -45,6 +45,7 @@ type Customer = {
 type Props = {
   customers: Customer[]
   initialTotal: number
+  initialNextCursor: string | null
   plan?: string
   stats: {
     totalRevenue: number
@@ -142,7 +143,15 @@ function CustomerMobileCard({ customer, crmEnabled }: { customer: Customer; crmE
   )
 }
 
-export default function CustomersClient({ customers, initialTotal, plan, stats, updateCustomer, deleteCustomer }: Props) {
+export default function CustomersClient({
+  customers,
+  initialTotal,
+  initialNextCursor,
+  plan,
+  stats,
+  updateCustomer,
+  deleteCustomer,
+}: Props) {
   const crmEnabled = plan !== 'starter'
   const router = useRouter()
   const [search, setSearch] = useState('')
@@ -152,8 +161,8 @@ export default function CustomersClient({ customers, initialTotal, plan, stats, 
 
   // Pagination
   const [allCustomers, setAllCustomers] = useState<Customer[]>(customers)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [hasMore, setHasMore] = useState(initialTotal > customers.length)
+  const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor)
+  const [hasMore, setHasMore] = useState(Boolean(initialNextCursor))
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const didInitSortRef = useRef(false)
 
@@ -223,15 +232,15 @@ export default function CustomersClient({ customers, initialTotal, plan, stats, 
     async function reloadSortedCustomers() {
       setIsLoadingMore(true)
       try {
-        const params = new URLSearchParams({ page: '1', limit: '20', sortBy })
+        const params = new URLSearchParams({ limit: '20', sortBy })
         const q = search.trim()
         if (q.length >= 2) params.set('search', q)
-        const res = await fetch(`/api/customers/list?${params.toString()}`)
+        const res = await fetch(`/api/customers/cursor?${params.toString()}`)
         const data = await res.json()
         if (!res.ok || cancelled) return
         setAllCustomers(data.customers ?? [])
-        setCurrentPage(1)
         setHasMore(data.hasMore ?? false)
+        setNextCursor(data.nextCursor ?? null)
       } finally {
         if (!cancelled) setIsLoadingMore(false)
       }
@@ -242,17 +251,17 @@ export default function CustomersClient({ customers, initialTotal, plan, stats, 
   }, [sortBy, search])
 
   async function loadMore() {
-    if (isLoadingMore) return
+    if (isLoadingMore || !hasMore || !nextCursor) return
     setIsLoadingMore(true)
     try {
       const params = new URLSearchParams({
-        page: String(currentPage + 1),
         limit: '20',
         sortBy,
+        cursor: nextCursor,
       })
       const q = search.trim()
       if (q.length >= 2) params.set('search', q)
-      const res = await fetch(`/api/customers/list?${params.toString()}`)
+      const res = await fetch(`/api/customers/cursor?${params.toString()}`)
       const data = await res.json()
       if (!res.ok) return
       setAllCustomers(prev => {
@@ -261,7 +270,7 @@ export default function CustomersClient({ customers, initialTotal, plan, stats, 
         return [...prev, ...fresh]
       })
       setHasMore(data.hasMore ?? false)
-      setCurrentPage(p => p + 1)
+      setNextCursor(data.nextCursor ?? null)
     } finally {
       setIsLoadingMore(false)
     }
