@@ -53,6 +53,8 @@ describe('middleware auth boundaries', () => {
       '/api/auth/register',
       '/api/auth/callback',
       '/api/auth/callback?code=abc123',
+      '/api/orders/send-otp',
+      '/api/orders/verify-otp',
     ]
 
     for (const path of publicPaths) {

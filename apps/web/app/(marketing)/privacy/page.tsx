@@ -22,7 +22,7 @@ export default function PrivacyPage() {
           <ul className="list-disc pl-5 mt-2 space-y-1">
             <li>Informations de compte : nom, adresse e-mail, numéro de téléphone</li>
             <li>Données de boutique : nom de la boutique, slug, catalogue produits</li>
-            <li>Données de commandes : informations clients (nom, téléphone, adresse, gouvernorat), produits commandés, montants</li>
+            <li>Données de commandes : informations clients (nom, adresse e-mail, téléphone, adresse, gouvernorat), produits commandés, montants</li>
             <li>Données d&apos;activité : journaux d&apos;actions pour traçabilité interne</li>
           </ul>
         </section>
@@ -31,7 +31,8 @@ export default function PrivacyPage() {
           <h2 className="text-xl font-semibold text-[#1C1917] mb-3">2. Finalité du traitement</h2>
           <p>
             Les données collectées sont utilisées exclusivement pour le fonctionnement du service Hanut :
-            gestion des commandes, suivi des livraisons, statistiques de vente, et support utilisateur.
+            vérification des commandes par e-mail, gestion des commandes, suivi des livraisons,
+            statistiques de vente et support utilisateur.
             Aucune donnée n&apos;est vendue ou cédée à des tiers à des fins commerciales.
           </p>
         </section>
@@ -40,7 +41,8 @@ export default function PrivacyPage() {
           <h2 className="text-xl font-semibold text-[#1C1917] mb-3">3. Hébergement des données</h2>
           <p>
             Les données sont hébergées chez <strong>Supabase</strong> (base de données, stockage) et{' '}
-            <strong>Vercel</strong> (application web), tous deux basés aux États-Unis, dans des infrastructures
+            <strong>Vercel</strong> (application web). <strong>Resend</strong> est utilisé uniquement pour
+            acheminer les e-mails de vérification de commande. Ces prestataires utilisent des infrastructures
             conformes aux standards de sécurité actuels.
           </p>
         </section>
@@ -73,7 +75,7 @@ export default function PrivacyPage() {
           <h2 className="text-xl font-semibold text-[#1C1917] mb-3">6. Droit à l&apos;effacement (anonymisation)</h2>
           <p>
             En tant que vendeur sur Hanut, vous pouvez anonymiser les données personnelles de vos clients
-            (nom, téléphone, adresse) tout en conservant l&apos;historique des commandes.
+            (nom, adresse e-mail, téléphone, adresse) tout en conservant l&apos;historique des commandes.
             Cette fonctionnalité est accessible depuis la fiche client dans le tableau de bord.
           </p>
           <p className="mt-2">

@@ -26,6 +26,8 @@ const PUBLIC_PATHS = [
   '/api/waitlist',
   '/api/csp-report',
   '/api/orders/public',
+  '/api/orders/send-otp',
+  '/api/orders/verify-otp',
   '/api/track',
   '/legal',
   '/privacy',

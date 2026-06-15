@@ -43,6 +43,7 @@ describeIf('anonymize_customer RPC', () => {
         p_quantity: 1,
         p_customer_name: 'Client Secret',
         p_customer_phone: '55123456',
+        p_customer_email: 'client-secret@example.com',
         p_customer_address: '10 rue privée',
         p_customer_city: 'Tunis',
         p_status: 'new',
@@ -141,12 +142,12 @@ describeIf('anonymize_customer RPC', () => {
     ] = await Promise.all([
       adminClient
         .from('customers')
-        .select('name, phone, address, city, notes, tags')
+        .select('name, phone, email, address, city, notes, tags')
         .eq('id', customerId)
         .single(),
       adminClient
         .from('orders')
-        .select('id, customer_id')
+        .select('id, customer_id, customer_email')
         .eq('id', orderId)
         .single(),
       adminClient
@@ -160,12 +161,13 @@ describeIf('anonymize_customer RPC', () => {
     expect(customer).toEqual({
       name: 'Client anonymisé',
       phone: '00000000',
+      email: null,
       address: null,
       city: null,
       notes: null,
       tags: [],
     })
-    expect(order).toEqual({ id: orderId, customer_id: customerId })
+    expect(order).toEqual({ id: orderId, customer_id: customerId, customer_email: null })
     expect(logs).toEqual([
       { description: 'Données client anonymisées', metadata: {} },
     ])

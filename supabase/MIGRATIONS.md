@@ -28,21 +28,24 @@ Redéfinie dans l'ordre chronologique :
 | `20260609_stock_variant_consistency.sql` | 13 | ⚠️ DÉPRÉCIÉ |
 | `20260610_consolidate_order_rpc.sql` | 13 | consolidation |
 | `20260610_add_order_unit_cost.sql` | 13 | ⚠️ DÉPRÉCIÉ (section RPC uniquement) |
-| `20260620_secure_order_rpc.sql` | 13 | ✅ VERSION FINALE |
+| `20260620_secure_order_rpc.sql` | 13 | version sécurisée |
+| `20260711_add_customer_email.sql` | 14 | ✅ VERSION FINALE |
 
-La version finale est dans `20260620_secure_order_rpc.sql` :
-- 13 paramètres dont `p_changed_by`
+La version finale est dans `20260711_add_customer_email.sql` :
+- 14 paramètres, dont `p_changed_by` et `p_customer_email`
 - `SECURITY DEFINER SET search_path = public`
 - Garde `can_write_seller` + bypass service_role
 - Restreint la création aux statuts `pending` / `new`
 - Écrit dans `order_status_history`
+- Enregistre l'email vérifié sur le client et la commande
 
 ### `update_order_status`
 
 | Fichier | Statut |
 |---|---|
 | `20260613_add_update_order_status_rpc.sql` | version initiale |
-| `20260622_add_status_transitions.sql` | ✅ VERSION FINALE — ajoute vérification `order_status_transitions` |
+| `20260622_add_status_transitions.sql` | ajoute vérification `order_status_transitions` |
+| `20260709_fix_returned_order_workflow.sql` | ✅ VERSION FINALE — retour puis annulation avec stock |
 
 ### `create_delivery_from_order` / `mark_delivery_cod_collected`
 
@@ -63,7 +66,8 @@ La version finale est dans `20260620_secure_order_rpc.sql` :
 |---|---|
 | `set_seller_jwt_claims` (Auth Hook) | `20260616_add_jwt_claims_hook.sql` |
 | `adjust_product_stock` | `20260628_fix_adjust_stock_delta.sql` |
-| `cancel_order_with_stock` | `20260619_extend_cancel_order.sql` |
+| `cancel_order_with_stock` | `20260709_fix_returned_order_workflow.sql` |
+| `create_public_order_with_otp` | `20260712_create_public_order_with_otp.sql` |
 | `soft_delete_order_with_stock` | `20260612_allow_delete_cancelled_order.sql` |
 | `get_analytics_summary` | `20260612_add_analytics_rpc.sql` |
 | `get_analytics_export` | `20260625_add_analytics_export_rpc.sql` |

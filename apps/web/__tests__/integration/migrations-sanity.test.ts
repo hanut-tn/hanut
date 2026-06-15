@@ -107,7 +107,7 @@ describeIf('Schema integrity — tables existent', () => {
     'stock_movements', 'order_status_history',
     'order_status_transitions', 'cod_reversals',
     'rate_limits', 'waitlist', 'contact_messages',
-    'upgrade_requests', 'restock_orders',
+    'upgrade_requests', 'restock_orders', 'order_otps',
   ]
 
   requiredTables.forEach(table => {
@@ -161,6 +161,20 @@ describeIf('Schema integrity — fonctions existent', () => {
       p_seller_id: '00000000-0000-0000-0000-000000000000',
       p_sort_by: 'name',
       p_limit: 20,
+    })
+    expect(error?.code).not.toBe('PGRST202')
+    expect(error?.message ?? '').not.toMatch(/does not exist|could not find.*function|schema cache/i)
+  })
+
+  it('create_public_order_with_otp() is callable', async () => {
+    const { error } = await adminClient.rpc('create_public_order_with_otp', {
+      p_slug: 'missing-shop',
+      p_email: 'missing@example.com',
+      p_code_hash: 'hash',
+      p_product_id: '00000000-0000-0000-0000-000000000000',
+      p_quantity: 1,
+      p_customer_name: 'Missing',
+      p_customer_phone: '22123456',
     })
     expect(error?.code).not.toBe('PGRST202')
     expect(error?.message ?? '').not.toMatch(/does not exist|could not find.*function|schema cache/i)

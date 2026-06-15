@@ -3,6 +3,7 @@ export interface Customer {
   seller_id: string
   name: string
   phone: string
+  email?: string | null
   address?: string
   city?: string
   order_count: number

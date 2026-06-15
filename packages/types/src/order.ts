@@ -11,6 +11,7 @@ export interface Order {
   unit_cost: number
   status: OrderStatus
   notes?: string | null
+  customer_email?: string | null
   tracking_token?: string | null
   deleted_at?: string | null
   archived_by?: string | null
@@ -27,6 +28,7 @@ export interface CreateOrderInput {
   customer_phone?: string
   customer_address?: string
   customer_city?: string
+  customer_email?: string
   product_id: string
   variant?: string
   quantity: number

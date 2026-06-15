@@ -75,6 +75,10 @@ describe('Supabase migrations', () => {
   const customerCursorMigration = migration('20260707_customers_cursor_page.sql')
   const teamDowngradeMigration = migration('20260708_team_cleanup_on_downgrade.sql')
   const returnedOrderWorkflowMigration = migration('20260709_fix_returned_order_workflow.sql')
+  const orderOtpMigration = migration('20260710_add_order_otp.sql')
+  const customerEmailMigration = migration('20260711_add_customer_email.sql')
+  const publicOrderOtpMigration = migration('20260712_create_public_order_with_otp.sql')
+  const anonymizeCustomerEmailMigration = migration('20260713_anonymize_customer_email.sql')
 
   it('base tables migration creates the 5 core tables idempotently before any other migration', () => {
     expect(baseTables).toMatch(/CREATE TABLE IF NOT EXISTS sellers/i)
@@ -154,6 +158,47 @@ describe('Supabase migrations', () => {
     )
     expect(returnedOrderWorkflowMigration).toMatch(/PERFORM adjust_order_stock/i)
     expect(returnedOrderWorkflowMigration).toMatch(/Commande retournée puis annulée/i)
+  })
+
+  it('stores order OTPs privately as bounded hashes', () => {
+    expect(orderOtpMigration).toMatch(/CREATE TABLE IF NOT EXISTS order_otps/i)
+    expect(orderOtpMigration).toMatch(/seller_id\s+UUID\s+NOT NULL REFERENCES sellers\(id\) ON DELETE CASCADE/i)
+    expect(orderOtpMigration).toMatch(/code_hash\s+TEXT\s+NOT NULL/i)
+    expect(orderOtpMigration).toMatch(/attempts\s+INTEGER\s+NOT NULL DEFAULT 0/i)
+    expect(orderOtpMigration).toMatch(/CHECK \(attempts BETWEEN 0 AND 5\)/i)
+    expect(orderOtpMigration).toMatch(/CREATE UNIQUE INDEX IF NOT EXISTS idx_order_otps_seller_email_unique/i)
+    expect(orderOtpMigration).toMatch(/ALTER TABLE order_otps ENABLE ROW LEVEL SECURITY/i)
+    expect(orderOtpMigration).toMatch(/REVOKE ALL ON TABLE order_otps FROM PUBLIC, anon, authenticated/i)
+    expect(orderOtpMigration).toMatch(/GRANT ALL ON TABLE order_otps TO service_role/i)
+  })
+
+  it('adds customer email to the final order creation RPC signature', () => {
+    expect(customerEmailMigration).toMatch(/ADD COLUMN IF NOT EXISTS email TEXT/i)
+    expect(customerEmailMigration).toMatch(/ADD COLUMN IF NOT EXISTS customer_email TEXT/i)
+    expect(customerEmailMigration).toMatch(/p_customer_email\s+TEXT\s+DEFAULT NULL/i)
+    expect(customerEmailMigration).toMatch(/COALESCE\(v_customer_email, email\)/i)
+    expect(customerEmailMigration).toMatch(/customer_email/i)
+    expect(customerEmailMigration).toMatch(/NOTIFY pgrst, 'reload schema'/i)
+  })
+
+  it('consumes OTP and creates the public order in one guarded transaction', () => {
+    expect(publicOrderOtpMigration).toMatch(/CREATE OR REPLACE FUNCTION create_public_order_with_otp/i)
+    expect(publicOrderOtpMigration).toMatch(/SECURITY DEFINER/i)
+    expect(publicOrderOtpMigration).toMatch(/IF NOT is_service_role\(\)/i)
+    expect(publicOrderOtpMigration).toMatch(/FOR UPDATE/i)
+    expect(publicOrderOtpMigration).toMatch(/attempts = LEAST\(attempts \+ 1, 5\)/i)
+    expect(publicOrderOtpMigration).toMatch(/v_order_id := create_order_with_stock/i)
+    expect(publicOrderOtpMigration).toMatch(/SET verified = true/i)
+    expect(publicOrderOtpMigration).toMatch(/TO service_role/i)
+    expect(publicOrderOtpMigration).not.toMatch(/TO authenticated, service_role/i)
+  })
+
+  it('removes customer email during anonymization', () => {
+    expect(anonymizeCustomerEmailMigration).toMatch(/CREATE OR REPLACE FUNCTION anonymize_customer/i)
+    expect(anonymizeCustomerEmailMigration).toMatch(/email\s+=\s+NULL/i)
+    expect(anonymizeCustomerEmailMigration).toMatch(/UPDATE orders[\s\S]+customer_email = NULL/i)
+    expect(anonymizeCustomerEmailMigration).toMatch(/entity_id::TEXT\s*=\s*p_customer_id::TEXT/i)
+    expect(anonymizeCustomerEmailMigration).toMatch(/NOTIFY pgrst, 'reload schema'/i)
   })
 
   it('keeps useful constraints and indexes for the added schema', () => {

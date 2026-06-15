@@ -14,18 +14,24 @@ type Props = {
   products: Product[]
 }
 
-type Submitted = { orderId: string; fullId: string; trackingToken: string | null }
+type Submitted = { orderId: string; trackingToken: string }
 type StockErrorScope = 'product' | 'variant'
 
 function getVariantKey(productId: string, label: string) {
   return `${productId}::${label}`
 }
 
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+}
+
 export default function OrderForm({ sellerSlug, sellerName, products: initialProducts }: Props) {
   const formTopRef = useRef<HTMLFormElement>(null)
 
+  // ── Form state ────────────────────────────────────────────────────────────────
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [city, setCity] = useState('')
   const [address, setAddress] = useState('')
   const [productId, setProductId] = useState('')
@@ -34,14 +40,27 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [phoneError, setPhoneError] = useState<string | null>(null)
   const [stockError, setStockError] = useState<string | null>(null)
   const [stockErrorScope, setStockErrorScope] = useState<StockErrorScope>('product')
   const [exhaustedIds, setExhaustedIds] = useState<Set<string>>(new Set())
   const [exhaustedVariantKeys, setExhaustedVariantKeys] = useState<Set<string>>(new Set())
   const [submitted, setSubmitted] = useState<Submitted | null>(null)
-  const [phoneError, setPhoneError] = useState<string | null>(null)
   const [turnstileToken, setTurnstileToken] = useState('')
   const [turnstileResetKey, setTurnstileResetKey] = useState(0)
+
+  // ── OTP state ─────────────────────────────────────────────────────────────────
+  const [step, setStep] = useState<'form' | 'otp'>('form')
+  const [otpDigits, setOtpDigits] = useState(['', '', '', ''])
+  const [otpError, setOtpError] = useState<string | null>(null)
+  const [resendCooldown, setResendCooldown] = useState(0)
+  const otpRef0 = useRef<HTMLInputElement>(null)
+  const otpRef1 = useRef<HTMLInputElement>(null)
+  const otpRef2 = useRef<HTMLInputElement>(null)
+  const otpRef3 = useRef<HTMLInputElement>(null)
+  const otpRefs = [otpRef0, otpRef1, otpRef2, otpRef3]
+  const otpSubmittingRef = useRef(false)
 
   const visibleProducts = initialProducts.filter(p => {
     if (exhaustedIds.has(p.id)) return false
@@ -81,6 +100,13 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
     }
   }, [selectedVariant])
 
+  // Resend OTP countdown
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+    const t = setTimeout(() => setResendCooldown(c => c - 1), 1000)
+    return () => clearTimeout(t)
+  }, [resendCooldown])
+
   function handlePhoneChange(value: string) {
     const cleaned = formatTunisianPhone(value)
     setPhone(cleaned)
@@ -91,13 +117,19 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
     }
   }
 
+  // ── Step 1 : envoyer l'OTP ────────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    setEmailError(null)
     setStockError(null)
 
     if (!isValidTunisianPhone(phone)) {
       setError('Numéro de téléphone invalide. Entrez 8 chiffres (ex: 22 123 456).')
+      return
+    }
+    if (!isValidEmail(email)) {
+      setEmailError('Adresse email invalide.')
       return
     }
     if (!productId) {
@@ -117,19 +149,66 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
       return
     }
 
-    const phoneDigits = phone.replace(/\D/g, '')
-
     setLoading(true)
     try {
-      const res = await fetch('/api/orders/public', {
+      const res = await fetch('/api/orders/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           slug: sellerSlug,
+          email: email.trim().toLowerCase(),
+          turnstile_token: turnstileToken || undefined,
+        }),
+      })
+      const data = await res.json()
+      setTurnstileToken('')
+      setTurnstileResetKey(k => k + 1)
+      if (!res.ok) {
+        setError(data.error ?? "Erreur lors de l'envoi du code. Réessayez.")
+        return
+      }
+      setOtpDigits(['', '', '', ''])
+      setOtpError(null)
+      setStep('otp')
+      setResendCooldown(60)
+      setTimeout(() => otpRef0.current?.focus(), 100)
+    } catch {
+      setTurnstileToken('')
+      setTurnstileResetKey(k => k + 1)
+      setError('Erreur réseau. Vérifiez votre connexion et réessayez.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // ── Step 2 : vérifier l'OTP et créer la commande ─────────────────────────────
+  async function handleOtpSubmit(code: string) {
+    if (loading || otpSubmittingRef.current) return
+    if (code.length !== 4) {
+      setOtpError('Entrez les 4 chiffres du code.')
+      return
+    }
+    if (isTurnstileEnabled() && !turnstileToken) {
+      setOtpError('Terminez la vérification anti-spam avant de valider.')
+      return
+    }
+
+    otpSubmittingRef.current = true
+    setOtpError(null)
+    setLoading(true)
+    try {
+      const phoneDigits = phone.replace(/\D/g, '')
+      const res = await fetch('/api/orders/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: sellerSlug,
+          email: email.trim().toLowerCase(),
+          code,
           customer_name: name.trim(),
           customer_phone: phoneDigits,
-          customer_address: address.trim(),
-          customer_city: city,
+          customer_address: address.trim() || undefined,
+          customer_city: city || undefined,
           product_id: productId,
           variant: variant || undefined,
           quantity,
@@ -137,11 +216,13 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
           turnstile_token: turnstileToken || undefined,
         }),
       })
-
       const data = await res.json()
+      setTurnstileToken('')
+      setTurnstileResetKey(k => k + 1)
       if (!res.ok) {
-        const msg: string = data.error ?? 'Une erreur est survenue. Réessayez.'
-        const isStockError = msg.toLowerCase().includes('insuffisant') || msg.toLowerCase().includes('stock')
+        const msg: string = data.error ?? 'Code invalide. Réessayez.'
+        const isStockError =
+          msg.toLowerCase().includes('insuffisant') || msg.toLowerCase().includes('stock')
         if (isStockError) {
           setStockError(msg)
           if (hasVariants && variant && selectedProduct) {
@@ -153,35 +234,113 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
             })
             setStockErrorScope(hasOtherAvailableVariant ? 'variant' : 'product')
             setExhaustedVariantKeys(prev => new Set([...prev, exhaustedKey]))
-            if (!hasOtherAvailableVariant) {
-              setExhaustedIds(prev => new Set([...prev, productId]))
-            }
+            if (!hasOtherAvailableVariant) setExhaustedIds(prev => new Set([...prev, productId]))
             setVariant('')
             setQuantity(1)
           } else {
             setStockErrorScope('product')
             setExhaustedIds(prev => new Set([...prev, productId]))
           }
+          setStep('form')
         } else {
-          setError(msg)
+          setOtpError(msg)
+          setOtpDigits(['', '', '', ''])
+          setTimeout(() => otpRef0.current?.focus(), 100)
         }
-        setTurnstileToken('')
-        setTurnstileResetKey(key => key + 1)
         return
       }
-      setSubmitted({ orderId: (data.order_id as string).slice(0, 8).toUpperCase(), fullId: data.order_id as string, trackingToken: (data.tracking_token as string | null) ?? null })
+      setSubmitted({
+        orderId: data.order_id as string,
+        trackingToken: data.tracking_token as string,
+      })
     } catch {
-      setError('Erreur réseau. Vérifiez votre connexion et réessayez.')
       setTurnstileToken('')
-      setTurnstileResetKey(key => key + 1)
+      setTurnstileResetKey(k => k + 1)
+      setOtpError('Erreur réseau. Vérifiez votre connexion et réessayez.')
+      setOtpDigits(['', '', '', ''])
+    } finally {
+      otpSubmittingRef.current = false
+      setLoading(false)
+    }
+  }
+
+  async function handleResendOtp() {
+    if (loading) return
+    if (isTurnstileEnabled() && !turnstileToken) {
+      setOtpError('Terminez la vérification anti-spam avant de renvoyer le code.')
+      return
+    }
+    setLoading(true)
+    try {
+      const res = await fetch('/api/orders/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: sellerSlug,
+          email: email.trim().toLowerCase(),
+          turnstile_token: turnstileToken || undefined,
+        }),
+      })
+      setTurnstileToken('')
+      setTurnstileResetKey(k => k + 1)
+      if (res.ok) {
+        setOtpDigits(['', '', '', ''])
+        setOtpError(null)
+        setResendCooldown(60)
+        setTimeout(() => otpRef0.current?.focus(), 100)
+      } else {
+        const data = await res.json()
+        setOtpError(data.error ?? "Erreur lors de l'envoi. Réessayez.")
+      }
+    } catch {
+      setTurnstileToken('')
+      setTurnstileResetKey(k => k + 1)
+      setOtpError('Erreur réseau. Réessayez.')
     } finally {
       setLoading(false)
     }
   }
 
-  // ── Confirmation screen ──────────────────────────────────────────────────────
+  function handleOtpDigit(index: number, value: string) {
+    const digit = value.replace(/\D/g, '').slice(-1)
+    const newDigits = [...otpDigits]
+    newDigits[index] = digit
+    setOtpDigits(newDigits)
+    if (digit) {
+      if (index < 3) {
+        otpRefs[index + 1].current?.focus()
+      } else if (newDigits.every(d => d !== '')) {
+        handleOtpSubmit(newDigits.join(''))
+      }
+    }
+  }
+
+  function handleOtpKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
+      const newDigits = [...otpDigits]
+      newDigits[index - 1] = ''
+      setOtpDigits(newDigits)
+      otpRefs[index - 1].current?.focus()
+    }
+  }
+
+  function handleOtpPaste(e: React.ClipboardEvent) {
+    e.preventDefault()
+    const digits = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4)
+    if (digits.length === 4) {
+      setOtpDigits(digits.split(''))
+      handleOtpSubmit(digits)
+    } else if (digits.length > 0) {
+      const newDigits = ['', '', '', '']
+      for (let i = 0; i < digits.length; i++) newDigits[i] = digits[i]
+      setOtpDigits(newDigits)
+      otpRefs[Math.min(digits.length, 3)].current?.focus()
+    }
+  }
+
+  // ── Confirmation screen ───────────────────────────────────────────────────────
   if (submitted) {
-    const trackUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/track/${submitted.trackingToken ?? submitted.fullId}`
+    const trackUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/track/${submitted.trackingToken}`
 
     return (
       <div className="flex flex-col items-center text-center py-10 space-y-5">
@@ -227,9 +386,10 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         <button
           onClick={() => {
             setSubmitted(null)
-            setName(''); setPhone(''); setCity(''); setAddress('')
+            setName(''); setPhone(''); setEmail(''); setCity(''); setAddress('')
             setProductId(''); setVariant(''); setQuantity(1); setNotes('')
-            setTurnstileToken(''); setTurnstileResetKey(key => key + 1)
+            setTurnstileToken(''); setTurnstileResetKey(k => k + 1)
+            setStep('form')
           }}
           className="min-h-[44px] touch-manipulation text-sm font-medium text-[#16A34A] hover:underline"
         >
@@ -239,7 +399,90 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
     )
   }
 
-  // ── Order form ───────────────────────────────────────────────────────────────
+  // ── OTP screen ────────────────────────────────────────────────────────────────
+  if (step === 'otp') {
+    return (
+      <div className="space-y-4">
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-[#1C1917]">Vérification par email</h2>
+          <p className="text-sm text-gray-500 mt-1.5">
+            Un code à 4 chiffres a été envoyé à
+          </p>
+          <p className="text-sm font-semibold text-[#1C1917] mt-0.5 break-all">{email}</p>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm space-y-5">
+          <div className="flex gap-3 justify-center" onPaste={handleOtpPaste}>
+            {otpRefs.map((ref, i) => (
+              <input
+                key={i}
+                ref={ref}
+                type="text"
+                inputMode="numeric"
+                pattern="\d*"
+                maxLength={1}
+                value={otpDigits[i]}
+                onChange={e => handleOtpDigit(i, e.target.value)}
+                onKeyDown={e => handleOtpKeyDown(i, e)}
+                autoComplete={i === 0 ? 'one-time-code' : 'off'}
+                className="w-14 h-14 text-center text-2xl font-bold border-2 border-[#E7E5E4] rounded-xl outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition caret-transparent"
+              />
+            ))}
+          </div>
+
+          {otpError && (
+            <p className="text-sm text-center text-red-600">{otpError}</p>
+          )}
+
+          {isTurnstileEnabled() && (
+            <div className="flex justify-center">
+              <TurnstileWidget onVerify={setTurnstileToken} resetKey={turnstileResetKey} />
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => handleOtpSubmit(otpDigits.join(''))}
+            disabled={loading || otpDigits.some(d => !d) || (isTurnstileEnabled() && !turnstileToken)}
+            className="h-12 w-full touch-manipulation bg-[#16A34A] hover:bg-green-700 disabled:opacity-60 text-white font-bold rounded-2xl text-base transition-colors shadow-lg shadow-green-200"
+          >
+            {loading ? 'Vérification…' : 'Valider le code'}
+          </button>
+
+          <div className="text-center">
+            {resendCooldown > 0 ? (
+              <p className="text-sm text-gray-400">Renvoyer dans {resendCooldown}s</p>
+            ) : (
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={loading}
+                className="text-sm text-[#16A34A] font-medium hover:underline disabled:opacity-60"
+              >
+                Renvoyer le code
+              </button>
+            )}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setStep('form')
+            setOtpDigits(['', '', '', ''])
+            setOtpError(null)
+            setTurnstileToken('')
+            setTurnstileResetKey(k => k + 1)
+          }}
+          className="w-full text-sm text-gray-400 hover:text-gray-600 text-center py-2 touch-manipulation"
+        >
+          ← Modifier mes informations
+        </button>
+      </div>
+    )
+  }
+
+  // ── Order form ────────────────────────────────────────────────────────────────
   return (
     <form ref={formTopRef} onSubmit={handleSubmit} className="space-y-4">
       <div>
@@ -288,6 +531,24 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
             />
           </div>
           {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Adresse email *</label>
+          <input
+            className={`w-full border rounded-xl px-4 py-3 text-base outline-none focus:ring-2 transition ${emailError ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-gray-200 focus:border-[#16A34A] focus:ring-green-100'}`}
+            type="email"
+            value={email}
+            onChange={e => { setEmail(e.target.value); setEmailError(null) }}
+            placeholder="vous@exemple.com"
+            required
+            autoComplete="email"
+            inputMode="email"
+          />
+          {emailError
+            ? <p className="text-xs text-red-600 mt-1">{emailError}</p>
+            : <p className="text-xs text-gray-400 mt-1">Un code de vérification vous sera envoyé par email.</p>
+          }
         </div>
 
         <div>
@@ -367,15 +628,14 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
           )}
         </div>
 
-        {/* Variantes — pills */}
-        {selectedProduct && hasVariants && (
+        {hasVariants && selectedProduct && (
           <div>
-            <p className="text-sm font-medium text-[#1C1917] mb-2">Choisissez votre variante</p>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Variante *</label>
             <div className="flex flex-wrap gap-2">
               {selectedProduct.variants.map((v, i) => {
                 const label = getVariantLabel(v, i)
+                const isOut = v.qty === 0 || exhaustedVariantKeys.has(getVariantKey(productId, label))
                 const isSelected = variant === label
-                const isOut = v.qty === 0 || exhaustedVariantKeys.has(getVariantKey(selectedProduct.id, label))
                 return (
                   <button
                     key={i}
@@ -467,30 +727,30 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
 
       {/* Erreur stock */}
       {stockError && (
-	        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-	          <PackageX className="text-red-500 w-6 h-6 shrink-0 mt-0.5" />
-	          <div className="flex-1">
-	            <p className="text-sm font-semibold text-red-700">
-	              {stockErrorScope === 'variant' ? 'Cette variante n&apos;est plus disponible' : 'Ce produit n&apos;est plus disponible'}
-	            </p>
-	            <p className="text-xs text-red-600 mt-1">
-	              {stockErrorScope === 'variant'
-	                ? 'Le stock de cette variante vient d’être épuisé. Choisissez une autre variante ou un autre produit.'
-	                : 'Le stock de ce produit vient d’être épuisé. Choisissez un autre produit ou revenez plus tard.'}
-	            </p>
-	            <button
-	              type="button"
-	              onClick={() => {
-	                if (stockErrorScope === 'product') setProductId('')
-	                setVariant('')
-	                setQuantity(1)
-	                setStockError(null)
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+          <PackageX className="text-red-500 w-6 h-6 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-700">
+              {stockErrorScope === 'variant' ? 'Cette variante n&apos;est plus disponible' : 'Ce produit n&apos;est plus disponible'}
+            </p>
+            <p className="text-xs text-red-600 mt-1">
+              {stockErrorScope === 'variant'
+                ? "Le stock de cette variante vient d'être épuisé. Choisissez une autre variante ou un autre produit."
+                : "Le stock de ce produit vient d'être épuisé. Choisissez un autre produit ou revenez plus tard."}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                if (stockErrorScope === 'product') setProductId('')
+                setVariant('')
+                setQuantity(1)
+                setStockError(null)
                 formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-	              }}
-	              className="mt-2 min-h-[44px] touch-manipulation text-xs font-semibold text-red-700 underline underline-offset-2"
-	            >
-	              {stockErrorScope === 'variant' ? 'Choisir une autre variante' : 'Choisir un autre produit'}
-	            </button>
+              }}
+              className="mt-2 min-h-[44px] touch-manipulation text-xs font-semibold text-red-700 underline underline-offset-2"
+            >
+              {stockErrorScope === 'variant' ? 'Choisir une autre variante' : 'Choisir un autre produit'}
+            </button>
           </div>
         </div>
       )}
@@ -506,11 +766,11 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         disabled={loading || (isTurnstileEnabled() && !turnstileToken)}
         className="h-12 w-full touch-manipulation bg-[#16A34A] hover:bg-green-700 disabled:opacity-60 text-white font-bold rounded-2xl text-base transition-colors shadow-lg shadow-green-200"
       >
-        {loading ? 'Envoi en cours…' : 'Passer la commande'}
+        {loading ? 'Envoi du code…' : 'Commander'}
       </button>
 
       <p className="text-xs text-[#78716C] text-center mt-2">
-        En passant cette commande, vous acceptez que vos données personnelles (nom, téléphone, adresse)
+        En passant cette commande, vous acceptez que vos données personnelles (nom, adresse e-mail, téléphone, adresse)
         soient transmises au vendeur pour le traitement de votre commande COD. Conformément à la loi
         organique n° 2004-63, vous disposez d&apos;un droit d&apos;accès et de rectification.{' '}
         <a href="/privacy" className="underline hover:text-[#1C1917]">Politique de confidentialité</a>.
