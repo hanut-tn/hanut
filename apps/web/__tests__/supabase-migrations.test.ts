@@ -79,6 +79,7 @@ describe('Supabase migrations', () => {
   const customerEmailMigration = migration('20260711_add_customer_email.sql')
   const publicOrderOtpMigration = migration('20260712_create_public_order_with_otp.sql')
   const anonymizeCustomerEmailMigration = migration('20260713_anonymize_customer_email.sql')
+  const cancelledStatusRepairMigration = migration('20260714_repair_cancelled_order_status.sql')
 
   it('base tables migration creates the 5 core tables idempotently before any other migration', () => {
     expect(baseTables).toMatch(/CREATE TABLE IF NOT EXISTS sellers/i)
@@ -199,6 +200,18 @@ describe('Supabase migrations', () => {
     expect(anonymizeCustomerEmailMigration).toMatch(/UPDATE orders[\s\S]+customer_email = NULL/i)
     expect(anonymizeCustomerEmailMigration).toMatch(/entity_id::TEXT\s*=\s*p_customer_id::TEXT/i)
     expect(anonymizeCustomerEmailMigration).toMatch(/NOTIFY pgrst, 'reload schema'/i)
+  })
+
+  it('repairs legacy order status constraints that reject cancelled orders', () => {
+    expect(cancelledStatusRepairMigration).toMatch(/DROP CONSTRAINT IF EXISTS orders_status_check/i)
+    expect(cancelledStatusRepairMigration).toMatch(/ADD CONSTRAINT orders_status_check/i)
+    expect(cancelledStatusRepairMigration).toMatch(/'cancelled'/i)
+    expect(cancelledStatusRepairMigration).toMatch(/INSERT INTO order_status_transitions/i)
+    expect(cancelledStatusRepairMigration).toMatch(/\('pending', 'cancelled'\)/i)
+    expect(cancelledStatusRepairMigration).toMatch(/\('new', 'cancelled'\)/i)
+    expect(cancelledStatusRepairMigration).toMatch(/\('confirmed', 'cancelled'\)/i)
+    expect(cancelledStatusRepairMigration).toMatch(/\('returned', 'cancelled'\)/i)
+    expect(cancelledStatusRepairMigration).toMatch(/NOTIFY pgrst, 'reload schema'/i)
   })
 
   it('keeps useful constraints and indexes for the added schema', () => {
