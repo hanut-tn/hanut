@@ -41,6 +41,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
   const [productId, setProductId] = useState('')
   const [variant, setVariant] = useState('')
   const [quantity, setQuantity] = useState(1)
+  const [variantQtys, setVariantQtys] = useState<Record<string, number>>({})
   const [deliveryNotes, setDeliveryNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -88,10 +89,13 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
     ? selectedVariant.qty
     : (selectedProduct?.stock ?? 99)
 
+  const multiVariantQtyTotal = Object.values(variantQtys).reduce((s, q) => s + (q || 0), 0)
+
   // Reset variant + quantity when product changes
   useEffect(() => {
     setVariant('')
     setQuantity(1)
+    setVariantQtys({})
     setStockError(null)
   }, [productId])
 
@@ -119,6 +123,21 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
     } else {
       setPhoneError(null)
     }
+  }
+
+  function buildItems() {
+    if (!selectedProduct) return null
+    if (hasVariants && selectedProduct.variants.length > 1) {
+      const items = selectedProduct.variants
+        .map((v, i) => {
+          const label = getVariantLabel(v, i)
+          const qty = variantQtys[label] ?? 0
+          return qty > 0 ? { product_id: selectedProduct.id, variant: label, quantity: qty } : null
+        })
+        .filter(Boolean)
+      return items.length > 0 ? items : null
+    }
+    return null
   }
 
   // ── Step 1 : envoyer l'OTP ────────────────────────────────────────────────────
@@ -164,13 +183,20 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
       setError('Sélectionnez un produit.')
       return
     }
-    if (hasVariants && !variant) {
-      setError('Veuillez choisir une variante.')
-      return
-    }
-    if (selectedProduct && quantity > maxQty) {
-      setError(`Stock disponible : ${maxQty} unité(s).`)
-      return
+    if (hasVariants && selectedProduct && selectedProduct.variants.length > 1) {
+      if (multiVariantQtyTotal === 0) {
+        setError('Sélectionnez au moins une variante avec une quantité supérieure à 0.')
+        return
+      }
+    } else {
+      if (hasVariants && !variant) {
+        setError('Veuillez choisir une variante.')
+        return
+      }
+      if (selectedProduct && quantity > maxQty) {
+        setError(`Stock disponible : ${maxQty} unité(s).`)
+        return
+      }
     }
     if (isTurnstileEnabled() && !turnstileToken) {
       setError('Vérification anti-spam échouée. Réessayez.')
@@ -226,27 +252,33 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
     setLoading(true)
     try {
       const phoneDigits = phone.replace(/\D/g, '')
+      const multiItems = buildItems()
+      const body: Record<string, unknown> = {
+        slug: sellerSlug,
+        email: email.trim().toLowerCase(),
+        code,
+        customer_name: name.trim(),
+        customer_phone: phoneDigits,
+        customer_governorate: governorate,
+        customer_city: customerCity.trim(),
+        customer_delegation: delegation.trim() || undefined,
+        customer_address: address.trim(),
+        customer_landmark: landmark.trim(),
+        customer_postal_code: postalCode.trim() || undefined,
+        delivery_notes: deliveryNotes.trim() || undefined,
+        turnstile_token: turnstileToken || undefined,
+      }
+      if (multiItems) {
+        body.items = multiItems
+      } else {
+        body.product_id = productId
+        body.variant = variant || undefined
+        body.quantity = quantity
+      }
       const res = await fetch('/api/orders/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          slug: sellerSlug,
-          email: email.trim().toLowerCase(),
-          code,
-          customer_name: name.trim(),
-          customer_phone: phoneDigits,
-          customer_governorate: governorate,
-          customer_city: customerCity.trim(),
-          customer_delegation: delegation.trim() || undefined,
-          customer_address: address.trim(),
-          customer_landmark: landmark.trim(),
-          customer_postal_code: postalCode.trim() || undefined,
-          delivery_notes: deliveryNotes.trim() || undefined,
-          product_id: productId,
-          variant: variant || undefined,
-          quantity,
-          turnstile_token: turnstileToken || undefined,
-        }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       setTurnstileToken('')
@@ -421,7 +453,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
             setName(''); setPhone(''); setEmail('')
             setGovernorate(''); setCustomerCity(''); setDelegation('')
             setAddress(''); setLandmark(''); setPostalCode('')
-            setProductId(''); setVariant(''); setQuantity(1); setDeliveryNotes('')
+            setProductId(''); setVariant(''); setQuantity(1); setVariantQtys({}); setDeliveryNotes('')
             setTurnstileToken(''); setTurnstileResetKey(k => k + 1)
             setStep('form')
           }}
@@ -517,6 +549,8 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
   }
 
   // ── Order form ────────────────────────────────────────────────────────────────
+  const isMultiVariant = hasVariants && selectedProduct && selectedProduct.variants.length > 1
+
   return (
     <form ref={formTopRef} onSubmit={handleSubmit} className="space-y-4">
       <div>
@@ -705,15 +739,84 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
               <div>
                 <p className="text-sm font-semibold text-[#1C1917]">{selectedProduct.name}</p>
                 <p className="text-sm font-bold text-[#16A34A]">{selectedProduct.price} DT</p>
-                <p className="text-xs text-[#78716C]">
-                  Stock disponible : {selectedProduct.stock} unité{selectedProduct.stock !== 1 ? 's' : ''}
-                </p>
+                {!hasVariants && (
+                  <p className="text-xs text-[#78716C]">
+                    Stock disponible : {selectedProduct.stock} unité{selectedProduct.stock !== 1 ? 's' : ''}
+                  </p>
+                )}
               </div>
             </div>
           )}
         </div>
 
-        {hasVariants && selectedProduct && (
+        {/* Multi-variant grid */}
+        {isMultiVariant && selectedProduct && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Variantes et quantités *
+            </label>
+            <div className="space-y-2">
+              {selectedProduct.variants.map((v, i) => {
+                const label = getVariantLabel(v, i)
+                const isOut = v.qty === 0 || exhaustedVariantKeys.has(getVariantKey(productId, label))
+                const currentQty = variantQtys[label] ?? 0
+                return (
+                  <div
+                    key={i}
+                    className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
+                      isOut
+                        ? 'border-[#E7E5E4] opacity-40'
+                        : currentQty > 0
+                          ? 'border-[#16A34A] bg-[#F0FDF4]'
+                          : 'border-gray-200'
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium ${isOut ? 'line-through text-gray-400' : 'text-[#1C1917]'}`}>
+                        {label}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {isOut ? 'Épuisée' : `${v.qty} dispo`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        disabled={isOut || currentQty <= 0}
+                        onClick={() => setVariantQtys(prev => ({ ...prev, [label]: Math.max(0, (prev[label] ?? 0) - 1) }))}
+                        className="w-9 h-9 touch-manipulation rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-lg transition disabled:opacity-30"
+                      >
+                        −
+                      </button>
+                      <span className="w-6 text-center text-base font-bold text-[#1C1917]">
+                        {currentQty}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={isOut || currentQty >= v.qty}
+                        onClick={() => setVariantQtys(prev => ({ ...prev, [label]: Math.min(v.qty, (prev[label] ?? 0) + 1) }))}
+                        className="w-9 h-9 touch-manipulation rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-lg transition disabled:opacity-30"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            {multiVariantQtyTotal > 0 && (
+              <div className="mt-3 bg-[#F5F5F4] rounded-xl px-4 py-3 flex items-center justify-between">
+                <span className="text-sm text-gray-500">Total à payer (COD)</span>
+                <span className="text-lg font-extrabold text-[#0B5E46]">
+                  {(selectedProduct.price * multiVariantQtyTotal).toFixed(0)} DT
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Single variant selector */}
+        {hasVariants && selectedProduct && !isMultiVariant && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Variante *</label>
             <div className="flex flex-wrap gap-2">
@@ -751,34 +854,37 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
           </div>
         )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Quantité *</label>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setQuantity(q => Math.max(1, q - 1))}
-              className="w-11 h-11 touch-manipulation rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-lg transition"
-            >
-              −
-            </button>
-            <span className="text-lg font-bold text-[#1C1917] w-8 text-center">{quantity}</span>
-            <button
-              type="button"
-              onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
-              disabled={!selectedProduct || (hasVariants && !variant)}
-              className="w-11 h-11 touch-manipulation rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-lg transition disabled:opacity-40"
-            >
-              +
-            </button>
-            {selectedProduct && (
-              <span className="text-xs text-gray-400 ml-1">
-                {selectedVariant ? `${selectedVariant.qty} dispo` : !hasVariants ? `${selectedProduct.stock} dispo` : ''}
-              </span>
-            )}
+        {/* Quantity for non-multi-variant */}
+        {!isMultiVariant && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Quantité *</label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                className="w-11 h-11 touch-manipulation rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-lg transition"
+              >
+                −
+              </button>
+              <span className="text-lg font-bold text-[#1C1917] w-8 text-center">{quantity}</span>
+              <button
+                type="button"
+                onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
+                disabled={!selectedProduct || (hasVariants && !variant)}
+                className="w-11 h-11 touch-manipulation rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-lg transition disabled:opacity-40"
+              >
+                +
+              </button>
+              {selectedProduct && (
+                <span className="text-xs text-gray-400 ml-1">
+                  {selectedVariant ? `${selectedVariant.qty} dispo` : !hasVariants ? `${selectedProduct.stock} dispo` : ''}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
-        {selectedProduct && (
+        {selectedProduct && !isMultiVariant && (
           <div className="bg-[#F5F5F4] rounded-xl px-4 py-3 flex items-center justify-between">
             <span className="text-sm text-gray-500">Total à payer (COD)</span>
             <span className="text-lg font-extrabold text-[#0B5E46]">
@@ -803,14 +909,12 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         />
       </div>
 
-      {/* Erreur générique */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
           {error}
         </div>
       )}
 
-      {/* Erreur stock */}
       {stockError && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
           <PackageX className="text-red-500 w-6 h-6 shrink-0 mt-0.5" />
@@ -829,6 +933,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
                 if (stockErrorScope === 'product') setProductId('')
                 setVariant('')
                 setQuantity(1)
+                setVariantQtys({})
                 setStockError(null)
                 formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
               }}

@@ -4,6 +4,26 @@ import type { Delivery } from './delivery'
 
 export type OrderStatus = 'pending' | 'new' | 'confirmed' | 'shipped' | 'delivered' | 'returned' | 'cancelled'
 
+export interface OrderItem {
+  id: string
+  order_id: string
+  seller_id: string
+  product_id: string
+  variant?: string | null
+  quantity: number
+  unit_price: number
+  unit_cost: number
+  created_at: string
+  product?: Product
+}
+
+export interface OrderItemInput {
+  product_id: string
+  variant?: string
+  quantity: number
+  unit_price?: number
+}
+
 export interface Order {
   id: string
   seller_id: string
@@ -32,6 +52,7 @@ export interface Order {
   customer?: Customer
   product?: Product
   delivery?: Delivery
+  items?: OrderItem[]
 }
 
 export interface CreateOrderInput {

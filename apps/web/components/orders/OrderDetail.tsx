@@ -32,6 +32,17 @@ function formatDate(dateStr: string): string {
   })
 }
 
+type OrderItemRow = {
+  id: string
+  product_id: string
+  variant?: string | null
+  quantity: number
+  unit_price: number
+  unit_cost: number
+  created_at: string
+  product?: { id: string; name: string; price: number } | null
+}
+
 type Props = {
   role: string
   order: {
@@ -50,6 +61,7 @@ type Props = {
     delivery_notes?: string | null
     address_version?: number | null
     created_at: string
+    items?: OrderItemRow[]
   }
   customer: {
     id: string
@@ -332,46 +344,85 @@ export default function OrderDetail({
             </div>
           )}
 
-          {/* Produit */}
+          {/* Produit(s) commandé(s) */}
           <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-[#1C1917]">Produit commandé</h2>
-              {product && (
+              <h2 className="font-semibold text-[#1C1917]">
+                {order.items && order.items.length > 1 ? 'Articles commandés' : 'Produit commandé'}
+              </h2>
+              {product && (!order.items || order.items.length <= 1) && (
                 <Link href={`/catalog/${product.id}`} className="text-xs text-[#16A34A] hover:text-[#15803D] font-medium transition-colors">
                   Voir le produit →
                 </Link>
               )}
             </div>
-            <div className="flex items-center gap-4">
-              {product?.image_url ? (
-                <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-[#E7E5E4] shrink-0">
-                  <Image
-                    src={product.image_url}
-                    alt={product.name}
-                    fill
-                    sizes="64px"
-                    className="object-cover"
-                    placeholder="blur"
-                    blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AJQAB/9k="
-                  />
-                </div>
-              ) : (
-                <div className="w-16 h-16 rounded-lg bg-[#F5F5F4] border border-[#E7E5E4] flex items-center justify-center shrink-0">
-                  <Package className="w-6 h-6 text-[#A8A29E]" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-[#1C1917]">{product?.name ?? '—'}</p>
-                {order.variant && <p className="text-sm text-[#78716C]">{order.variant}</p>}
-                {order.quantity > 1 && <p className="text-sm text-[#78716C]">× {order.quantity}</p>}
+
+            {order.items && order.items.length > 0 ? (
+              <div className="space-y-0">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[#E7E5E4]">
+                      <th className="text-left text-xs font-medium text-[#78716C] pb-2">Produit</th>
+                      <th className="text-center text-xs font-medium text-[#78716C] pb-2">Qté</th>
+                      <th className="text-right text-xs font-medium text-[#78716C] pb-2">Prix unit.</th>
+                      <th className="text-right text-xs font-medium text-[#78716C] pb-2">Sous-total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {order.items.map((item) => (
+                      <tr key={item.id} className="border-b border-[#F5F5F4] last:border-0">
+                        <td className="py-2.5 pr-2">
+                          <p className="font-medium text-[#1C1917]">{item.product?.name ?? '—'}</p>
+                          {item.variant && <p className="text-xs text-[#78716C]">{item.variant}</p>}
+                        </td>
+                        <td className="py-2.5 text-center text-[#78716C]">{item.quantity}</td>
+                        <td className="py-2.5 text-right text-[#78716C]">{item.unit_price} DT</td>
+                        <td className="py-2.5 text-right font-medium text-[#1C1917]">
+                          {(item.unit_price * item.quantity).toFixed(2)} DT
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t border-[#E7E5E4]">
+                      <td colSpan={3} className="pt-2.5 text-right text-sm font-medium text-[#1C1917]">Total COD</td>
+                      <td className="pt-2.5 text-right text-base font-bold text-[#16A34A]">{order.cod_amount} DT</td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
-              <div className="text-right shrink-0">
-                <p className="font-bold text-[#1C1917]">{order.cod_amount} DT</p>
-                {order.quantity > 1 && product && (
-                  <p className="text-xs text-[#78716C]">{product.price} DT / unité</p>
+            ) : (
+              <div className="flex items-center gap-4">
+                {product?.image_url ? (
+                  <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-[#E7E5E4] shrink-0">
+                    <Image
+                      src={product.image_url}
+                      alt={product.name}
+                      fill
+                      sizes="64px"
+                      className="object-cover"
+                      placeholder="blur"
+                      blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AJQAB/9k="
+                    />
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 rounded-lg bg-[#F5F5F4] border border-[#E7E5E4] flex items-center justify-center shrink-0">
+                    <Package className="w-6 h-6 text-[#A8A29E]" />
+                  </div>
                 )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-[#1C1917]">{product?.name ?? '—'}</p>
+                  {order.variant && <p className="text-sm text-[#78716C]">{order.variant}</p>}
+                  {order.quantity > 1 && <p className="text-sm text-[#78716C]">× {order.quantity}</p>}
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="font-bold text-[#1C1917]">{order.cod_amount} DT</p>
+                  {order.quantity > 1 && product && (
+                    <p className="text-xs text-[#78716C]">{product.price} DT / unité</p>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 

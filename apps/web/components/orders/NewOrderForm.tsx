@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect, useTransition, useRef } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
-import { Check, ChevronRight, Package, User, ClipboardList } from 'lucide-react'
+import { Check, ChevronRight, Package, User, ClipboardList, Plus, Trash2 } from 'lucide-react'
 import type { Product } from '@hanut/types'
 import type { CreateOrderInput } from '@/app/(dashboard)/orders/actions'
 import { TUNISIAN_GOVERNORATES, isValidTunisianPhone } from '@/lib/constants'
@@ -25,6 +24,13 @@ type CustomerSuggestion = {
   city?: string | null
 }
 
+type CartItem = {
+  product_id: string
+  variant: string
+  quantity: number
+  unit_price: number
+}
+
 type Props = {
   products: Product[]
   createOrder: (input: CreateOrderInput) => Promise<{ error?: string }>
@@ -32,10 +38,20 @@ type Props = {
 }
 
 const STEPS = [
-  { label: 'Client',       icon: User },
-  { label: 'Produit',      icon: Package },
-  { label: 'Récapitulatif',icon: ClipboardList },
+  { label: 'Client',        icon: User },
+  { label: 'Articles',      icon: Package },
+  { label: 'Récapitulatif', icon: ClipboardList },
 ]
+
+function emptyCartItem(products: Product[]): CartItem {
+  const first = products[0]
+  return {
+    product_id: first?.id ?? '',
+    variant: '',
+    quantity: 1,
+    unit_price: first?.price ?? 0,
+  }
+}
 
 export default function NewOrderForm({ products, createOrder, initialCustomer }: Props) {
   const router = useRouter()
@@ -58,40 +74,51 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
   const [searching, setSearching] = useState(false)
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // ── Product ──
-  const [productId, setProductId] = useState('')
-  const [variant, setVariant] = useState('')
-  const [quantity, setQuantity] = useState(1)
-  const [codAmount, setCodAmount] = useState<number | ''>('')
-  const [productSearch, setProductSearch] = useState('')
+  // ── Cart ──
+  const [cartItems, setCartItems] = useState<CartItem[]>([emptyCartItem(products)])
+  const [codAmountOverride, setCodAmountOverride] = useState<number | ''>('')
 
   // ── Notes livraison ──
   const [deliveryNotes, setDeliveryNotes] = useState(initialCustomer?.delivery_notes ?? '')
   const [error, setError] = useState<string | null>(null)
 
-  const selectedProduct = products.find(p => p.id === productId)
-  const hasVariants = (selectedProduct?.variants.length ?? 0) > 0
-  const selectedVariant = hasVariants
-    ? selectedProduct?.variants.find((v, index) => getVariantLabel(v, index) === variant)
-    : undefined
-  const maxQty = selectedVariant ? selectedVariant.qty : (selectedProduct?.stock ?? 99)
+  const computedTotal = cartItems.reduce((sum, item) => sum + item.unit_price * item.quantity, 0)
+  const codAmount = codAmountOverride !== '' ? codAmountOverride : computedTotal
 
-  const filteredProducts = productSearch
-    ? products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
-    : products
+  function getProduct(productId: string) {
+    return products.find(p => p.id === productId)
+  }
 
-  useEffect(() => {
-    if (selectedProduct) setCodAmount(selectedProduct.price * quantity)
-  }, [selectedProduct, quantity])
+  function updateCartItem(index: number, patch: Partial<CartItem>) {
+    setCartItems(prev => {
+      const next = [...prev]
+      const current = next[index]!
+      const updated = { ...current, ...patch }
+      if (patch.product_id !== undefined && patch.product_id !== current.product_id) {
+        const newProduct = getProduct(patch.product_id)
+        updated.variant = ''
+        updated.quantity = 1
+        updated.unit_price = newProduct?.price ?? 0
+      }
+      if (patch.variant !== undefined && patch.variant !== current.variant) {
+        updated.quantity = 1
+      }
+      next[index] = updated
+      return next
+    })
+    if (patch.unit_price === undefined) setCodAmountOverride('')
+  }
 
-  useEffect(() => {
-    setVariant('')
-    setQuantity(1)
-  }, [productId])
+  function addCartItem() {
+    setCartItems(prev => [...prev, emptyCartItem(products)])
+    setCodAmountOverride('')
+  }
 
-  useEffect(() => {
-    if (selectedVariant) setQuantity(q => Math.min(q, selectedVariant.qty))
-  }, [selectedVariant])
+  function removeCartItem(index: number) {
+    if (cartItems.length <= 1) return
+    setCartItems(prev => prev.filter((_, i) => i !== index))
+    setCodAmountOverride('')
+  }
 
   function onSearchChange(value: string) {
     setSearch(value)
@@ -152,30 +179,55 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
       }
     }
     if (n === 2) {
-      if (!productId) return setError('Sélectionnez un produit.')
-      if (hasVariants && !variant) return setError('Sélectionnez une variante.')
-      if (selectedProduct && quantity > maxQty) return setError(`Stock disponible : ${maxQty} unité(s).`)
+      for (let i = 0; i < cartItems.length; i++) {
+        const item = cartItems[i]!
+        const product = getProduct(item.product_id)
+        if (!item.product_id) return setError(`Article ${i + 1} : sélectionnez un produit.`)
+        const hasVariants = (product?.variants.length ?? 0) > 0
+        if (hasVariants && !item.variant) return setError(`Article ${i + 1} : sélectionnez une variante.`)
+        const selectedVariant = hasVariants
+          ? product?.variants.find((v, idx) => getVariantLabel(v, idx) === item.variant)
+          : undefined
+        const maxQty = selectedVariant ? selectedVariant.qty : (product?.stock ?? 0)
+        if (item.quantity < 1 || item.quantity > maxQty) {
+          return setError(`Article ${i + 1} : stock disponible : ${maxQty} unité(s).`)
+        }
+      }
     }
     setStep(n)
   }
 
   function handleSubmit() {
-    if (!productId) return setError('Sélectionnez un produit.')
-    if (hasVariants && !variant) return setError('Sélectionnez une variante.')
-    if (selectedProduct && quantity > maxQty) return setError(`Stock disponible : ${maxQty} unité(s).`)
-    if (!customerName.trim()) return setError('Le nom du client est obligatoire.')
-    if (!phone.trim()) return setError('Le téléphone est obligatoire.')
-    if (!isValidTunisianPhone(phone)) return setError('Numéro tunisien invalide. Ex: 22 123 456')
-    if (!customerGovernorate) return setError('Le gouvernorat est obligatoire.')
-    if (!customerCity.trim()) return setError('La ville / délégation est obligatoire.')
-    if (!customerAddress.trim()) return setError("L'adresse détaillée est obligatoire.")
-    if (!customerLandmark.trim()) return setError('Le repère livreur est obligatoire.')
+    for (let i = 0; i < cartItems.length; i++) {
+      const item = cartItems[i]!
+      const product = getProduct(item.product_id)
+      if (!item.product_id) { setError(`Article ${i + 1} : sélectionnez un produit.`); setStep(1); return }
+      const hasVariants = (product?.variants.length ?? 0) > 0
+      if (hasVariants && !item.variant) { setError(`Article ${i + 1} : sélectionnez une variante.`); setStep(1); return }
+      const selectedVariant = hasVariants
+        ? product?.variants.find((v, idx) => getVariantLabel(v, idx) === item.variant)
+        : undefined
+      const maxQty = selectedVariant ? selectedVariant.qty : (product?.stock ?? 0)
+      if (item.quantity < 1 || item.quantity > maxQty) {
+        setError(`Article ${i + 1} : stock disponible : ${maxQty} unité(s).`)
+        setStep(1)
+        return
+      }
+    }
+    if (!customerName.trim()) { setError('Le nom du client est obligatoire.'); setStep(0); return }
+    if (!phone.trim()) { setError('Le téléphone est obligatoire.'); setStep(0); return }
+    if (!isValidTunisianPhone(phone)) { setError('Numéro tunisien invalide. Ex: 22 123 456'); setStep(0); return }
+    if (!customerGovernorate) { setError('Le gouvernorat est obligatoire.'); setStep(0); return }
+    if (!customerCity.trim()) { setError('La ville / délégation est obligatoire.'); setStep(0); return }
+    if (!customerAddress.trim()) { setError("L'adresse détaillée est obligatoire."); setStep(0); return }
+    if (!customerLandmark.trim()) { setError('Le repère livreur est obligatoire.'); setStep(0); return }
     if (customerPostalCode.trim() && !/^\d{4}$/.test(customerPostalCode.trim())) {
-      return setError('Le code postal doit contenir 4 chiffres.')
+      setError('Le code postal doit contenir 4 chiffres.'); setStep(0); return
     }
     setError(null)
     startTransition(async () => {
       try {
+        const firstItem = cartItems[0]!
         const result = await createOrder({
           customer_id: selectedCustomer?.id,
           customer_name: customerName.trim(),
@@ -187,10 +239,16 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
           customer_landmark: customerLandmark.trim(),
           customer_postal_code: customerPostalCode.trim() || undefined,
           delivery_notes: deliveryNotes.trim() || undefined,
-          product_id: productId,
-          variant: variant || undefined,
-          quantity,
-          cod_amount: codAmount === '' ? 0 : codAmount,
+          product_id: firstItem.product_id,
+          variant: firstItem.variant || undefined,
+          quantity: firstItem.quantity,
+          cod_amount: codAmount,
+          items: cartItems.map(item => ({
+            product_id: item.product_id,
+            variant: item.variant || undefined,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+          })),
         })
         if (result?.error === 'LIMIT_REACHED') {
           setError('Limite de 100 commandes atteinte ce mois. Passe au plan Pro pour des commandes illimitées.')
@@ -294,7 +352,6 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
             Client
           </h2>
 
-          {/* Selected customer badge */}
           {selectedCustomer ? (
             <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl">
               <div className="w-8 h-8 bg-[#F0FDF4] text-[#166534] rounded-full flex items-center justify-center text-xs font-bold shrink-0 select-none">
@@ -413,130 +470,157 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
 
           <div className="flex justify-end pt-2">
             <button onClick={() => goToStep(1)} className="btn-primary flex w-full items-center justify-center gap-2 sm:w-auto">
-              Produit
+              Articles
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
 
-      {/* STEP 1 — Produit */}
+      {/* STEP 1 — Articles */}
       {step === 1 && (
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4 space-y-4 sm:p-6">
           <h2 className="font-semibold text-[#1C1917] flex items-center gap-2">
             <span className="w-6 h-6 bg-[#F0FDF4] text-[#166534] rounded-full text-xs flex items-center justify-center font-bold">2</span>
-            Produit
+            Articles
           </h2>
 
-          <div>
-            <input
-              className="input"
-              placeholder="Rechercher un produit…"
-              value={productSearch}
-              onChange={e => setProductSearch(e.target.value)}
-            />
-          </div>
+          <div className="space-y-4">
+            {cartItems.map((item, index) => {
+              const product = getProduct(item.product_id)
+              const hasVariants = (product?.variants.length ?? 0) > 0
+              const selectedVariant = hasVariants
+                ? product?.variants.find((v, i) => getVariantLabel(v, i) === item.variant)
+                : undefined
+              const maxQty = selectedVariant ? selectedVariant.qty : (product?.stock ?? 99)
 
-          <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto pr-1 sm:grid-cols-3">
-            {filteredProducts.map(p => {
-              const available = p.variants.length > 0 ? hasVariantStock(p.variants) : p.stock > 0
               return (
-              <button
-                key={p.id}
-                type="button"
-                disabled={!available}
-                onClick={() => { setProductId(p.id); setCodAmount('') }}
-                className={`relative text-left p-3 rounded-xl border-2 transition-all ${
-                  productId === p.id
-                    ? 'border-[#16A34A] bg-green-50'
-                    : !available
-                      ? 'border-[#E7E5E4] opacity-50 cursor-not-allowed'
-                      : 'border-[#E7E5E4] hover:border-[#D6D3D1] hover:bg-[#FAFAF9]'
-                }`}
-              >
-                {p.image_url ? (
-                  <div className="relative w-full aspect-square rounded-lg mb-2 overflow-hidden">
-                    <Image
-                      src={p.image_url}
-                      alt={p.name}
-                      fill
-                      sizes="(max-width: 640px) 50vw, 25vw"
-                      className="object-cover"
-                      placeholder="blur"
-                      blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AJQAB/9k="
-                    />
+                <div key={index} className="border border-[#E7E5E4] rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-[#78716C]">Article {index + 1}</p>
+                    {cartItems.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeCartItem(index)}
+                        className="text-red-400 hover:text-red-600 transition-colors p-1"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
-                ) : (
-                  <div className="w-full aspect-square bg-[#F5F5F4] rounded-lg mb-2 flex items-center justify-center">
-                    <Package className="w-6 h-6 text-[#A8A29E]" />
+
+                  <div>
+                    <label className="block text-sm font-medium text-[#1C1917] mb-1">Produit <span className="text-red-500">*</span></label>
+                    <select
+                      className="input bg-white"
+                      value={item.product_id}
+                      onChange={e => updateCartItem(index, { product_id: e.target.value })}
+                    >
+                      <option value="">Sélectionner un produit…</option>
+                      {products.map(p => {
+                        const available = p.variants.length > 0 ? hasVariantStock(p.variants) : p.stock > 0
+                        return (
+                          <option key={p.id} value={p.id} disabled={!available}>
+                            {p.name} — {p.price} DT{!available ? ' (rupture)' : ''}
+                          </option>
+                        )
+                      })}
+                    </select>
                   </div>
-                )}
-                <p className="text-xs font-semibold text-[#1C1917] truncate">{p.name}</p>
-                <p className="text-xs text-[#16A34A] font-medium">{p.price} DT</p>
-                {!available && <p className="text-xs text-red-500">Rupture</p>}
-                {productId === p.id && (
-                  <div className="absolute top-2 right-2 w-5 h-5 bg-[#16A34A] rounded-full flex items-center justify-center">
-                    <Check className="w-3 h-3 text-white" />
+
+                  {hasVariants && product && (
+                    <div>
+                      <label className="block text-sm font-medium text-[#1C1917] mb-1">Variante <span className="text-red-500">*</span></label>
+                      <div className="flex flex-wrap gap-2">
+                        {product.variants.map((v, i) => {
+                          const label = getVariantLabel(v, i)
+                          const out = v.qty <= 0
+                          return (
+                            <button
+                              key={i}
+                              type="button"
+                              disabled={out}
+                              onClick={() => updateCartItem(index, { variant: label, unit_price: product.price })}
+                              className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+                                out
+                                  ? 'border-[#E7E5E4] text-[#A8A29E] opacity-50 line-through cursor-not-allowed'
+                                  : item.variant === label
+                                    ? 'bg-[#16A34A] text-white border-[#16A34A]'
+                                    : 'border-[#E7E5E4] text-[#78716C] hover:border-[#D6D3D1]'
+                              }`}
+                            >
+                              {label} <span className="text-xs opacity-70">({v.qty})</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-[#1C1917] mb-1">Quantité <span className="text-red-500">*</span></label>
+                      <input
+                        className="input"
+                        type="number"
+                        min="1"
+                        max={maxQty}
+                        value={item.quantity}
+                        onChange={e => updateCartItem(index, { quantity: Math.min(maxQty, Math.max(1, parseInt(e.target.value) || 1)) })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#1C1917] mb-1">Prix unitaire (DT)</label>
+                      <input
+                        className="input"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.unit_price}
+                        onChange={e => {
+                          updateCartItem(index, { unit_price: parseFloat(e.target.value) || 0 })
+                          setCodAmountOverride('')
+                        }}
+                        placeholder="0.00"
+                      />
+                    </div>
                   </div>
-                )}
-              </button>
+
+                  {product && (
+                    <p className="text-xs text-[#78716C]">
+                      Sous-total : <span className="font-semibold text-[#1C1917]">{(item.unit_price * item.quantity).toFixed(2)} DT</span>
+                    </p>
+                  )}
+                </div>
               )
             })}
           </div>
 
-          {selectedProduct && selectedProduct.variants.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-[#1C1917] mb-1">Variante</label>
-              <div className="flex flex-wrap gap-2">
-                {selectedProduct.variants.map((v, i) => {
-                  const label = getVariantLabel(v, i)
-                  const out = v.qty <= 0
-                  return (
-                    <button
-                      key={i}
-                      type="button"
-                      disabled={out}
-                      onClick={() => setVariant(label)}
-                      className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
-                        out
-                          ? 'border-[#E7E5E4] text-[#A8A29E] opacity-50 line-through cursor-not-allowed'
-                          : variant === label
-                            ? 'bg-[#16A34A] text-white border-[#16A34A]'
-                            : 'border-[#E7E5E4] text-[#78716C] hover:border-[#D6D3D1]'
-                      }`}
-                    >
-                      {label} <span className="text-xs opacity-70">({v.qty})</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={addCartItem}
+            className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-[#D6D3D1] rounded-xl text-sm text-[#78716C] hover:border-[#16A34A] hover:text-[#16A34A] transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Ajouter un article
+          </button>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-[#1C1917] mb-1">Quantité <span className="text-red-500">*</span></label>
-              <input
-                className="input"
-                type="number"
-                min="1"
-                max={maxQty}
-                value={quantity}
-                onChange={e => setQuantity(Math.min(maxQty, Math.max(1, parseInt(e.target.value) || 1)))}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#1C1917] mb-1">Montant COD (DT) <span className="text-red-500">*</span></label>
-              <input
-                className="input"
-                type="number"
-                min="0"
-                step="0.01"
-                value={codAmount}
-                onChange={e => setCodAmount(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                placeholder="0.00"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-[#1C1917] mb-1">
+              Montant COD total (DT) <span className="text-red-500">*</span>
+            </label>
+            <input
+              className="input"
+              type="number"
+              min="0"
+              step="0.01"
+              value={codAmountOverride !== '' ? codAmountOverride : Number(computedTotal.toFixed(2))}
+              onChange={e => setCodAmountOverride(e.target.value === '' ? '' : parseFloat(e.target.value))}
+              placeholder="0.00"
+            />
+            {codAmountOverride === '' && cartItems.length > 1 && (
+              <p className="text-xs text-[#78716C] mt-1">Calculé automatiquement depuis les articles. Modifiable.</p>
+            )}
           </div>
 
           <div className="flex flex-col gap-3 pt-2 sm:flex-row">
@@ -567,17 +651,34 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
             </p>
           </div>
 
-          {/* Product summary */}
-          <div className="bg-[#FAFAF9] border border-[#E7E5E4] rounded-xl p-4 space-y-1">
-            <p className="text-xs font-medium text-[#78716C] uppercase tracking-wide">Produit</p>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <p className="font-semibold text-[#1C1917]">{selectedProduct?.name ?? '—'}</p>
-                {variant && <p className="text-sm text-[#78716C]">{variant}</p>}
-                {quantity > 1 && <p className="text-sm text-[#78716C]">× {quantity}</p>}
-              </div>
-              <p className="shrink-0 text-xl font-bold text-[#16A34A]">{codAmount === '' ? '0' : codAmount} DT</p>
-            </div>
+          {/* Articles summary */}
+          <div className="bg-[#FAFAF9] border border-[#E7E5E4] rounded-xl p-4 space-y-2">
+            <p className="text-xs font-medium text-[#78716C] uppercase tracking-wide">Articles</p>
+            <table className="w-full text-sm">
+              <tbody>
+                {cartItems.map((item, index) => {
+                  const product = getProduct(item.product_id)
+                  return (
+                    <tr key={index} className="border-b border-[#F5F5F4] last:border-0">
+                      <td className="py-1.5 pr-2">
+                        <span className="font-medium text-[#1C1917]">{product?.name ?? '—'}</span>
+                        {item.variant && <span className="text-[#78716C] ml-1">· {item.variant}</span>}
+                      </td>
+                      <td className="py-1.5 text-center text-[#78716C] px-2">× {item.quantity}</td>
+                      <td className="py-1.5 text-right font-medium text-[#1C1917]">
+                        {(item.unit_price * item.quantity).toFixed(2)} DT
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-[#E7E5E4]">
+                  <td colSpan={2} className="pt-2 text-right text-sm font-medium text-[#1C1917]">Total COD</td>
+                  <td className="pt-2 text-right text-xl font-bold text-[#16A34A]">{codAmount} DT</td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
 
           {/* Notes */}

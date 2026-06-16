@@ -5,7 +5,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { revalidatePath, revalidateTag } from 'next/cache'
-import type { OrderStatus } from '@hanut/types'
+import type { OrderStatus, OrderItemInput } from '@hanut/types'
 import { DELETABLE_STATUSES, ORDER_STATUS_LABELS, PLAN_LIMITS } from '@/lib/constants'
 import { getMonthlyOrderCount } from '@/lib/get-context'
 import { isValidTransition } from '@/lib/order-transitions'
@@ -28,6 +28,7 @@ export type CreateOrderInput = {
   quantity: number
   cod_amount: number
   notes?: string
+  items?: OrderItemInput[]
 }
 
 export type OrderMutationResult = { error?: string }
@@ -61,24 +62,24 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderMutatio
   }
   const address = parsedAddress.data
 
-  const { data: product } = await supabase
+  const items: OrderItemInput[] = input.items && input.items.length > 0
+    ? input.items
+    : [{ product_id: input.product_id, variant: input.variant, quantity: input.quantity }]
+
+  const { data: firstProduct } = await supabase
     .from('products')
     .select('name')
-    .eq('id', input.product_id)
+    .eq('id', items[0]!.product_id)
     .eq('seller_id', context.sellerId)
     .single()
 
-  const { error } = await supabase.rpc('create_order_with_stock', {
+  const { error } = await supabase.rpc('create_order_with_items', {
     p_seller_id: context.sellerId,
-    p_product_id: input.product_id,
-    p_quantity: input.quantity,
     p_customer_name: input.customer_name,
     p_customer_phone: input.customer_phone,
     p_customer_address: address.customer_address,
     p_customer_city: address.customer_city,
     p_customer_id: input.customer_id ?? null,
-    p_variant: input.variant ?? null,
-    p_cod_amount: input.cod_amount,
     p_notes: input.notes ?? null,
     p_status: 'new',
     p_changed_by: context.userId,
@@ -87,6 +88,8 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderMutatio
     p_customer_landmark: address.customer_landmark,
     p_customer_postal_code: address.customer_postal_code ?? null,
     p_delivery_notes: address.delivery_notes ?? null,
+    p_cod_amount: String(input.cod_amount),
+    p_items: items,
   })
   if (error) {
     if (error.message.includes('LIMIT_REACHED')) return { error: 'LIMIT_REACHED' }
@@ -108,7 +111,7 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderMutatio
     actionType: 'order_created',
     entityType: 'order',
     description: `a créé une commande pour ${input.customer_name} (${input.cod_amount} DT)`,
-    metadata: { product: product?.name, quantity: input.quantity, governorate: address.customer_governorate },
+    metadata: { product: firstProduct?.name, quantity: items.reduce((s, i) => s + i.quantity, 0), governorate: address.customer_governorate },
   })
 
   revalidatePath('/orders')

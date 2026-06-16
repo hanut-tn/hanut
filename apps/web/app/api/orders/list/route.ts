@@ -38,7 +38,8 @@ export async function GET(req: NextRequest) {
        customer_address, customer_city, customer_governorate, customer_delegation,
        customer_landmark, customer_postal_code, delivery_notes, address_version,
        customer:customers(id, name, phone, address, city, customer_governorate, customer_city, customer_delegation, customer_address, customer_landmark, customer_postal_code, delivery_notes, address_version),
-       product:products(id, name, price)`,
+       product:products(id, name, price),
+       items:order_items(id, product_id, variant, quantity, unit_price, unit_cost, created_at, product:products(id, name, price))`,
       { count: 'exact' }
     )
     .eq('seller_id', context.sellerId)

@@ -14,17 +14,25 @@ import {
 } from '@/lib/order-otp'
 import { HanutAddressFieldsSchema } from '@/lib/address'
 
+const OrderItemInputSchema = z.object({
+  product_id: z.string().uuid(),
+  variant: z.string().trim().max(100).optional(),
+  quantity: z.coerce.number().int().min(1).max(99),
+  unit_price: z.coerce.number().min(0).optional(),
+})
+
 const VerifyOtpSchema = z.object({
   slug: z.string().trim().min(1).max(120),
   email: z.string().trim().email().max(254),
   code: z.string().regex(/^\d{4}$/),
   customer_name: z.string().trim().min(2).max(100),
   customer_phone: z.string().min(1),
-  product_id: z.string().uuid(),
+  product_id: z.string().uuid().optional(),
   variant: z.string().trim().max(100).optional(),
-  quantity: z.coerce.number().int().min(1).max(99),
+  quantity: z.coerce.number().int().min(1).max(99).optional(),
   notes: z.string().trim().max(500).optional(),
   turnstile_token: z.string().optional(),
+  items: z.array(OrderItemInputSchema).max(20).optional(),
 }).merge(HanutAddressFieldsSchema)
 
 type OtpRpcResult = {
@@ -55,6 +63,10 @@ export async function POST(request: NextRequest) {
       { error: parsed.error.issues[0]?.message ?? 'Données invalides.' },
       400,
     )
+  }
+
+  if (!parsed.data.items?.length && !parsed.data.product_id) {
+    return noStoreJson({ error: 'Produit ou articles obligatoires.' }, 400)
   }
 
   const slug = normalizeOtpSlug(parsed.data.slug)
@@ -100,8 +112,8 @@ export async function POST(request: NextRequest) {
     p_slug: slug,
     p_email: email,
     p_code_hash: hashOrderOtp(parsed.data.code, slug, email),
-    p_product_id: parsed.data.product_id,
-    p_quantity: parsed.data.quantity,
+    p_product_id: parsed.data.product_id || null,
+    p_quantity: parsed.data.quantity ?? 1,
     p_customer_name: parsed.data.customer_name,
     p_customer_phone: phone,
     p_customer_address: parsed.data.customer_address,
@@ -113,6 +125,7 @@ export async function POST(request: NextRequest) {
     p_customer_landmark: parsed.data.customer_landmark,
     p_customer_postal_code: parsed.data.customer_postal_code || null,
     p_delivery_notes: parsed.data.delivery_notes || null,
+    p_items: parsed.data.items && parsed.data.items.length > 0 ? parsed.data.items : null,
   })
 
   if (error) {
