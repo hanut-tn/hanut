@@ -611,6 +611,7 @@ GRANT EXECUTE ON FUNCTION create_public_order_with_otp(
   TEXT, TEXT, TEXT, UUID, INTEGER, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT
 ) TO service_role;
 
+DROP VIEW IF EXISTS customers_with_stats;
 CREATE OR REPLACE VIEW customers_with_stats WITH (security_invoker = true) AS
 SELECT
   c.id,
@@ -772,6 +773,7 @@ REVOKE ALL ON FUNCTION get_customers_cursor_page(UUID, TEXT, INT, TEXT, UUID, TE
 GRANT EXECUTE ON FUNCTION get_customers_cursor_page(UUID, TEXT, INT, TEXT, UUID, TEXT)
   TO authenticated, service_role;
 
+DROP FUNCTION IF EXISTS search_orders(UUID, TEXT, UUID[], INTEGER);
 CREATE OR REPLACE FUNCTION search_orders(
   p_seller_id UUID,
   p_search TEXT,

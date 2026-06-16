@@ -30,7 +30,8 @@ export default async function OrderDetailPage({ params }: Props) {
       customer_address, customer_city, customer_governorate, customer_delegation,
       customer_landmark, customer_postal_code, delivery_notes, address_version,
       customer:customers(id, name, phone, address, city, customer_governorate, customer_city, customer_delegation, customer_address, customer_landmark, customer_postal_code, delivery_notes, address_version),
-      product:products(id, name, price, cost, image_url)
+      product:products(id, name, price, cost, image_url),
+      items:order_items(id, product_id, variant, quantity, unit_price, unit_cost, created_at, product:products(id, name, price))
     `)
     .eq('id', id)
     .eq('seller_id', context.sellerId)
@@ -85,6 +86,8 @@ export default async function OrderDetailPage({ params }: Props) {
     }
   }
 
+  const items = Array.isArray(order.items) ? order.items : []
+
   return (
     <OrderDetail
       role={context.role}
@@ -104,6 +107,16 @@ export default async function OrderDetailPage({ params }: Props) {
         delivery_notes: order.delivery_notes,
         address_version: order.address_version,
         created_at: order.created_at,
+        items: items.map(i => ({
+          id: i.id,
+          product_id: i.product_id,
+          variant: i.variant,
+          quantity: i.quantity,
+          unit_price: i.unit_price,
+          unit_cost: i.unit_cost,
+          created_at: i.created_at,
+          product: Array.isArray(i.product) ? i.product[0] : i.product,
+        })),
       }}
       customer={customer ?? null}
       product={product ?? null}

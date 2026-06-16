@@ -137,7 +137,10 @@ export default function OrderDetail({
   const isPendingOrder = status === 'pending'
   const canDelete = role === 'admin' && deleteOrder && DELETABLE_STATUSES.includes(status)
   const ini = customer ? initials(customer.name) : '?'
-  const estimatedProfit = order.cod_amount - ((product?.cost ?? 0) * order.quantity)
+  const totalCost = order.items && order.items.length > 0
+    ? order.items.reduce((s, i) => s + i.unit_cost * i.quantity, 0)
+    : (product?.cost ?? 0) * order.quantity
+  const estimatedProfit = order.cod_amount - totalCost
   const shortId = order.id.slice(0, 8).toUpperCase()
   const orderAddress = order.customer_address ?? customer?.customer_address ?? customer?.address ?? null
   const orderCity = order.customer_city ?? customer?.customer_city ?? null
@@ -592,11 +595,11 @@ export default function OrderDetail({
                 <span className="text-sm text-[#78716C]">Montant COD</span>
                 <span className="text-2xl font-bold text-[#16A34A]">{order.cod_amount} DT</span>
               </div>
-              {product?.cost !== undefined && product?.cost !== null && (
+              {totalCost > 0 && (
                 <>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-[#78716C]">Coût produit</span>
-                    <span className="text-sm text-[#1C1917]">−{product.cost * order.quantity} DT</span>
+                    <span className="text-sm text-[#1C1917]">−{totalCost} DT</span>
                   </div>
                   <div className="pt-2 border-t border-[#E7E5E4] flex items-center justify-between">
                     <span className="text-sm font-medium text-[#1C1917]">Profit estimé</span>
