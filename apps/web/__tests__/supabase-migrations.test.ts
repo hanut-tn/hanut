@@ -80,6 +80,7 @@ describe('Supabase migrations', () => {
   const publicOrderOtpMigration = migration('20260712_create_public_order_with_otp.sql')
   const anonymizeCustomerEmailMigration = migration('20260713_anonymize_customer_email.sql')
   const cancelledStatusRepairMigration = migration('20260714_repair_cancelled_order_status.sql')
+  const customerAddressHistoryMigration = migration('20260715_add_customer_address_history.sql')
 
   it('base tables migration creates the 5 core tables idempotently before any other migration', () => {
     expect(baseTables).toMatch(/CREATE TABLE IF NOT EXISTS sellers/i)
@@ -212,6 +213,19 @@ describe('Supabase migrations', () => {
     expect(cancelledStatusRepairMigration).toMatch(/\('confirmed', 'cancelled'\)/i)
     expect(cancelledStatusRepairMigration).toMatch(/\('returned', 'cancelled'\)/i)
     expect(cancelledStatusRepairMigration).toMatch(/NOTIFY pgrst, 'reload schema'/i)
+  })
+
+  it('keeps a full address history for repeat customers', () => {
+    expect(customerAddressHistoryMigration).toMatch(/CREATE TABLE IF NOT EXISTS customer_addresses/i)
+    expect(customerAddressHistoryMigration).toMatch(/UNIQUE \(customer_id, address_normalized, city_normalized\)/i)
+    expect(customerAddressHistoryMigration).toMatch(/ADD COLUMN IF NOT EXISTS customer_address TEXT/i)
+    expect(customerAddressHistoryMigration).toMatch(/ADD COLUMN IF NOT EXISTS customer_city TEXT/i)
+    expect(customerAddressHistoryMigration).toMatch(/address = COALESCE\(address, v_customer_address\)/i)
+    expect(customerAddressHistoryMigration).toMatch(/INSERT INTO customer_addresses/i)
+    expect(customerAddressHistoryMigration).toMatch(/ON CONFLICT \(customer_id, address_normalized, city_normalized\)/i)
+    expect(customerAddressHistoryMigration).toMatch(/use_count\s+=\s+customer_addresses\.use_count \+ 1/i)
+    expect(customerAddressHistoryMigration).toMatch(/customer_address, customer_city/i)
+    expect(customerAddressHistoryMigration).toMatch(/DELETE FROM customer_addresses/i)
   })
 
   it('keeps useful constraints and indexes for the added schema', () => {

@@ -138,6 +138,7 @@ describeIf('anonymize_customer RPC', () => {
     const [
       { data: customer },
       { data: order },
+      { data: addresses },
       { data: logs },
     ] = await Promise.all([
       adminClient
@@ -147,9 +148,13 @@ describeIf('anonymize_customer RPC', () => {
         .single(),
       adminClient
         .from('orders')
-        .select('id, customer_id, customer_email')
+        .select('id, customer_id, customer_email, customer_address, customer_city')
         .eq('id', orderId)
         .single(),
+      adminClient
+        .from('customer_addresses')
+        .select('id')
+        .eq('customer_id', customerId),
       adminClient
         .from('activity_logs')
         .select('description, metadata')
@@ -167,7 +172,14 @@ describeIf('anonymize_customer RPC', () => {
       notes: null,
       tags: [],
     })
-    expect(order).toEqual({ id: orderId, customer_id: customerId, customer_email: null })
+    expect(order).toEqual({
+      id: orderId,
+      customer_id: customerId,
+      customer_email: null,
+      customer_address: null,
+      customer_city: null,
+    })
+    expect(addresses).toEqual([])
     expect(logs).toEqual([
       { description: 'Données client anonymisées', metadata: {} },
     ])

@@ -27,6 +27,7 @@ export default async function OrderDetailPage({ params }: Props) {
     .from('orders')
     .select(`
       id, status, cod_amount, variant, quantity, notes, created_at, tracking_token,
+      customer_address, customer_city,
       customer:customers(id, name, phone, address, city),
       product:products(id, name, price, cost, image_url)
     `)
@@ -93,6 +94,8 @@ export default async function OrderDetailPage({ params }: Props) {
         variant: order.variant,
         quantity: order.quantity,
         notes: order.notes,
+        customer_address: order.customer_address,
+        customer_city: order.customer_city,
         created_at: order.created_at,
       }}
       customer={customer ?? null}

@@ -4,7 +4,7 @@ import { useState, useTransition, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import type { CustomerInput } from '@/app/(dashboard)/customers/actions'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { X, Lock } from 'lucide-react'
+import { X, Lock, MapPin } from 'lucide-react'
 import { getUpgradeWhatsAppUrl } from '@/lib/constants'
 
 const TAG_SUGGESTIONS = ['VIP', 'Fidèle', 'Retours fréquents', 'À risque', 'Nouveau']
@@ -44,6 +44,15 @@ type CustomerData = {
   notes: string
 }
 
+type CustomerAddress = {
+  id: string
+  address?: string | null
+  city?: string | null
+  use_count: number
+  first_used_at: string
+  last_used_at: string
+}
+
 type Stats = {
   total_spent: number
   order_count: number
@@ -54,13 +63,14 @@ type Stats = {
 type Props = {
   customer: CustomerData
   orders: Order[]
+  addresses: CustomerAddress[]
   totalOrders: number
   stats: Stats
   plan?: string
   updateCustomer: (id: string, input: CustomerInput) => Promise<{ error?: string }>
 }
 
-export default function CustomerDetail({ customer, orders: initialOrders, totalOrders, stats, plan, updateCustomer }: Props) {
+export default function CustomerDetail({ customer, orders: initialOrders, addresses, totalOrders, stats, plan, updateCustomer }: Props) {
   const [isPending, startTransition] = useTransition()
 
   // Edit modal
@@ -193,6 +203,7 @@ export default function CustomerDetail({ customer, orders: initialOrders, totalO
 
   const initials = customer.name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()
   const suggestions = TAG_SUGGESTIONS.filter(t => !tags.includes(t))
+  const knownAddresses = addresses.filter(a => a.address || a.city)
 
   return (
     <div className="space-y-5 max-w-4xl">
@@ -242,6 +253,47 @@ export default function CustomerDetail({ customer, orders: initialOrders, totalO
           </div>
         </div>
       </div>
+
+      {knownAddresses.length > 0 && (
+        <div className="card p-5">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div>
+              <h2 className="font-semibold text-gray-900">Adresses connues</h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Toutes les adresses utilisées par ce client.
+              </p>
+            </div>
+            <span className="text-xs text-gray-400">
+              {knownAddresses.length} adresse{knownAddresses.length > 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {knownAddresses.map(address => (
+              <div
+                key={address.id}
+                className="rounded-xl border border-[#E7E5E4] bg-white px-4 py-3"
+              >
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900">
+                      {[address.address, address.city].filter(Boolean).join(', ')}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Utilisée {address.use_count} fois · dernière fois le{' '}
+                      {new Date(address.last_used_at).toLocaleDateString('fr-TN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── STATS ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

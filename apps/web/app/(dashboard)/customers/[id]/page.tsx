@@ -7,6 +7,7 @@ import { notFound } from 'next/navigation'
 
 type Props = { params: Promise<{ id: string }> }
 type CustomerOrders = Parameters<typeof CustomerDetail>[0]['orders']
+type CustomerAddresses = Parameters<typeof CustomerDetail>[0]['addresses']
 type CustomerStats = {
   total_spent: number
   order_count: number
@@ -30,7 +31,11 @@ export default async function CustomerDetailPage({ params }: Props) {
 
   if (!customer) notFound()
 
-  const [{ data: orders, count: totalOrders }, { data: statsRaw, error: statsError }] = await Promise.all([
+  const [
+    { data: orders, count: totalOrders },
+    { data: statsRaw, error: statsError },
+    { data: addresses },
+  ] = await Promise.all([
     supabase
       .from('orders')
       .select('id, cod_amount, status, variant, quantity, created_at, product:products(id, name)', { count: 'exact' })
@@ -43,6 +48,12 @@ export default async function CustomerDetailPage({ params }: Props) {
       p_customer_id: id,
       p_seller_id: context.sellerId,
     }),
+    supabase
+      .from('customer_addresses')
+      .select('id, address, city, use_count, first_used_at, last_used_at')
+      .eq('customer_id', id)
+      .eq('seller_id', context.sellerId)
+      .order('last_used_at', { ascending: false }),
   ])
 
   if (statsError) {
@@ -68,6 +79,7 @@ export default async function CustomerDetailPage({ params }: Props) {
           notes: customer.notes ?? '',
         }}
         orders={orderList as CustomerOrders}
+        addresses={(addresses ?? []) as CustomerAddresses}
         totalOrders={orderCount}
         stats={{
           total_spent: stats.total_spent ?? 0,

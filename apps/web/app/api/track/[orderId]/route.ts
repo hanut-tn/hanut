@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, { params }: Params) {
   const { data: order } = await supabase
     .from('orders')
     .select(`
-      id, status, cod_amount, variant, quantity, created_at,
+      id, status, cod_amount, variant, quantity, created_at, customer_city,
       seller:sellers(phone),
       customer:customers(name, city),
       product:products(name, image_url)
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     quantity:      order.quantity,
     cod_amount:    order.cod_amount,
     customer_name: customer?.name?.split(' ')[0] ?? '',
-    customer_city: customer?.city ?? '',
+    customer_city: order.customer_city ?? customer?.city ?? '',
     delivery: delivery
       ? {
           delivery_type: deliveryType,

@@ -41,6 +41,8 @@ type Props = {
     variant?: string | null
     quantity: number
     notes?: string | null
+    customer_address?: string | null
+    customer_city?: string | null
     created_at: string
   }
   customer: {
@@ -111,6 +113,8 @@ export default function OrderDetail({
   const ini = customer ? initials(customer.name) : '?'
   const estimatedProfit = order.cod_amount - ((product?.cost ?? 0) * order.quantity)
   const shortId = order.id.slice(0, 8).toUpperCase()
+  const orderAddress = order.customer_address ?? customer?.address ?? null
+  const orderCity = order.customer_city ?? customer?.city ?? null
 
   function handleAction(fn: () => Promise<void | { error?: string }>) {
     setActionError(null)
@@ -277,10 +281,10 @@ export default function OrderDetail({
                   </p>
                 </div>
               </div>
-              {(customer.city || customer.address) && (
+              {(orderCity || orderAddress) && (
                 <p className="text-sm text-[#78716C] flex items-center gap-1.5 mb-3">
                   <MapPin className="w-3.5 h-3.5 shrink-0" />
-                  {[customer.address, customer.city].filter(Boolean).join(', ')}
+                  {[orderAddress, orderCity].filter(Boolean).join(', ')}
                 </p>
               )}
               {customerStats.orderCount > 0 && (

@@ -12,6 +12,8 @@ export interface Order {
   status: OrderStatus
   notes?: string | null
   customer_email?: string | null
+  customer_address?: string | null
+  customer_city?: string | null
   tracking_token?: string | null
   deleted_at?: string | null
   archived_by?: string | null

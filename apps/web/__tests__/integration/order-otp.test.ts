@@ -25,13 +25,16 @@ function hashCode() {
 async function insertOtp() {
   const { data, error } = await adminClient
     .from('order_otps')
-    .insert({
+    .upsert({
       seller_id: sellerId,
       slug: sellerSlug,
       email,
       code_hash: hashCode(),
       expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
-    })
+      attempts: 0,
+      verified: false,
+      created_at: new Date().toISOString(),
+    }, { onConflict: 'seller_id,email' })
     .select('id')
     .single()
 
@@ -92,11 +95,75 @@ describe('public order OTP transaction', () => {
 
     const [{ data: otp }, { data: orders }] = await Promise.all([
       adminClient.from('order_otps').select('verified').eq('id', otpId).single(),
-      adminClient.from('orders').select('customer_email').eq('seller_id', sellerId),
+      adminClient.from('orders').select('customer_email, customer_address, customer_city').eq('seller_id', sellerId),
     ])
     expect(otp?.verified).toBe(true)
     expect(orders).toHaveLength(1)
     expect(orders?.[0]?.customer_email).toBe(email)
+    expect(orders?.[0]?.customer_address).toBe('Rue OTP')
+    expect(orders?.[0]?.customer_city).toBe('Tunis')
+  })
+
+  it('keeps every address without overwriting the customer primary address', async () => {
+    await insertOtp()
+    const first = await adminClient.rpc('create_public_order_with_otp', {
+      p_slug: sellerSlug,
+      p_email: email,
+      p_code_hash: hashCode(),
+      p_product_id: productId,
+      p_quantity: 1,
+      p_customer_name: 'Client OTP',
+      p_customer_phone: '22123456',
+      p_customer_address: 'Rue A',
+      p_customer_city: 'Tunis',
+    })
+    expect(first.error).toBeNull()
+    expect(first.data).toMatchObject({ ok: true })
+
+    await insertOtp()
+    const second = await adminClient.rpc('create_public_order_with_otp', {
+      p_slug: sellerSlug,
+      p_email: email,
+      p_code_hash: hashCode(),
+      p_product_id: productId,
+      p_quantity: 1,
+      p_customer_name: 'Client OTP',
+      p_customer_phone: '22123456',
+      p_customer_address: 'Rue B',
+      p_customer_city: 'Sousse',
+    })
+    expect(second.error).toBeNull()
+    expect(second.data).toMatchObject({ ok: true })
+
+    const { data: customers } = await adminClient
+      .from('customers')
+      .select('id, address, city')
+      .eq('seller_id', sellerId)
+      .eq('phone', '22123456')
+    const customer = customers?.[0]
+    expect(customer).toMatchObject({ address: 'Rue A', city: 'Tunis' })
+
+    const [{ data: addresses }, { data: orders }] = await Promise.all([
+      adminClient
+        .from('customer_addresses')
+        .select('address, city, use_count')
+        .eq('customer_id', customer?.id)
+        .order('address', { ascending: true }),
+      adminClient
+        .from('orders')
+        .select('customer_address, customer_city')
+        .eq('seller_id', sellerId)
+        .order('created_at', { ascending: true }),
+    ])
+
+    expect(addresses).toEqual([
+      { address: 'Rue A', city: 'Tunis', use_count: 1 },
+      { address: 'Rue B', city: 'Sousse', use_count: 1 },
+    ])
+    expect(orders).toEqual([
+      { customer_address: 'Rue A', customer_city: 'Tunis' },
+      { customer_address: 'Rue B', customer_city: 'Sousse' },
+    ])
   })
 
   it('persists failed attempts and blocks after five incorrect codes', async () => {
