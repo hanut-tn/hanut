@@ -34,6 +34,14 @@ type Customer = {
   phone: string
   address?: string
   city?: string
+  customer_governorate?: string | null
+  customer_city?: string | null
+  customer_delegation?: string | null
+  customer_address?: string | null
+  customer_landmark?: string | null
+  customer_postal_code?: string | null
+  delivery_notes?: string | null
+  address_version?: number | null
   created_at: string
   tags?: string[] | null
   order_count?: number | null
@@ -68,10 +76,26 @@ function getStats(customer: Customer) {
   }
 }
 
+function getCustomerLocation(customer: Customer) {
+  const governorate = customer.customer_governorate ?? customer.city
+  const city = customer.customer_delegation || customer.customer_city
+  return [city, governorate].filter(Boolean).join(' · ')
+}
+
+function getCustomerAddressLine(customer: Customer) {
+  return [
+    customer.customer_address ?? customer.address,
+    customer.customer_landmark ? `Repère: ${customer.customer_landmark}` : null,
+    customer.customer_city,
+    customer.customer_governorate ?? customer.city,
+  ].filter(Boolean).join(', ')
+}
+
 function CustomerMobileCard({ customer, crmEnabled }: { customer: Customer; crmEnabled: boolean }) {
   const stats = getStats(customer)
   const tags = customer.tags ?? []
   const ini = initials(customer.name)
+  const location = getCustomerLocation(customer)
 
   return (
     <div className="mb-3 bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-4">
@@ -99,7 +123,7 @@ function CustomerMobileCard({ customer, crmEnabled }: { customer: Customer; crmE
           </div>
           <p className="mt-0.5 truncate text-xs text-[#78716C]">
             <span className="font-mono">{customer.phone}</span>
-            {customer.city ? ` · ${customer.city}` : ''}
+            {location ? ` · ${location}` : ''}
           </p>
         </div>
       </div>
@@ -181,8 +205,13 @@ export default function CustomersClient({
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null)
   const [editName, setEditName] = useState('')
   const [editPhone, setEditPhone] = useState('')
+  const [editGovernorate, setEditGovernorate] = useState('')
+  const [editCustomerCity, setEditCustomerCity] = useState('')
+  const [editDelegation, setEditDelegation] = useState('')
   const [editAddress, setEditAddress] = useState('')
-  const [editCity, setEditCity] = useState('')
+  const [editLandmark, setEditLandmark] = useState('')
+  const [editPostalCode, setEditPostalCode] = useState('')
+  const [editDeliveryNotes, setEditDeliveryNotes] = useState('')
   const [editMsg, setEditMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const [confirmDelete, setConfirmDelete] = useState<Customer | null>(null)
@@ -202,7 +231,12 @@ export default function CustomersClient({
       result = result.filter(c =>
         c.name.toLowerCase().includes(q) ||
         c.phone.includes(q) ||
-        (c.city ?? '').toLowerCase().includes(q)
+        (c.city ?? '').toLowerCase().includes(q) ||
+        (c.customer_governorate ?? '').toLowerCase().includes(q) ||
+        (c.customer_city ?? '').toLowerCase().includes(q) ||
+        (c.customer_delegation ?? '').toLowerCase().includes(q) ||
+        (c.customer_address ?? '').toLowerCase().includes(q) ||
+        getCustomerAddressLine(c).toLowerCase().includes(q)
       )
     }
     const arr = [...result]
@@ -280,8 +314,13 @@ export default function CustomersClient({
     setEditCustomer(c)
     setEditName(c.name)
     setEditPhone(c.phone)
-    setEditAddress(c.address ?? '')
-    setEditCity(c.city ?? '')
+    setEditGovernorate(c.customer_governorate ?? c.city ?? '')
+    setEditCustomerCity(c.customer_city ?? '')
+    setEditDelegation(c.customer_delegation ?? '')
+    setEditAddress(c.customer_address ?? c.address ?? '')
+    setEditLandmark(c.customer_landmark ?? '')
+    setEditPostalCode(c.customer_postal_code ?? '')
+    setEditDeliveryNotes(c.delivery_notes ?? '')
     setEditMsg(null)
   }
 
@@ -293,8 +332,13 @@ export default function CustomersClient({
       const result = await updateCustomer(editCustomer.id, {
         name: editName,
         phone: editPhone,
-        address: editAddress,
-        city: editCity,
+        customer_governorate: editGovernorate,
+        customer_city: editCustomerCity,
+        customer_delegation: editDelegation,
+        customer_address: editAddress,
+        customer_landmark: editLandmark,
+        customer_postal_code: editPostalCode,
+        delivery_notes: editDeliveryNotes,
       })
       if (result?.error) {
         setEditMsg({ type: 'error', text: result.error })
@@ -357,7 +401,7 @@ export default function CustomersClient({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
           <input
             className="input pl-9"
-            placeholder="Rechercher par nom, téléphone ou ville…"
+            placeholder="Rechercher par nom, téléphone ou zone…"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -446,7 +490,7 @@ export default function CustomersClient({
           <table className="w-full text-sm">
             <thead className="bg-[#FAFAF9] border-b border-[#E7E5E4]">
               <tr>
-                {['Client', 'Téléphone', 'Ville', 'Commandes', 'CA livré', 'Dernière commande', ''].map((h, i) => (
+                {['Client', 'Téléphone', 'Zone', 'Commandes', 'CA livré', 'Dernière commande', ''].map((h, i) => (
                   <th key={i} className="text-left text-xs font-medium text-[#78716C] uppercase tracking-wide px-5 py-3">
                     {h}
                   </th>
@@ -457,6 +501,7 @@ export default function CustomersClient({
               {filtered.map(c => {
                 const stats = getStats(c)
                 const tags = c.tags ?? []
+                const location = getCustomerLocation(c)
                 return (
                   <tr
                     key={c.id}
@@ -486,7 +531,7 @@ export default function CustomersClient({
                       </div>
                     </td>
                     <td className="px-5 py-4 text-[#78716C] font-mono text-xs">{c.phone}</td>
-                    <td className="px-5 py-4 text-[#78716C]">{c.city || <span className="text-gray-300">—</span>}</td>
+                    <td className="px-5 py-4 text-[#78716C]">{location || <span className="text-gray-300">—</span>}</td>
                     <td className="px-5 py-4">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
                         {stats.count} cmd{stats.count !== 1 ? 's' : ''}
@@ -574,7 +619,7 @@ export default function CustomersClient({
       {/* ── EDIT MODAL ── */}
       {editCustomer && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
-          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-lg sm:rounded-xl sm:border sm:border-[#E7E5E4]">
             <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
               <h3 className="font-semibold text-[#1C1917] text-lg">Modifier le client</h3>
             </div>
@@ -601,21 +646,80 @@ export default function CustomersClient({
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-[#1C1917] mb-1">Adresse</label>
-                  <input
-                    className="input"
-                    value={editAddress}
-                    onChange={e => setEditAddress(e.target.value)}
-                    placeholder="Rue, numéro…"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#1C1917] mb-1">Gouvernorat</label>
-                  <select className="input bg-white" value={editCity} onChange={e => setEditCity(e.target.value)}>
+                  <label className="block text-sm font-medium text-[#1C1917] mb-1">Gouvernorat *</label>
+                  <select
+                    className="input bg-white"
+                    value={editGovernorate}
+                    onChange={e => setEditGovernorate(e.target.value)}
+                    required
+                  >
                     <option value="">Sélectionner…</option>
                     {TUNISIAN_GOVERNORATES.map(g => <option key={g} value={g}>{g}</option>)}
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#1C1917] mb-1">Ville / Délégation *</label>
+                  <input
+                    className="input"
+                    value={editCustomerCity}
+                    onChange={e => setEditCustomerCity(e.target.value)}
+                    placeholder="Ariana Ville, Sakiet Ezzit…"
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#1C1917] mb-1">Adresse détaillée *</label>
+                <input
+                  className="input"
+                  value={editAddress}
+                  onChange={e => setEditAddress(e.target.value)}
+                  placeholder="Rue, numéro, immeuble…"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#1C1917] mb-1">Repère pour le livreur *</label>
+                <input
+                  className="input"
+                  value={editLandmark}
+                  onChange={e => setEditLandmark(e.target.value)}
+                  placeholder="Près de la mosquée, café, école…"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-[#1C1917] mb-1">Code postal</label>
+                  <input
+                    className="input"
+                    value={editPostalCode}
+                    onChange={e => setEditPostalCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    inputMode="numeric"
+                    pattern="[0-9]{4}"
+                    maxLength={4}
+                    placeholder="Optionnel"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#1C1917] mb-1">Délégation précise</label>
+                  <input
+                    className="input"
+                    value={editDelegation}
+                    onChange={e => setEditDelegation(e.target.value)}
+                    placeholder="Optionnel"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#1C1917] mb-1">Notes de livraison</label>
+                <textarea
+                  className="input resize-none"
+                  rows={3}
+                  value={editDeliveryNotes}
+                  onChange={e => setEditDeliveryNotes(e.target.value)}
+                  placeholder="Optionnel"
+                />
               </div>
               {editMsg && (
                 <div className={`rounded-lg px-3 py-2.5 text-sm ${

@@ -39,6 +39,9 @@ vi.mock('@sentry/nextjs', () => ({
 
 vi.mock('@/lib/constants', () => ({
   DELETABLE_STATUSES: ['pending', 'new', 'confirmed'],
+  TUNISIAN_GOVERNORATES: ['Tunis', 'Sfax', 'Sousse'],
+  formatTunisianPhone: (phone: string) => phone,
+  isValidTunisianPhone: () => true,
   ORDER_STATUS_LABELS: {
     pending: 'En attente', new: 'Nouveau', confirmed: 'Confirmé',
     shipped: 'Expédié', delivered: 'Livré', returned: 'Retourné', cancelled: 'Annulé',
@@ -89,6 +92,10 @@ function mockServerClientForCreate(error: { message: string } | null = null) {
 const orderInput: CreateOrderInput = {
   customer_name: 'Fatima',
   customer_phone: '22222222',
+  customer_governorate: 'Tunis',
+  customer_city: 'Tunis Ville',
+  customer_address: 'Rue 1',
+  customer_landmark: 'Près de la poste',
   product_id: 'product-1',
   quantity: 1,
   cod_amount: 50,

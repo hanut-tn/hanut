@@ -14,6 +14,13 @@ type CustomerSuggestion = {
   id: string
   name: string
   phone: string
+  customer_governorate?: string | null
+  customer_city?: string | null
+  customer_delegation?: string | null
+  customer_address?: string | null
+  customer_landmark?: string | null
+  customer_postal_code?: string | null
+  delivery_notes?: string | null
   address?: string | null
   city?: string | null
 }
@@ -39,8 +46,12 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerSuggestion | null>(initialCustomer ?? null)
   const [customerName, setCustomerName] = useState(initialCustomer?.name ?? '')
   const [phone, setPhone] = useState(initialCustomer?.phone ?? '')
-  const [customerAddress, setCustomerAddress] = useState(initialCustomer?.address ?? '')
-  const [customerCity, setCustomerCity] = useState(initialCustomer?.city ?? '')
+  const [customerGovernorate, setCustomerGovernorate] = useState(initialCustomer?.customer_governorate ?? initialCustomer?.city ?? '')
+  const [customerCity, setCustomerCity] = useState(initialCustomer?.customer_city ?? '')
+  const [customerDelegation, setCustomerDelegation] = useState(initialCustomer?.customer_delegation ?? '')
+  const [customerAddress, setCustomerAddress] = useState(initialCustomer?.customer_address ?? initialCustomer?.address ?? '')
+  const [customerLandmark, setCustomerLandmark] = useState(initialCustomer?.customer_landmark ?? '')
+  const [customerPostalCode, setCustomerPostalCode] = useState(initialCustomer?.customer_postal_code ?? '')
   const [search, setSearch] = useState('')
   const [suggestions, setSuggestions] = useState<CustomerSuggestion[]>([])
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -54,8 +65,8 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
   const [codAmount, setCodAmount] = useState<number | ''>('')
   const [productSearch, setProductSearch] = useState('')
 
-  // ── Notes ──
-  const [notes, setNotes] = useState('')
+  // ── Notes livraison ──
+  const [deliveryNotes, setDeliveryNotes] = useState(initialCustomer?.delivery_notes ?? '')
   const [error, setError] = useState<string | null>(null)
 
   const selectedProduct = products.find(p => p.id === productId)
@@ -100,8 +111,13 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
     setSelectedCustomer(c)
     setCustomerName(c.name)
     setPhone(c.phone)
-    setCustomerAddress(c.address ?? '')
-    setCustomerCity(c.city ?? '')
+    setCustomerGovernorate(c.customer_governorate ?? c.city ?? '')
+    setCustomerCity(c.customer_city ?? '')
+    setCustomerDelegation(c.customer_delegation ?? '')
+    setCustomerAddress(c.customer_address ?? c.address ?? '')
+    setCustomerLandmark(c.customer_landmark ?? '')
+    setCustomerPostalCode(c.customer_postal_code ?? '')
+    setDeliveryNotes(c.delivery_notes ?? '')
     setSearch('')
     setSuggestions([])
     setDropdownOpen(false)
@@ -111,8 +127,13 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
     setSelectedCustomer(null)
     setCustomerName('')
     setPhone('')
-    setCustomerAddress('')
+    setCustomerGovernorate('')
     setCustomerCity('')
+    setCustomerDelegation('')
+    setCustomerAddress('')
+    setCustomerLandmark('')
+    setCustomerPostalCode('')
+    setDeliveryNotes('')
     setSearch('')
   }
 
@@ -122,6 +143,13 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
       if (!phone.trim()) return setError('Le téléphone est obligatoire.')
       if (!isValidTunisianPhone(phone)) return setError('Numéro tunisien invalide. Ex: 22 123 456')
       if (!customerName.trim()) return setError('Le nom du client est obligatoire.')
+      if (!customerGovernorate) return setError('Le gouvernorat est obligatoire.')
+      if (!customerCity.trim()) return setError('La ville / délégation est obligatoire.')
+      if (!customerAddress.trim()) return setError("L'adresse détaillée est obligatoire.")
+      if (!customerLandmark.trim()) return setError('Le repère livreur est obligatoire.')
+      if (customerPostalCode.trim() && !/^\d{4}$/.test(customerPostalCode.trim())) {
+        return setError('Le code postal doit contenir 4 chiffres.')
+      }
     }
     if (n === 2) {
       if (!productId) return setError('Sélectionnez un produit.')
@@ -137,6 +165,14 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
     if (selectedProduct && quantity > maxQty) return setError(`Stock disponible : ${maxQty} unité(s).`)
     if (!customerName.trim()) return setError('Le nom du client est obligatoire.')
     if (!phone.trim()) return setError('Le téléphone est obligatoire.')
+    if (!isValidTunisianPhone(phone)) return setError('Numéro tunisien invalide. Ex: 22 123 456')
+    if (!customerGovernorate) return setError('Le gouvernorat est obligatoire.')
+    if (!customerCity.trim()) return setError('La ville / délégation est obligatoire.')
+    if (!customerAddress.trim()) return setError("L'adresse détaillée est obligatoire.")
+    if (!customerLandmark.trim()) return setError('Le repère livreur est obligatoire.')
+    if (customerPostalCode.trim() && !/^\d{4}$/.test(customerPostalCode.trim())) {
+      return setError('Le code postal doit contenir 4 chiffres.')
+    }
     setError(null)
     startTransition(async () => {
       try {
@@ -144,13 +180,17 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
           customer_id: selectedCustomer?.id,
           customer_name: customerName.trim(),
           customer_phone: phone.trim(),
-          customer_address: customerAddress.trim() || undefined,
-          customer_city: customerCity.trim() || undefined,
+          customer_governorate: customerGovernorate,
+          customer_city: customerCity.trim(),
+          customer_delegation: customerDelegation.trim() || undefined,
+          customer_address: customerAddress.trim(),
+          customer_landmark: customerLandmark.trim(),
+          customer_postal_code: customerPostalCode.trim() || undefined,
+          delivery_notes: deliveryNotes.trim() || undefined,
           product_id: productId,
           variant: variant || undefined,
           quantity,
           cod_amount: codAmount === '' ? 0 : codAmount,
-          notes: notes.trim() || undefined,
         })
         if (result?.error === 'LIMIT_REACHED') {
           setError('Limite de 100 commandes atteinte ce mois. Passe au plan Pro pour des commandes illimitées.')
@@ -263,7 +303,9 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm text-[#1C1917]">{selectedCustomer.name}</p>
                 <p className="text-xs text-[#78716C] font-mono">{selectedCustomer.phone}</p>
-                {selectedCustomer.city && <p className="text-xs text-[#78716C]">{selectedCustomer.city}</p>}
+                {(selectedCustomer.customer_governorate ?? selectedCustomer.city) && (
+                  <p className="text-xs text-[#78716C]">{selectedCustomer.customer_governorate ?? selectedCustomer.city}</p>
+                )}
               </div>
               <button
                 type="button"
@@ -303,7 +345,9 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
                             </div>
                             <div className="min-w-0">
                               <p className="font-medium text-sm text-[#1C1917] truncate">{c.name}</p>
-                              <p className="text-xs text-[#78716C] font-mono">{c.phone}{c.city ? ` · ${c.city}` : ''}</p>
+                              <p className="text-xs text-[#78716C] font-mono">
+                                {c.phone}{(c.customer_governorate ?? c.city) ? ` · ${c.customer_governorate ?? c.city}` : ''}
+                              </p>
                             </div>
                           </button>
                         )
@@ -339,15 +383,31 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-[#1C1917] mb-1">Adresse</label>
-              <input className="input" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} placeholder="Rue, numéro…" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#1C1917] mb-1">Gouvernorat</label>
-              <select className="input bg-white" value={customerCity} onChange={e => setCustomerCity(e.target.value)}>
+              <label className="block text-sm font-medium text-[#1C1917] mb-1">Gouvernorat <span className="text-red-500">*</span></label>
+              <select className="input bg-white" value={customerGovernorate} onChange={e => setCustomerGovernorate(e.target.value)}>
                 <option value="">Sélectionner…</option>
                 {TUNISIAN_GOVERNORATES.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#1C1917] mb-1">Ville / Délégation <span className="text-red-500">*</span></label>
+              <input className="input" value={customerCity} onChange={e => setCustomerCity(e.target.value)} placeholder="Sfax, Sakiet Ezzit…" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#1C1917] mb-1">Adresse détaillée <span className="text-red-500">*</span></label>
+              <input className="input" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} placeholder="Rue, numéro, quartier…" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#1C1917] mb-1">Repère livreur <span className="text-red-500">*</span></label>
+              <input className="input" value={customerLandmark} onChange={e => setCustomerLandmark(e.target.value)} placeholder="Près de la mosquée…" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#1C1917] mb-1">Code postal <span className="text-xs font-normal text-[#78716C]">(optionnel)</span></label>
+              <input className="input" inputMode="numeric" maxLength={4} value={customerPostalCode} onChange={e => setCustomerPostalCode(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="3000" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#1C1917] mb-1">Délégation précise <span className="text-xs font-normal text-[#78716C]">(optionnel)</span></label>
+              <input className="input" value={customerDelegation} onChange={e => setCustomerDelegation(e.target.value)} placeholder="Si différente…" />
             </div>
           </div>
 
@@ -502,7 +562,9 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
             <p className="text-xs font-medium text-[#78716C] uppercase tracking-wide">Client</p>
             <p className="font-semibold text-[#1C1917]">{customerName}</p>
             <p className="text-sm text-[#78716C]">{phone}</p>
-            {customerCity && <p className="text-sm text-[#78716C]">{customerCity}</p>}
+            <p className="text-sm text-[#78716C]">
+              {[customerAddress, customerLandmark, customerCity, customerGovernorate].filter(Boolean).join(', ')}
+            </p>
           </div>
 
           {/* Product summary */}
@@ -521,14 +583,14 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
           {/* Notes */}
           <div>
             <label className="block text-sm font-medium text-[#1C1917] mb-1">
-              Notes <span className="text-xs font-normal text-[#78716C]">(optionnel)</span>
+              Notes de livraison <span className="text-xs font-normal text-[#78716C]">(optionnel)</span>
             </label>
             <textarea
               className="input resize-none"
               rows={3}
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="Instructions de livraison, couleur exacte, remarques…"
+              value={deliveryNotes}
+              onChange={e => setDeliveryNotes(e.target.value)}
+              placeholder="Appeler avant livraison, créneau préféré…"
             />
           </div>
 

@@ -24,9 +24,10 @@ export default async function TrackPage({ params }: Params) {
   const { data: order } = await supabase
     .from('orders')
     .select(`
-      id, status, cod_amount, variant, quantity, created_at, customer_city,
+      id, status, cod_amount, variant, quantity, created_at,
+      customer_city, customer_governorate, customer_delegation,
       seller:sellers(phone),
-      customer:customers(name, city),
+      customer:customers(name, city, customer_governorate, customer_city, customer_delegation),
       product:products(name, image_url)
     `)
     .eq('tracking_token', orderId)
@@ -36,7 +37,13 @@ export default async function TrackPage({ params }: Params) {
   if (!order) return <NotFound />
 
   type SellerRow   = { phone?: string | null }
-  type CustomerRow = { name: string; city?: string | null }
+  type CustomerRow = {
+    name: string
+    city?: string | null
+    customer_governorate?: string | null
+    customer_city?: string | null
+    customer_delegation?: string | null
+  }
   type ProductRow  = { name: string; image_url?: string | null }
   const seller   = (Array.isArray(order.seller)   ? order.seller[0]   : order.seller)   as SellerRow   | null
   const customer = (Array.isArray(order.customer) ? order.customer[0] : order.customer) as CustomerRow | null
@@ -67,6 +74,10 @@ export default async function TrackPage({ params }: Params) {
   const sellerWhatsapp = isValidTunisianPhone(normalizedPhone)
     ? `https://wa.me/216${normalizedPhone}`
     : null
+  const customerLocation = [
+    order.customer_delegation ?? order.customer_city ?? customer?.customer_delegation ?? customer?.customer_city,
+    order.customer_governorate ?? customer?.customer_governorate ?? customer?.city,
+  ].filter(Boolean).join(' · ')
 
   const initialData: TrackData = {
     order_id:       orderId.slice(0, 8).toUpperCase(),
@@ -78,7 +89,7 @@ export default async function TrackPage({ params }: Params) {
     quantity:       order.quantity,
     cod_amount:     order.cod_amount,
     customer_name:  customer?.name?.split(' ')[0] ?? '',
-    customer_city:  order.customer_city ?? customer?.city ?? null,
+    customer_city:  customerLocation || null,
     delivery: delivery
       ? {
           delivery_type: deliveryType,

@@ -43,6 +43,12 @@ type Props = {
     notes?: string | null
     customer_address?: string | null
     customer_city?: string | null
+    customer_governorate?: string | null
+    customer_delegation?: string | null
+    customer_landmark?: string | null
+    customer_postal_code?: string | null
+    delivery_notes?: string | null
+    address_version?: number | null
     created_at: string
   }
   customer: {
@@ -51,6 +57,14 @@ type Props = {
     phone: string
     address?: string | null
     city?: string | null
+    customer_address?: string | null
+    customer_city?: string | null
+    customer_governorate?: string | null
+    customer_delegation?: string | null
+    customer_landmark?: string | null
+    customer_postal_code?: string | null
+    delivery_notes?: string | null
+    address_version?: number | null
   } | null
   product: {
     id: string
@@ -113,8 +127,21 @@ export default function OrderDetail({
   const ini = customer ? initials(customer.name) : '?'
   const estimatedProfit = order.cod_amount - ((product?.cost ?? 0) * order.quantity)
   const shortId = order.id.slice(0, 8).toUpperCase()
-  const orderAddress = order.customer_address ?? customer?.address ?? null
-  const orderCity = order.customer_city ?? customer?.city ?? null
+  const orderAddress = order.customer_address ?? customer?.customer_address ?? customer?.address ?? null
+  const orderCity = order.customer_city ?? customer?.customer_city ?? null
+  const orderDelegation = order.customer_delegation ?? customer?.customer_delegation ?? null
+  const orderGovernorate = order.customer_governorate ?? customer?.customer_governorate ?? customer?.city ?? null
+  const orderLandmark = order.customer_landmark ?? customer?.customer_landmark ?? null
+  const orderPostalCode = order.customer_postal_code ?? customer?.customer_postal_code ?? null
+  const deliveryNotes = order.delivery_notes ?? customer?.delivery_notes ?? null
+  const addressLines = [
+    orderAddress,
+    orderLandmark ? `Repère: ${orderLandmark}` : null,
+    orderDelegation && orderDelegation !== orderCity ? orderDelegation : null,
+    orderCity,
+    orderGovernorate,
+    orderPostalCode,
+  ].filter(Boolean)
 
   function handleAction(fn: () => Promise<void | { error?: string }>) {
     setActionError(null)
@@ -281,11 +308,16 @@ export default function OrderDetail({
                   </p>
                 </div>
               </div>
-              {(orderCity || orderAddress) && (
-                <p className="text-sm text-[#78716C] flex items-center gap-1.5 mb-3">
+              {addressLines.length > 0 && (
+                <p className="text-sm text-[#78716C] flex items-start gap-1.5 mb-3">
                   <MapPin className="w-3.5 h-3.5 shrink-0" />
-                  {[orderAddress, orderCity].filter(Boolean).join(', ')}
+                  <span>{addressLines.join(', ')}</span>
                 </p>
+              )}
+              {deliveryNotes && (
+                <div className="text-xs text-[#78716C] bg-[#FAFAF9] border border-[#E7E5E4] rounded-lg px-3 py-2 mb-3 whitespace-pre-wrap">
+                  <span className="font-medium text-[#1C1917]">Notes livraison: </span>{deliveryNotes}
+                </div>
               )}
               {customerStats.orderCount > 0 && (
                 <div className="pt-3 border-t border-[#E7E5E4]">

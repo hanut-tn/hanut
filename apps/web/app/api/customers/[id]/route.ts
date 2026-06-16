@@ -26,7 +26,9 @@ export async function GET(req: Request, { params }: Params) {
 
   const { data: customer } = await supabase
     .from('customers')
-    .select('id, name, phone, address, city, created_at, tags, notes')
+    .select(`id, name, phone, address, city, customer_governorate, customer_city,
+      customer_delegation, customer_address, customer_landmark, customer_postal_code,
+      delivery_notes, address_version, created_at, tags, notes`)
     .eq('id', id)
     .eq('seller_id', context.sellerId)
     .single()

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import type { CustomerInput } from '@/app/(dashboard)/customers/actions'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { X, Lock, MapPin } from 'lucide-react'
-import { getUpgradeWhatsAppUrl } from '@/lib/constants'
+import { TUNISIAN_GOVERNORATES, getUpgradeWhatsAppUrl } from '@/lib/constants'
 
 const TAG_SUGGESTIONS = ['VIP', 'Fidèle', 'Retours fréquents', 'À risque', 'Nouveau']
 
@@ -21,6 +21,37 @@ const TAG_COLORS = [
 function tagColor(tag: string) {
   const hash = tag.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
   return TAG_COLORS[hash % TAG_COLORS.length]
+}
+
+type AddressRecord = {
+  address?: string | null
+  city?: string | null
+  customer_governorate?: string | null
+  customer_city?: string | null
+  customer_delegation?: string | null
+  customer_address?: string | null
+  customer_landmark?: string | null
+  customer_postal_code?: string | null
+  delivery_notes?: string | null
+}
+
+function addressLines(record: AddressRecord) {
+  const governorate = record.customer_governorate ?? record.city
+  const city = record.customer_city
+  return [
+    record.customer_address ?? record.address,
+    record.customer_landmark ? `Repère: ${record.customer_landmark}` : null,
+    record.customer_delegation && record.customer_delegation !== city ? record.customer_delegation : null,
+    city,
+    governorate,
+    record.customer_postal_code,
+  ].filter(Boolean)
+}
+
+function locationLabel(record: AddressRecord) {
+  const governorate = record.customer_governorate ?? record.city
+  const city = record.customer_delegation || record.customer_city
+  return [city, governorate].filter(Boolean).join(' · ')
 }
 
 type Order = {
@@ -39,6 +70,14 @@ type CustomerData = {
   phone: string
   address?: string
   city?: string
+  customer_governorate?: string
+  customer_city?: string
+  customer_delegation?: string
+  customer_address?: string
+  customer_landmark?: string
+  customer_postal_code?: string
+  delivery_notes?: string
+  address_version?: number
   created_at: string
   tags: string[]
   notes: string
@@ -48,6 +87,14 @@ type CustomerAddress = {
   id: string
   address?: string | null
   city?: string | null
+  customer_governorate?: string | null
+  customer_city?: string | null
+  customer_delegation?: string | null
+  customer_address?: string | null
+  customer_landmark?: string | null
+  customer_postal_code?: string | null
+  delivery_notes?: string | null
+  address_version?: number | null
   use_count: number
   first_used_at: string
   last_used_at: string
@@ -77,8 +124,13 @@ export default function CustomerDetail({ customer, orders: initialOrders, addres
   const [editOpen, setEditOpen] = useState(false)
   const [editName, setEditName] = useState(customer.name)
   const [editPhone, setEditPhone] = useState(customer.phone)
-  const [editAddress, setEditAddress] = useState(customer.address ?? '')
-  const [editCity, setEditCity] = useState(customer.city ?? '')
+  const [editGovernorate, setEditGovernorate] = useState(customer.customer_governorate ?? customer.city ?? '')
+  const [editCustomerCity, setEditCustomerCity] = useState(customer.customer_city ?? '')
+  const [editDelegation, setEditDelegation] = useState(customer.customer_delegation ?? '')
+  const [editAddress, setEditAddress] = useState(customer.customer_address ?? customer.address ?? '')
+  const [editLandmark, setEditLandmark] = useState(customer.customer_landmark ?? '')
+  const [editPostalCode, setEditPostalCode] = useState(customer.customer_postal_code ?? '')
+  const [editDeliveryNotes, setEditDeliveryNotes] = useState(customer.delivery_notes ?? '')
   const [editMsg, setEditMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   // Tags
@@ -189,8 +241,13 @@ export default function CustomerDetail({ customer, orders: initialOrders, addres
       const result = await updateCustomer(customer.id, {
         name: editName,
         phone: editPhone,
-        address: editAddress,
-        city: editCity,
+        customer_governorate: editGovernorate,
+        customer_city: editCustomerCity,
+        customer_delegation: editDelegation,
+        customer_address: editAddress,
+        customer_landmark: editLandmark,
+        customer_postal_code: editPostalCode,
+        delivery_notes: editDeliveryNotes,
       })
       if (result?.error) {
         setEditMsg({ type: 'error', text: result.error })
@@ -201,9 +258,25 @@ export default function CustomerDetail({ customer, orders: initialOrders, addres
     })
   }
 
+  function openEditModal() {
+    setEditName(customer.name)
+    setEditPhone(customer.phone)
+    setEditGovernorate(customer.customer_governorate ?? customer.city ?? '')
+    setEditCustomerCity(customer.customer_city ?? '')
+    setEditDelegation(customer.customer_delegation ?? '')
+    setEditAddress(customer.customer_address ?? customer.address ?? '')
+    setEditLandmark(customer.customer_landmark ?? '')
+    setEditPostalCode(customer.customer_postal_code ?? '')
+    setEditDeliveryNotes(customer.delivery_notes ?? '')
+    setEditMsg(null)
+    setEditOpen(true)
+  }
+
   const initials = customer.name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()
   const suggestions = TAG_SUGGESTIONS.filter(t => !tags.includes(t))
-  const knownAddresses = addresses.filter(a => a.address || a.city)
+  const knownAddresses = addresses.filter(a => addressLines(a).length > 0)
+  const customerAddressLine = addressLines(customer).join(', ')
+  const customerLocation = locationLabel(customer)
 
   return (
     <div className="space-y-5 max-w-4xl">
@@ -232,7 +305,7 @@ export default function CustomerDetail({ customer, orders: initialOrders, addres
                   + Nouvelle commande
                 </Link>
                 <button
-                  onClick={() => { setEditOpen(true); setEditMsg(null) }}
+                  onClick={openEditModal}
                   className="btn-secondary text-sm"
                 >
                   Modifier
@@ -241,8 +314,8 @@ export default function CustomerDetail({ customer, orders: initialOrders, addres
             </div>
             <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-gray-500">
               <span className="font-mono">{customer.phone}</span>
-              {customer.city && <span>{customer.city}</span>}
-              {customer.address && <span className="text-gray-400">{customer.address}</span>}
+              {customerLocation && <span>{customerLocation}</span>}
+              {customerAddressLine && <span className="text-gray-400">{customerAddressLine}</span>}
             </div>
             <p className="text-xs text-gray-400 mt-1.5">
               Client depuis le{' '}
@@ -277,8 +350,11 @@ export default function CustomerDetail({ customer, orders: initialOrders, addres
                   <MapPin className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900">
-                      {[address.address, address.city].filter(Boolean).join(', ')}
+                      {addressLines(address).join(', ')}
                     </p>
+                    {address.delivery_notes && (
+                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{address.delivery_notes}</p>
+                    )}
                     <p className="text-xs text-gray-500 mt-1">
                       Utilisée {address.use_count} fois · dernière fois le{' '}
                       {new Date(address.last_used_at).toLocaleDateString('fr-TN', {
@@ -531,7 +607,7 @@ export default function CustomerDetail({ customer, orders: initialOrders, addres
       {/* ── EDIT MODAL ── */}
       {editOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
-          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-sm sm:rounded-xl sm:border sm:border-gray-200">
+          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-lg sm:rounded-xl sm:border sm:border-gray-200">
             <div className="sticky top-0 border-b border-gray-100 bg-white px-4 py-4 sm:px-6">
               <h3 className="font-semibold text-gray-900 text-lg">Modifier le client</h3>
             </div>
@@ -558,23 +634,80 @@ export default function CustomerDetail({ customer, orders: initialOrders, addres
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Gouvernorat *</label>
+                  <select
+                    className="input bg-white"
+                    value={editGovernorate}
+                    onChange={e => setEditGovernorate(e.target.value)}
+                    required
+                  >
+                    <option value="">Sélectionner…</option>
+                    {TUNISIAN_GOVERNORATES.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ville / Délégation *</label>
                   <input
                     className="input"
-                    value={editAddress}
-                    onChange={e => setEditAddress(e.target.value)}
-                    placeholder="Rue, numéro…"
+                    value={editCustomerCity}
+                    onChange={e => setEditCustomerCity(e.target.value)}
+                    placeholder="Ariana Ville, Sakiet Ezzit…"
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Adresse détaillée *</label>
+                <input
+                  className="input"
+                  value={editAddress}
+                  onChange={e => setEditAddress(e.target.value)}
+                  placeholder="Rue, numéro, immeuble…"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Repère pour le livreur *</label>
+                <input
+                  className="input"
+                  value={editLandmark}
+                  onChange={e => setEditLandmark(e.target.value)}
+                  placeholder="Près de la mosquée, café, école…"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Code postal</label>
+                  <input
+                    className="input"
+                    value={editPostalCode}
+                    onChange={e => setEditPostalCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    inputMode="numeric"
+                    pattern="[0-9]{4}"
+                    maxLength={4}
+                    placeholder="Optionnel"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Ville</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Délégation précise</label>
                   <input
                     className="input"
-                    value={editCity}
-                    onChange={e => setEditCity(e.target.value)}
-                    placeholder="Tunis, Sfax…"
+                    value={editDelegation}
+                    onChange={e => setEditDelegation(e.target.value)}
+                    placeholder="Optionnel"
                   />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes de livraison</label>
+                <textarea
+                  className="input resize-none"
+                  rows={3}
+                  value={editDeliveryNotes}
+                  onChange={e => setEditDeliveryNotes(e.target.value)}
+                  placeholder="Optionnel"
+                />
               </div>
               {editMsg && (
                 <div className={`rounded-lg px-3 py-2.5 text-sm ${

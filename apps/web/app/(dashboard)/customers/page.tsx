@@ -29,7 +29,10 @@ export default async function CustomersPage() {
     // Pas de JOIN orders — order_count/total_spent viennent des colonnes dénormalisées.
     supabase
       .from('customers')
-      .select('id, name, phone, address, city, created_at, tags, order_count, total_spent_calc:total_spent, last_order_at', { count: 'exact' })
+      .select(`id, name, phone, address, city, customer_governorate, customer_city,
+        customer_delegation, customer_address, customer_landmark, customer_postal_code,
+        delivery_notes, address_version, created_at, tags, order_count,
+        total_spent_calc:total_spent, last_order_at`, { count: 'exact' })
       .eq('seller_id', context.sellerId)
       .order('name', { ascending: true })
       .order('id', { ascending: true })

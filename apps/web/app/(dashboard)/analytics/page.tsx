@@ -18,8 +18,14 @@ type AnalyticsOrderRow = {
   unit_cost: number
   status: string
   created_at: string
+  customer_governorate?: string | null
+  customer_city?: string | null
+  customer_delegation?: string | null
   product: { id: string; name: string } | { id: string; name: string }[] | null
-  customer: { id: string; name: string; city?: string | null } | { id: string; name: string; city?: string | null }[] | null
+  customer:
+    | { id: string; name: string; city?: string | null; customer_governorate?: string | null; customer_city?: string | null; customer_delegation?: string | null }
+    | { id: string; name: string; city?: string | null; customer_governorate?: string | null; customer_city?: string | null; customer_delegation?: string | null }[]
+    | null
 }
 
 type DeliveryOrderRow = {
@@ -67,7 +73,10 @@ export default async function AnalyticsPage() {
   const [{ data: ordersRaw }, { data: deliveriesRaw }, { data: summaryRaw }] = (await Promise.all([
     supabase
       .from('orders')
-      .select('id, cod_amount, quantity, unit_cost, status, created_at, product:products(id, name), customer:customers(id, name, city)')
+      .select(`id, cod_amount, quantity, unit_cost, status, created_at,
+        customer_governorate, customer_city, customer_delegation,
+        product:products(id, name),
+        customer:customers(id, name, city, customer_governorate, customer_city, customer_delegation)`)
       .eq('seller_id', context.sellerId)
       .is('deleted_at', null)
       .gte('created_at', iso)

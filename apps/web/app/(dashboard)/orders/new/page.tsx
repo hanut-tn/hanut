@@ -26,7 +26,12 @@ export default async function NewOrderPage({ searchParams }: Props) {
     customer_id
       ? supabase
           .from('customers')
-          .select('id, name, phone, address, city')
+          .select(`
+            id, name, phone,
+            customer_governorate, customer_city, customer_delegation,
+            customer_address, customer_landmark, customer_postal_code,
+            delivery_notes, address, city
+          `)
           .eq('id', customer_id)
           .eq('seller_id', context.sellerId)
           .single()

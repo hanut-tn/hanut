@@ -10,13 +10,19 @@ import { DELETABLE_STATUSES, ORDER_STATUS_LABELS, PLAN_LIMITS } from '@/lib/cons
 import { getMonthlyOrderCount } from '@/lib/get-context'
 import { isValidTransition } from '@/lib/order-transitions'
 import { requireActive } from '@/lib/assert-active'
+import { HanutAddressFieldsSchema } from '@/lib/address'
 
 export type CreateOrderInput = {
   customer_id?: string
   customer_name: string
   customer_phone: string
-  customer_address?: string
+  customer_governorate?: string
   customer_city?: string
+  customer_delegation?: string
+  customer_address?: string
+  customer_landmark?: string
+  customer_postal_code?: string
+  delivery_notes?: string
   product_id: string
   variant?: string
   quantity: number
@@ -41,6 +47,19 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderMutatio
   }
 
   const supabase = await createServerClient()
+  const parsedAddress = HanutAddressFieldsSchema.safeParse({
+    customer_governorate: input.customer_governorate,
+    customer_city: input.customer_city,
+    customer_delegation: input.customer_delegation,
+    customer_address: input.customer_address,
+    customer_landmark: input.customer_landmark,
+    customer_postal_code: input.customer_postal_code,
+    delivery_notes: input.delivery_notes,
+  })
+  if (!parsedAddress.success) {
+    return { error: parsedAddress.error.issues[0]?.message ?? 'Adresse invalide.' }
+  }
+  const address = parsedAddress.data
 
   const { data: product } = await supabase
     .from('products')
@@ -55,14 +74,19 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderMutatio
     p_quantity: input.quantity,
     p_customer_name: input.customer_name,
     p_customer_phone: input.customer_phone,
-    p_customer_address: input.customer_address ?? null,
-    p_customer_city: input.customer_city ?? null,
+    p_customer_address: address.customer_address,
+    p_customer_city: address.customer_city,
     p_customer_id: input.customer_id ?? null,
     p_variant: input.variant ?? null,
     p_cod_amount: input.cod_amount,
     p_notes: input.notes ?? null,
     p_status: 'new',
     p_changed_by: context.userId,
+    p_customer_governorate: address.customer_governorate,
+    p_customer_delegation: address.customer_delegation ?? null,
+    p_customer_landmark: address.customer_landmark,
+    p_customer_postal_code: address.customer_postal_code ?? null,
+    p_delivery_notes: address.delivery_notes ?? null,
   })
   if (error) {
     if (error.message.includes('LIMIT_REACHED')) return { error: 'LIMIT_REACHED' }
@@ -84,7 +108,7 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderMutatio
     actionType: 'order_created',
     entityType: 'order',
     description: `a créé une commande pour ${input.customer_name} (${input.cod_amount} DT)`,
-    metadata: { product: product?.name, quantity: input.quantity },
+    metadata: { product: product?.name, quantity: input.quantity, governorate: address.customer_governorate },
   })
 
   revalidatePath('/orders')

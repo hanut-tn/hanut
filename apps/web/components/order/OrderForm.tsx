@@ -32,12 +32,16 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
-  const [city, setCity] = useState('')
+  const [governorate, setGovernorate] = useState('')
+  const [customerCity, setCustomerCity] = useState('')
+  const [delegation, setDelegation] = useState('')
   const [address, setAddress] = useState('')
+  const [landmark, setLandmark] = useState('')
+  const [postalCode, setPostalCode] = useState('')
   const [productId, setProductId] = useState('')
   const [variant, setVariant] = useState('')
   const [quantity, setQuantity] = useState(1)
-  const [notes, setNotes] = useState('')
+  const [deliveryNotes, setDeliveryNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [emailError, setEmailError] = useState<string | null>(null)
@@ -128,8 +132,32 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
       setError('Numéro de téléphone invalide. Entrez 8 chiffres (ex: 22 123 456).')
       return
     }
+    if (!name.trim()) {
+      setError('Le nom complet est obligatoire.')
+      return
+    }
     if (!isValidEmail(email)) {
       setEmailError('Adresse email invalide.')
+      return
+    }
+    if (!governorate) {
+      setError('Le gouvernorat est obligatoire.')
+      return
+    }
+    if (!customerCity.trim()) {
+      setError('La ville / délégation est obligatoire.')
+      return
+    }
+    if (!address.trim()) {
+      setError("L'adresse détaillée est obligatoire.")
+      return
+    }
+    if (!landmark.trim()) {
+      setError('Le repère pour le livreur est obligatoire.')
+      return
+    }
+    if (postalCode.trim() && !/^\d{4}$/.test(postalCode.trim())) {
+      setError('Le code postal doit contenir 4 chiffres.')
       return
     }
     if (!productId) {
@@ -207,12 +235,16 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
           code,
           customer_name: name.trim(),
           customer_phone: phoneDigits,
-          customer_address: address.trim() || undefined,
-          customer_city: city || undefined,
+          customer_governorate: governorate,
+          customer_city: customerCity.trim(),
+          customer_delegation: delegation.trim() || undefined,
+          customer_address: address.trim(),
+          customer_landmark: landmark.trim(),
+          customer_postal_code: postalCode.trim() || undefined,
+          delivery_notes: deliveryNotes.trim() || undefined,
           product_id: productId,
           variant: variant || undefined,
           quantity,
-          notes: notes.trim() || undefined,
           turnstile_token: turnstileToken || undefined,
         }),
       })
@@ -386,8 +418,10 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         <button
           onClick={() => {
             setSubmitted(null)
-            setName(''); setPhone(''); setEmail(''); setCity(''); setAddress('')
-            setProductId(''); setVariant(''); setQuantity(1); setNotes('')
+            setName(''); setPhone(''); setEmail('')
+            setGovernorate(''); setCustomerCity(''); setDelegation('')
+            setAddress(''); setLandmark(''); setPostalCode('')
+            setProductId(''); setVariant(''); setQuantity(1); setDeliveryNotes('')
             setTurnstileToken(''); setTurnstileResetKey(k => k + 1)
             setStep('form')
           }}
@@ -555,8 +589,8 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Gouvernorat *</label>
           <select
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition bg-white"
-            value={city}
-            onChange={e => setCity(e.target.value)}
+            value={governorate}
+            onChange={e => setGovernorate(e.target.value)}
             required
           >
             <option value="">Sélectionner…</option>
@@ -567,7 +601,19 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Adresse complète *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Ville / Délégation *</label>
+          <input
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
+            value={customerCity}
+            onChange={e => setCustomerCity(e.target.value)}
+            placeholder="Sfax, Sakiet Ezzit…"
+            required
+            autoComplete="address-level2"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Adresse détaillée *</label>
           <input
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
             value={address}
@@ -576,6 +622,45 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
             required
             autoComplete="street-address"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Repère pour le livreur *</label>
+          <input
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
+            value={landmark}
+            onChange={e => setLandmark(e.target.value)}
+            placeholder="Près de la mosquée, café, école…"
+            required
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Code postal <span className="text-gray-400 font-normal">(optionnel)</span>
+            </label>
+            <input
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
+              value={postalCode}
+              onChange={e => setPostalCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              placeholder="3000"
+              inputMode="numeric"
+              maxLength={4}
+              autoComplete="postal-code"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Délégation précise <span className="text-gray-400 font-normal">(optionnel)</span>
+            </label>
+            <input
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
+              value={delegation}
+              onChange={e => setDelegation(e.target.value)}
+              placeholder="Si différente…"
+            />
+          </div>
         </div>
       </div>
 
@@ -706,15 +791,15 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
       {/* ── Note ── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <label className="block text-sm font-medium text-gray-700 mb-1.5">
-          Note pour le vendeur
+          Notes de livraison
           <span className="text-gray-400 font-normal ml-1">(optionnel)</span>
         </label>
         <textarea
           className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition resize-none"
           rows={3}
-          value={notes}
-          onChange={e => setNotes(e.target.value)}
-          placeholder="Couleur exacte, taille précise, instructions de livraison…"
+          value={deliveryNotes}
+          onChange={e => setDeliveryNotes(e.target.value)}
+          placeholder="Appeler avant livraison, créneau préféré…"
         />
       </div>
 

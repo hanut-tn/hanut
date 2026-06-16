@@ -37,6 +37,9 @@ vi.mock('@sentry/nextjs', () => ({
 
 vi.mock('@/lib/constants', () => ({
   DELETABLE_STATUSES: ['pending', 'new', 'confirmed'],
+  TUNISIAN_GOVERNORATES: ['Tunis', 'Sfax', 'Sousse'],
+  formatTunisianPhone: (phone: string) => phone,
+  isValidTunisianPhone: () => true,
   ORDER_STATUS_LABELS: {
     pending: 'En attente', new: 'Nouveau', confirmed: 'Confirmé',
     shipped: 'Expédié', delivered: 'Livré', returned: 'Retourné', cancelled: 'Annulé',

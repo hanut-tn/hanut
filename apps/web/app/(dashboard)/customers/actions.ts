@@ -6,10 +6,18 @@ import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { revalidatePath } from 'next/cache'
 import { requireActive } from '@/lib/assert-active'
+import { HanutAddressFieldsSchema } from '@/lib/address'
 
 export type CustomerInput = {
   name: string
   phone: string
+  customer_governorate?: string
+  customer_city?: string
+  customer_delegation?: string
+  customer_address?: string
+  customer_landmark?: string
+  customer_postal_code?: string
+  delivery_notes?: string
   address?: string
   city?: string
 }
@@ -22,14 +30,36 @@ export async function updateCustomer(id: string, input: CustomerInput): Promise<
   if (activeCheck) return activeCheck
 
   const supabase = await createServerClient()
+  const parsedAddress = HanutAddressFieldsSchema.safeParse({
+    customer_governorate: input.customer_governorate ?? input.city,
+    customer_city: input.customer_city,
+    customer_delegation: input.customer_delegation,
+    customer_address: input.customer_address ?? input.address,
+    customer_landmark: input.customer_landmark,
+    customer_postal_code: input.customer_postal_code,
+    delivery_notes: input.delivery_notes,
+  })
+  if (!parsedAddress.success) {
+    return { error: parsedAddress.error.issues[0]?.message ?? 'Adresse invalide.' }
+  }
+
+  const address = parsedAddress.data
 
   const { error } = await supabase
     .from('customers')
     .update({
       name: input.name.trim(),
       phone: input.phone.trim(),
-      address: input.address?.trim() || null,
-      city: input.city?.trim() || null,
+      address: address.customer_address,
+      city: address.customer_governorate,
+      customer_governorate: address.customer_governorate,
+      customer_city: address.customer_city,
+      customer_delegation: address.customer_delegation ?? null,
+      customer_address: address.customer_address,
+      customer_landmark: address.customer_landmark,
+      customer_postal_code: address.customer_postal_code ?? null,
+      delivery_notes: address.delivery_notes ?? null,
+      address_version: 2,
     })
     .eq('id', id)
     .eq('seller_id', context.sellerId)

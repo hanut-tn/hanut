@@ -34,7 +34,10 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('customers_with_stats')
-    .select('id, name, phone, address, city, created_at, tags, order_count, total_spent_calc, last_order_at', { count: 'exact' })
+    .select(`id, name, phone, address, city, customer_governorate, customer_city,
+      customer_delegation, customer_address, customer_landmark, customer_postal_code,
+      delivery_notes, address_version, created_at, tags, order_count, total_spent_calc,
+      last_order_at`, { count: 'exact' })
     .eq('seller_id', context.sellerId)
     .order(sortConfig.column, { ascending: sortConfig.ascending, nullsFirst: sortConfig.nullsFirst })
     .order('name', { ascending: true })
@@ -42,7 +45,9 @@ export async function GET(req: NextRequest) {
 
   const safeSearch = escapeLikePattern(search.replace(/[,()]/g, '').slice(0, 100))
   if (safeSearch.length >= 2) {
-    query = query.or(`name.ilike.%${safeSearch}%,phone.ilike.%${safeSearch}%`)
+    query = query.or(
+      `name.ilike.%${safeSearch}%,phone.ilike.%${safeSearch}%,city.ilike.%${safeSearch}%,customer_governorate.ilike.%${safeSearch}%,customer_city.ilike.%${safeSearch}%`,
+    )
   }
 
   const { data: customers, count, error } = await query

@@ -12,6 +12,7 @@ import {
   normalizeOtpSlug,
   otpRateLimitIdentifier,
 } from '@/lib/order-otp'
+import { HanutAddressFieldsSchema } from '@/lib/address'
 
 const VerifyOtpSchema = z.object({
   slug: z.string().trim().min(1).max(120),
@@ -19,14 +20,12 @@ const VerifyOtpSchema = z.object({
   code: z.string().regex(/^\d{4}$/),
   customer_name: z.string().trim().min(2).max(100),
   customer_phone: z.string().min(1),
-  customer_address: z.string().trim().min(2).max(200),
-  customer_city: z.string().trim().min(1).max(100),
   product_id: z.string().uuid(),
   variant: z.string().trim().max(100).optional(),
   quantity: z.coerce.number().int().min(1).max(99),
   notes: z.string().trim().max(500).optional(),
   turnstile_token: z.string().optional(),
-})
+}).merge(HanutAddressFieldsSchema)
 
 type OtpRpcResult = {
   ok?: boolean
@@ -109,6 +108,11 @@ export async function POST(request: NextRequest) {
     p_customer_city: parsed.data.customer_city,
     p_variant: parsed.data.variant || null,
     p_notes: parsed.data.notes || null,
+    p_customer_governorate: parsed.data.customer_governorate,
+    p_customer_delegation: parsed.data.customer_delegation || null,
+    p_customer_landmark: parsed.data.customer_landmark,
+    p_customer_postal_code: parsed.data.customer_postal_code || null,
+    p_delivery_notes: parsed.data.delivery_notes || null,
   })
 
   if (error) {

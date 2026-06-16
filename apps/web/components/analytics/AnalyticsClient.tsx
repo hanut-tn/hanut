@@ -6,7 +6,14 @@ import { Banknote, TrendingUp, TrendingDown, Minus, ShoppingBag, Truck, Clock, D
 import { getCarrierConfig, ORDER_STATUS_CONFIG, ORDER_STATUSES } from '@/lib/constants'
 
 type Product = { id: string; name: string }
-type Customer = { id: string; name: string; city?: string | null }
+type Customer = {
+  id: string
+  name: string
+  city?: string | null
+  customer_governorate?: string | null
+  customer_city?: string | null
+  customer_delegation?: string | null
+}
 
 type Order = {
   id: string
@@ -15,6 +22,9 @@ type Order = {
   unit_cost: number
   status: string
   created_at: string
+  customer_governorate?: string | null
+  customer_city?: string | null
+  customer_delegation?: string | null
   product?: Product | Product[] | null
   customer?: Customer | Customer[] | null
 }
@@ -64,6 +74,14 @@ function getProduct(o: Order): Product | null {
 function getCustomer(o: Order): Customer | null {
   const c = Array.isArray(o.customer) ? o.customer[0] : o.customer
   return c ?? null
+}
+
+function getOrderZone(o: Order): string {
+  const c = getCustomer(o)
+  return [
+    o.customer_delegation ?? o.customer_city ?? c?.customer_delegation ?? c?.customer_city,
+    o.customer_governorate ?? c?.customer_governorate ?? c?.city,
+  ].filter(Boolean).join(' · ')
 }
 
 function getDeliveryOrder(d: Delivery): DeliveryOrder | null {
@@ -294,8 +312,8 @@ export default function AnalyticsClient({ orders, deliveries, plan, truncated, o
 
   const cityMap: Record<string, number> = {}
   for (const o of filtered) {
-    const c = getCustomer(o)
-    if (c?.city) cityMap[c.city] = (cityMap[c.city] ?? 0) + 1
+    const zone = getOrderZone(o)
+    if (zone) cityMap[zone] = (cityMap[zone] ?? 0) + 1
   }
   const topCities = Object.entries(cityMap).sort((a, b) => b[1] - a[1]).slice(0, 5)
   const maxCityCount = Math.max(...topCities.map(c => c[1]), 1)
@@ -797,14 +815,14 @@ export default function AnalyticsClient({ orders, deliveries, plan, truncated, o
         </div>
 
         <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-5">
-          <h2 className="font-semibold text-[#1C1917] mb-4">Top villes</h2>
+          <h2 className="font-semibold text-[#1C1917] mb-4">Top zones</h2>
           {plan === 'starter' ? (
             <div className="flex flex-col items-center justify-center py-6 gap-2">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="9" width="16" height="11" rx="2" stroke="#9CA3AF" strokeWidth="1.5"/><path d="M6 9V6a4 4 0 018 0v3" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round"/></svg>
               <p className="text-sm text-[#78716C] text-center">Disponible sur le <a href="/settings?tab=abonnement" className="text-[#16A34A] font-medium hover:underline">plan Pro</a></p>
             </div>
           ) : topCities.length === 0 ? (
-            <p className="text-sm text-[#78716C] py-4 text-center">Aucune donnée (villes non renseignées)</p>
+            <p className="text-sm text-[#78716C] py-4 text-center">Aucune donnée (zones non renseignées)</p>
           ) : (
             <div className="space-y-3">
               {topCities.map(([city, count], i) => (

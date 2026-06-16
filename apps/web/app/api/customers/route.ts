@@ -23,7 +23,12 @@ export async function GET(req: Request) {
 
   const { data } = await supabase
     .from('customers')
-    .select('id, name, phone, city, address')
+    .select(`
+      id, name, phone,
+      customer_governorate, customer_city, customer_delegation,
+      customer_address, customer_landmark, customer_postal_code,
+      delivery_notes, city, address
+    `)
     .eq('seller_id', context.sellerId)
     .or(`name.ilike.%${safeSearch}%,phone.ilike.%${safeSearch}%`)
     .order(orderCol, { ascending })

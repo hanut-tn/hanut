@@ -34,7 +34,11 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('orders')
     .select(
-      'id, cod_amount, status, variant, quantity, notes, created_at, customer:customers(id, name, phone, city), product:products(id, name, price)',
+      `id, cod_amount, status, variant, quantity, notes, created_at,
+       customer_address, customer_city, customer_governorate, customer_delegation,
+       customer_landmark, customer_postal_code, delivery_notes, address_version,
+       customer:customers(id, name, phone, address, city, customer_governorate, customer_city, customer_delegation, customer_address, customer_landmark, customer_postal_code, delivery_notes, address_version),
+       product:products(id, name, price)`,
       { count: 'exact' }
     )
     .eq('seller_id', context.sellerId)

@@ -31,6 +31,9 @@ vi.mock('@/lib/activity', () => ({
 
 vi.mock('@/lib/constants', () => ({
   DELETABLE_STATUSES: ['pending', 'new', 'confirmed'],
+  TUNISIAN_GOVERNORATES: ['Tunis', 'Sfax', 'Sousse'],
+  formatTunisianPhone: (phone: string) => phone,
+  isValidTunisianPhone: () => true,
   ORDER_STATUS_LABELS: {
     pending: 'En attente', new: 'Nouveau', confirmed: 'Confirmé',
     shipped: 'Expédié', delivered: 'Livré', returned: 'Retourné',
@@ -47,8 +50,13 @@ import { createOrder } from '../app/(dashboard)/orders/actions'
 const input: CreateOrderInput = {
   customer_name: 'Fatima',
   customer_phone: '+21611111111',
+  customer_governorate: 'Tunis',
+  customer_city: 'Tunis Ville',
+  customer_delegation: 'Bab Bhar',
   customer_address: 'Rue 1',
-  customer_city: 'Tunis',
+  customer_landmark: 'Près de la poste',
+  customer_postal_code: '1000',
+  delivery_notes: 'Appeler avant livraison',
   product_id: 'product-1',
   variant: 'Noir',
   quantity: 2,
@@ -123,7 +131,12 @@ describe('createOrder dashboard action', () => {
         p_customer_name: 'Fatima',
         p_customer_phone: '+21611111111',
         p_customer_address: 'Rue 1',
-        p_customer_city: 'Tunis',
+        p_customer_city: 'Tunis Ville',
+        p_customer_governorate: 'Tunis',
+        p_customer_delegation: 'Bab Bhar',
+        p_customer_landmark: 'Près de la poste',
+        p_customer_postal_code: '1000',
+        p_delivery_notes: 'Appeler avant livraison',
         p_customer_id: null,
         p_variant: 'Noir',
         p_cod_amount: 120,

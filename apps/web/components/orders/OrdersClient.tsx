@@ -31,11 +31,33 @@ type Order = {
   quantity: number
   notes?: string
   created_at: string
+  customer_address?: string | null
+  customer_city?: string | null
+  customer_governorate?: string | null
+  customer_delegation?: string | null
+  customer_landmark?: string | null
+  customer_postal_code?: string | null
+  delivery_notes?: string | null
+  address_version?: number | null
   customer: OrderCustomer | OrderCustomer[] | null
   product: OrderProduct | OrderProduct[] | null
 }
 
-type OrderCustomer = { id: string; name: string; phone: string; city?: string }
+type OrderCustomer = {
+  id: string
+  name: string
+  phone: string
+  address?: string | null
+  city?: string | null
+  customer_address?: string | null
+  customer_city?: string | null
+  customer_governorate?: string | null
+  customer_delegation?: string | null
+  customer_landmark?: string | null
+  customer_postal_code?: string | null
+  delivery_notes?: string | null
+  address_version?: number | null
+}
 type OrderProduct = { id: string; name: string; price: number }
 
 type TrashOrder = {
@@ -47,6 +69,14 @@ type TrashOrder = {
   notes?: string
   created_at: string
   deleted_at: string
+  customer_address?: string | null
+  customer_city?: string | null
+  customer_governorate?: string | null
+  customer_delegation?: string | null
+  customer_landmark?: string | null
+  customer_postal_code?: string | null
+  delivery_notes?: string | null
+  address_version?: number | null
   customer: OrderCustomer | OrderCustomer[] | null
   product: OrderProduct | OrderProduct[] | null
 }
@@ -84,6 +114,28 @@ function getCustomer(order: Order | TrashOrder) {
 
 function getProduct(order: Order | TrashOrder) {
   return Array.isArray(order.product) ? order.product[0] : order.product
+}
+
+function getOrderAddress(order: Order | TrashOrder) {
+  const customer = getCustomer(order)
+  return {
+    governorate: order.customer_governorate ?? customer?.customer_governorate ?? customer?.city ?? '',
+    city: order.customer_city ?? customer?.customer_city ?? '',
+    delegation: order.customer_delegation ?? customer?.customer_delegation ?? '',
+    address: order.customer_address ?? customer?.customer_address ?? customer?.address ?? '',
+    landmark: order.customer_landmark ?? customer?.customer_landmark ?? '',
+    postalCode: order.customer_postal_code ?? customer?.customer_postal_code ?? '',
+    deliveryNotes: order.delivery_notes ?? customer?.delivery_notes ?? '',
+  }
+}
+
+function getOrderLocationLabel(order: Order | TrashOrder) {
+  const address = getOrderAddress(order)
+  return [address.delegation || address.city, address.governorate].filter(Boolean).join(' · ')
+}
+
+function csvCell(value: unknown) {
+  return `"${String(value ?? '').replace(/"/g, '""')}"`
 }
 
 function daysUntilExpiry(deletedAt: string) {
@@ -148,20 +200,26 @@ function exportCSV(orders: Order[]) {
   const rows = orders.map(o => {
     const customer = getCustomer(o)
     const product = getProduct(o)
+    const address = getOrderAddress(o)
     return [
       o.id.slice(0, 8),
       customer?.name ?? '',
       customer?.phone ?? '',
-      customer?.city ?? '',
+      address.governorate,
+      address.delegation || address.city,
+      address.address,
+      address.landmark,
+      address.postalCode,
+      address.deliveryNotes,
       product?.name ?? '',
       o.variant ?? '',
       o.quantity,
       o.cod_amount,
       ORDER_STATUS_LABELS[o.status],
       new Date(o.created_at).toLocaleDateString('fr-TN'),
-    ].join(';')
+    ].map(csvCell).join(';')
   })
-  const csv = ['ID;Client;Téléphone;Ville;Produit;Variante;Qté;COD (DT);Statut;Date', ...rows].join('\n')
+  const csv = ['ID;Client;Téléphone;Gouvernorat;Ville / Délégation;Adresse;Repère;Code postal;Notes livraison;Produit;Variante;Qté;COD (DT);Statut;Date', ...rows].join('\n')
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -657,6 +715,14 @@ export default function OrdersClient({
       quantity: trashedOrder.quantity,
       notes: trashedOrder.notes,
       created_at: trashedOrder.created_at,
+      customer_address: trashedOrder.customer_address,
+      customer_city: trashedOrder.customer_city,
+      customer_governorate: trashedOrder.customer_governorate,
+      customer_delegation: trashedOrder.customer_delegation,
+      customer_landmark: trashedOrder.customer_landmark,
+      customer_postal_code: trashedOrder.customer_postal_code,
+      delivery_notes: trashedOrder.delivery_notes,
+      address_version: trashedOrder.address_version,
       customer: trashedOrder.customer,
       product: trashedOrder.product,
     }
@@ -1004,6 +1070,7 @@ export default function OrdersClient({
                 const isShipped = order.status === 'shipped'
                 const canDelete = canDeleteOrder(order.status, plan, isAdmin)
                 const ini = customer?.name ? initials(customer.name) : '?'
+                const location = getOrderLocationLabel(order)
 
                 const isUpdatingThis = updatingId === order.id
                 const mobileLeadingAction = isCancellable ? (
@@ -1083,7 +1150,7 @@ export default function OrdersClient({
                             </p>
                             <p className="text-xs text-[#78716C] truncate">
                               {customer?.phone ? <Highlight text={customer.phone} query={debouncedSearch} /> : ''}
-                              {customer?.city ? ` · ${customer.city}` : ''}
+                              {location ? ` · ${location}` : ''}
                             </p>
                             <p className="text-xs text-[#78716C] mt-0.5 truncate">
                               {product?.name ?? '—'}
@@ -1137,6 +1204,7 @@ export default function OrdersClient({
                     const isShipped = order.status === 'shipped'
                     const canDelete = canDeleteOrder(order.status, plan, isAdmin)
                     const ini = customer?.name ? initials(customer.name) : '?'
+                    const location = getOrderLocationLabel(order)
 
                     return (
                       <tr
@@ -1164,7 +1232,7 @@ export default function OrdersClient({
                           </p>
                           <p className="text-xs text-[#78716C] truncate">
                             {customer?.phone ? <Highlight text={customer.phone} query={debouncedSearch} /> : ''}
-                            {customer?.city ? ` · ${customer.city}` : ''}
+                            {location ? ` · ${location}` : ''}
                           </p>
                           <p className="text-xs text-[#A8A29E]">{relativeDate(order.created_at)}</p>
                         </td>
@@ -1304,6 +1372,7 @@ export default function OrdersClient({
                 const product = getProduct(order)
                 const daysLeft = daysUntilExpiry(order.deleted_at)
                 const ini = customer?.name ? initials(customer.name) : '?'
+                const location = getOrderLocationLabel(order)
 
                 return (
                   <div key={order.id} className="m-3 bg-red-50/30 border border-[#E7E5E4] border-l-2 border-l-red-200 rounded-xl p-4">
@@ -1316,7 +1385,7 @@ export default function OrdersClient({
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-[#1C1917] truncate">{customer?.name ?? '—'}</p>
                             <p className="text-xs text-[#78716C] truncate">
-                              {customer?.phone}{customer?.city ? ` · ${customer.city}` : ''}
+                              {customer?.phone}{location ? ` · ${location}` : ''}
                             </p>
                             <p className="mt-0.5 text-xs text-[#78716C] truncate">
                               {product?.name ?? '—'}{order.variant ? ` · ${order.variant}` : ''}

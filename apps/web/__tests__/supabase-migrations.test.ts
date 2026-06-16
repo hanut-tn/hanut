@@ -81,6 +81,7 @@ describe('Supabase migrations', () => {
   const anonymizeCustomerEmailMigration = migration('20260713_anonymize_customer_email.sql')
   const cancelledStatusRepairMigration = migration('20260714_repair_cancelled_order_status.sql')
   const customerAddressHistoryMigration = migration('20260715_add_customer_address_history.sql')
+  const structuredAddressMigration = migration('20260716_add_structured_addresses.sql')
 
   it('base tables migration creates the 5 core tables idempotently before any other migration', () => {
     expect(baseTables).toMatch(/CREATE TABLE IF NOT EXISTS sellers/i)
@@ -226,6 +227,19 @@ describe('Supabase migrations', () => {
     expect(customerAddressHistoryMigration).toMatch(/use_count\s+=\s+customer_addresses\.use_count \+ 1/i)
     expect(customerAddressHistoryMigration).toMatch(/customer_address, customer_city/i)
     expect(customerAddressHistoryMigration).toMatch(/DELETE FROM customer_addresses/i)
+  })
+
+  it('adds structured carrier-ready customer addresses without dropping legacy data', () => {
+    expect(structuredAddressMigration).toMatch(/ADD COLUMN IF NOT EXISTS customer_governorate TEXT/i)
+    expect(structuredAddressMigration).toMatch(/ADD COLUMN IF NOT EXISTS customer_landmark TEXT/i)
+    expect(structuredAddressMigration).toMatch(/ADD COLUMN IF NOT EXISTS delivery_notes TEXT/i)
+    expect(structuredAddressMigration).toMatch(/customer_address\s+=\s+COALESCE/i)
+    expect(structuredAddressMigration).toMatch(/customer_addresses_structured_address_required/i)
+    expect(structuredAddressMigration).toMatch(/idx_orders_structured_location_created/i)
+    expect(structuredAddressMigration).toMatch(/p_customer_governorate\s+TEXT\s+DEFAULT NULL/i)
+    expect(structuredAddressMigration).toMatch(/p_delivery_notes\s+TEXT\s+DEFAULT NULL/i)
+    expect(structuredAddressMigration).toMatch(/CREATE OR REPLACE FUNCTION search_orders/i)
+    expect(structuredAddressMigration).toMatch(/NOTIFY pgrst, 'reload schema'/i)
   })
 
   it('keeps useful constraints and indexes for the added schema', () => {

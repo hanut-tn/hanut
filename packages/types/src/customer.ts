@@ -4,6 +4,14 @@ export interface Customer {
   name: string
   phone: string
   email?: string | null
+  customer_governorate?: string | null
+  customer_city?: string | null
+  customer_delegation?: string | null
+  customer_address?: string | null
+  customer_landmark?: string | null
+  customer_postal_code?: string | null
+  delivery_notes?: string | null
+  address_version?: number
   address?: string
   city?: string
   order_count: number
@@ -22,6 +30,13 @@ export interface Customer {
 export interface CreateCustomerInput {
   name: string
   phone: string
+  customer_governorate?: string
+  customer_city?: string
+  customer_delegation?: string
+  customer_address?: string
+  customer_landmark?: string
+  customer_postal_code?: string
+  delivery_notes?: string
   address?: string
   city?: string
 }
@@ -30,6 +45,14 @@ export interface CustomerAddress {
   id: string
   seller_id: string
   customer_id: string
+  customer_governorate?: string | null
+  customer_city?: string | null
+  customer_delegation?: string | null
+  customer_address?: string | null
+  customer_landmark?: string | null
+  customer_postal_code?: string | null
+  delivery_notes?: string | null
+  address_version?: number
   address?: string | null
   city?: string | null
   use_count: number
