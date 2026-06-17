@@ -166,6 +166,23 @@ export async function deleteProduct(id: string): Promise<{ error?: string }> {
   return {}
 }
 
+function isMagicBytesValid(buf: Uint8Array, mimeType: string): boolean {
+  switch (mimeType) {
+    case 'image/jpeg':
+      return buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF
+    case 'image/png':
+      return buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47
+    case 'image/webp':
+      return buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46
+        && buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50
+    case 'image/heic':
+    case 'image/heif':
+      return buf[4] === 0x66 && buf[5] === 0x74 && buf[6] === 0x79 && buf[7] === 0x70
+    default:
+      return false
+  }
+}
+
 export async function uploadProductImage(formData: FormData): Promise<{ url?: string; error?: string }> {
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
@@ -197,6 +214,10 @@ export async function uploadProductImage(formData: FormData): Promise<{ url?: st
   }
 
   const bytes = await file.arrayBuffer()
+  const header = new Uint8Array(bytes, 0, Math.min(bytes.byteLength, 16))
+  if (!isMagicBytesValid(header, file.type)) {
+    return { error: 'Le contenu du fichier ne correspond pas à son extension.' }
+  }
 
   const { error: uploadError } = await serviceClient.storage
     .from('product-images')

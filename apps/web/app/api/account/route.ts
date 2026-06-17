@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
 import { checkOrigin } from '@/lib/csrf'
@@ -38,7 +39,12 @@ export async function DELETE(request: Request) {
     return failure('Email de confirmation incorrect.', 400)
   }
 
-  // Suppression transactionnelle via RPC (COD check + cascade inclus)
+  // delete_seller_account supprime dans l'ordre :
+  // activity_logs, stock_movements, restock_orders, order_status_history,
+  // cod_reversals (optionnels via to_regclass), puis deliveries, orders,
+  // customers (→ customer_addresses CASCADE), products, team_members,
+  // sms_templates, rate_limits, et enfin sellers.
+  // Les order_items suivent orders en CASCADE FK.
   const { error: rpcError } = await supabase.rpc('delete_seller_account', {
     p_seller_id: sellerId,
     p_user_id: userId,
@@ -64,6 +70,10 @@ export async function DELETE(request: Request) {
     // DB nettoyée mais Auth non supprimé — l'utilisateur ne peut plus se connecter
     // car ses données sont absentes. Logger pour traitement manuel si nécessaire.
     console.error('CRITICAL: DB deleted but Auth user remains:', userId, authError.message)
+    Sentry.captureException(
+      new Error(`delete_seller_account: DB deleted but Auth user ${userId} remains: ${authError.message}`),
+      { tags: { module: 'account-delete' } }
+    )
   }
 
   return NextResponse.json({ success: true })

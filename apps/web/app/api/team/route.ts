@@ -1,4 +1,5 @@
 import { randomBytes } from 'crypto'
+import * as Sentry from '@sentry/nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { z } from 'zod'
@@ -133,7 +134,10 @@ export async function POST(request: NextRequest) {
     .select('id')
     .single()
 
-  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
+  if (insertError) {
+    Sentry.captureException(new Error(`team invite insert: ${insertError.message}`), { tags: { module: 'team' } })
+    return NextResponse.json({ error: insertError.message }, { status: 500 })
+  }
 
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -144,6 +148,7 @@ export async function POST(request: NextRequest) {
   })
 
   if (inviteError) {
+    Sentry.captureException(new Error(`team invite auth.admin.inviteUserByEmail: ${inviteError.message}`), { tags: { module: 'team' } })
     await serviceClient.from('team_members').delete().eq('id', member.id)
     return NextResponse.json({ error: `Erreur d'invitation : ${inviteError.message}` }, { status: 500 })
   }

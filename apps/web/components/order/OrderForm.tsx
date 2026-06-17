@@ -566,8 +566,9 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         </p>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Nom complet *</label>
+          <label htmlFor="order-name" className="block text-sm font-medium text-gray-700 mb-1.5">Nom complet *</label>
           <input
+            id="order-name"
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
             value={name}
             onChange={e => setName(e.target.value)}
@@ -578,7 +579,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label htmlFor="order-phone" className="block text-sm font-medium text-gray-700 mb-1.5">
             Numéro de téléphone *
             <span className="text-gray-400 font-normal ml-1">(8 chiffres)</span>
           </label>
@@ -587,10 +588,16 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
               +216
             </span>
             <input
+              id="order-phone"
               className={`min-w-0 flex-1 border rounded-xl px-4 py-3 text-base outline-none focus:ring-2 transition ${phoneError ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-gray-200 focus:border-[#16A34A] focus:ring-green-100'}`}
               type="tel"
               value={phone}
               onChange={e => handlePhoneChange(e.target.value)}
+              onBlur={() => {
+                if (phone.length > 0 && !isValidTunisianPhone(phone)) {
+                  setPhoneError('Numéro tunisien invalide. Ex: 22 123 456')
+                }
+              }}
               placeholder="22 123 456"
               maxLength={8}
               required
@@ -602,8 +609,9 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Adresse email *</label>
+          <label htmlFor="order-email" className="block text-sm font-medium text-gray-700 mb-1.5">Adresse email *</label>
           <input
+            id="order-email"
             className={`w-full border rounded-xl px-4 py-3 text-base outline-none focus:ring-2 transition ${emailError ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-gray-200 focus:border-[#16A34A] focus:ring-green-100'}`}
             type="email"
             value={email}
@@ -620,8 +628,9 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Gouvernorat *</label>
+          <label htmlFor="order-governorate" className="block text-sm font-medium text-gray-700 mb-1.5">Gouvernorat *</label>
           <select
+            id="order-governorate"
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition bg-white"
             value={governorate}
             onChange={e => setGovernorate(e.target.value)}
@@ -635,8 +644,9 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Ville / Délégation *</label>
+          <label htmlFor="order-city" className="block text-sm font-medium text-gray-700 mb-1.5">Ville / Délégation *</label>
           <input
+            id="order-city"
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
             value={customerCity}
             onChange={e => setCustomerCity(e.target.value)}
@@ -647,8 +657,9 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Adresse détaillée *</label>
+          <label htmlFor="order-address" className="block text-sm font-medium text-gray-700 mb-1.5">Adresse détaillée *</label>
           <input
+            id="order-address"
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
             value={address}
             onChange={e => setAddress(e.target.value)}
@@ -659,8 +670,9 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Repère pour le livreur *</label>
+          <label htmlFor="order-landmark" className="block text-sm font-medium text-gray-700 mb-1.5">Repère pour le livreur *</label>
           <input
+            id="order-landmark"
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
             value={landmark}
             onChange={e => setLandmark(e.target.value)}
@@ -671,10 +683,11 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label htmlFor="order-postal-code" className="block text-sm font-medium text-gray-700 mb-1.5">
               Code postal <span className="text-gray-400 font-normal">(optionnel)</span>
             </label>
             <input
+              id="order-postal-code"
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
               value={postalCode}
               onChange={e => setPostalCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
@@ -685,10 +698,11 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label htmlFor="order-delegation" className="block text-sm font-medium text-gray-700 mb-1.5">
               Délégation précise <span className="text-gray-400 font-normal">(optionnel)</span>
             </label>
             <input
+              id="order-delegation"
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
               value={delegation}
               onChange={e => setDelegation(e.target.value)}
@@ -706,8 +720,9 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         </p>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Produit *</label>
+          <label htmlFor="order-product" className="block text-sm font-medium text-gray-700 mb-1.5">Produit *</label>
           <select
+            id="order-product"
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition bg-white"
             value={productId}
             onChange={e => setProductId(e.target.value)}

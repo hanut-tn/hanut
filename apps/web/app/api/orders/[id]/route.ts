@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs'
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
@@ -56,6 +57,9 @@ export async function PUT(req: Request, { params }: Params) {
     .eq('seller_id', context.sellerId)
     .is('deleted_at', null)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    Sentry.captureException(new Error(`order update: ${error.message}`), { tags: { module: 'orders' } })
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
   return NextResponse.json({ success: true })
 }

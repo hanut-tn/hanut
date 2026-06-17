@@ -89,7 +89,11 @@ export async function POST(req: NextRequest) {
   })
 
   if (signUpError) {
-    return NextResponse.json({ error: signUpError.message }, { status: 400 })
+    console.error('[register] signUpError:', signUpError.message)
+    return NextResponse.json(
+      { error: 'Impossible de créer le compte. Réessayez ou connectez-vous.' },
+      { status: 400 }
+    )
   }
 
   if (!data.user) {
@@ -122,8 +126,9 @@ export async function POST(req: NextRequest) {
   }
 
   if (!inserted) {
+    console.error('[register] seller insert failed:', lastError)
     await serviceClient.auth.admin.deleteUser(data.user.id).catch(() => {})
-    return NextResponse.json({ error: lastError ?? 'Impossible de créer le profil. Réessayez.' }, { status: 500 })
+    return NextResponse.json({ error: 'Impossible de créer le profil. Réessayez.' }, { status: 500 })
   }
 
   const { error: trialError } = await serviceClient.rpc('set_demo_trial', {

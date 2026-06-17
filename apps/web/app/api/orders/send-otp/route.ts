@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { checkOrigin } from '@/lib/csrf'
@@ -115,6 +116,7 @@ export async function POST(request: NextRequest) {
 
   if (insertError || !insertedOtp) {
     console.error('[send-otp] insert error:', insertError)
+    Sentry.captureException(new Error(`send-otp OTP upsert: ${insertError?.message ?? 'no row returned'}`), { tags: { module: 'send-otp' } })
     return noStoreJson({ error: 'Erreur interne. Réessayez.' }, 500)
   }
 
@@ -123,41 +125,54 @@ export async function POST(request: NextRequest) {
     console.log(`[OTP DEV] Code pour ${email} (boutique: ${slug}): ${code}`)
   } else {
     const sellerName = escapeEmailHtml(seller.name ?? slug)
-    const emailResponse = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${resendApiKey}`,
-      },
-      body: JSON.stringify({
-        from: process.env.RESEND_FROM_EMAIL ?? 'Hanut <noreply@hanut.tn>',
-        to: email,
-        subject: `${code} — votre code de vérification`,
-        html: `
-          <div style="font-family:sans-serif;max-width:420px;margin:0 auto;padding:32px 24px">
-            <h2 style="color:#1C1917;margin:0 0 8px">Vérification de commande</h2>
-            <p style="color:#78716C;margin:0 0 24px">
-              Votre code pour commander chez <strong style="color:#1C1917">${sellerName}</strong> :
-            </p>
-            <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:24px;text-align:center;margin:0 0 24px">
-              <span style="font-size:40px;font-weight:900;letter-spacing:14px;color:#0B5E46;font-family:monospace">${code}</span>
-            </div>
-            <p style="color:#78716C;font-size:14px;margin:0 0 8px">Ce code expire dans <strong>5 minutes</strong>.</p>
-            <p style="color:#A8A29E;font-size:12px;margin:0">
-              Si vous n'avez pas initié cette commande, ignorez cet email.
-            </p>
+    const emailBody = JSON.stringify({
+      from: process.env.RESEND_FROM_EMAIL ?? 'Hanut <noreply@hanut.tn>',
+      to: email,
+      subject: `${code} — votre code de vérification`,
+      html: `
+        <div style="font-family:sans-serif;max-width:420px;margin:0 auto;padding:32px 24px">
+          <h2 style="color:#1C1917;margin:0 0 8px">Vérification de commande</h2>
+          <p style="color:#78716C;margin:0 0 24px">
+            Votre code pour commander chez <strong style="color:#1C1917">${sellerName}</strong> :
+          </p>
+          <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:24px;text-align:center;margin:0 0 24px">
+            <span style="font-size:40px;font-weight:900;letter-spacing:14px;color:#0B5E46;font-family:monospace">${code}</span>
           </div>
-        `,
-      }),
-      signal: AbortSignal.timeout(10_000),
-    }).catch(error => {
-      console.error('[send-otp] Resend network error:', error)
-      return null
+          <p style="color:#78716C;font-size:14px;margin:0 0 8px">Ce code expire dans <strong>5 minutes</strong>.</p>
+          <p style="color:#A8A29E;font-size:12px;margin:0">
+            Si vous n'avez pas initié cette commande, ignorez cet email.
+          </p>
+        </div>
+      `,
     })
+
+    let emailResponse: Response | null = null
+    for (let attempt = 0; attempt < 2 && !emailResponse?.ok; attempt++) {
+      emailResponse = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${resendApiKey}`,
+        },
+        body: emailBody,
+        signal: AbortSignal.timeout(10_000),
+      }).catch(err => {
+        console.error(`[send-otp] Resend network error (attempt ${attempt + 1}):`, err)
+        if (attempt === 1) {
+          Sentry.captureException(new Error(`send-otp Resend network error: ${err?.message}`), { tags: { module: 'send-otp' } })
+        }
+        return null
+      })
+    }
 
     sent = Boolean(emailResponse?.ok)
     if (!sent && emailResponse) {
-      console.error('[send-otp] Resend error:', await emailResponse.text().catch(() => ''))
+      const errBody = await emailResponse.text().catch(() => '')
+      console.error('[send-otp] Resend error:', errBody)
+      Sentry.captureException(
+        new Error(`send-otp Resend HTTP ${emailResponse.status}: ${errBody.slice(0, 200)}`),
+        { tags: { module: 'send-otp' } }
+      )
     }
   }
 

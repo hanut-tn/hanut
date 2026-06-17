@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
@@ -130,6 +131,7 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     console.error('[verify-otp] RPC error:', error)
+    Sentry.captureException(new Error(`verify-otp RPC error: ${error.message}`), { tags: { module: 'verify-otp' } })
     return noStoreJson({ error: 'Erreur lors de la création de la commande.' }, 500)
   }
 

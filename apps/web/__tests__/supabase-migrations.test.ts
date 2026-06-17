@@ -86,6 +86,10 @@ describe('Supabase migrations', () => {
   const subscriptionStatusMigration = migration('20260721_add_subscription_status.sql')
   const activatePaidSubscriptionMigration = migration('20260722_activate_paid_subscription.sql')
   const renewPaidSubscriptionMigration = migration('20260723_renew_paid_subscription.sql')
+  const orderItemsMigration = migration('20260717_add_order_items.sql')
+  const orderItemsStockAdjustmentMigration = migration('20260718_fix_order_items_stock_adjustment.sql')
+  const getProductStatsMigration = migration('20260724_get_product_stats.sql')
+  const orderItemsRlsFixMigration = migration('20260725_fix_order_items_rls.sql')
 
   it('base tables migration creates the 5 core tables idempotently before any other migration', () => {
     expect(baseTables).toMatch(/CREATE TABLE IF NOT EXISTS sellers/i)
@@ -813,5 +817,108 @@ describe('Supabase migrations', () => {
     expect(renewPaidSubscriptionMigration).not.toMatch(/upgrade_requests/i)
     expect(renewPaidSubscriptionMigration).toMatch(/GRANT EXECUTE[\s\S]+service_role/i)
     expect(renewPaidSubscriptionMigration).not.toMatch(/GRANT EXECUTE[\s\S]+authenticated/i)
+  })
+
+  // P1 — vérification que anonymize_customer (version 20260716) efface bien tous
+  // les champs d'adresse structurée sur orders ET customers.
+  // La migration 20260713 ne couvrait que customer_email — 20260716 a complété le champ.
+  it('anonymize_customer (20260716) clears all structured address columns from orders and customers', () => {
+    // orders — colonnes ajoutées par 20260716
+    expect(structuredAddressMigration).toMatch(
+      /UPDATE orders[\s\S]+customer_governorate\s*=\s*NULL/i
+    )
+    expect(structuredAddressMigration).toMatch(
+      /UPDATE orders[\s\S]+customer_delegation\s*=\s*NULL/i
+    )
+    expect(structuredAddressMigration).toMatch(
+      /UPDATE orders[\s\S]+customer_landmark\s*=\s*NULL/i
+    )
+    expect(structuredAddressMigration).toMatch(
+      /UPDATE orders[\s\S]+customer_postal_code\s*=\s*NULL/i
+    )
+    expect(structuredAddressMigration).toMatch(
+      /UPDATE orders[\s\S]+delivery_notes\s*=\s*NULL/i
+    )
+    expect(structuredAddressMigration).toMatch(
+      /UPDATE orders[\s\S]+address_version\s*=\s*1/i
+    )
+    // customers — colonnes structured address
+    expect(structuredAddressMigration).toMatch(
+      /UPDATE customers[\s\S]+customer_governorate\s*=\s*NULL/i
+    )
+    expect(structuredAddressMigration).toMatch(
+      /UPDATE customers[\s\S]+customer_landmark\s*=\s*NULL/i
+    )
+    expect(structuredAddressMigration).toMatch(
+      /UPDATE customers[\s\S]+delivery_notes\s*=\s*NULL/i
+    )
+  })
+
+  // P2 — get_product_stats lit depuis order_items (pas depuis orders.product_id)
+  it('get_product_stats reads from order_items for accurate multi-item order stats', () => {
+    expect(getProductStatsMigration).toMatch(/CREATE OR REPLACE FUNCTION get_product_stats/i)
+    expect(getProductStatsMigration).toMatch(/SECURITY DEFINER/i)
+    expect(getProductStatsMigration).toMatch(/STABLE/i)
+    expect(getProductStatsMigration).toMatch(/get_team_role\(p_seller_id\)/i)
+    expect(getProductStatsMigration).toMatch(/FROM order_items/i)
+    expect(getProductStatsMigration).toMatch(/total_orders/i)
+    expect(getProductStatsMigration).toMatch(/total_revenue/i)
+    expect(getProductStatsMigration).toMatch(/has_blocking_orders/i)
+    expect(getProductStatsMigration).toMatch(/recent_orders/i)
+    // index composite pour la perf
+    expect(getProductStatsMigration).toMatch(/idx_order_items_product_seller/i)
+    expect(getProductStatsMigration).toMatch(/GRANT EXECUTE[\s\S]+authenticated, service_role/i)
+  })
+
+  // P2 — order_items : table créée avec RLS activée et backfill legacy
+  it('order_items table is created with RLS and legacy orders are backfilled', () => {
+    expect(orderItemsMigration).toMatch(/CREATE TABLE IF NOT EXISTS order_items/i)
+    expect(orderItemsMigration).toMatch(/order_id\s+UUID\s+NOT NULL REFERENCES orders\(id\) ON DELETE CASCADE/i)
+    expect(orderItemsMigration).toMatch(/ALTER TABLE order_items ENABLE ROW LEVEL SECURITY/i)
+    expect(orderItemsMigration).toMatch(/INSERT INTO order_items[\s\S]+SELECT[\s\S]+FROM orders o/i)
+    expect(orderItemsMigration).toMatch(/WHERE o\.product_id IS NOT NULL/i)
+    expect(orderItemsMigration).toMatch(/CREATE OR REPLACE FUNCTION create_order_with_items/i)
+  })
+
+  // P2 — adjust_order_items_stock itère sur order_items pour restaurer tous les articles
+  it('adjust_order_items_stock restores stock for all items of a multi-item order', () => {
+    expect(orderItemsStockAdjustmentMigration).toMatch(
+      /CREATE OR REPLACE FUNCTION adjust_order_items_stock/i
+    )
+    expect(orderItemsStockAdjustmentMigration).toMatch(/FOR v_item IN[\s\S]+FROM order_items/i)
+    expect(orderItemsStockAdjustmentMigration).toMatch(/p_delta_sign NOT IN \(1, -1\)/i)
+    expect(orderItemsStockAdjustmentMigration).toMatch(/PERFORM adjust_order_items_stock/i)
+    // Les quatre RPCs l'utilisent
+    expect(orderItemsStockAdjustmentMigration).toMatch(
+      /CREATE OR REPLACE FUNCTION cancel_pending_order_with_stock/i
+    )
+    expect(orderItemsStockAdjustmentMigration).toMatch(
+      /CREATE OR REPLACE FUNCTION cancel_order_with_stock/i
+    )
+    expect(orderItemsStockAdjustmentMigration).toMatch(
+      /CREATE OR REPLACE FUNCTION soft_delete_order_with_stock/i
+    )
+    expect(orderItemsStockAdjustmentMigration).toMatch(
+      /CREATE OR REPLACE FUNCTION restore_trashed_order_with_stock/i
+    )
+    // Le helper interne est accessible uniquement à service_role (pas à authenticated)
+    expect(orderItemsStockAdjustmentMigration).toMatch(
+      /GRANT EXECUTE ON FUNCTION adjust_order_items_stock[^\n]+TO service_role/i
+    )
+    expect(
+      (orderItemsStockAdjustmentMigration.match(
+        /GRANT EXECUTE ON FUNCTION adjust_order_items_stock[^\n]+/i
+      ) ?? [''])[0]
+    ).not.toMatch(/authenticated/i)
+  })
+
+  // P3 — RLS order_items team-aware : get_seller_id() au lieu de auth.uid()
+  it('order_items RLS policy uses get_seller_id() so team members can read order items', () => {
+    expect(orderItemsRlsFixMigration).toMatch(/DROP POLICY IF EXISTS[\s\S]+ON order_items/i)
+    expect(orderItemsRlsFixMigration).toMatch(/CREATE POLICY[\s\S]+ON order_items FOR SELECT/i)
+    expect(orderItemsRlsFixMigration).toMatch(/seller_id\s*=\s*get_seller_id\(\)/i)
+    // auth.uid() direct n'est plus utilisé dans la policy
+    expect(orderItemsRlsFixMigration).not.toMatch(/auth\.uid\(\)/i)
+    expect(orderItemsRlsFixMigration).toMatch(/NOTIFY pgrst, 'reload schema'/i)
   })
 })

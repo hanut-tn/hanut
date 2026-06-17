@@ -36,9 +36,22 @@ export default async function ProductDetailPage({ params }: Props) {
 
   if (!product) redirect('/catalog')
 
-  const startOfMonth = new Date()
-  startOfMonth.setDate(1)
-  startOfMonth.setHours(0, 0, 0, 0)
+  type ProductStats = {
+    total_orders: number
+    total_revenue: number
+    total_qty_sold: number
+    this_month_qty: number
+    returned_count: number
+    has_blocking_orders: boolean
+    recent_orders: Array<{
+      id: string
+      cod_amount: number
+      status: string
+      created_at: string
+      quantity: number
+      customer_name: string | null
+    }>
+  }
 
   const stockMovementsRes = await supabase
     .from('stock_movements')
@@ -49,61 +62,11 @@ export default async function ProductDetailPage({ params }: Props) {
     .limit(10)
   const stockMovements = stockMovementsRes.data ?? []
 
-  const [
-    { count: totalOrders },
-    { data: deliveredOrders },
-    { data: thisMonthOrders },
-    { count: returnedCount },
-    { data: rawRecentOrders },
-    { count: linkedOrdersCount },
-    { data: rawPlannedRestocks },
-  ] = await Promise.all([
-    supabase
-      .from('orders')
-      .select('id', { count: 'exact', head: true })
-      .eq('product_id', id)
-      .eq('seller_id', context.sellerId)
-      .is('deleted_at', null),
-
-    supabase
-      .from('orders')
-      .select('cod_amount, quantity')
-      .eq('product_id', id)
-      .eq('seller_id', context.sellerId)
-      .eq('status', 'delivered')
-      .is('deleted_at', null),
-
-    supabase
-      .from('orders')
-      .select('quantity')
-      .eq('product_id', id)
-      .eq('seller_id', context.sellerId)
-      .eq('status', 'delivered')
-      .is('deleted_at', null)
-      .gte('created_at', startOfMonth.toISOString()),
-
-    supabase
-      .from('orders')
-      .select('id', { count: 'exact', head: true })
-      .eq('product_id', id)
-      .eq('seller_id', context.sellerId)
-      .eq('status', 'returned')
-      .is('deleted_at', null),
-
-    supabase
-      .from('orders')
-      .select('id, cod_amount, status, created_at, quantity, customer:customers(name)')
-      .eq('product_id', id)
-      .eq('seller_id', context.sellerId)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-      .limit(5),
-
-    supabase
-      .from('orders')
-      .select('id', { count: 'exact', head: true })
-      .eq('product_id', id)
-      .eq('seller_id', context.sellerId),
+  const [{ data: rawStats }, { data: rawPlannedRestocks }] = await Promise.all([
+    supabase.rpc('get_product_stats', {
+      p_seller_id: context.sellerId,
+      p_product_id: id,
+    }),
 
     supabase
       .from('restock_orders')
@@ -114,25 +77,23 @@ export default async function ProductDetailPage({ params }: Props) {
       .order('created_at', { ascending: false }),
   ])
 
-  const totalRevenue = deliveredOrders?.reduce((sum, o) => sum + (o.cod_amount ?? 0), 0) ?? 0
-  const totalQtySold = deliveredOrders?.reduce((sum, o) => sum + (o.quantity ?? 0), 0) ?? 0
-  const thisMonthQty = thisMonthOrders?.reduce((sum, o) => sum + (o.quantity ?? 0), 0) ?? 0
-  const returnRate =
-    totalOrders && totalOrders > 0
-      ? Math.round(((returnedCount ?? 0) / totalOrders) * 100)
-      : 0
+  const stats = rawStats as ProductStats | null
+  const totalOrders = stats?.total_orders ?? 0
+  const totalRevenue = stats?.total_revenue ?? 0
+  const totalQtySold = stats?.total_qty_sold ?? 0
+  const thisMonthQty = stats?.this_month_qty ?? 0
+  const returnedCount = stats?.returned_count ?? 0
+  const hasBlockingOrders = stats?.has_blocking_orders ?? false
+  const returnRate = totalOrders > 0 ? Math.round((returnedCount / totalOrders) * 100) : 0
 
-  const recentOrders = (rawRecentOrders ?? []).map(o => {
-    const customer = Array.isArray(o.customer) ? o.customer[0] : o.customer
-    return {
-      id: o.id,
-      cod_amount: o.cod_amount,
-      status: o.status,
-      created_at: o.created_at,
-      quantity: o.quantity,
-      customer_name: customer?.name ?? null,
-    }
-  })
+  const recentOrders = (stats?.recent_orders ?? []).map(o => ({
+    id: o.id,
+    cod_amount: o.cod_amount,
+    status: o.status,
+    created_at: o.created_at,
+    quantity: o.quantity,
+    customer_name: o.customer_name,
+  }))
 
   const plannedRestocks = (rawPlannedRestocks ?? []).map(r => ({
     id: r.id as string,
@@ -159,7 +120,7 @@ export default async function ProductDetailPage({ params }: Props) {
       recentOrders={recentOrders}
       stockMovements={stockMovements}
       plannedRestocks={plannedRestocks}
-      hasBlockingOrders={(linkedOrdersCount ?? 0) > 0}
+      hasBlockingOrders={hasBlockingOrders}
       upsertProduct={upsertProduct}
       deleteProduct={deleteProduct}
       adjustStock={adjustStock}

@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
@@ -55,7 +56,10 @@ export async function PATCH(
     .update({ role })
     .eq('id', memberId)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    Sentry.captureException(new Error(`team member role update: ${error.message}`), { tags: { module: 'team-member' } })
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   const ROLE_LABELS: Record<string, string> = { operator: 'Opérateur', readonly: 'Lecture seule', admin: 'Admin' }
   const memberName = member.name ?? member.email
@@ -110,7 +114,10 @@ export async function DELETE(
     .delete()
     .eq('id', memberId)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    Sentry.captureException(new Error(`team member delete: ${error.message}`), { tags: { module: 'team-member' } })
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   const memberName = member.name ?? member.email
 

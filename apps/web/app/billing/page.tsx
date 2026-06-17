@@ -144,7 +144,7 @@ export default async function BillingPage() {
       </div>
 
       <p className="text-center text-xs text-gray-400 mt-6">
-        Activation sous 24h · Paiement par virement ou en main propre ·{' '}
+        {context.subscriptionStatus === 'active' ? 'Renouvellement sous 24h' : 'Activation sous 24h'} · Paiement par virement ou en main propre ·{' '}
         <Link href="/login" className="underline hover:text-gray-600">
           Se déconnecter
         </Link>

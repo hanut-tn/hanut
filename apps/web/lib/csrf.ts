@@ -34,7 +34,7 @@ export function checkOrigin(request: OriginRequest): boolean {
     if (process.env.NODE_ENV === 'production') {
       console.error(
         '[CSRF] NEXT_PUBLIC_APP_URL absent en production — ' +
-        'protection CSRF désactivée. Configurer la variable immédiatement.'
+        'requête bloquée (fail-closed). Configurer NEXT_PUBLIC_APP_URL immédiatement.'
       )
       return false
     }
