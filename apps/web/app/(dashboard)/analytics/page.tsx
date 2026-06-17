@@ -21,6 +21,7 @@ type AnalyticsOrderRow = {
   customer_governorate?: string | null
   customer_city?: string | null
   customer_delegation?: string | null
+  items?: { unit_cost: number; quantity: number }[] | null
   product: { id: string; name: string } | { id: string; name: string }[] | null
   customer:
     | { id: string; name: string; city?: string | null; customer_governorate?: string | null; customer_city?: string | null; customer_delegation?: string | null }
@@ -75,6 +76,7 @@ export default async function AnalyticsPage() {
       .from('orders')
       .select(`id, cod_amount, quantity, unit_cost, status, created_at,
         customer_governorate, customer_city, customer_delegation,
+        items:order_items(unit_cost, quantity),
         product:products(id, name),
         customer:customers(id, name, city, customer_governorate, customer_city, customer_delegation)`)
       .eq('seller_id', context.sellerId)

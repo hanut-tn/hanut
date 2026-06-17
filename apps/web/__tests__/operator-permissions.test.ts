@@ -122,7 +122,7 @@ describe('role-based permissions', () => {
     const result = await createOrder(orderInput)
 
     expect(result.error).toBeUndefined()
-    expect(rpc).toHaveBeenCalledWith('create_order_with_stock', expect.objectContaining({
+    expect(rpc).toHaveBeenCalledWith('create_order_with_items', expect.objectContaining({
       p_seller_id: 'seller-1',
       p_status: 'new',
     }))

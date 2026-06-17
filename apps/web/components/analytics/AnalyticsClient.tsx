@@ -15,6 +15,8 @@ type Customer = {
   customer_delegation?: string | null
 }
 
+type OrderItem = { unit_cost: number; quantity: number }
+
 type Order = {
   id: string
   cod_amount: number
@@ -25,8 +27,16 @@ type Order = {
   customer_governorate?: string | null
   customer_city?: string | null
   customer_delegation?: string | null
+  items?: OrderItem[] | null
   product?: Product | Product[] | null
   customer?: Customer | Customer[] | null
+}
+
+function orderItemsCost(o: Order): number {
+  if (o.items && o.items.length > 0) {
+    return o.items.reduce((s, i) => s + i.unit_cost * i.quantity, 0)
+  }
+  return (o.unit_cost ?? 0) * (o.quantity ?? 1)
 }
 
 type DeliveryOrder = { status: string; cod_amount: number; created_at: string }
@@ -215,7 +225,7 @@ export default function AnalyticsClient({ orders, deliveries, plan, truncated, o
     const o = getDeliveryOrder(d)
     return o?.status === 'delivered' ? s + (d.fee ?? 0) : s
   }, 0)
-  const totalCost = serverSummary?.total_cost    ?? delivered.reduce((s, o) => s + (o.unit_cost ?? 0) * (o.quantity ?? 1), 0)
+  const totalCost = serverSummary?.total_cost    ?? delivered.reduce((s, o) => s + orderItemsCost(o), 0)
   const profit    = revenue - totalFees - totalCost
 
   // true si au moins une commande livrée n'a pas de coût d'achat renseigné
@@ -232,7 +242,7 @@ export default function AnalyticsClient({ orders, deliveries, plan, truncated, o
     const o = getDeliveryOrder(d)
     return o?.status === 'delivered' ? s + (d.fee ?? 0) : s
   }, 0)
-  const prevTotalCost = prevDelivered.reduce((s, o) => s + (o.unit_cost ?? 0) * (o.quantity ?? 1), 0)
+  const prevTotalCost = prevDelivered.reduce((s, o) => s + orderItemsCost(o), 0)
   const prevProfit = prevRevenue - prevTotalFees - prevTotalCost
 
   function trendDir(current: number, prev: number): 'up' | 'down' | 'stable' {

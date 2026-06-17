@@ -14,6 +14,7 @@ export type AnalyticsOrderRow = {
   cod_amount: number | string | null
   quantity: number | string | null
   unit_cost: number | string | null
+  items?: { unit_cost: number | string | null; quantity: number | string | null }[] | null
 }
 
 export const EMPTY_ANALYTICS: AnalyticsSummary = {
@@ -57,7 +58,9 @@ export function summarizeOrders(rows: AnalyticsOrderRow[]): AnalyticsSummary {
     } else if (order.status === 'delivered') {
       summary.delivered_count += 1
       summary.total_revenue += toNumber(order.cod_amount)
-      summary.total_cost += toNumber(order.unit_cost) * toNumber(order.quantity)
+      summary.total_cost += order.items && order.items.length > 0
+        ? order.items.reduce((s, i) => s + toNumber(i.unit_cost) * toNumber(i.quantity), 0)
+        : toNumber(order.unit_cost) * toNumber(order.quantity)
     } else if (order.status === 'returned') {
       summary.returned_count += 1
     } else if (order.status === 'cancelled') {

@@ -123,11 +123,10 @@ describe('createOrder dashboard action', () => {
     await createOrder(input)
 
     expect(rpc).toHaveBeenCalledWith(
-      'create_order_with_stock',
+      'create_order_with_items',
       expect.objectContaining({
         p_seller_id: 'seller-1',
-        p_product_id: 'product-1',
-        p_quantity: 2,
+        p_items: [{ product_id: 'product-1', variant: 'Noir', quantity: 2 }],
         p_customer_name: 'Fatima',
         p_customer_phone: '+21611111111',
         p_customer_address: 'Rue 1',
@@ -138,8 +137,7 @@ describe('createOrder dashboard action', () => {
         p_customer_postal_code: '1000',
         p_delivery_notes: 'Appeler avant livraison',
         p_customer_id: null,
-        p_variant: 'Noir',
-        p_cod_amount: 120,
+        p_cod_amount: '120',
         p_notes: 'Client VIP',
         p_status: 'new',
         p_changed_by: 'user-1',

@@ -268,7 +268,7 @@ export async function deleteOrder(id: string): Promise<OrderMutationResult> {
 
   const { data: order } = await supabase
     .from('orders')
-    .select('status, cod_amount, product_id, quantity, customer:customers(name)')
+    .select('status, cod_amount, customer:customers(name)')
     .eq('id', id)
     .eq('seller_id', context.sellerId)
     .is('deleted_at', null)
