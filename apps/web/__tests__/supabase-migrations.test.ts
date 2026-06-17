@@ -83,6 +83,9 @@ describe('Supabase migrations', () => {
   const customerAddressHistoryMigration = migration('20260715_add_customer_address_history.sql')
   const structuredAddressMigration = migration('20260716_add_structured_addresses.sql')
   const jwtHookNullFix = migration('20260720_fix_jwt_hook_null_claims.sql')
+  const subscriptionStatusMigration = migration('20260721_add_subscription_status.sql')
+  const activatePaidSubscriptionMigration = migration('20260722_activate_paid_subscription.sql')
+  const renewPaidSubscriptionMigration = migration('20260723_renew_paid_subscription.sql')
 
   it('base tables migration creates the 5 core tables idempotently before any other migration', () => {
     expect(baseTables).toMatch(/CREATE TABLE IF NOT EXISTS sellers/i)
@@ -765,5 +768,50 @@ describe('Supabase migrations', () => {
     expect(jwtHookNullFix).toMatch(/REVOKE ALL ON FUNCTION set_seller_jwt_claims/i)
     expect(jwtHookNullFix).toMatch(/GRANT EXECUTE[\s\S]+TO supabase_auth_admin/i)
     expect(jwtHookNullFix).not.toMatch(/TO authenticated/i)
+  })
+
+  it('adds subscription_status with binary constraint and trial default — no expired state', () => {
+    expect(subscriptionStatusMigration).toMatch(/ADD COLUMN IF NOT EXISTS subscription_status/i)
+    expect(subscriptionStatusMigration).toMatch(/CHECK.*subscription_status.*IN.*'trial'.*'active'/i)
+    expect(subscriptionStatusMigration).toMatch(/DEFAULT 'trial'/i)
+    expect(subscriptionStatusMigration).toMatch(/NOT NULL/i)
+    // 'expired' ne doit pas être une valeur valide dans la contrainte CHECK
+    expect(subscriptionStatusMigration).not.toMatch(/CHECK.*expired/i)
+  })
+
+  it('activate_paid_subscription is service_role only, locks the seller row, and links upgrade_requests optionally', () => {
+    expect(activatePaidSubscriptionMigration).toMatch(/CREATE OR REPLACE FUNCTION activate_paid_subscription/i)
+    expect(activatePaidSubscriptionMigration).toMatch(/SECURITY DEFINER/i)
+    expect(activatePaidSubscriptionMigration).toMatch(/is_service_role/i)
+    // p_activated_by TEXT : supporte UUID et identifiant système
+    expect(activatePaidSubscriptionMigration).toMatch(/p_activated_by\s+TEXT/i)
+    // Verrouillage ligne pour atomicité
+    expect(activatePaidSubscriptionMigration).toMatch(/FOR UPDATE/i)
+    // Mise à jour de subscription_status
+    expect(activatePaidSubscriptionMigration).toMatch(/subscription_status\s*=\s*'active'/i)
+    // Journal d'activité intégré
+    expect(activatePaidSubscriptionMigration).toMatch(/subscription_activated/i)
+    expect(activatePaidSubscriptionMigration).toMatch(/INSERT INTO activity_logs/i)
+    // upgrade_requests : effet de bord optionnel, pas une dépendance dure
+    expect(activatePaidSubscriptionMigration).toMatch(/upgrade_requests/i)
+    // Accessible seulement à service_role
+    expect(activatePaidSubscriptionMigration).toMatch(/GRANT EXECUTE[\s\S]+service_role/i)
+    expect(activatePaidSubscriptionMigration).not.toMatch(/GRANT EXECUTE[\s\S]+authenticated/i)
+  })
+
+  it('renew_paid_subscription preserves remaining time and stays pure of upgrade_requests', () => {
+    expect(renewPaidSubscriptionMigration).toMatch(/CREATE OR REPLACE FUNCTION renew_paid_subscription/i)
+    expect(renewPaidSubscriptionMigration).toMatch(/SECURITY DEFINER/i)
+    expect(renewPaidSubscriptionMigration).toMatch(/is_service_role/i)
+    // Extension depuis GREATEST(now(), subscription_end) pour préserver le temps restant
+    expect(renewPaidSubscriptionMigration).toMatch(/GREATEST\(now\(\)/i)
+    expect(renewPaidSubscriptionMigration).toMatch(/subscription_status\s*=\s*'active'/i)
+    expect(renewPaidSubscriptionMigration).toMatch(/p_activated_by\s+TEXT/i)
+    expect(renewPaidSubscriptionMigration).toMatch(/subscription_renewed/i)
+    expect(renewPaidSubscriptionMigration).toMatch(/INSERT INTO activity_logs/i)
+    // Pas de dépendance sur upgrade_requests (renouvellement = pas de demande pendante)
+    expect(renewPaidSubscriptionMigration).not.toMatch(/upgrade_requests/i)
+    expect(renewPaidSubscriptionMigration).toMatch(/GRANT EXECUTE[\s\S]+service_role/i)
+    expect(renewPaidSubscriptionMigration).not.toMatch(/GRANT EXECUTE[\s\S]+authenticated/i)
   })
 })

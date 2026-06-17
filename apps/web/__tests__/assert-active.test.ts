@@ -15,6 +15,7 @@ function context(demoExpired: boolean): UserContext {
     isSeller: true,
     userName: 'Test Seller',
     plan: 'pro',
+    subscriptionStatus: 'trial',
     demoExpiresAt: demoExpired ? '2026-01-01T00:00:00.000Z' : null,
     demoExpired,
     daysLeft: demoExpired ? 0 : null,

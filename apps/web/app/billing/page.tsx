@@ -73,7 +73,9 @@ export default async function BillingPage() {
     <div>
       <div className="text-center mb-8">
         <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1C1917] mb-2">
-          Ta démo Pro est terminée
+          {context.subscriptionStatus === 'active'
+            ? 'Ton abonnement a expiré'
+            : 'Ta période d\'essai est terminée'}
         </h2>
         <p className="text-gray-500">
           Choisis le plan qui correspond à ton activité pour continuer à utiliser Hanut.
