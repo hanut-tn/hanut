@@ -22,6 +22,12 @@ export type CustomerInput = {
   city?: string
 }
 
+// updateCustomer force systématiquement address_version: 2 et valide l'adresse
+// complète via HanutAddressFieldsSchema (gouvernorat, ville, adresse, repère obligatoires).
+// Conséquence intentionnelle : modifier un client v1 (legacy address/city) oblige
+// à renseigner les champs structurés — c'est le mécanisme de migration progressive.
+// Si seul le nom ou le téléphone doit changer sur un client legacy, l'appelant
+// doit passer les champs customer_* actuels du client pour passer la validation.
 export async function updateCustomer(id: string, input: CustomerInput): Promise<{ error?: string }> {
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }

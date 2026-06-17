@@ -1,6 +1,11 @@
+-- DÉPRÉCIÉ : cette version de create_order_with_stock (13 params, avec unit_cost)
+-- est remplacée par 20260716_add_structured_addresses.sql (19 params, adresses structurées).
+-- Conservé pour le replay complet des migrations — ne pas déplacer ni supprimer
+-- (référencé par chemin exact dans supabase-migrations.test.ts).
+--
 -- Cette migration garantit que create_order_with_stock est toujours dans sa version
 -- finale correcte, indépendamment de l'ordre d'application des migrations précédentes.
--- Source de vérité : 20260610_add_order_unit_cost.sql (version 13 params, SECURITY DEFINER, unit_cost).
+-- Source de vérité historique : 20260610_add_order_unit_cost.sql (version 13 params, SECURITY DEFINER, unit_cost).
 
 -- Supprimer toutes les versions existantes (12 params et 13 params).
 DROP FUNCTION IF EXISTS create_order_with_stock(

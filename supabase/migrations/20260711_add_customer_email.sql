@@ -1,5 +1,11 @@
 -- Ajoute l'email aux tables customers et orders,
 -- et met à jour create_order_with_stock pour accepter p_customer_email.
+--
+-- DDL (lignes ci-dessous) : ACTIF — nécessaire au replay des migrations.
+-- Section RPC : DÉPRÉCIÉ — remplacée par 20260716_add_structured_addresses.sql
+-- (19 params, adresses structurées complètes).
+-- Conservé pour le replay complet des migrations — ne pas déplacer ni supprimer
+-- (référencé par chemin exact dans supabase-migrations.test.ts).
 
 ALTER TABLE customers
   ADD COLUMN IF NOT EXISTS email TEXT;

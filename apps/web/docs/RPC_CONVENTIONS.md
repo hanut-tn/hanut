@@ -135,6 +135,20 @@ YYYYMMDD_description_courte.sql
 
 Le `YYYYMMDD` doit être la date réelle d'écriture. Si deux migrations sont créées le même jour, suffixer avec `_b`, `_c`, ou utiliser un intitulé différent.
 
+### Ne jamais déplacer ni supprimer une migration, même dépréciée
+
+`supabase-migrations.test.ts` référence chaque fichier de migration **par son chemin exact** (`migration('20260601_create_order_with_stock_rpc.sql')`). Déplacer un fichier (p.ex. vers `_deprecated/`) casse immédiatement les tests.
+
+De plus, Supabase CLI applique les migrations **dans l'ordre alphabétique/chronologique depuis le dossier `supabase/migrations/`**. Un fichier déplacé hors du dossier serait absent du replay sur un nouvel environnement, ce qui peut bloquer les migrations suivantes si elles s'appuient sur des fonctions ou colonnes créées par le fichier déplacé.
+
+**Règle :** marquer les sections dépréciées avec un commentaire d'en-tête uniforme, et laisser le fichier en place :
+
+```sql
+-- DÉPRÉCIÉ : cette version de ma_rpc est remplacée par YYYYMMDD_nouvelle_migration.sql.
+-- Conservé pour le replay complet des migrations — ne pas déplacer ni supprimer
+-- (référencé par chemin exact dans supabase-migrations.test.ts).
+```
+
 ---
 
 ## Helpers internes
