@@ -82,6 +82,7 @@ describe('Supabase migrations', () => {
   const cancelledStatusRepairMigration = migration('20260714_repair_cancelled_order_status.sql')
   const customerAddressHistoryMigration = migration('20260715_add_customer_address_history.sql')
   const structuredAddressMigration = migration('20260716_add_structured_addresses.sql')
+  const jwtHookNullFix = migration('20260720_fix_jwt_hook_null_claims.sql')
 
   it('base tables migration creates the 5 core tables idempotently before any other migration', () => {
     expect(baseTables).toMatch(/CREATE TABLE IF NOT EXISTS sellers/i)
@@ -733,5 +734,36 @@ describe('Supabase migrations', () => {
     expect(codReversalHistory).toMatch(/RAISE EXCEPTION 'COD_ALREADY_REVERSED'/i)
     expect(codReversalHistory).toMatch(/RAISE EXCEPTION 'INVALID_REVERSAL_AMOUNT'/i)
     expect(codReversalHistory).toMatch(/REVOKE ALL ON FUNCTION mark_delivery_cod_reversed/i)
+  })
+
+  it('JWT hook never returns NULL — guards against missing claims key and internal errors', () => {
+    // Cause du bug original : jsonb_set(event, '{claims,seller_id}', ...) retourne NULL
+    // si event->'claims' est absent, car jsonb_set ne crée que le dernier niveau manquant.
+    // Ce test vérifie que le correctif est présent dans la migration.
+
+    // 1. Guard event IS NULL
+    expect(jwtHookNullFix).toMatch(/IF event IS NULL/i)
+    expect(jwtHookNullFix).toMatch(/RETURN '\{\}'::JSONB/i)
+
+    // 2. Extraction sûre des claims existants avant toute manipulation
+    expect(jwtHookNullFix).toMatch(/COALESCE\(event\s*->\s*'claims',\s*'\{\}'::JSONB\)/i)
+
+    // 3. Enrichissement via || (pas de jsonb_set multi-niveaux)
+    expect(jwtHookNullFix).toMatch(/jsonb_build_object\(/i)
+    expect(jwtHookNullFix).toMatch(/'seller_id'/i)
+    expect(jwtHookNullFix).toMatch(/'plan'/i)
+    expect(jwtHookNullFix).toMatch(/'subscription_end'/i)
+
+    // 4. jsonb_set à un seul niveau '{claims}' — jamais NULL si event est un objet valide
+    expect(jwtHookNullFix).toMatch(/jsonb_set\(event,\s*'\{claims\}'/i)
+
+    // 5. Filet de sécurité : toute exception retourne l'event d'origine
+    expect(jwtHookNullFix).toMatch(/EXCEPTION WHEN OTHERS THEN/i)
+    expect(jwtHookNullFix).toMatch(/RETURN COALESCE\(event,\s*'\{\}'::JSONB\)/i)
+
+    // Permissions : hook accessible uniquement à supabase_auth_admin
+    expect(jwtHookNullFix).toMatch(/REVOKE ALL ON FUNCTION set_seller_jwt_claims/i)
+    expect(jwtHookNullFix).toMatch(/GRANT EXECUTE[\s\S]+TO supabase_auth_admin/i)
+    expect(jwtHookNullFix).not.toMatch(/TO authenticated/i)
   })
 })
