@@ -348,9 +348,9 @@ BEGIN
       last_used_at = now();
   END IF;
 
-  v_first_product_id := (p_items->0->>'product_id')::UUID;
-  v_first_variant    := NULLIF(trim(coalesce(p_items->0->>'variant', '')), '');
-  v_first_quantity   := (p_items->0->>'quantity')::INTEGER;
+  v_first_product_id := (v_items->0->>'product_id')::UUID;
+  v_first_variant    := NULLIF(trim(coalesce(v_items->0->>'variant', '')), '');
+  v_first_quantity   := (v_items->0->>'quantity')::INTEGER;
 
   INSERT INTO orders (
     seller_id, customer_id, product_id, variant,

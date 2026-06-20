@@ -914,6 +914,8 @@ describe('Supabase migrations', () => {
     expect(createOrderWithItems).toMatch(/v_items\s+JSONB/i)
     expect(createOrderWithItems).toMatch(/jsonb_typeof\(p_items\) = 'string'/i)
     expect(createOrderWithItems).toMatch(/\(p_items #>> '\{\}'\)::JSONB/i)
+    expect(createOrderWithItems).toMatch(/v_first_product_id := \(v_items->0->>'product_id'\)::UUID/i)
+    expect(createOrderWithItems).not.toMatch(/v_first_product_id := \(p_items->0->>'product_id'\)::UUID/i)
     expect(createOrderWithItems).toMatch(/HAVING COUNT\(\*\) > 1/i)
     expect(createOrderWithItems).toMatch(/RAISE EXCEPTION 'DUPLICATE_ORDER_ITEM'/i)
   })
