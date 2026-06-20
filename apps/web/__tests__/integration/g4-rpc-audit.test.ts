@@ -366,6 +366,10 @@ describeIf('check_rate_limit', () => {
 describeIf('activate_paid_subscription + renew_paid_subscription', () => {
   let seller: { id: string; email: string }
 
+  function expectServiceRoleOnlyError(message: string) {
+    expect(message).toMatch(/UNAUTHORIZED|permission denied for function/i)
+  }
+
   beforeAll(async () => {
     seller = await createTestSeller('sub-lifecycle')
     // Reset to starter with no active subscription
@@ -387,7 +391,7 @@ describeIf('activate_paid_subscription + renew_paid_subscription', () => {
       p_duration_days: 30,
     })
     expect(error).not.toBeNull()
-    expect(error!.message).toMatch(/UNAUTHORIZED/i)
+    expectServiceRoleOnlyError(error!.message)
   })
 
   it('activate_paid_subscription sets plan, subscription_end and status=active', async () => {
@@ -449,6 +453,6 @@ describeIf('activate_paid_subscription + renew_paid_subscription', () => {
       p_duration_days: 30,
     })
     expect(error).not.toBeNull()
-    expect(error!.message).toMatch(/UNAUTHORIZED/i)
+    expectServiceRoleOnlyError(error!.message)
   })
 })
