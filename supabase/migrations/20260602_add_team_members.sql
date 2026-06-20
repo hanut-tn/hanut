@@ -117,15 +117,10 @@ CREATE POLICY "team_update" ON team_members FOR UPDATE
   USING (
     seller_id = auth.uid()
     OR get_team_role(seller_id) = 'admin'
-    OR (
-      lower(email) = lower(auth.jwt() ->> 'email')
-      AND status = 'pending'
-    )
   )
   WITH CHECK (
     seller_id = auth.uid()
     OR get_team_role(seller_id) = 'admin'
-    OR user_id = auth.uid()
   );
 
 CREATE POLICY "team_delete" ON team_members FOR DELETE

@@ -187,6 +187,35 @@ describe('public order OTP routes', () => {
     expect(cacheMock.revalidateTag).toHaveBeenCalledWith('dashboard-seller-1')
   })
 
+  it('strips client supplied unit_price from public order items', async () => {
+    const rpc = mockVerifyRpc({
+      ok: true,
+      order_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      tracking_token: 'tracking-token',
+      seller_id: 'seller-1',
+    })
+
+    const response = await verifyOtp(verifyRequest({
+      product_id: undefined,
+      quantity: undefined,
+      items: [
+        { product_id: PRODUCT_ID, quantity: 2, unit_price: 0 },
+      ],
+    }))
+
+    expect(response.status).toBe(200)
+    expect(rpc).toHaveBeenCalledWith(
+      'create_public_order_with_otp',
+      expect.objectContaining({
+        p_product_id: null,
+        p_quantity: 1,
+        p_items: [
+          { product_id: PRODUCT_ID, quantity: 2 },
+        ],
+      }),
+    )
+  })
+
   it('does not consume the recipient quota when Turnstile fails', async () => {
     turnstileMock.verifyTurnstileToken.mockResolvedValue(false)
 

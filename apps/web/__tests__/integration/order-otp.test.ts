@@ -104,6 +104,37 @@ describe('public order OTP transaction', () => {
     expect(orders?.[0]?.customer_city).toBe('Tunis')
   })
 
+  it('ignores unit_price from public items and uses the product price from the database', async () => {
+    await insertOtp()
+
+    const { data, error } = await adminClient.rpc('create_public_order_with_otp', {
+      p_slug: sellerSlug,
+      p_email: email,
+      p_code_hash: hashCode(),
+      p_customer_name: 'Client Prix',
+      p_customer_phone: '22123456',
+      p_customer_address: 'Rue Prix',
+      p_customer_city: 'Tunis',
+      p_items: [
+        { product_id: productId, quantity: 2, unit_price: 0 },
+      ],
+    })
+
+    expect(error).toBeNull()
+    expect(data).toMatchObject({ ok: true })
+    const result = data as { order_id: string }
+
+    const [{ data: order }, { data: items }] = await Promise.all([
+      adminClient.from('orders').select('cod_amount').eq('id', result.order_id).single(),
+      adminClient.from('order_items').select('unit_price, quantity').eq('order_id', result.order_id),
+    ])
+
+    expect(Number(order?.cod_amount)).toBe(80)
+    expect(items).toHaveLength(1)
+    expect(Number(items?.[0]?.unit_price)).toBe(40)
+    expect(Number(items?.[0]?.quantity)).toBe(2)
+  })
+
   it('keeps every address without overwriting the customer primary address', async () => {
     await insertOtp()
     const first = await adminClient.rpc('create_public_order_with_otp', {

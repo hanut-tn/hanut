@@ -33,6 +33,9 @@ export async function PATCH(req: NextRequest) {
   }
 
   const { ids, action } = parsed.data
+  if (action === 'cod_reversed' && context.role !== 'admin') {
+    return NextResponse.json({ error: 'Action réservée aux admins.' }, { status: 403 })
+  }
 
   const supabase = await createServerClient()
 

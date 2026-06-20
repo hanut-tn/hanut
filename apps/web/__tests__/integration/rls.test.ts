@@ -159,4 +159,52 @@ describe('team member access', () => {
     await adminClient.from('team_members').delete().eq('user_id', memberId)
     await adminClient.auth.admin.deleteUser(memberId)
   })
+
+  it('pending invitee cannot self-activate or promote their role to admin', async () => {
+    const memberEmail = `pending-member-${Date.now()}@hanut-test.local`
+    const { data: memberUser } = await adminClient.auth.admin.createUser({
+      email: memberEmail, password: 'Test1234!', email_confirm: true,
+    })
+    const memberId = memberUser.user!.id
+
+    try {
+      const { data: invite, error: inviteError } = await adminClient
+        .from('team_members')
+        .insert({
+          seller_id: sellerA.id,
+          email: memberEmail,
+          role: 'operator',
+          status: 'pending',
+        })
+        .select('id')
+        .single()
+      expect(inviteError).toBeNull()
+
+      const memberClient = await authenticateAs(memberEmail)
+      await memberClient
+        .from('team_members')
+        .update({
+          user_id: memberId,
+          status: 'active',
+          role: 'admin',
+          joined_at: new Date().toISOString(),
+        })
+        .eq('id', invite!.id)
+
+      const { data: row } = await adminClient
+        .from('team_members')
+        .select('user_id, status, role')
+        .eq('id', invite!.id)
+        .single()
+
+      expect(row).toEqual({
+        user_id: null,
+        status: 'pending',
+        role: 'operator',
+      })
+    } finally {
+      await adminClient.from('team_members').delete().eq('email', memberEmail)
+      await adminClient.auth.admin.deleteUser(memberId)
+    }
+  })
 })

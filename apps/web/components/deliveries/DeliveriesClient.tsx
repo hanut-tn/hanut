@@ -47,6 +47,7 @@ type CodSummary = {
 }
 
 type Props = {
+  role: 'admin' | 'operator' | 'readonly'
   deliveries: Delivery[]
   shippableOrders: OrderInfo[]
   createDelivery: (input: CreateDeliveryInput) => Promise<{ error?: string }>
@@ -79,6 +80,7 @@ function DeliveryMobileCard({
   onEdit,
   onDelete,
   onComplete,
+  canReverseCod,
   selectionMode = false,
   isSelected = false,
   onSelect,
@@ -89,6 +91,7 @@ function DeliveryMobileCard({
   onEdit: (delivery: Delivery) => void
   onDelete: (delivery: Delivery) => void
   onComplete: (delivery: Delivery) => void
+  canReverseCod: boolean
   selectionMode?: boolean
   isSelected?: boolean
   onSelect?: (id: string) => void
@@ -229,11 +232,11 @@ function DeliveryMobileCard({
             <button
               type="button"
               onClick={e => { e.stopPropagation(); onToggle(delivery, 'cod_reversed') }}
-              disabled={isPending || !delivery.cod_collected}
+              disabled={isPending || !delivery.cod_collected || !canReverseCod}
               className={`flex-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors min-h-[44px] touch-manipulation ${
                 delivery.cod_reversed
                   ? 'bg-[#F0FDF4] text-[#166534] border border-green-200'
-                  : delivery.cod_collected
+                  : delivery.cod_collected && canReverseCod
                     ? 'bg-gray-100 text-gray-500 hover:bg-[#F0FDF4] hover:text-[#166534]'
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
@@ -276,6 +279,7 @@ function DeliveryMobileCard({
 }
 
 export default function DeliveriesClient({
+  role,
   deliveries,
   shippableOrders,
   createDelivery,
@@ -324,6 +328,7 @@ export default function DeliveriesClient({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isBulkPending, setIsBulkPending] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const canReverseCod = role === 'admin'
 
   useEffect(() => {
     if (!toast) return
@@ -442,6 +447,10 @@ export default function DeliveriesClient({
   function handleToggle(d: Delivery, field: 'cod_collected' | 'cod_reversed') {
     const prevValue = d[field]
     const newValue = !prevValue
+    if (field === 'cod_reversed' && newValue && !canReverseCod) {
+      setToast('Erreur : Action réservée aux admins.')
+      return
+    }
     setAllDeliveries(list => list.map(del => del.id === d.id ? { ...del, [field]: newValue } : del))
     startTransition(async () => {
       try {
@@ -521,6 +530,10 @@ export default function DeliveriesClient({
 
   async function handleBulkAction(action: 'cod_collected' | 'cod_reversed') {
     if (selectedIds.size === 0) return
+    if (action === 'cod_reversed' && !canReverseCod) {
+      setToast('Erreur : Action réservée aux admins.')
+      return
+    }
     setIsBulkPending(true)
     try {
       const res = await fetch('/api/deliveries/bulk', {
@@ -736,14 +749,16 @@ export default function DeliveriesClient({
               <CheckCircle2 className="w-4 h-4" />
               Marquer COD collecté
             </button>
-            <button
-              onClick={() => handleBulkAction('cod_reversed')}
-              disabled={isBulkPending}
-              className="flex min-h-[44px] touch-manipulation items-center gap-2 bg-[#0B5E46] text-white rounded-lg px-3 py-1.5 text-sm disabled:opacity-50 transition-colors hover:bg-[#0a5240]"
-            >
-              <ArrowDownCircle className="w-4 h-4" />
-              Marquer COD reversé
-            </button>
+            {canReverseCod && (
+              <button
+                onClick={() => handleBulkAction('cod_reversed')}
+                disabled={isBulkPending}
+                className="flex min-h-[44px] touch-manipulation items-center gap-2 bg-[#0B5E46] text-white rounded-lg px-3 py-1.5 text-sm disabled:opacity-50 transition-colors hover:bg-[#0a5240]"
+              >
+                <ArrowDownCircle className="w-4 h-4" />
+                Marquer COD reversé
+              </button>
+            )}
           </div>
           <button
             type="button"
@@ -801,6 +816,7 @@ export default function DeliveriesClient({
                 onEdit={openEdit}
                 onDelete={setConfirmDelete}
                 onComplete={openComplete}
+                canReverseCod={canReverseCod}
                 selectionMode={selectionMode}
                 isSelected={selectedIds.has(d.id)}
                 onSelect={toggleSelection}
@@ -991,11 +1007,11 @@ export default function DeliveriesClient({
                           <button
                             type="button"
                             onClick={e => { e.stopPropagation(); handleToggle(d, 'cod_reversed') }}
-                            disabled={isPending || !d.cod_collected}
+                            disabled={isPending || !d.cod_collected || !canReverseCod}
                             className={`whitespace-nowrap rounded-full px-3 py-1 text-xs transition-colors ${
                               d.cod_reversed
                                 ? 'bg-[#F0FDF4] text-[#166534] border border-green-200 hover:bg-green-100'
-                                : d.cod_collected
+                                : d.cod_collected && canReverseCod
                                   ? 'bg-gray-100 text-gray-500 hover:bg-[#F0FDF4] hover:text-[#166534]'
                                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             }`}

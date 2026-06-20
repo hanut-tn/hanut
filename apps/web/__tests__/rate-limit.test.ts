@@ -17,6 +17,7 @@ describe('getClientIp', () => {
     process.env.VERCEL = '1'
     const headers = new Headers({
       'x-vercel-forwarded-for': '203.0.113.10',
+      'x-real-ip': '203.0.113.11',
       'x-forwarded-for': '198.51.100.20',
     })
 
@@ -30,6 +31,15 @@ describe('getClientIp', () => {
     })
 
     expect(getClientIp(headers)).toBe('198.51.100.20')
+  })
+
+  it('uses x-real-ip before the spoofable x-forwarded-for fallback', () => {
+    const headers = new Headers({
+      'x-real-ip': '203.0.113.40',
+      'x-forwarded-for': '198.51.100.20',
+    })
+
+    expect(getClientIp(headers)).toBe('203.0.113.40')
   })
 
   it('uses the first public fallback address', () => {

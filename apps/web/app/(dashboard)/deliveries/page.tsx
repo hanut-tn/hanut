@@ -146,6 +146,7 @@ export default async function DeliveriesPage() {
 
   return (
     <DeliveriesClient
+      role={context.role}
       deliveries={normalizedDeliveries}
       shippableOrders={shippableOrders}
       createDelivery={createDelivery}

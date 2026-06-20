@@ -436,6 +436,15 @@ describe('markCodReversed', () => {
     })
   })
 
+  it('blocks operators from reversing COD before opening a database client', async () => {
+    mockContext('operator')
+
+    const result = await markCodReversed('delivery-1', 80, 'Virement reçu')
+
+    expect(result.error).toBe('Action réservée aux admins.')
+    expect(serverMock.createServerClient).not.toHaveBeenCalled()
+  })
+
   it('rejects invalid amounts before opening a database client', async () => {
     const result = await markCodReversed('delivery-1', Number.NaN)
 

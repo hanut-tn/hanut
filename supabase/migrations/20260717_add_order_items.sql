@@ -171,6 +171,21 @@ BEGIN
     ELSE auth.uid()
   END;
 
+  IF EXISTS (
+    SELECT 1
+    FROM (
+      SELECT
+        item->>'product_id' AS product_id,
+        COALESCE(NULLIF(trim(coalesce(item->>'variant', '')), ''), '') AS variant_key,
+        COUNT(*) AS item_count
+      FROM jsonb_array_elements(p_items) AS items(item)
+      GROUP BY 1, 2
+      HAVING COUNT(*) > 1
+    ) duplicates
+  ) THEN
+    RAISE EXCEPTION 'DUPLICATE_ORDER_ITEM';
+  END IF;
+
   FOR v_item IN SELECT * FROM jsonb_array_elements(p_items) LOOP
     v_item_product_id := (v_item->>'product_id')::UUID;
     v_item_quantity   := (v_item->>'quantity')::INTEGER;
@@ -941,7 +956,19 @@ BEGIN
   END IF;
 
   v_effective_items := CASE
-    WHEN p_items IS NOT NULL AND jsonb_array_length(p_items) > 0 THEN p_items
+    WHEN p_items IS NOT NULL AND jsonb_array_length(p_items) > 0 THEN (
+      SELECT COALESCE(
+        jsonb_agg(
+          jsonb_strip_nulls(jsonb_build_object(
+            'product_id', item->>'product_id',
+            'variant', NULLIF(trim(coalesce(item->>'variant', '')), ''),
+            'quantity', item->>'quantity'
+          ))
+        ),
+        '[]'::JSONB
+      )
+      FROM jsonb_array_elements(p_items) AS items(item)
+    )
     WHEN p_product_id IS NOT NULL THEN jsonb_build_array(jsonb_build_object(
       'product_id', p_product_id,
       'variant', p_variant,

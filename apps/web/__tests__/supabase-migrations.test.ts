@@ -297,6 +297,19 @@ describe('Supabase migrations', () => {
     expect(teamMembers).toMatch(/CREATE POLICY "deliveries_team_delete" ON deliveries FOR DELETE/i)
   })
 
+  it('does not let pending invitees update their own team role through RLS', () => {
+    const policy = teamMembers.match(
+      /CREATE POLICY "team_update" ON team_members FOR UPDATE[\s\S]+?;\n/i,
+    )?.[0] ?? ''
+
+    expect(policy).toContain('CREATE POLICY "team_update"')
+    expect(policy).toMatch(/seller_id = auth\.uid\(\)/i)
+    expect(policy).toMatch(/get_team_role\(seller_id\) = 'admin'/i)
+    expect(policy).not.toMatch(/lower\(email\)/i)
+    expect(policy).not.toMatch(/status\s*=\s*'pending'/i)
+    expect(policy).not.toMatch(/user_id\s*=\s*auth\.uid\(\)/i)
+  })
+
   it('adds activity logs for team audit history', () => {
     expect(activityLogs).toMatch(/CREATE TABLE IF NOT EXISTS activity_logs/i)
     expect(activityLogs).toMatch(/seller_id\s+UUID NOT NULL REFERENCES sellers\(id\) ON DELETE CASCADE/i)
@@ -736,7 +749,8 @@ describe('Supabase migrations', () => {
     expect(codReversalHistory).toMatch(/CREATE UNIQUE INDEX IF NOT EXISTS idx_cod_reversals_delivery_unique/i)
     expect(codReversalHistory).not.toMatch(/CREATE POLICY "cod_reversals_insert"/i)
     expect(codReversalHistory).toMatch(/CREATE OR REPLACE FUNCTION mark_delivery_cod_reversed/i)
-    expect(codReversalHistory).toMatch(/can_write_seller\(p_seller_id\)/i)
+    expect(codReversalHistory).toMatch(/get_team_role\(p_seller_id\) = 'admin'/i)
+    expect(codReversalHistory).not.toMatch(/can_write_seller\(p_seller_id\)/i)
     expect(codReversalHistory).toMatch(/FOR UPDATE OF d, o/i)
     expect(codReversalHistory).toMatch(/RAISE EXCEPTION 'COD_ALREADY_REVERSED'/i)
     expect(codReversalHistory).toMatch(/RAISE EXCEPTION 'INVALID_REVERSAL_AMOUNT'/i)
@@ -878,6 +892,27 @@ describe('Supabase migrations', () => {
     expect(orderItemsMigration).toMatch(/INSERT INTO order_items[\s\S]+SELECT[\s\S]+FROM orders o/i)
     expect(orderItemsMigration).toMatch(/WHERE o\.product_id IS NOT NULL/i)
     expect(orderItemsMigration).toMatch(/CREATE OR REPLACE FUNCTION create_order_with_items/i)
+  })
+
+  it('public multi-item OTP orders strip client prices before creating the order', () => {
+    const publicOtpFunction = orderItemsMigration.match(
+      /CREATE OR REPLACE FUNCTION create_public_order_with_otp[\s\S]+?NOTIFY pgrst, 'reload schema';/i,
+    )?.[0] ?? ''
+
+    expect(publicOtpFunction).toMatch(/CREATE OR REPLACE FUNCTION create_public_order_with_otp/i)
+    expect(publicOtpFunction).toMatch(/jsonb_strip_nulls\(jsonb_build_object/i)
+    expect(publicOtpFunction).toMatch(/'product_id', item->>'product_id'/i)
+    expect(publicOtpFunction).toMatch(/'quantity', item->>'quantity'/i)
+    expect(publicOtpFunction).not.toMatch(/'unit_price'/i)
+  })
+
+  it('create_order_with_items rejects duplicate product-variant lines before stock decrement', () => {
+    const createOrderWithItems = orderItemsMigration.match(
+      /CREATE OR REPLACE FUNCTION create_order_with_items[\s\S]+?REVOKE ALL ON FUNCTION create_order_with_items/i,
+    )?.[0] ?? ''
+
+    expect(createOrderWithItems).toMatch(/HAVING COUNT\(\*\) > 1/i)
+    expect(createOrderWithItems).toMatch(/RAISE EXCEPTION 'DUPLICATE_ORDER_ITEM'/i)
   })
 
   // P2 — adjust_order_items_stock itère sur order_items pour restaurer tous les articles

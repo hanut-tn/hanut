@@ -50,11 +50,11 @@ function request(body: unknown) {
   })
 }
 
-function mockContext() {
+function mockContext(role: 'admin' | 'operator' | 'readonly' = 'admin') {
   contextMock.getUserContext.mockResolvedValue({
     userId: 'user-1',
     sellerId: 'seller-1',
-    role: 'admin',
+    role,
     isSeller: true,
     plan: 'pro',
     demoExpired: false,
@@ -137,5 +137,19 @@ describe('PATCH /api/deliveries/bulk', () => {
     expect(json.updated).toBe(0)
     expect(json.message).toContain('en personne')
     expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('blocks operators from bulk COD reversal before opening a database client', async () => {
+    mockContext('operator')
+
+    const response = await PATCH(request({
+      ids: ['carrier-1'],
+      action: 'cod_reversed',
+    }))
+    const json = await response.json()
+
+    expect(response.status).toBe(403)
+    expect(json.error).toBe('Action réservée aux admins.')
+    expect(serverMock.createServerClient).not.toHaveBeenCalled()
   })
 })

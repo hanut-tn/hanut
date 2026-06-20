@@ -104,6 +104,7 @@ async function recordCodReversal(
   amount: number,
   notes?: string
 ): Promise<DeliveryMutationResult> {
+  if (context.role !== 'admin') return { error: 'Action réservée aux admins.' }
   if (!Number.isFinite(amount) || amount <= 0) return { error: 'Montant de reversement invalide.' }
 
   const { error } = await supabase.rpc('mark_delivery_cod_reversed', {
@@ -251,6 +252,10 @@ export async function updateDelivery(
     ...input,
     ...('tracking_number' in input ? { tracking_number: normalizedTracking } : {}),
     ...('vendor_note' in input ? { vendor_note: normalizedVendorNote } : {}),
+  }
+
+  if (normalizedInput.cod_reversed === true && context.role !== 'admin') {
+    return { error: 'Action réservée aux admins.' }
   }
 
   const supabase = await createServerClient()
@@ -432,7 +437,7 @@ export async function markCodReversed(
 ): Promise<DeliveryMutationResult> {
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé.' }
-  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs.' }
+  if (context.role !== 'admin') return { error: 'Action réservée aux admins.' }
   const activeCheck = requireActive(context)
   if (activeCheck) return activeCheck
   if (!Number.isFinite(amount) || amount <= 0) return { error: 'Montant de reversement invalide.' }

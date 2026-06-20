@@ -126,7 +126,7 @@ DECLARE
   v_actor       UUID;
 BEGIN
   IF COALESCE(current_setting('request.jwt.claim.role', true), '') <> 'service_role'
-    AND NOT COALESCE(can_write_seller(p_seller_id), false)
+    AND NOT COALESCE(get_team_role(p_seller_id) = 'admin', false)
   THEN
     RAISE EXCEPTION 'UNAUTHORIZED';
   END IF;

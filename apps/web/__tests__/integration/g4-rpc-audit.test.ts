@@ -205,6 +205,46 @@ describeIf('create_order_with_items', () => {
     expect(pB!.stock).toBe(3)
   })
 
+  it('rejects duplicate product-variant lines before stock can go negative', async () => {
+    const { data: variantProduct } = await adminClient
+      .from('products')
+      .insert({
+        seller_id: seller.id,
+        name: 'Variant Duplicate Guard',
+        price: 20,
+        cost: 8,
+        stock: 3,
+        variants: [{ name: 'Taille M', qty: 3 }],
+      })
+      .select('id')
+      .single()
+    if (!variantProduct) throw new Error('Variant product setup failed')
+
+    const client = await authenticateAs(seller.email)
+    const { error } = await client.rpc('create_order_with_items', {
+      p_seller_id: seller.id,
+      p_customer_name: 'Client Duplicate',
+      p_customer_phone: '22330011',
+      p_status: 'new',
+      p_items: JSON.stringify([
+        { product_id: variantProduct.id, variant: 'Taille M', quantity: 2 },
+        { product_id: variantProduct.id, variant: 'Taille M', quantity: 2 },
+      ]),
+    })
+
+    expect(error).not.toBeNull()
+    expect(error!.message).toMatch(/DUPLICATE_ORDER_ITEM/i)
+
+    const { data: productAfter } = await adminClient
+      .from('products')
+      .select('stock, variants')
+      .eq('id', variantProduct.id)
+      .single()
+    expect(productAfter!.stock).toBe(3)
+    const variants = productAfter!.variants as Array<{ qty: number | string }>
+    expect(Number(variants[0]?.qty)).toBe(3)
+  })
+
   it('rejects quota exceeded for starter plan (100 orders/month)', async () => {
     const starterSeller = await createTestSeller('quota-test')
     try {

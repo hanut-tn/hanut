@@ -61,8 +61,12 @@ export function getClientIp(headers: Headers): string {
     if (vercelIp) return vercelIp
   }
 
+  const realIp = firstIp(headers.get('x-real-ip'))
+  if (realIp) return realIp
+
   // Fallback pour les environnements non-Vercel (dev local, autres hébergeurs).
-  // Ce chemin est best-effort : seul un proxy de confiance peut garantir l'IP.
+  // Ce chemin est best-effort et ne doit passer qu'après les headers proxy
+  // contrôlés par l'infrastructure.
   const forwardedFor = headers.get('x-forwarded-for')
   if (forwardedFor) {
     const ips = forwardedFor.split(',').map(ip => ip.trim()).filter(Boolean)
@@ -71,7 +75,7 @@ export function getClientIp(headers: Headers): string {
     if (ips[0]) return ips[0]
   }
 
-  return firstIp(headers.get('x-real-ip')) ?? 'anonymous'
+  return 'anonymous'
 }
 
 function firstIp(value: string | null): string | null {
