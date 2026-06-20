@@ -911,6 +911,9 @@ describe('Supabase migrations', () => {
       /CREATE OR REPLACE FUNCTION create_order_with_items[\s\S]+?REVOKE ALL ON FUNCTION create_order_with_items/i,
     )?.[0] ?? ''
 
+    expect(createOrderWithItems).toMatch(/v_items\s+JSONB/i)
+    expect(createOrderWithItems).toMatch(/jsonb_typeof\(p_items\) = 'string'/i)
+    expect(createOrderWithItems).toMatch(/\(p_items #>> '\{\}'\)::JSONB/i)
     expect(createOrderWithItems).toMatch(/HAVING COUNT\(\*\) > 1/i)
     expect(createOrderWithItems).toMatch(/RAISE EXCEPTION 'DUPLICATE_ORDER_ITEM'/i)
   })

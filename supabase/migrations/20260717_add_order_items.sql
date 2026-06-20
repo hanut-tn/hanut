@@ -83,6 +83,7 @@ DECLARE
   v_delivery_notes          TEXT := NULLIF(trim(coalesce(p_delivery_notes, '')), '');
   v_customer_email          TEXT := NULLIF(trim(coalesce(p_customer_email, '')), '');
   v_notes                   TEXT := NULLIF(trim(coalesce(p_notes, '')), '');
+  v_items                   JSONB := '[]'::JSONB;
   v_address_version         SMALLINT := 1;
   v_address_normalized      TEXT;
   v_city_normalized         TEXT;
@@ -115,8 +116,23 @@ BEGIN
     RAISE EXCEPTION 'UNAUTHORIZED';
   END IF;
 
+  BEGIN
+    v_items := CASE
+      WHEN p_items IS NULL THEN '[]'::JSONB
+      WHEN jsonb_typeof(p_items) = 'array' THEN p_items
+      WHEN jsonb_typeof(p_items) = 'string' THEN (p_items #>> '{}')::JSONB
+      ELSE p_items
+    END;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE EXCEPTION 'INVALID_ORDER_ITEMS';
+  END;
+
+  IF jsonb_typeof(v_items) <> 'array' THEN
+    RAISE EXCEPTION 'INVALID_ORDER_ITEMS';
+  END IF;
+
   IF p_seller_id IS NULL THEN RAISE EXCEPTION 'Vendeur introuvable'; END IF;
-  IF jsonb_array_length(p_items) = 0 THEN RAISE EXCEPTION 'Au moins un article est obligatoire'; END IF;
+  IF jsonb_array_length(v_items) = 0 THEN RAISE EXCEPTION 'Au moins un article est obligatoire'; END IF;
   IF v_customer_name IS NULL THEN RAISE EXCEPTION 'Nom client obligatoire'; END IF;
   IF v_customer_phone IS NULL THEN RAISE EXCEPTION 'Telephone client obligatoire'; END IF;
 
@@ -178,7 +194,7 @@ BEGIN
         item->>'product_id' AS product_id,
         COALESCE(NULLIF(trim(coalesce(item->>'variant', '')), ''), '') AS variant_key,
         COUNT(*) AS item_count
-      FROM jsonb_array_elements(p_items) AS items(item)
+      FROM jsonb_array_elements(v_items) AS items(item)
       GROUP BY 1, 2
       HAVING COUNT(*) > 1
     ) duplicates
@@ -186,7 +202,7 @@ BEGIN
     RAISE EXCEPTION 'DUPLICATE_ORDER_ITEM';
   END IF;
 
-  FOR v_item IN SELECT * FROM jsonb_array_elements(p_items) LOOP
+  FOR v_item IN SELECT * FROM jsonb_array_elements(v_items) LOOP
     v_item_product_id := (v_item->>'product_id')::UUID;
     v_item_quantity   := (v_item->>'quantity')::INTEGER;
     v_item_variant    := NULLIF(trim(coalesce(v_item->>'variant', '')), '');
@@ -358,7 +374,7 @@ BEGIN
   SELECT COALESCE(name, '') INTO v_seller_name
   FROM sellers WHERE id = p_seller_id;
 
-  FOR v_item IN SELECT * FROM jsonb_array_elements(p_items) LOOP
+  FOR v_item IN SELECT * FROM jsonb_array_elements(v_items) LOOP
     v_item_product_id := (v_item->>'product_id')::UUID;
     v_item_quantity   := (v_item->>'quantity')::INTEGER;
     v_item_variant    := NULLIF(trim(coalesce(v_item->>'variant', '')), '');
