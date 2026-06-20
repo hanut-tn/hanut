@@ -257,29 +257,41 @@ describeIf('create_order_with_items', () => {
         .single()
       if (!qProduct) throw new Error('Quota product setup failed')
 
-      await adminClient.rpc('create_order_with_items', {
+      const { data: quotaOrderId, error: quotaOrderError } = await adminClient.rpc('create_order_with_items', {
         p_seller_id: starterSeller.id,
         p_customer_name: 'Client Quota',
         p_customer_phone: '99887766',
         p_status: 'new',
         p_items: JSON.stringify([{ product_id: qProduct.id, quantity: 1 }]),
       })
+      expect(quotaOrderError).toBeNull()
+      expect(quotaOrderId).toBeTruthy()
 
       await adminClient
         .from('orders')
         .update({ created_at: new Date().toISOString() })
         .eq('seller_id', starterSeller.id)
 
+      const { data: quotaOrder } = await adminClient
+        .from('orders')
+        .select('customer_id')
+        .eq('id', quotaOrderId as string)
+        .single()
+      expect(quotaOrder?.customer_id).toBeTruthy()
+
       // Simulate 100 existing orders this month via adminClient
       const bulkOrders = Array.from({ length: 99 }, (_, i) => ({
         seller_id: starterSeller.id,
+        customer_id: quotaOrder!.customer_id,
         product_id: qProduct.id,
         quantity: 1,
         cod_amount: 10,
+        unit_cost: 0,
         status: 'new',
         tracking_token: `token${i}${Date.now()}`.slice(0, 32),
       }))
-      await adminClient.from('orders').insert(bulkOrders)
+      const { error: bulkError } = await adminClient.from('orders').insert(bulkOrders)
+      expect(bulkError).toBeNull()
 
       const starterClient = await authenticateAs(starterSeller.email)
       const { error } = await starterClient.rpc('create_order_with_items', {
