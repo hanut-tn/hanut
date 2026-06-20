@@ -1,3 +1,5 @@
+import Image from 'next/image'
+
 export const dynamic = 'force-dynamic'
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -6,9 +8,15 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-brand-600 rounded-2xl mb-4 shadow-lg">
-            <span className="text-2xl font-bold text-white">H</span>
-          </div>
+          <Image
+            src="/logo-icone.svg"
+            alt="Hanut"
+            width={56}
+            height={68}
+            className="mx-auto mb-4"
+            priority
+            unoptimized
+          />
           <h1 className="text-3xl font-bold text-gray-900">Hanut</h1>
           <p className="text-gray-500 text-sm mt-1">Gestion commandes WhatsApp</p>
         </div>

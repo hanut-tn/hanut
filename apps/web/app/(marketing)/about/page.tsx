@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
@@ -156,9 +157,7 @@ export default function AboutPage() {
                   Notre vision : que dans 5 ans, chaque vendeur tunisien qui vend via Instagram ait les mêmes données qu&apos;un Amazon Seller.
                 </p>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#16A34A] rounded-full flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">H</span>
-                  </div>
+                  <Image src="/logo-icone-blanc.svg" alt="Hanut" width={40} height={49} unoptimized />
                   <div>
                     <p className="font-semibold text-white text-sm">L&apos;équipe Hanut</p>
                     <p className="text-xs text-green-300">Tunis, Tunisie</p>

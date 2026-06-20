@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
@@ -69,9 +70,7 @@ function LinkMockup() {
     <MockupShell url="hanut.tn/order/ma-boutique">
       <div className="p-5 space-y-4 bg-white">
         <div className="text-center pb-3 border-b border-gray-100">
-          <div className="w-12 h-12 bg-[#0B5E46] rounded-2xl mx-auto mb-2.5 flex items-center justify-center">
-            <span className="text-white font-bold text-lg">H</span>
-          </div>
+          <Image src="/logo-icone.svg" alt="Hanut" width={48} height={58} className="mx-auto mb-2.5" unoptimized />
           <p className="font-bold text-gray-900 text-sm">Boutique Yasmine</p>
           <p className="text-xs text-gray-400 mt-0.5">Tunis, Tunisie</p>
         </div>
