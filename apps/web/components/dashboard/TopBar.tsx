@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { LogOut, Menu, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -46,7 +47,7 @@ export default function TopBar({ sellerName, role, isSeller }: TopBarProps) {
 
       {/* ── Logo centré mobile / spacer desktop ── */}
       <div className="flex-1 flex items-center justify-center md:justify-start">
-        <span className="font-bold text-[#0B5E46] text-base md:hidden">Hanut</span>
+        <Image src="/logo-icone.svg" alt="Hanut" width={32} height={39} className="md:hidden" />
       </div>
 
       {/* ── Droite : nom vendeur + badge rôle + déconnexion ── */}

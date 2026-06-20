@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -29,11 +30,8 @@ export default function Navbar() {
       scrolled ? 'border-b border-gray-100 shadow-sm' : ''
     }`}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-6">
-        <Link href="/" className="flex items-center gap-2.5 shrink-0">
-          <div className="w-8 h-8 bg-[#0B5E46] rounded-lg flex items-center justify-center shadow-sm">
-            <span className="text-white font-bold text-sm">H</span>
-          </div>
-          <span className="font-bold text-[#1C1917] text-lg tracking-tight">Hanut</span>
+        <Link href="/" className="flex items-center shrink-0">
+          <Image src="/logo-horizontal.svg" alt="Hanut" width={110} height={35} priority />
         </Link>
 
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-500">

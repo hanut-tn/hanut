@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -70,9 +71,8 @@ export default function MobileSidebar({ role, sellerName, plan = 'starter' }: Pr
         }`}
       >
         {/* Logo */}
-        <div className="flex items-center gap-3 px-5 h-14 border-b border-[#E7E5E4] shrink-0">
-          <span className="text-[#16A34A] text-lg leading-none">●</span>
-          <span className="font-bold text-xl text-[#0B5E46]">Hanut</span>
+        <div className="flex items-center px-5 h-14 border-b border-[#E7E5E4] shrink-0">
+          <Image src="/logo-horizontal.svg" alt="Hanut" width={110} height={35} />
         </div>
 
         {/* Nav */}

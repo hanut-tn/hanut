@@ -125,12 +125,14 @@ export async function POST(request: NextRequest) {
     console.log(`[OTP DEV] Code pour ${email} (boutique: ${slug}): ${code}`)
   } else {
     const sellerName = escapeEmailHtml(seller.name ?? slug)
+    const logoUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://hanut.tn'}/icon-512.png`
     const emailBody = JSON.stringify({
       from: process.env.RESEND_FROM_EMAIL ?? 'Hanut <noreply@hanut.tn>',
       to: email,
       subject: `${code} — votre code de vérification`,
       html: `
         <div style="font-family:sans-serif;max-width:420px;margin:0 auto;padding:32px 24px">
+          <img src="${logoUrl}" alt="Hanut" width="48" height="48" style="display:block;margin:0 0 20px;border-radius:10px" />
           <h2 style="color:#1C1917;margin:0 0 8px">Vérification de commande</h2>
           <p style="color:#78716C;margin:0 0 24px">
             Votre code pour commander chez <strong style="color:#1C1917">${sellerName}</strong> :

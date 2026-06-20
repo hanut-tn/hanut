@@ -6,6 +6,14 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Hanut — Gestion commandes WhatsApp',
   description: 'Gérez vos commandes WhatsApp, votre stock et vos livraisons depuis un seul tableau de bord.',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon-32.png', type: 'image/png', sizes: '32x32' },
+      { url: '/icon-192.png', type: 'image/png', sizes: '192x192' },
+    ],
+    apple: [{ url: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+  },
 }
 
 // La lecture des headers force le rendu dynamique requis par une CSP à nonce.

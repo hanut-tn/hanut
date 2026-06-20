@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { LayoutDashboard, ShoppingBag, Users, Package, Truck, BarChart2, Settings, Users2 } from 'lucide-react'
@@ -53,9 +54,8 @@ export default function Sidebar({ role, sellerName, plan = 'pro', daysLeft }: Pr
   return (
     <aside className="w-56 bg-white border-r border-[#E7E5E4] flex flex-col h-screen sticky top-0">
       {/* Logo */}
-      <div className="flex items-center gap-2 px-4 py-5 border-b border-[#E7E5E4]">
-        <span className="text-[#16A34A] text-lg leading-none">●</span>
-        <span className="font-bold text-xl text-[#0B5E46]">Hanut</span>
+      <div className="flex items-center px-4 py-5 border-b border-[#E7E5E4]">
+        <Image src="/logo-horizontal.svg" alt="Hanut" width={110} height={35} />
       </div>
 
       {/* Nav */}

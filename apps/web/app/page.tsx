@@ -219,11 +219,13 @@ export const metadata: Metadata = {
     siteName: 'Hanut',
     locale: 'fr_TN',
     type: 'website',
+    images: [{ url: 'https://hanut.tn/icon-512.png', width: 512, height: 512, alt: 'Hanut' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Hanut — Gérez vos commandes WhatsApp en 30 secondes',
     description: "L'outil fait pour les vendeurs tunisiens qui vendent via WhatsApp et Instagram.",
+    images: ['https://hanut.tn/icon-512.png'],
   },
   robots: {
     index: true,
