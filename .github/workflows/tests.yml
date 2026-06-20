@@ -100,7 +100,10 @@ jobs:
           done
 
       - name: Start Supabase
-        run: supabase start
+        # The integration suite exercises Postgres/RLS/RPC only. Hanut has no
+        # local Edge Functions, so skip edge-runtime to avoid unrelated CI
+        # health-check failures from that optional container.
+        run: supabase start -x edge-runtime
 
       - name: Export Supabase credentials
         run: |
