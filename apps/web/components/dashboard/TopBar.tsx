@@ -47,7 +47,7 @@ export default function TopBar({ sellerName, role, isSeller }: TopBarProps) {
 
       {/* ── Logo centré mobile / spacer desktop ── */}
       <div className="flex-1 flex items-center justify-center md:justify-start">
-        <Image src="/logo-icone.svg" alt="Hanut" width={32} height={39} className="md:hidden" />
+        <Image src="/logo-icone.svg" alt="Hanut" width={32} height={39} className="md:hidden" unoptimized />
       </div>
 
       {/* ── Droite : nom vendeur + badge rôle + déconnexion ── */}

@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { createServiceClient } from '@/lib/supabase/service'
 import OrderForm from '@/components/order/OrderForm'
 import type { Product } from '@hanut/types'
@@ -55,9 +56,7 @@ export default async function PublicOrderPage({ params }: Props) {
       {/* Header */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-xl mx-auto px-4 h-14 flex items-center gap-3">
-          <div className="w-7 h-7 bg-[#0B5E46] rounded-lg flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-xs">H</span>
-          </div>
+          <Image src="/logo-icone.svg" alt="Hanut" width={28} height={34} unoptimized />
           <p className="font-bold text-[#1C1917] truncate">{seller.name}</p>
         </div>
       </header>
@@ -83,9 +82,7 @@ export default async function PublicOrderPage({ params }: Props) {
       <footer className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-gray-100 py-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] text-center">
         <div className="flex items-center justify-center gap-4">
           <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-            <div className="w-4 h-4 bg-[#0B5E46] rounded flex items-center justify-center">
-              <span className="text-white font-bold" style={{ fontSize: '9px' }}>H</span>
-            </div>
+            <img src="/icon-16.png" alt="" width={16} height={16} style={{ borderRadius: '3px' }} />
             Propulsé par Hanut
           </Link>
           <Link href="/privacy" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">

@@ -72,7 +72,7 @@ export default function MobileSidebar({ role, sellerName, plan = 'starter' }: Pr
       >
         {/* Logo */}
         <div className="flex items-center px-5 h-14 border-b border-[#E7E5E4] shrink-0">
-          <Image src="/logo-horizontal.svg" alt="Hanut" width={110} height={35} />
+          <Image src="/logo-horizontal.svg" alt="Hanut" width={110} height={35} unoptimized />
         </div>
 
         {/* Nav */}

@@ -31,7 +31,7 @@ export default function Navbar() {
     }`}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-6">
         <Link href="/" className="flex items-center shrink-0">
-          <Image src="/logo-horizontal.svg" alt="Hanut" width={110} height={35} priority />
+          <Image src="/logo-horizontal.svg" alt="Hanut" width={110} height={35} priority unoptimized />
         </Link>
 
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-500">

@@ -161,12 +161,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
       {/* Header */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-[#0B5E46] rounded-lg flex items-center justify-center shrink-0">
-              <span className="text-white font-bold text-xs">H</span>
-            </div>
-            <span className="font-bold text-[#1C1917]">Hanut</span>
-          </div>
+          <Image src="/logo-horizontal.svg" alt="Hanut" width={90} height={29} unoptimized />
           <span className="text-xs text-[#78716C]">Suivi de commande</span>
         </div>
       </header>
@@ -369,9 +364,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
 
       <footer className="py-6 text-center">
         <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-          <div className="w-4 h-4 bg-[#0B5E46] rounded flex items-center justify-center">
-            <span className="text-white font-bold" style={{ fontSize: '9px' }}>H</span>
-          </div>
+          <img src="/icon-16.png" alt="" width={16} height={16} style={{ borderRadius: '3px' }} />
           Propulsé par Hanut
         </Link>
       </footer>
