@@ -61,6 +61,8 @@ BEGIN
   UPDATE orders
   SET
     customer_email       = NULL,
+    customer_address     = NULL,
+    customer_city        = NULL,
     customer_governorate = NULL,
     customer_delegation  = NULL,
     customer_landmark    = NULL,
