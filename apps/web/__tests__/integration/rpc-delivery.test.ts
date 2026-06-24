@@ -279,6 +279,28 @@ describe('mark_delivery_cod_reversed', () => {
     })
     expect(duplicateError?.message).toContain('COD_ALREADY_REVERSED')
   })
+
+  it('rejects reversal when COD has not been collected yet', async () => {
+    const client = await authenticateAs(sellerEmail)
+
+    const { data: deliveryId, error: createError } = await client.rpc('create_delivery_from_order', {
+      p_seller_id: sellerId,
+      p_user_id: sellerId,
+      p_order_id: orderId,
+      p_carrier: 'navex',
+    })
+    expect(createError).toBeNull()
+
+    // cod_collected reste false — aucun appel à mark_delivery_cod_collected
+    const { error } = await client.rpc('mark_delivery_cod_reversed', {
+      p_delivery_id: deliveryId,
+      p_seller_id: sellerId,
+      p_amount: 80,
+    })
+
+    expect(error).not.toBeNull()
+    expect(error!.message).toContain('DELIVERY_NOT_FOUND_OR_COD_NOT_COLLECTED')
+  })
 })
 
 describe('get_cod_summary', () => {

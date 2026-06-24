@@ -2,6 +2,9 @@
 -- est remplacée par 20260610_consolidate_order_rpc.sql
 -- Ne pas modifier ce fichier.
 
+-- gen_random_bytes() nécessite pgcrypto. Idempotent.
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- Add tracking_token to orders for public tracking URLs (replaces UUID exposure)
 ALTER TABLE orders
 ADD COLUMN IF NOT EXISTS tracking_token TEXT UNIQUE DEFAULT NULL;

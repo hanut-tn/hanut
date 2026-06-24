@@ -215,4 +215,48 @@ describe('middleware auth boundaries', () => {
     expect(membershipQuery.eq).toHaveBeenCalledWith('status', 'active')
     expect(sellerQuery.eq).toHaveBeenCalledWith('id', 'seller-1')
   })
+
+  it('skips the sellers DB query for subscription_end when JWT claims contain it (hook active)', async () => {
+    const future = new Date(Date.now() + 86_400_000).toISOString()
+    const header  = btoa(JSON.stringify({ alg: 'HS256' }))
+    const payload = btoa(JSON.stringify({ sub: 'seller-1', subscription_end: future }))
+    const jwtWithClaims = `${header}.${payload}.fake-sig`
+
+    const fromSpy = vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: future }))
+
+    supabaseSsrMock.createServerClient.mockReturnValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1' } } }),
+        getSession: vi.fn().mockResolvedValue({ data: { session: { access_token: jwtWithClaims } } }),
+      },
+      from: fromSpy,
+    })
+
+    const response = await middleware(requestFor('/dashboard'))
+
+    expect(response.headers.get('location')).toBeNull()
+    expect(fromSpy).not.toHaveBeenCalled()
+  })
+
+  it('falls back to sellers DB query when JWT claims are absent (hook not active)', async () => {
+    const future = new Date(Date.now() + 86_400_000).toISOString()
+    const header  = btoa(JSON.stringify({ alg: 'HS256' }))
+    const payload = btoa(JSON.stringify({ sub: 'seller-1' })) // pas de subscription_end
+    const jwtWithoutClaims = `${header}.${payload}.fake-sig`
+
+    const fromSpy = vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: future }))
+
+    supabaseSsrMock.createServerClient.mockReturnValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1' } } }),
+        getSession: vi.fn().mockResolvedValue({ data: { session: { access_token: jwtWithoutClaims } } }),
+      },
+      from: fromSpy,
+    })
+
+    const response = await middleware(requestFor('/dashboard'))
+
+    expect(response.headers.get('location')).toBeNull()
+    expect(fromSpy).toHaveBeenCalledWith('sellers')
+  })
 })

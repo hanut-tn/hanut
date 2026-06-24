@@ -96,11 +96,13 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderMutatio
     if (error.message.includes('SHOP_INACTIVE')) {
       return { error: 'Votre abonnement ou votre démo a expiré.' }
     }
+    // Messages utilisateur intentionnels du RPC (en français, déjà lisibles)
+    if (error.message.includes('Stock insuffisant')) return { error: error.message }
     Sentry.captureException(new Error(error.message), {
       tags: { module: 'orders' },
       extra: { sellerId: context.sellerId },
     })
-    return { error: error.message }
+    return { error: 'Une erreur inattendue est survenue. Réessayez ou contactez le support.' }
   }
 
 
@@ -236,7 +238,8 @@ export async function cancelOrder(id: string): Promise<OrderMutationResult> {
       const status = error.message.split(':')[1] ?? ''
       return { error: `Impossible d'annuler une commande ${status}.` }
     }
-    return { error: error.message }
+    Sentry.captureException(new Error(error.message), { tags: { module: 'orders', action: 'cancel' }, extra: { sellerId: context.sellerId, orderId: id } })
+    return { error: 'Une erreur inattendue est survenue lors de l\'annulation.' }
   }
 
 
@@ -293,7 +296,10 @@ export async function deleteOrder(id: string): Promise<OrderMutationResult> {
     p_order_id: id,
     p_archived_by: context.userId,
   })
-  if (error) return { error: error.message }
+  if (error) {
+    Sentry.captureException(new Error(error.message), { tags: { module: 'orders', action: 'delete' }, extra: { sellerId: context.sellerId, orderId: id } })
+    return { error: 'Une erreur inattendue est survenue lors de la suppression.' }
+  }
 
   const customer = Array.isArray(order.customer) ? order.customer[0] : order.customer
 
@@ -328,7 +334,13 @@ export async function restoreOrder(id: string): Promise<OrderMutationResult> {
     p_order_id: id,
     p_restored_by: context.userId,
   })
-  if (error) return { error: error.message }
+  if (error) {
+    if (error.message.includes('INSUFFICIENT_STOCK_ON_RESTORE')) {
+      return { error: 'Stock insuffisant pour restaurer cette commande. Un ou plusieurs produits ont été vendus entre-temps.' }
+    }
+    Sentry.captureException(new Error(error.message), { tags: { module: 'orders', action: 'restore' }, extra: { sellerId: context.sellerId, orderId: id } })
+    return { error: 'Une erreur inattendue est survenue lors de la restauration.' }
+  }
 
 
   await logActivity({

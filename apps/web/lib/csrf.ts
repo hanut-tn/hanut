@@ -50,7 +50,7 @@ export function checkOrigin(request: OriginRequest): boolean {
     toOrigin(vercelUrl),
     toOrigin(publicVercelUrl),
     toOrigin('url' in request ? request.url : null),
-    'http://localhost:3000',
+    ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3000'] : []),
   ].filter((value): value is string => Boolean(value)))
 
   const originHeader = toOrigin(origin)

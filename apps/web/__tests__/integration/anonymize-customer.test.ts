@@ -64,6 +64,37 @@ describeIf('anonymize_customer RPC', () => {
     }
     customerId = order.customer_id
 
+    // Définir des champs d'adresse structurée pour vérifier qu'ils sont bien effacés.
+    await adminClient.from('customers').update({
+      customer_governorate: 'Tunis',
+      customer_city: 'La Marsa',
+      customer_delegation: 'Carthage',
+      customer_address: '5 rue des oliviers',
+      customer_landmark: 'Près du café central',
+      customer_postal_code: '2070',
+      delivery_notes: 'Sonner 2 fois',
+    }).eq('id', customerId)
+
+    await adminClient.from('orders').update({
+      customer_governorate: 'Tunis',
+      customer_delegation: 'Carthage',
+      customer_landmark: 'Près du café central',
+      customer_postal_code: '2070',
+      delivery_notes: 'Sonner 2 fois',
+    }).eq('id', orderId)
+
+    await adminClient.from('customer_addresses').insert({
+      seller_id: seller.id,
+      customer_id: customerId,
+      customer_governorate: 'Tunis',
+      customer_city: 'La Marsa',
+      customer_delegation: 'Carthage',
+      customer_address: '5 rue des oliviers',
+      customer_landmark: 'Près du café central',
+      customer_postal_code: '2070',
+      delivery_notes: 'Sonner 2 fois',
+    })
+
     const { error: logError } = await adminClient.from('activity_logs').insert({
       seller_id: seller.id,
       user_id: seller.id,
@@ -143,12 +174,12 @@ describeIf('anonymize_customer RPC', () => {
     ] = await Promise.all([
       adminClient
         .from('customers')
-        .select('name, phone, email, address, city, notes, tags')
+        .select('name, phone, email, address, city, notes, tags, customer_governorate, customer_city, customer_delegation, customer_address, customer_landmark, customer_postal_code, delivery_notes')
         .eq('id', customerId)
         .single(),
       adminClient
         .from('orders')
-        .select('id, customer_id, customer_email, customer_address, customer_city')
+        .select('id, customer_id, customer_email, customer_governorate, customer_delegation, customer_landmark, customer_postal_code, delivery_notes')
         .eq('id', orderId)
         .single(),
       adminClient
@@ -163,7 +194,8 @@ describeIf('anonymize_customer RPC', () => {
         .eq('entity_id', customerId),
     ])
 
-    expect(customer).toEqual({
+    // Champs nominatifs (couverts depuis v1)
+    expect(customer).toMatchObject({
       name: 'Client anonymisé',
       phone: '00000000',
       email: null,
@@ -172,13 +204,28 @@ describeIf('anonymize_customer RPC', () => {
       notes: null,
       tags: [],
     })
-    expect(order).toEqual({
+    // Champs d'adresse structurée (ajoutés en migration 20260716 — corrigés en v3)
+    expect(customer).toMatchObject({
+      customer_governorate: null,
+      customer_city: null,
+      customer_delegation: null,
+      customer_address: null,
+      customer_landmark: null,
+      customer_postal_code: null,
+      delivery_notes: null,
+    })
+    // Champs dénormalisés sur orders
+    expect(order).toMatchObject({
       id: orderId,
       customer_id: customerId,
       customer_email: null,
-      customer_address: null,
-      customer_city: null,
+      customer_governorate: null,
+      customer_delegation: null,
+      customer_landmark: null,
+      customer_postal_code: null,
+      delivery_notes: null,
     })
+    // Historique d'adresses purgé
     expect(addresses).toEqual([])
     expect(logs).toEqual([
       { description: 'Données client anonymisées', metadata: {} },

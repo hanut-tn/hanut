@@ -18,6 +18,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { PLAN_LIMITS } from '../lib/constants'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 
@@ -960,5 +961,12 @@ describe('Supabase migrations', () => {
     // auth.uid() direct n'est plus utilisé dans la policy
     expect(orderItemsRlsFixMigration).not.toMatch(/auth\.uid\(\)/i)
     expect(orderItemsRlsFixMigration).toMatch(/NOTIFY pgrst, 'reload schema'/i)
+  })
+
+  it('PLAN_LIMITS.starter.ordersPerMonth matches the hardcoded threshold in the SQL migration', () => {
+    const limit = PLAN_LIMITS.starter.ordersPerMonth
+    expect(secureOrderRpc).toMatch(
+      new RegExp(`IF\\s+v_monthly_orders\\s*>=\\s*${limit}\\b`)
+    )
   })
 })

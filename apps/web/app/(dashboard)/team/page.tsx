@@ -41,8 +41,9 @@ export default async function TeamPage() {
   if (userIds.length > 0) {
     // getUserById en parallèle : O(max latency) pour N membres,
     // contre O(tous les users de l'app) avec listUsers({ perPage: 1000 }).
+    // slice(0, 20) : garde de sécurité si les limites de plan évoluent.
     const userResults = await Promise.allSettled(
-      userIds.map(id => serviceClient.auth.admin.getUserById(id))
+      userIds.slice(0, 20).map(id => serviceClient.auth.admin.getUserById(id))
     )
     for (const result of userResults) {
       if (result.status === 'fulfilled' && !result.value.error && result.value.data.user) {

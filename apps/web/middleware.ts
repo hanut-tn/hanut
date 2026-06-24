@@ -2,6 +2,9 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+// Limiter le log à une seule occurrence par worker Edge (évite le flood en prod).
+let _jwtHookWarningEmitted = false
+
 const PUBLIC_PATHS = [
   '/',
   '/login',
@@ -165,13 +168,18 @@ export async function middleware(req: NextRequest) {
       ? claims.subscription_end
       : null
 
-    // Avertissement dev si le hook JWT n'est pas activé dans Supabase.
+    // Avertissement si le hook JWT n'est pas activé dans Supabase.
     // Sans ce hook, le middleware fait 3 requêtes DB par requête HTTP protégée.
-    if (!hasSubscriptionClaim && process.env.NODE_ENV === 'development') {
-      console.warn(
+    if (!hasSubscriptionClaim && !_jwtHookWarningEmitted) {
+      _jwtHookWarningEmitted = true
+      const msg =
         '[Hanut] Hook JWT Supabase non activé — 3 requêtes DB par requête HTTP. ' +
         'Activer : Dashboard Supabase → Authentication → Hooks → Custom Access Token → set_seller_jwt_claims.'
-      )
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(msg)
+      } else {
+        console.error(msg)
+      }
     }
 
     let subscriptionEnd: string | null = subscriptionEndFromClaim
