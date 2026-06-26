@@ -45,15 +45,18 @@ function request() {
   })
 }
 
-function mockServiceClient(trialError: { message: string } | null = null) {
-  const insert = vi.fn().mockResolvedValue({ error: null })
+function mockServiceClient(options: {
+  trialError?: { message: string } | null
+  insertError?: { code?: string; message: string } | null
+} = {}) {
+  const insert = vi.fn().mockResolvedValue({ error: options.insertError ?? null })
   const cleanupEq = vi.fn().mockResolvedValue({ error: null })
   const remove = vi.fn(() => ({ eq: cleanupEq }))
   const from = vi.fn((table: string) => {
     if (table !== 'sellers') throw new Error(`Unexpected table: ${table}`)
     return { insert, delete: remove }
   })
-  const rpc = vi.fn().mockResolvedValue({ error: trialError })
+  const rpc = vi.fn().mockResolvedValue({ error: options.trialError ?? null })
   const deleteUser = vi.fn().mockResolvedValue({ error: null })
 
   serviceMock.createServiceClient.mockReturnValue({
@@ -94,7 +97,7 @@ describe('POST /api/auth/register', () => {
 
   it('removes the partial seller and Auth user if trial activation fails', async () => {
     const { cleanupEq, remove, deleteUser } = mockServiceClient({
-      message: 'function set_demo_trial does not exist',
+      trialError: { message: 'function set_demo_trial does not exist' },
     })
 
     const response = await POST(request())
@@ -106,5 +109,38 @@ describe('POST /api/auth/register', () => {
     expect(remove).toHaveBeenCalled()
     expect(cleanupEq).toHaveBeenCalledWith('id', 'seller-1')
     expect(deleteUser).toHaveBeenCalledWith('seller-1')
+  })
+
+  it('does not delete an existing Auth user when Supabase returns a duplicate signup user', async () => {
+    const { deleteUser, rpc } = mockServiceClient({
+      insertError: {
+        code: '23505',
+        message: 'duplicate key value violates unique constraint "sellers_pkey"',
+      },
+    })
+
+    const response = await POST(request())
+
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toEqual({
+      error: 'Un compte existe déjà avec cet email. Vérifiez votre boîte mail ou connectez-vous.',
+    })
+    expect(deleteUser).not.toHaveBeenCalled()
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('does not report duplicate seller emails as server errors', async () => {
+    const { deleteUser, rpc } = mockServiceClient({
+      insertError: {
+        code: '23505',
+        message: 'duplicate key value violates unique constraint "sellers_email_key"',
+      },
+    })
+
+    const response = await POST(request())
+
+    expect(response.status).toBe(409)
+    expect(deleteUser).not.toHaveBeenCalled()
+    expect(rpc).not.toHaveBeenCalled()
   })
 })

@@ -149,18 +149,18 @@ export async function POST(req: NextRequest) {
 
     lastError = error.message
     if (error.code !== '23505') break
-    // Email déjà utilisé → inutile de retenter avec un autre slug
-    if (error.message.includes('sellers_email_key')) break
+    // Identité déjà liée à un seller existant → ne pas retenter avec un autre slug.
+    if (error.message.includes('sellers_pkey') || error.message.includes('sellers_email_key')) break
   }
 
   if (!inserted) {
-    await serviceClient.auth.admin.deleteUser(data.user.id).catch(() => {})
-    if (lastError?.includes('sellers_email_key')) {
+    if (lastError?.includes('sellers_pkey') || lastError?.includes('sellers_email_key')) {
       return NextResponse.json(
-        { error: 'Un compte existe déjà avec cet email. Connectez-vous.' },
+        { error: 'Un compte existe déjà avec cet email. Vérifiez votre boîte mail ou connectez-vous.' },
         { status: 409 }
       )
     }
+    await serviceClient.auth.admin.deleteUser(data.user.id).catch(() => {})
     Sentry.captureException(new Error(lastError ?? 'seller insert failed'), {
       tags: { module: 'auth_register', action: 'seller_insert' },
     })
