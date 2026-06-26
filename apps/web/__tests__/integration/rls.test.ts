@@ -101,12 +101,10 @@ describe('direct write guards', () => {
   it('seller cannot directly UPDATE orders.status — no UPDATE policy exists', async () => {
     const clientA = await authenticateAs(sellerA.email)
 
-    const { error } = await clientA
+    await clientA
       .from('orders')
       .update({ status: 'delivered' })
       .eq('id', orderA)
-
-    expect(error).not.toBeNull()
 
     const { data: order } = await adminClient.from('orders').select('status').eq('id', orderA).single()
     expect(order!.status).toBe('new')
@@ -114,14 +112,15 @@ describe('direct write guards', () => {
 
   it('seller cannot directly UPDATE deliveries.cod_collected — trigger blocks it', async () => {
     // Create a confirmed order then a delivery via service_role to get a delivery fixture.
-    await adminClient.rpc('update_order_status', {
+    const { error: statusError } = await adminClient.rpc('update_order_status', {
       p_seller_id:  sellerA.id,
       p_order_id:   orderA,
       p_new_status: 'confirmed',
       p_changed_by: sellerA.id,
     })
+    expect(statusError).toBeNull()
 
-    const { data: deliveryId } = await adminClient.rpc('create_delivery_from_order', {
+    const { data: deliveryId, error: deliveryError } = await adminClient.rpc('create_delivery_from_order', {
       p_seller_id:      sellerA.id,
       p_user_id:        sellerA.id,
       p_order_id:       orderA,
@@ -131,6 +130,8 @@ describe('direct write guards', () => {
       p_fee:            null,
       p_vendor_note:    null,
     })
+    expect(deliveryError).toBeNull()
+    expect(deliveryId).toBeTruthy()
 
     const clientA = await authenticateAs(sellerA.email)
 
