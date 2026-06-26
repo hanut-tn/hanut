@@ -5,6 +5,7 @@ import { GET } from '../app/api/auth/callback/route'
 const authMock = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
   verifyOtp: vi.fn(),
+  getUser: vi.fn(),
 }))
 
 const sentryMock = vi.hoisted(() => ({
@@ -70,8 +71,9 @@ function mockServiceClient(options: {
 describe('GET /api/auth/callback', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    authMock.exchangeCodeForSession.mockResolvedValue({ error: null })
-    authMock.verifyOtp.mockResolvedValue({ error: null })
+    authMock.exchangeCodeForSession.mockResolvedValue({ data: { user: null }, error: null })
+    authMock.verifyOtp.mockResolvedValue({ data: { user: null }, error: null })
+    authMock.getUser.mockResolvedValue({ data: { user: null } })
     mockServiceClient()
     delete process.env.RESEND_API_KEY
   })
@@ -176,6 +178,40 @@ describe('GET /api/auth/callback', () => {
     expect(body.to).toBe('seller@example.com')
     expect(body.html).toContain('&lt;Shop &amp; Co&gt;')
     expect(body.html).not.toContain('<Shop & Co>')
+  })
+
+  it('creates the seller profile from the current session if the code exchange omits user data', async () => {
+    const { insert, rpc } = mockServiceClient()
+    authMock.exchangeCodeForSession.mockResolvedValue({
+      data: { user: null },
+      error: null,
+    })
+    authMock.getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: 'seller-1',
+          email: 'seller@example.com',
+          email_confirmed_at: '2026-06-26T12:00:00.000Z',
+          user_metadata: { name: 'Seller Shop', phone: '22123456', hanut_signup: true },
+          created_at: new Date().toISOString(),
+        },
+      },
+    })
+    const request = new NextRequest(
+      'https://hanut.test/api/auth/callback?code=auth-code',
+    )
+
+    const response = await GET(request)
+
+    expect(response.headers.get('location')).toBe('https://hanut.test/verify-email?confirmed=1')
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'seller-1',
+      email: 'seller@example.com',
+      name: 'Seller Shop',
+      phone: '22123456',
+      plan: 'starter',
+    }))
+    expect(rpc).toHaveBeenCalledWith('set_demo_trial', { p_seller_id: 'seller-1' })
   })
 
   it('logs welcome email failures without blocking the auth redirect or leaking the email', async () => {

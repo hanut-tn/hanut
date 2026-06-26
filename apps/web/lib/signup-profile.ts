@@ -9,6 +9,12 @@ type EnsureSignupSellerProfileInput = {
   phone?: unknown
 }
 
+type AuthUserLike = {
+  email_confirmed_at?: string | null
+  confirmed_at?: string | null
+  user_metadata?: Record<string, unknown>
+}
+
 export type EnsureSignupSellerProfileResult =
   | { ok: true; created: boolean }
   | { ok: false; duplicateEmail?: boolean; error: string }
@@ -28,6 +34,20 @@ function normalizeOptionalString(value: unknown): string | null {
 
 function normalizeShopName(value: unknown): string {
   return normalizeOptionalString(value)?.slice(0, 100) ?? 'Ma boutique'
+}
+
+export function isConfirmedHanutSignupUser(user: AuthUserLike): boolean {
+  const metadata = user.user_metadata ?? {}
+  const hasInviteMarker =
+    typeof metadata.invitation_token === 'string' ||
+    typeof metadata.team_role === 'string'
+
+  if (hasInviteMarker) return false
+  if (!user.email_confirmed_at && !user.confirmed_at) return false
+  if (metadata.hanut_signup === true) return true
+
+  // Recovery path for accounts created before the hanut_signup marker existed.
+  return typeof metadata.name === 'string' && metadata.name.trim().length >= 2
 }
 
 export function generateSlug(name: string): string {

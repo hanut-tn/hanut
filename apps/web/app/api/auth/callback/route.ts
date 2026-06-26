@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { ensureSignupSellerProfile } from '@/lib/signup-profile'
+import { ensureSignupSellerProfile, isConfirmedHanutSignupUser } from '@/lib/signup-profile'
 
 const EMAIL_OTP_TYPES = new Set<EmailOtpType>([
   'signup',
@@ -176,7 +176,14 @@ export async function GET(request: NextRequest) {
     )
 
     let verifyError: Error | null = null
-    let verifiedUser: { id?: string; email?: string; user_metadata?: Record<string, unknown>; created_at?: string } | null = null
+    let verifiedUser: {
+      id?: string
+      email?: string
+      email_confirmed_at?: string | null
+      confirmed_at?: string | null
+      user_metadata?: Record<string, unknown>
+      created_at?: string
+    } | null = null
 
     if (tokenHash && isEmailOtpType(type)) {
       const { data, error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type })
@@ -196,6 +203,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(loginUrl)
     }
 
+    if (!verifiedUser?.id) {
+      const { data } = await supabase.auth.getUser()
+      verifiedUser = data.user ?? verifiedUser
+    }
+
     // Email de bienvenue pour les nouvelles inscriptions confirmées.
     // Critères : destination = /dashboard + compte créé il y a moins d'1h.
     const isSignupType = type === 'signup'
@@ -203,7 +215,10 @@ export async function GET(request: NextRequest) {
       ? Date.now() - new Date(verifiedUser.created_at).getTime() < 60 * 60 * 1000
       : false
 
-    const isSignupConfirmation = isSignupType || (redirectPath === '/dashboard' && isRecentAccount)
+    const isSignupConfirmation =
+      isSignupType ||
+      (redirectPath === '/dashboard' && isRecentAccount) ||
+      (verifiedUser ? isConfirmedHanutSignupUser(verifiedUser) : false)
 
     if (verifiedUser?.id && verifiedUser.email && isSignupConfirmation) {
       const serviceClient = createServiceClient()

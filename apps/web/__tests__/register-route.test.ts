@@ -86,6 +86,11 @@ describe('POST /api/auth/register', () => {
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ success: true, session: null })
     expect(serviceMock.createServiceClient).not.toHaveBeenCalled()
+    expect(authClientMock.signUp).toHaveBeenCalledWith(expect.objectContaining({
+      options: expect.objectContaining({
+        data: expect.objectContaining({ hanut_signup: true }),
+      }),
+    }))
   })
 
   it('creates the seller immediately only when Supabase returns a session', async () => {

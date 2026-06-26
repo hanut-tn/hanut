@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     password,
     options: {
       emailRedirectTo: buildAuthCallbackUrl('/dashboard', req.nextUrl.origin),
-      data: { name: shop_name, phone: phone ?? '' },
+      data: { name: shop_name, phone: phone ?? '', hanut_signup: true },
     },
   })
 
