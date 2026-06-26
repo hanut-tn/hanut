@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs'
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
@@ -134,11 +135,21 @@ export async function POST(req: NextRequest) {
 
     lastError = error.message
     if (error.code !== '23505') break
+    // Email déjà utilisé → inutile de retenter avec un autre slug
+    if (error.message.includes('sellers_email_key')) break
   }
 
   if (!inserted) {
-    console.error('[register] seller insert failed:', lastError)
     await serviceClient.auth.admin.deleteUser(data.user.id).catch(() => {})
+    if (lastError?.includes('sellers_email_key')) {
+      return NextResponse.json(
+        { error: 'Un compte existe déjà avec cet email. Connectez-vous.' },
+        { status: 409 }
+      )
+    }
+    Sentry.captureException(new Error(lastError ?? 'seller insert failed'), {
+      tags: { module: 'auth_register', action: 'seller_insert' },
+    })
     return NextResponse.json({ error: 'Impossible de créer le profil. Réessayez.' }, { status: 500 })
   }
 
