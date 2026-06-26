@@ -68,7 +68,7 @@ function publicAuthClient() {
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req.headers)
 
-  const { allowed } = await checkRateLimit(ip, 'auth_register', 5, 60).catch(() => ({ allowed: true }))
+  const { allowed } = await checkRateLimit(ip, 'auth_register', 5, 1).catch(() => ({ allowed: true }))
   if (!allowed) {
     return NextResponse.json(
       { error: 'Trop de tentatives. Réessayez dans une minute.' },
