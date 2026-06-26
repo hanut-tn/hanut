@@ -101,9 +101,23 @@ export async function POST(req: NextRequest) {
   })
 
   if (signUpError) {
-    console.error('[register] signUpError:', signUpError.message)
+    if (signUpError.message.toLowerCase().includes('email rate limit')) {
+      return NextResponse.json(
+        { error: 'Trop de comptes créés récemment. Réessayez dans quelques minutes.' },
+        { status: 429 }
+      )
+    }
+    if (signUpError.message.toLowerCase().includes('user already registered')) {
+      return NextResponse.json(
+        { error: 'Un compte existe déjà avec cet email. Connectez-vous.' },
+        { status: 409 }
+      )
+    }
+    Sentry.captureException(new Error(signUpError.message), {
+      tags: { module: 'auth_register', action: 'sign_up' },
+    })
     return NextResponse.json(
-      { error: 'Impossible de créer le compte. Réessayez ou connectez-vous.' },
+      { error: 'Impossible de créer le compte. Réessayez ou contactez le support.' },
       { status: 400 }
     )
   }
