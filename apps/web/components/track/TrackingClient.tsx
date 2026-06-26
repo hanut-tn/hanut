@@ -364,7 +364,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
 
       <footer className="py-6 text-center">
         <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-          <img src="/icon-16.png" alt="" width={16} height={16} style={{ borderRadius: '3px' }} />
+          <Image src="/icon-16.png" alt="" width={16} height={16} unoptimized style={{ borderRadius: '3px' }} />
           Propulsé par Hanut
         </Link>
       </footer>

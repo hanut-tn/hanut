@@ -199,7 +199,7 @@ export async function anonymizeCustomer(id: string): Promise<{ error?: string }>
       tags: { module: 'customer_anonymization' },
       extra: { sellerId: context.sellerId, customerId: id },
     })
-    return { error: error.message }
+    return { error: 'Une erreur est survenue lors de l\'anonymisation. Réessayez ou contactez le support.' }
   }
 
   await logActivity({

@@ -4,71 +4,15 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { Banknote, TrendingUp, TrendingDown, Minus, ShoppingBag, Truck, Clock, Download, Calendar, X as XIcon, ExternalLink } from 'lucide-react'
 import { getCarrierConfig, ORDER_STATUS_CONFIG, ORDER_STATUSES } from '@/lib/constants'
-
-type Product = { id: string; name: string }
-type Customer = {
-  id: string
-  name: string
-  city?: string | null
-  customer_governorate?: string | null
-  customer_city?: string | null
-  customer_delegation?: string | null
-}
-
-type OrderItem = { unit_cost: number; quantity: number }
-
-type Order = {
-  id: string
-  cod_amount: number
-  quantity: number
-  unit_cost: number
-  status: string
-  created_at: string
-  customer_governorate?: string | null
-  customer_city?: string | null
-  customer_delegation?: string | null
-  items?: OrderItem[] | null
-  product?: Product | Product[] | null
-  customer?: Customer | Customer[] | null
-}
-
-function orderItemsCost(o: Order): number {
-  if (o.items && o.items.length > 0) {
-    return o.items.reduce((s, i) => s + i.unit_cost * i.quantity, 0)
-  }
-  return (o.unit_cost ?? 0) * (o.quantity ?? 1)
-}
-
-type DeliveryOrder = { status: string; cod_amount: number; created_at: string }
-
-type Delivery = {
-  delivery_type: 'self' | 'carrier'
-  carrier: string | null
-  fee?: number | null
-  cod_collected: boolean
-  cod_reversed: boolean
-  order?: DeliveryOrder | DeliveryOrder[] | null
-}
-
-type AnalyticsSummary = {
-  total_revenue: number
-  total_fees: number
-  total_cost: number
-  order_count: number
-  shipped_count: number
-  delivered_count: number
-  returned_count: number
-  cancelled_count: number
-}
+import type {
+  AnalyticsData,
+  AnalyticsCarrierStat,
+} from '@/app/(dashboard)/analytics/actions'
 
 type Props = {
-  orders: Order[]
-  deliveries: Delivery[]
+  initialData: AnalyticsData
   plan: 'starter' | 'pro' | 'business'
-  truncated?: boolean
-  orderLimit?: number
-  summary?: AnalyticsSummary | null
-  summaryPeriod?: Period
+  loadData: (from: string, to: string) => Promise<AnalyticsData | null>
 }
 
 type Period = 7 | 30 | 90
@@ -76,42 +20,22 @@ type ChartMode = 'orders' | 'ca'
 
 const PERIOD_LABELS: Record<Period, string> = { 7: '7 jours', 30: '30 jours', 90: '90 jours' }
 
-function getProduct(o: Order): Product | null {
-  const p = Array.isArray(o.product) ? o.product[0] : o.product
-  return p ?? null
-}
-
-function getCustomer(o: Order): Customer | null {
-  const c = Array.isArray(o.customer) ? o.customer[0] : o.customer
-  return c ?? null
-}
-
-function getOrderZone(o: Order): string {
-  const c = getCustomer(o)
-  return [
-    o.customer_delegation ?? o.customer_city ?? c?.customer_delegation ?? c?.customer_city,
-    o.customer_governorate ?? c?.customer_governorate ?? c?.city,
-  ].filter(Boolean).join(' · ')
-}
-
-function getDeliveryOrder(d: Delivery): DeliveryOrder | null {
-  const o = Array.isArray(d.order) ? d.order[0] : d.order
-  return o ?? null
-}
-
-export default function AnalyticsClient({ orders, deliveries, plan, truncated, orderLimit, summary, summaryPeriod }: Props) {
-  const [period, setPeriod] = useState<Period>(30)
+export default function AnalyticsClient({ initialData, plan, loadData }: Props) {
+  const [data, setData]       = useState<AnalyticsData>(initialData)
+  const [loading, setLoading] = useState(false)
+  const [period, setPeriod]   = useState<Period>(30)
   const [chartMode, setChartMode] = useState<ChartMode>('orders')
   const [selectedCarrier, setSelectedCarrier] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
   const [customMode, setCustomMode] = useState(false)
   const [customFrom, setCustomFrom] = useState('')
-  const [customTo, setCustomTo] = useState('')
+  const [customTo, setCustomTo]     = useState('')
   const [showPicker, setShowPicker] = useState(false)
-  const pickerRef = useRef<HTMLDivElement>(null)
+  const pickerRef    = useRef<HTMLDivElement>(null)
+  const isFirstMount = useRef(true)
 
   const todayStr = new Date().toISOString().split('T')[0]
-  const minDate = useMemo(() => {
+  const minDate  = useMemo(() => {
     const d = new Date()
     d.setDate(d.getDate() - 180)
     return d.toISOString().split('T')[0]
@@ -151,100 +75,96 @@ export default function AnalyticsClient({ orders, deliveries, plan, truncated, o
     return d
   }, [customMode, customTo])
 
-  const prevCutoff = useMemo(() => {
-    if (customMode && customFrom && customTo) {
-      const from = new Date(customFrom)
-      const to = new Date(customTo)
-      from.setHours(0, 0, 0, 0)
-      to.setHours(0, 0, 0, 0)
-      const oneDay = 24 * 60 * 60 * 1000
-      const duration = to.getTime() - from.getTime() + oneDay
-      return new Date(from.getTime() - duration)
+  // Fetch new aggregated data whenever the effective period changes.
+  // Skip the first render (initialData from SSR already covers default 30d).
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false
+      return
     }
-    const d = new Date()
-    d.setDate(d.getDate() - period * 2)
-    d.setHours(0, 0, 0, 0)
-    return d
-  }, [period, customMode, customFrom, customTo])
+    if (customMode && (!customFrom || !customTo)) return
 
-  const filtered = useMemo(
-    () => orders.filter(o => {
-      const d = new Date(o.created_at)
-      return d >= cutoff && d <= cutoffEnd
-    }),
-    [orders, cutoff, cutoffEnd]
-  )
+    let cancelled = false
+    setLoading(true)
+    loadData(cutoff.toISOString(), cutoffEnd.toISOString()).then(fresh => {
+      if (cancelled) return
+      if (fresh) setData(fresh)
+      setLoading(false)
+    })
+    return () => { cancelled = true }
+  // loadData is a stable server action ref — intentionally omitted from deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cutoff, cutoffEnd])
 
-  const prevFiltered = useMemo(
-    () => orders.filter(o => {
-      const d = new Date(o.created_at)
-      return d >= prevCutoff && d < cutoff
-    }),
-    [orders, prevCutoff, cutoff]
-  )
+  // ── Derived KPI values ──────────────────────────────────────────────
+  const s  = data.summary
+  const ps = data.prev_summary
 
-  const filteredDeliveries = useMemo(
-    () => deliveries.filter(d => {
-      const o = getDeliveryOrder(d)
-      if (!o) return false
-      const date = new Date(o.created_at)
-      return date >= cutoff && date <= cutoffEnd
-    }),
-    [deliveries, cutoff, cutoffEnd]
-  )
+  const totalOrders    = s.order_count
+  const deliveredCount = s.delivered_count
+  const shippedCount   = s.shipped_count
+  const returnedCount  = s.returned_count
+  const closedCount    = shippedCount + deliveredCount + returnedCount
+  const deliveryRate   = closedCount > 0 ? Math.round(deliveredCount / closedCount * 100) : 0
+  const returnRate     = closedCount > 0 ? Math.round(returnedCount  / closedCount * 100) : 0
+  const revenue        = s.total_revenue
+  const totalFees      = s.total_fees
+  const totalCost      = s.total_cost
+  const profit         = revenue - totalFees - totalCost
+  const hasMissingCost = s.has_missing_cost
+  const codPending     = s.cod_pending
 
-  const prevFilteredDeliveries = useMemo(
-    () => deliveries.filter(d => {
-      const o = getDeliveryOrder(d)
-      if (!o) return false
-      const date = new Date(o.created_at)
-      return date >= prevCutoff && date < cutoff
-    }),
-    [deliveries, prevCutoff, cutoff]
-  )
+  const prevClosedCount  = ps.shipped_count + ps.delivered_count + ps.returned_count
+  const prevRevenue      = ps.total_revenue
+  const prevTotalOrders  = ps.order_count
+  const prevDeliveryRate = prevClosedCount > 0 ? Math.round(ps.delivered_count / prevClosedCount * 100) : 0
+  const prevProfit       = ps.total_revenue - ps.total_fees - ps.total_cost
 
-  const delivered = filtered.filter(o => o.status === 'delivered')
-  const serverSummary = !customMode && summaryPeriod === period ? summary : null
-  const totalOrders = serverSummary?.order_count ?? filtered.length
-  const shippedCount = serverSummary?.shipped_count ?? filtered.filter(o => o.status === 'shipped').length
-  const deliveredCount = serverSummary?.delivered_count ?? delivered.length
-  const returnedCount = serverSummary?.returned_count ?? filtered.filter(o => o.status === 'returned').length
-  const closedCount = shippedCount + deliveredCount + returnedCount
-  const deliveryRate = closedCount > 0
-    ? Math.round(deliveredCount / closedCount * 100) : 0
-  const returnRate   = closedCount > 0
-    ? Math.round(returnedCount / closedCount * 100) : 0
-  const codPending   = filtered
-    .filter(o => ['pending', 'new', 'confirmed', 'shipped'].includes(o.status))
-    .reduce((s, o) => s + o.cod_amount, 0)
+  // ── Chart data ──────────────────────────────────────────────────────
+  const statusCounts    = data.by_status   ?? {}
+  const maxStatusCount  = Math.max(...Object.values(statusCounts), 1)
 
-  // KPIs financiers : utiliser les agrégats serveur uniquement pour la période
-  // exacte qu'ils couvrent. Les autres filtres restent calculés côté client.
-  const revenue   = serverSummary?.total_revenue ?? delivered.reduce((s, o) => s + o.cod_amount, 0)
-  const totalFees = serverSummary?.total_fees    ?? filteredDeliveries.reduce((s, d) => {
-    const o = getDeliveryOrder(d)
-    return o?.status === 'delivered' ? s + (d.fee ?? 0) : s
-  }, 0)
-  const totalCost = serverSummary?.total_cost    ?? delivered.reduce((s, o) => s + orderItemsCost(o), 0)
-  const profit    = revenue - totalFees - totalCost
+  const topProducts       = data.top_products  ?? []
+  const maxProductRevenue = Math.max(...topProducts.map(p => p.revenue), 1)
 
-  // true si au moins une commande livrée n'a pas de coût d'achat renseigné
-  const hasMissingCost = delivered.some(o => (o.unit_cost ?? 0) === 0)
+  const topCustomers       = data.top_customers ?? []
+  const maxCustomerRevenue = Math.max(...topCustomers.map(c => c.revenue), 1)
 
-  // Previous period metrics
-  const prevDelivered    = prevFiltered.filter(o => o.status === 'delivered')
-  const prevRevenue      = prevDelivered.reduce((s, o) => s + o.cod_amount, 0)
-  const prevTotalOrders  = prevFiltered.length
-  const prevClosedOrders = prevFiltered.filter(o => ['shipped', 'delivered', 'returned'].includes(o.status))
-  const prevDeliveryRate = prevClosedOrders.length > 0
-    ? Math.round(prevDelivered.length / prevClosedOrders.length * 100) : 0
-  const prevTotalFees = prevFilteredDeliveries.reduce((s, d) => {
-    const o = getDeliveryOrder(d)
-    return o?.status === 'delivered' ? s + (d.fee ?? 0) : s
-  }, 0)
-  const prevTotalCost = prevDelivered.reduce((s, o) => s + orderItemsCost(o), 0)
-  const prevProfit = prevRevenue - prevTotalFees - prevTotalCost
+  const topCities    = data.top_zones ?? []
+  const maxCityCount = Math.max(...topCities.map(z => z.count), 1)
 
+  const carrierList = (data.carrier_stats ?? []).map((cs: AnalyticsCarrierStat) => ({
+    key:          cs.key,
+    label:        cs.key === 'self' ? 'Livraison en personne' : getCarrierConfig(cs.key).label,
+    shipped:      cs.shipped,
+    delivered:    cs.delivered,
+    codToReverse: cs.cod_to_reverse,
+    codPending:   cs.cod_pending,
+    fees:         cs.fees,
+    rate: cs.shipped > 0 ? Math.round((cs.delivered / cs.shipped) * 100) : 0,
+  })).sort((a, b) => b.shipped - a.shipped)
+
+  const displayedCarriers = selectedCarrier
+    ? carrierList.filter(c => c.key === selectedCarrier)
+    : carrierList
+
+  const dailyData = useMemo(() => {
+    return (data.daily ?? []).map(d => {
+      // Use noon to avoid DST edge cases when parsing a date-only string
+      const date = new Date(d.date + 'T12:00:00')
+      return {
+        label:     date.toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' }),
+        fullLabel: date.toLocaleDateString('fr-TN', { weekday: 'long', day: '2-digit', month: 'long' }),
+        orders:    d.order_count,
+        revenue:   d.delivered_revenue,
+      }
+    })
+  }, [data.daily])
+
+  const maxDailyOrders  = Math.max(...dailyData.map(d => d.orders), 1)
+  const maxDailyRevenue = Math.max(...dailyData.map(d => d.revenue), 1)
+
+  // ── Helpers ─────────────────────────────────────────────────────────
   function trendDir(current: number, prev: number): 'up' | 'down' | 'stable' {
     if (prev === 0) return current > 0 ? 'up' : 'stable'
     const pct = ((current - prev) / prev) * 100
@@ -292,106 +212,16 @@ export default function AnalyticsClient({ orders, deliveries, plan, truncated, o
     }
   }
 
-  const statusCounts: Record<string, number> = {}
-  for (const o of filtered) statusCounts[o.status] = (statusCounts[o.status] ?? 0) + 1
-  const maxStatusCount = Math.max(...Object.values(statusCounts), 1)
-
-  const productMap: Record<string, { name: string; revenue: number; count: number }> = {}
-  for (const o of filtered) {
-    const p = getProduct(o)
-    if (p && o.status === 'delivered') {
-      if (!productMap[p.id]) productMap[p.id] = { name: p.name, revenue: 0, count: 0 }
-      productMap[p.id].revenue += o.cod_amount
-      productMap[p.id].count  += 1
-    }
-  }
-  const topProducts = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5)
-  const maxProductRevenue = Math.max(...topProducts.map(p => p.revenue), 1)
-
-  const customerMap: Record<string, { id: string; name: string; revenue: number; count: number }> = {}
-  for (const o of filtered) {
-    const c = getCustomer(o)
-    if (c?.id && o.status === 'delivered') {
-      if (!customerMap[c.id]) customerMap[c.id] = { id: c.id, name: c.name, revenue: 0, count: 0 }
-      customerMap[c.id].revenue += o.cod_amount
-      customerMap[c.id].count  += 1
-    }
-  }
-  const topCustomers = Object.values(customerMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5)
-  const maxCustomerRevenue = Math.max(...topCustomers.map(c => c.revenue), 1)
-
-  const cityMap: Record<string, number> = {}
-  for (const o of filtered) {
-    const zone = getOrderZone(o)
-    if (zone) cityMap[zone] = (cityMap[zone] ?? 0) + 1
-  }
-  const topCities = Object.entries(cityMap).sort((a, b) => b[1] - a[1]).slice(0, 5)
-  const maxCityCount = Math.max(...topCities.map(c => c[1]), 1)
-
-  type CarrierStats = {
-    shipped: number; delivered: number
-    codToReverse: number; codPending: number; fees: number
-  }
-  const carrierMap: Record<string, CarrierStats> = {}
-  for (const d of filteredDeliveries) {
-    const o = getDeliveryOrder(d)
-    if (!o) continue
-    const deliveryKey = d.delivery_type === 'self' ? 'self' : d.carrier
-    if (!deliveryKey) continue
-    if (!carrierMap[deliveryKey]) carrierMap[deliveryKey] = { shipped: 0, delivered: 0, codToReverse: 0, codPending: 0, fees: 0 }
-    const c = carrierMap[deliveryKey]
-    c.shipped += 1
-    if (o.status === 'delivered') c.delivered += 1
-    if (d.delivery_type === 'carrier' && d.cod_collected && !d.cod_reversed) {
-      c.codToReverse += o.cod_amount
-    }
-    if (!d.cod_collected && ['shipped', 'delivered'].includes(o.status)) c.codPending += o.cod_amount
-    c.fees += d.fee ?? 0
-  }
-  const carrierList = Object.entries(carrierMap).map(([key, stats]) => ({
-    key,
-    label: key === 'self' ? 'Livraison en personne' : getCarrierConfig(key).label,
-    ...stats,
-    rate: stats.shipped > 0 ? Math.round((stats.delivered / stats.shipped) * 100) : 0,
-  })).sort((a, b) => b.shipped - a.shipped)
-
-  const displayedCarriers = selectedCarrier
-    ? carrierList.filter(c => c.key === selectedCarrier)
-    : carrierList
-
-  const dailyData = useMemo(() => {
-    const days: { label: string; fullLabel: string; orders: number; revenue: number }[] = []
-    const start = new Date(cutoff)
-    start.setHours(0, 0, 0, 0)
-    const end = new Date(cutoffEnd)
-    const current = new Date(start)
-    while (current <= end) {
-      const dateStr = current.toISOString().split('T')[0]
-      const dayOrders = filtered.filter(o => o.created_at.startsWith(dateStr))
-      days.push({
-        label: current.toLocaleDateString('fr-TN', { day: '2-digit', month: 'short' }),
-        fullLabel: current.toLocaleDateString('fr-TN', { weekday: 'long', day: '2-digit', month: 'long' }),
-        orders: dayOrders.length,
-        revenue: dayOrders.filter(o => o.status === 'delivered').reduce((s, o) => s + o.cod_amount, 0),
-      })
-      current.setDate(current.getDate() + 1)
-    }
-    return days
-  }, [filtered, cutoff, cutoffEnd])
-
-  const maxDailyOrders  = Math.max(...dailyData.map(d => d.orders), 1)
-  const maxDailyRevenue = Math.max(...dailyData.map(d => d.revenue), 1)
-
   const KPI_ITEMS = [
-    { label: 'CA encaissé',    value: `${revenue.toFixed(0)} DT`,    sub: `${deliveredCount} livrée${deliveredCount !== 1 ? 's' : ''}`, icon: Banknote,    valueClass: 'text-[#16A34A]', trend: trendDir(revenue, prevRevenue),      trendText: trendLabel(revenue, prevRevenue) },
-    { label: 'Profit net',     value: `${profit.toFixed(0)} DT`,     sub: totalCost > 0 ? `Frais: ${totalFees.toFixed(0)} · Coût: ${totalCost.toFixed(0)} DT` : `Frais: ${totalFees.toFixed(0)} DT`, icon: TrendingUp,  valueClass: 'text-[#0B5E46]', trend: trendDir(profit, prevProfit),        trendText: trendLabel(profit, prevProfit) },
-    { label: 'Commandes',      value: String(totalOrders),            sub: 'sur la période',                                                 icon: ShoppingBag, valueClass: 'text-[#1C1917]', trend: trendDir(totalOrders, prevTotalOrders), trendText: trendLabel(totalOrders, prevTotalOrders) },
-    { label: 'Taux livraison', value: `${deliveryRate}%`,             sub: `Retours: ${returnRate}%`,                                        icon: Truck,       valueClass: 'text-[#1C1917]', trend: trendDir(deliveryRate, prevDeliveryRate), trendText: trendLabel(deliveryRate, prevDeliveryRate) },
-    { label: 'COD en attente', value: `${codPending.toFixed(0)} DT`,  sub: 'non encore livré',                                              icon: Clock,       valueClass: 'text-amber-600', trend: 'stable' as const, trendText: '' },
+    { label: 'CA encaissé',    value: `${revenue.toFixed(0)} DT`,   sub: `${deliveredCount} livrée${deliveredCount !== 1 ? 's' : ''}`,  icon: Banknote,    valueClass: 'text-[#16A34A]', trend: trendDir(revenue,      prevRevenue),      trendText: trendLabel(revenue,      prevRevenue) },
+    { label: 'Profit net',     value: `${profit.toFixed(0)} DT`,    sub: totalCost > 0 ? `Frais: ${totalFees.toFixed(0)} · Coût: ${totalCost.toFixed(0)} DT` : `Frais: ${totalFees.toFixed(0)} DT`, icon: TrendingUp,  valueClass: 'text-[#0B5E46]', trend: trendDir(profit,       prevProfit),       trendText: trendLabel(profit,       prevProfit) },
+    { label: 'Commandes',      value: String(totalOrders),          sub: 'sur la période',                                               icon: ShoppingBag, valueClass: 'text-[#1C1917]', trend: trendDir(totalOrders,  prevTotalOrders),  trendText: trendLabel(totalOrders,  prevTotalOrders) },
+    { label: 'Taux livraison', value: `${deliveryRate}%`,           sub: `Retours: ${returnRate}%`,                                      icon: Truck,       valueClass: 'text-[#1C1917]', trend: trendDir(deliveryRate, prevDeliveryRate), trendText: trendLabel(deliveryRate, prevDeliveryRate) },
+    { label: 'COD en attente', value: `${codPending.toFixed(0)} DT`, sub: 'non encore livré',                                           icon: Clock,       valueClass: 'text-amber-600', trend: 'stable' as const, trendText: '' },
   ]
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 transition-opacity duration-200 ${loading ? 'opacity-60 pointer-events-none' : ''}`}>
 
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -517,17 +347,6 @@ export default function AnalyticsClient({ orders, deliveries, plan, truncated, o
         </div>
       </div>
 
-      {/* Banner : données tronquées */}
-      {truncated && (
-        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 16 16"><path d="M8 1.333A6.667 6.667 0 1 0 8 14.667 6.667 6.667 0 0 0 8 1.333Zm0 3.334a.667.667 0 1 1 0 1.333.667.667 0 0 1 0-1.333Zm.667 6H7.333V7.333h1.334V10.667Z" fill="currentColor"/></svg>
-          <span>
-            Analytics basées sur vos <strong>{orderLimit?.toLocaleString('fr-TN')}</strong> commandes les plus récentes.{' '}
-            Pour une analyse complète, exportez vos données en CSV.
-          </span>
-        </div>
-      )}
-
       {/* Banner : coûts d'achat manquants */}
       {hasMissingCost && (
         <div className="flex items-start gap-2.5 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
@@ -554,9 +373,9 @@ export default function AnalyticsClient({ orders, deliveries, plan, truncated, o
                     <div className={`flex items-center gap-0.5 mt-1.5 text-xs font-medium ${
                       s.trend === 'up' ? 'text-green-600' : s.trend === 'down' ? 'text-red-600' : 'text-[#78716C]'
                     }`}>
-                      {s.trend === 'up' && <TrendingUp className="w-3 h-3 shrink-0" />}
-                      {s.trend === 'down' && <TrendingDown className="w-3 h-3 shrink-0" />}
-                      {s.trend === 'stable' && <Minus className="w-3 h-3 shrink-0" />}
+                      {s.trend === 'up'   && <TrendingUp   className="w-3 h-3 shrink-0" />}
+                      {s.trend === 'down' && <TrendingDown  className="w-3 h-3 shrink-0" />}
+                      {s.trend === 'stable' && <Minus       className="w-3 h-3 shrink-0" />}
                       <span>{s.trendText}</span>
                       <span className="font-normal text-[#A8A29E] ml-0.5">vs préc.</span>
                     </div>
@@ -835,7 +654,7 @@ export default function AnalyticsClient({ orders, deliveries, plan, truncated, o
             <p className="text-sm text-[#78716C] py-4 text-center">Aucune donnée (zones non renseignées)</p>
           ) : (
             <div className="space-y-3">
-              {topCities.map(([city, count], i) => (
+              {topCities.map(({ zone: city, count }, i) => (
                 <div key={city}>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm text-[#78716C] flex items-center gap-2">

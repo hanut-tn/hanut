@@ -45,6 +45,13 @@ export async function upsertProduct(input: ProductInput): Promise<{ error?: stri
   if (!parsed.success) return { error: parsed.error.issues[0].message }
   const product = parsed.data
 
+  if (product.variants.length > 1) {
+    const labels = product.variants.map((v, i) => getVariantLabel(v, i))
+    if (new Set(labels).size !== labels.length) {
+      return { error: 'Deux variantes ont le même libellé. Modifiez la taille, la couleur ou le nom pour les distinguer.' }
+    }
+  }
+
   const supabase = await createServerClient()
 
   const payload = {
@@ -65,10 +72,20 @@ export async function upsertProduct(input: ProductInput): Promise<{ error?: stri
   let productId: string | undefined = validatedProductId
 
   if (isUpdate) {
-    const { error } = await supabase.from('products')
-      .update(payload)
-      .eq('id', validatedProductId)
-      .eq('seller_id', context.sellerId)
+    const { error } = await supabase.rpc('update_product', {
+      p_seller_id: context.sellerId,
+      p_product_id: validatedProductId,
+      p_name: product.name,
+      p_price: product.price,
+      p_cost: product.cost ?? null,
+      p_stock: product.variants.length > 0 ? 0 : product.stock,
+      p_low_stock_alert: product.low_stock_alert,
+      p_variants: product.variants,
+      p_image_url: product.image_url ?? null,
+      p_description: product.description ?? null,
+      p_changed_by: context.userId,
+      p_changed_by_name: context.userName,
+    })
     if (error) return { error: error.message }
   } else {
     const { data, error } = await supabase.from('products')

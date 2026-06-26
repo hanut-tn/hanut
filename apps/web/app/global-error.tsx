@@ -1,6 +1,7 @@
 'use client'
 
 import * as Sentry from '@sentry/nextjs'
+import Image from 'next/image'
 import { useEffect } from 'react'
 
 export default function GlobalError({
@@ -18,7 +19,7 @@ export default function GlobalError({
     <html lang="fr">
       <body>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: '1rem', padding: '1.5rem', fontFamily: 'sans-serif' }}>
-          <img src="/icon-512.png" alt="Hanut" width={48} height={48} style={{ borderRadius: '10px', marginBottom: '0.25rem' }} />
+          <Image src="/icon-512.png" alt="Hanut" width={48} height={48} unoptimized style={{ borderRadius: '10px', marginBottom: '0.25rem' }} />
           <p style={{ fontSize: '1.125rem', fontWeight: 600, color: '#1C1917' }}>
             Une erreur critique est survenue
           </p>

@@ -504,3 +504,63 @@ export async function deleteDelivery(id: string): Promise<{ error?: string }> {
   revalidateTag(`dashboard-${context.sellerId}`)
   return {}
 }
+
+export type DeliveryRow = {
+  id: string
+  delivery_type: 'self' | 'carrier'
+  carrier: CarrierName | null
+  tracking_number?: string | null
+  carrier_status?: string | null
+  fee?: number | null
+  vendor_note?: string | null
+  cod_collected: boolean
+  cod_reversed: boolean
+  created_at: string
+  delivered_at?: string | null
+  order: {
+    id: string
+    cod_amount: number
+    customer: { name: string; phone: string }
+    product: { name: string }
+  }
+}
+
+export async function fetchDeliveriesPage(cursor: string): Promise<DeliveryRow[]> {
+  const context = await getUserContext()
+  if (!context) return []
+
+  const supabase = await createServerClient()
+
+  const { data } = await supabase
+    .from('deliveries')
+    .select(`
+      id, delivery_type, carrier, tracking_number, carrier_status, fee,
+      vendor_note, cod_collected, cod_reversed, created_at, delivered_at,
+      order:orders(id, cod_amount, deleted_at, customer:customers(name, phone), product:products(name))
+    `)
+    .lt('created_at', cursor)
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  return (data ?? []).flatMap(d => {
+    const rawOrder = Array.isArray(d.order) ? d.order[0] : d.order
+    if (!rawOrder || rawOrder.deleted_at !== null) return []
+    const customer = Array.isArray(rawOrder.customer) ? rawOrder.customer[0] : rawOrder.customer
+    const product = Array.isArray(rawOrder.product) ? rawOrder.product[0] : rawOrder.product
+    if (!customer || !product) return []
+    return [{
+      id: d.id,
+      delivery_type: (d.delivery_type ?? 'carrier') as 'self' | 'carrier',
+      carrier: d.carrier as CarrierName | null,
+      tracking_number: d.tracking_number,
+      carrier_status: d.carrier_status,
+      fee: d.fee,
+      vendor_note: d.vendor_note ?? null,
+      cod_collected: d.cod_collected,
+      cod_reversed: d.cod_reversed,
+      created_at: d.created_at,
+      delivered_at: d.delivered_at,
+      order: { id: rawOrder.id, cod_amount: rawOrder.cod_amount, customer, product },
+    }]
+  })
+}

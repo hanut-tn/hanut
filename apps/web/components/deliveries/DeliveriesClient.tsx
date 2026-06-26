@@ -10,6 +10,7 @@ import type { CarrierName } from '@hanut/types'
 import type {
   CreateDeliveryInput,
   DeliveryMutationResult,
+  DeliveryRow,
   UpdateDeliveryInput,
 } from '@/app/(dashboard)/deliveries/actions'
 import { CARRIER_OPTIONS, getCarrierConfig, getTrackingUrl } from '@/lib/constants'
@@ -57,6 +58,8 @@ type Props = {
   deleteDelivery: (id: string) => Promise<{ error?: string }>
   codSummary?: CodSummary | null
   codSummaryUnavailable?: boolean
+  hasMore?: boolean
+  loadMore?: (cursor: string) => Promise<DeliveryRow[]>
 }
 
 type Tab = 'all' | 'pending' | 'collected' | 'reversed'
@@ -289,6 +292,8 @@ export default function DeliveriesClient({
   deleteDelivery,
   codSummary,
   codSummaryUnavailable = false,
+  hasMore = false,
+  loadMore,
 }: Props) {
   const [tab, setTab] = useState<Tab>('all')
   const [isPending, startTransition] = useTransition()
@@ -296,10 +301,27 @@ export default function DeliveriesClient({
   const [carrierFilter, setCarrierFilter] = useState<CarrierName | 'self' | ''>('')
 
   const [allDeliveries, setAllDeliveries] = useState<Delivery[]>(deliveries)
+  const [hasMoreState, setHasMoreState] = useState(hasMore)
+  const [loadingMore, setLoadingMore] = useState(false)
 
   useEffect(() => {
     setAllDeliveries(deliveries)
-  }, [deliveries])
+    setHasMoreState(hasMore)
+  }, [deliveries, hasMore])
+
+  async function handleLoadMore() {
+    if (!loadMore || loadingMore || !hasMoreState) return
+    const last = allDeliveries[allDeliveries.length - 1]
+    if (!last) return
+    setLoadingMore(true)
+    try {
+      const more = await loadMore(last.created_at)
+      if (more.length > 0) setAllDeliveries(prev => [...prev, ...(more as Delivery[])])
+      if (more.length < 200) setHasMoreState(false)
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   const [showAdd, setShowAdd] = useState(false)
   const [addOrderId, setAddOrderId] = useState('')
@@ -1056,6 +1078,19 @@ export default function DeliveriesClient({
             </table>
           </div>
         </>
+      )}
+
+      {/* ── Charger plus ── */}
+      {hasMoreState && (
+        <div className="flex justify-center py-5">
+          <button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="btn-secondary"
+          >
+            {loadingMore ? 'Chargement…' : 'Charger plus'}
+          </button>
+        </div>
       )}
 
       {/* ── MODAL Nouvelle livraison ── */}
