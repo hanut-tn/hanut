@@ -201,7 +201,9 @@ export async function GET(request: NextRequest) {
       ? Date.now() - new Date(verifiedUser.created_at).getTime() < 60 * 60 * 1000
       : false
 
-    if (verifiedUser?.email && (isSignupType || (redirectPath === '/dashboard' && isRecentAccount))) {
+    const isSignupConfirmation = isSignupType || (redirectPath === '/dashboard' && isRecentAccount)
+
+    if (verifiedUser?.email && isSignupConfirmation) {
       const name = verifiedUser.user_metadata?.name as string | undefined
       sendWelcomeEmail(verifiedUser.email, name).catch(err => {
         Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
@@ -209,6 +211,12 @@ export async function GET(request: NextRequest) {
           extra: { hasEmail: Boolean(verifiedUser?.email) },
         })
       })
+    }
+
+    if (isSignupConfirmation) {
+      const verifyUrl = new URL('/verify-email', requestUrl.origin)
+      verifyUrl.searchParams.set('confirmed', '1')
+      return NextResponse.redirect(verifyUrl)
     }
   }
 

@@ -136,7 +136,7 @@ describe('GET /api/auth/callback', () => {
 
     const response = await GET(request)
 
-    expect(response.headers.get('location')).toBe('https://hanut.test/dashboard')
+    expect(response.headers.get('location')).toBe('https://hanut.test/verify-email?confirmed=1')
     expect(fetchMock).toHaveBeenCalledWith(
       'https://api.resend.com/emails',
       expect.objectContaining({
@@ -173,7 +173,7 @@ describe('GET /api/auth/callback', () => {
 
     const response = await GET(request)
 
-    expect(response.headers.get('location')).toBe('https://hanut.test/dashboard')
+    expect(response.headers.get('location')).toBe('https://hanut.test/verify-email?confirmed=1')
     await vi.waitFor(() => expect(sentryMock.captureException).toHaveBeenCalled())
     const sentryContext = sentryMock.captureException.mock.calls[0][1]
     expect(sentryContext.extra).toEqual({ hasEmail: true })
