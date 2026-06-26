@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Mail } from 'lucide-react'
@@ -13,17 +13,26 @@ function VerifyEmailContent() {
   const [resent, setResent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [cooldown, setCooldown] = useState(0)
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const t = setTimeout(() => setCooldown(c => c - 1), 1000)
+    return () => clearTimeout(t)
+  }, [cooldown])
 
   async function handleResend() {
-    if (!email) return
+    if (!email || cooldown > 0) return
     setError(null)
+    setResent(false)
     setLoading(true)
     const { error } = await supabase.auth.resend({ type: 'signup', email })
     setLoading(false)
     if (error) {
-      setError(error.message)
+      setError("Impossible de renvoyer l'email. Réessayez dans un moment.")
     } else {
       setResent(true)
+      setCooldown(60)
     }
   }
 
@@ -53,17 +62,20 @@ function VerifyEmailContent() {
 
       <div className="space-y-3 pt-2">
         <p className="text-xs text-[#78716C]">Vous n&apos;avez pas reçu l&apos;email ?</p>
-        {resent ? (
+        {resent && cooldown === 0 && (
           <p className="text-sm text-[#16A34A] font-medium">Email renvoyé ✓</p>
-        ) : (
-          <button
-            onClick={handleResend}
-            disabled={loading || !email}
-            className="btn-secondary text-sm w-full"
-          >
-            {loading ? 'Envoi...' : "Renvoyer l'email de confirmation"}
-          </button>
         )}
+        <button
+          onClick={handleResend}
+          disabled={loading || !email || cooldown > 0}
+          className="btn-secondary text-sm w-full disabled:opacity-50"
+        >
+          {loading
+            ? 'Envoi...'
+            : cooldown > 0
+              ? `Renvoyer dans ${cooldown}s`
+              : "Renvoyer l'email de confirmation"}
+        </button>
       </div>
 
       <Link href="/login" className="text-sm text-[#16A34A] hover:underline block pt-2">

@@ -39,7 +39,7 @@ function request() {
       shop_name: 'Ma Boutique',
       email: 'seller@example.com',
       phone: '22123456',
-      password: 'password1',
+      password: 'Password1!',
       turnstile_token: 'valid-token',
     }),
   })

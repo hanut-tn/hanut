@@ -3,8 +3,62 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Check, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { TurnstileWidget, isTurnstileEnabled } from '@/components/ui/TurnstileWidget'
+
+const CRITERIA = [
+  { label: '8 caractères minimum', test: (p: string) => p.length >= 8 },
+  { label: 'Une majuscule (A–Z)', test: (p: string) => /[A-Z]/.test(p) },
+  { label: 'Un chiffre (0–9)', test: (p: string) => /[0-9]/.test(p) },
+  { label: 'Un caractère spécial (!@#…)', test: (p: string) => /[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(p) },
+]
+
+function passwordStrength(password: string): 0 | 1 | 2 | 3 {
+  if (!password) return 0
+  const passed = CRITERIA.filter(c => c.test(password)).length
+  if (passed <= 1) return 1
+  if (passed <= 3) return 2
+  return 3
+}
+
+function PasswordStrengthIndicator({ password }: { password: string }) {
+  if (!password) return null
+  const strength = passwordStrength(password)
+  const bars = [1, 2, 3]
+  const colors = { 1: '#EF4444', 2: '#F59E0B', 3: '#16A34A' }
+  const labels = { 1: 'Faible', 2: 'Moyen', 3: 'Fort' }
+
+  return (
+    <div className="mt-2 space-y-2">
+      <div className="flex gap-1.5">
+        {bars.map(b => (
+          <div
+            key={b}
+            className="h-1.5 flex-1 rounded-full transition-colors duration-200"
+            style={{ background: strength >= b && strength > 0 ? colors[strength as 1 | 2 | 3] : '#E7E5E4' }}
+          />
+        ))}
+      </div>
+      <p className="text-xs font-medium" style={{ color: strength > 0 ? colors[strength as 1 | 2 | 3] : '#78716C' }}>
+        {strength > 0 ? labels[strength as 1 | 2 | 3] : ''}
+      </p>
+      <ul className="space-y-1">
+        {CRITERIA.map(c => {
+          const ok = c.test(password)
+          return (
+            <li key={c.label} className="flex items-center gap-1.5 text-xs">
+              {ok
+                ? <Check className="w-3.5 h-3.5 shrink-0" style={{ color: '#16A34A' }} />
+                : <X className="w-3.5 h-3.5 shrink-0 text-red-400" />}
+              <span className={ok ? 'text-gray-700' : 'text-gray-400'}>{c.label}</span>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -30,13 +84,16 @@ export default function RegisterPage() {
       return
     }
 
+    const normalizedEmail = email.trim().toLowerCase()
+    const normalizedPhone = phone.trim()
+
     const response = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         shop_name: shopName.trim(),
-        email: email.trim().toLowerCase(),
-        phone: phone.trim() || undefined,
+        email: normalizedEmail,
+        phone: normalizedPhone || undefined,
         password,
         turnstile_token: turnstileToken || undefined,
       }),
@@ -61,7 +118,7 @@ export default function RegisterPage() {
 
     // Email confirmation required → redirect to verify page
     if (!data.session) {
-      router.push(`/verify-email?email=${encodeURIComponent(email)}`)
+      router.push(`/verify-email?email=${encodeURIComponent(normalizedEmail)}`)
       return
     }
 
@@ -132,9 +189,9 @@ export default function RegisterPage() {
             className="input"
             placeholder="Minimum 8 caractères"
             required
-            minLength={8}
             autoComplete="new-password"
           />
+          <PasswordStrengthIndicator password={password} />
         </div>
 
         {error && (
