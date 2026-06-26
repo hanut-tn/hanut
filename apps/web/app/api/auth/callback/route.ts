@@ -4,6 +4,8 @@ import type { EmailOtpType } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { ensureSignupSellerProfile } from '@/lib/signup-profile'
 
 const EMAIL_OTP_TYPES = new Set<EmailOtpType>([
   'signup',
@@ -174,7 +176,7 @@ export async function GET(request: NextRequest) {
     )
 
     let verifyError: Error | null = null
-    let verifiedUser: { email?: string; user_metadata?: Record<string, unknown>; created_at?: string } | null = null
+    let verifiedUser: { id?: string; email?: string; user_metadata?: Record<string, unknown>; created_at?: string } | null = null
 
     if (tokenHash && isEmailOtpType(type)) {
       const { data, error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type })
@@ -203,7 +205,26 @@ export async function GET(request: NextRequest) {
 
     const isSignupConfirmation = isSignupType || (redirectPath === '/dashboard' && isRecentAccount)
 
-    if (verifiedUser?.email && isSignupConfirmation) {
+    if (verifiedUser?.id && verifiedUser.email && isSignupConfirmation) {
+      const serviceClient = createServiceClient()
+      const profile = await ensureSignupSellerProfile(serviceClient, {
+        userId: verifiedUser.id,
+        email: verifiedUser.email,
+        shopName: verifiedUser.user_metadata?.name,
+        phone: verifiedUser.user_metadata?.phone,
+      })
+
+      if (!profile.ok) {
+        Sentry.captureException(new Error(profile.error), {
+          tags: { module: 'auth_callback', action: 'seller_profile' },
+          extra: { duplicateEmail: Boolean(profile.duplicateEmail) },
+        })
+        const verifyUrl = new URL('/verify-email', requestUrl.origin)
+        verifyUrl.searchParams.set('confirmed', '1')
+        verifyUrl.searchParams.set('setup_error', '1')
+        return NextResponse.redirect(verifyUrl)
+      }
+
       const name = verifiedUser.user_metadata?.name as string | undefined
       sendWelcomeEmail(verifiedUser.email, name).catch(err => {
         Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {

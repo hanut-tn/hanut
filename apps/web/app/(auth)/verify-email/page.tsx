@@ -11,6 +11,7 @@ function VerifyEmailContent() {
   const searchParams = useSearchParams()
   const email = searchParams.get('email') ?? ''
   const confirmed = searchParams.get('confirmed') === '1'
+  const setupError = searchParams.get('setup_error') === '1'
   const [resent, setResent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -49,13 +50,21 @@ function VerifyEmailContent() {
           <div>
             <h2 className="text-xl font-semibold text-gray-900">Email confirmé</h2>
             <p className="text-sm text-[#78716C] mt-2">
-              Votre adresse email est confirmée. Votre compte Hanut est maintenant actif.
+              {setupError
+                ? "Votre adresse email est confirmée, mais l'activation de votre boutique a échoué."
+                : 'Votre adresse email est confirmée. Votre compte Hanut est maintenant actif.'}
             </p>
           </div>
 
-          <Link href="/dashboard" className="btn-primary w-full block">
-            Accéder à mon tableau de bord
-          </Link>
+          {setupError ? (
+            <Link href="/contact" className="btn-primary w-full block">
+              Contacter le support
+            </Link>
+          ) : (
+            <Link href="/dashboard" className="btn-primary w-full block">
+              Accéder à mon tableau de bord
+            </Link>
+          )}
         </>
       ) : (
         <>

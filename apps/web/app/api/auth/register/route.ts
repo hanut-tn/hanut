@@ -6,6 +6,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { verifyTurnstileToken } from '@/lib/turnstile'
 import { buildAuthCallbackUrl } from '@/lib/auth-redirect'
+import { ensureSignupSellerProfile } from '@/lib/signup-profile'
 
 const PASSWORD_ERROR = 'Le mot de passe doit contenir au moins 8 caractères, une majuscule, un chiffre et un caractère spécial.'
 
@@ -25,38 +26,6 @@ const RegisterSchema = z.object({
   }),
   turnstile_token: z.string().optional(),
 })
-
-const ARABIC_TO_LATIN: Record<string, string> = {
-  'ا': 'a', 'أ': 'a', 'إ': 'i', 'آ': 'a', 'ب': 'b', 'ت': 't', 'ث': 'th',
-  'ج': 'j', 'ح': 'h', 'خ': 'kh', 'د': 'd', 'ذ': 'dh', 'ر': 'r', 'ز': 'z',
-  'س': 's', 'ش': 'sh', 'ص': 's', 'ض': 'd', 'ط': 't', 'ظ': 'z', 'ع': 'a',
-  'غ': 'gh', 'ف': 'f', 'ق': 'q', 'ك': 'k', 'ل': 'l', 'م': 'm', 'ن': 'n',
-  'ه': 'h', 'و': 'w', 'ي': 'y', 'ى': 'a', 'ة': 'a', 'ء': '', 'ؤ': 'w',
-  'ئ': 'y', 'لا': 'la', 'لأ': 'la', 'لآ': 'la', 'لإ': 'li',
-}
-
-function generateSlug(name: string): string {
-  // Translittérer les caractères arabes avant normalisation NFD
-  const transliterated = name
-    .split('')
-    .map(char => ARABIC_TO_LATIN[char] ?? char)
-    .join('')
-
-  const slug = transliterated
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 50)
-
-  // Fallback unique garanti si le nom ne produit aucun slug latin valide
-  if (!slug || slug.length < 2) {
-    return `boutique-${Date.now().toString(36)}`
-  }
-
-  return slug
-}
 
 function publicAuthClient() {
   return createClient(
@@ -126,60 +95,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Erreur lors de la création du compte.' }, { status: 500 })
   }
 
-  const serviceClient = createServiceClient()
-  const baseSlug = generateSlug(shop_name)
-  let inserted = false
-  let lastError: string | null = null
-
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const slug = attempt === 0 ? baseSlug : `${baseSlug}-${attempt + 1}`
-    const { error } = await serviceClient.from('sellers').insert({
-      id: data.user.id,
+  // Avec la confirmation email activée, Supabase crée seulement l'utilisateur
+  // Auth en attente et renvoie session=null. La boutique Hanut est créée après
+  // le clic dans l'email, dans /api/auth/callback.
+  if (data.session) {
+    const serviceClient = createServiceClient()
+    const profile = await ensureSignupSellerProfile(serviceClient, {
+      userId: data.user.id,
       email,
-      name: shop_name,
-      phone: phone || null,
-      slug,
-      plan: 'starter',
+      shopName: shop_name,
+      phone,
     })
 
-    if (!error) {
-      inserted = true
-      break
+    if (!profile.ok) {
+      if (profile.duplicateEmail) {
+        return NextResponse.json(
+          { error: 'Un compte existe déjà avec cet email. Vérifiez votre boîte mail ou connectez-vous.' },
+          { status: 409 }
+        )
+      }
+      await serviceClient.auth.admin.deleteUser(data.user.id).catch(() => {})
+      Sentry.captureException(new Error(profile.error), {
+        tags: { module: 'auth_register', action: 'seller_insert' },
+      })
+      return NextResponse.json({ error: 'Impossible de créer le profil. Réessayez.' }, { status: 500 })
     }
-
-    lastError = error.message
-    if (error.code !== '23505') break
-    // Identité déjà liée à un seller existant → ne pas retenter avec un autre slug.
-    if (error.message.includes('sellers_pkey') || error.message.includes('sellers_email_key')) break
-  }
-
-  if (!inserted) {
-    if (lastError?.includes('sellers_pkey') || lastError?.includes('sellers_email_key')) {
-      return NextResponse.json(
-        { error: 'Un compte existe déjà avec cet email. Vérifiez votre boîte mail ou connectez-vous.' },
-        { status: 409 }
-      )
-    }
-    await serviceClient.auth.admin.deleteUser(data.user.id).catch(() => {})
-    Sentry.captureException(new Error(lastError ?? 'seller insert failed'), {
-      tags: { module: 'auth_register', action: 'seller_insert' },
-    })
-    return NextResponse.json({ error: 'Impossible de créer le profil. Réessayez.' }, { status: 500 })
-  }
-
-  const { error: trialError } = await serviceClient.rpc('set_demo_trial', {
-    p_seller_id: data.user.id,
-  })
-
-  if (trialError) {
-    // L'inscription promet une démo Pro. Ne jamais laisser un compte partiel
-    // en Starter si la RPC d'activation est absente ou échoue.
-    await serviceClient.from('sellers').delete().eq('id', data.user.id)
-    await serviceClient.auth.admin.deleteUser(data.user.id).catch(() => {})
-    return NextResponse.json(
-      { error: "Impossible d'activer la démo Pro. Réessayez." },
-      { status: 500 }
-    )
   }
 
   return NextResponse.json({

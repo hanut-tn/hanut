@@ -11,11 +11,16 @@ const sentryMock = vi.hoisted(() => ({
   captureException: vi.fn(),
 }))
 
+const serviceMock = vi.hoisted(() => ({
+  createServiceClient: vi.fn(),
+}))
+
 vi.mock('@supabase/ssr', () => ({
   createServerClient: vi.fn(() => ({ auth: authMock })),
 }))
 
 vi.mock('@sentry/nextjs', () => sentryMock)
+vi.mock('@/lib/supabase/service', () => serviceMock)
 
 vi.mock('next/headers', () => ({
   cookies: vi.fn(async () => ({
@@ -44,11 +49,30 @@ function restoreEnv() {
   }
 }
 
+function mockServiceClient(options: {
+  insertError?: { code?: string; message: string } | null
+  trialError?: { message: string } | null
+} = {}) {
+  const insert = vi.fn().mockResolvedValue({ error: options.insertError ?? null })
+  const cleanupEq = vi.fn().mockResolvedValue({ error: null })
+  const remove = vi.fn(() => ({ eq: cleanupEq }))
+  const from = vi.fn((table: string) => {
+    if (table !== 'sellers') throw new Error(`Unexpected table: ${table}`)
+    return { insert, delete: remove }
+  })
+  const rpc = vi.fn().mockResolvedValue({ error: options.trialError ?? null })
+
+  serviceMock.createServiceClient.mockReturnValue({ from, rpc })
+
+  return { insert, rpc, remove, cleanupEq }
+}
+
 describe('GET /api/auth/callback', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     authMock.exchangeCodeForSession.mockResolvedValue({ error: null })
     authMock.verifyOtp.mockResolvedValue({ error: null })
+    mockServiceClient()
     delete process.env.RESEND_API_KEY
   })
 
@@ -122,6 +146,7 @@ describe('GET /api/auth/callback', () => {
     authMock.verifyOtp.mockResolvedValue({
       data: {
         user: {
+          id: 'seller-1',
           email: 'seller@example.com',
           user_metadata: { name: '<Shop & Co>' },
           created_at: new Date().toISOString(),
@@ -137,6 +162,7 @@ describe('GET /api/auth/callback', () => {
     const response = await GET(request)
 
     expect(response.headers.get('location')).toBe('https://hanut.test/verify-email?confirmed=1')
+    expect(serviceMock.createServiceClient).toHaveBeenCalled()
     expect(fetchMock).toHaveBeenCalledWith(
       'https://api.resend.com/emails',
       expect.objectContaining({
@@ -159,6 +185,7 @@ describe('GET /api/auth/callback', () => {
     authMock.verifyOtp.mockResolvedValue({
       data: {
         user: {
+          id: 'seller-1',
           email: 'seller@example.com',
           user_metadata: { name: 'Seller' },
           created_at: new Date().toISOString(),
@@ -178,5 +205,34 @@ describe('GET /api/auth/callback', () => {
     const sentryContext = sentryMock.captureException.mock.calls[0][1]
     expect(sentryContext.extra).toEqual({ hasEmail: true })
     expect(sentryContext.extra).not.toHaveProperty('email')
+  })
+
+  it('shows a setup error if the seller profile cannot be created after confirmation', async () => {
+    mockServiceClient({ trialError: { message: 'function set_demo_trial does not exist' } })
+    authMock.verifyOtp.mockResolvedValue({
+      data: {
+        user: {
+          id: 'seller-1',
+          email: 'seller@example.com',
+          user_metadata: { name: 'Seller' },
+          created_at: new Date().toISOString(),
+        },
+      },
+      error: null,
+    })
+    const request = new NextRequest(
+      'https://hanut.test/api/auth/callback' +
+      '?next=%2Fdashboard&token_hash=signup-token&type=signup',
+    )
+
+    const response = await GET(request)
+
+    expect(response.headers.get('location')).toBe('https://hanut.test/verify-email?confirmed=1&setup_error=1')
+    expect(sentryMock.captureException).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        tags: { module: 'auth_callback', action: 'seller_profile' },
+      }),
+    )
   })
 })
