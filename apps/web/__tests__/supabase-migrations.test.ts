@@ -91,6 +91,7 @@ describe('Supabase migrations', () => {
   const orderItemsStockAdjustmentMigration = migration('20260718_fix_order_items_stock_adjustment.sql')
   const getProductStatsMigration = migration('20260724_get_product_stats.sql')
   const orderItemsRlsFixMigration = migration('20260725_fix_order_items_rls.sql')
+  const signupSellerConfirmationMigration = migration('20260735_create_seller_after_email_confirmation.sql')
 
   it('base tables migration creates the 5 core tables idempotently before any other migration', () => {
     expect(baseTables).toMatch(/CREATE TABLE IF NOT EXISTS sellers/i)
@@ -100,6 +101,21 @@ describe('Supabase migrations', () => {
     expect(baseTables).toMatch(/CREATE TABLE IF NOT EXISTS deliveries/i)
     expect(baseTables).toMatch(/DROP POLICY IF EXISTS/i)
     expect(baseTables).toMatch(/DROP TRIGGER IF EXISTS orders_updated_at/i)
+  })
+
+  it('creates seller profiles from confirmed Auth signups without relying on the app callback', () => {
+    expect(signupSellerConfirmationMigration).toMatch(
+      /CREATE OR REPLACE FUNCTION public\.ensure_signup_seller_profile_from_auth/i,
+    )
+    expect(signupSellerConfirmationMigration).toMatch(
+      /CREATE TRIGGER trg_signup_seller_after_email_confirmation/i,
+    )
+    expect(signupSellerConfirmationMigration).toMatch(/AFTER INSERT OR UPDATE OF email, email_confirmed_at, raw_user_meta_data/i)
+    expect(signupSellerConfirmationMigration).toMatch(/NEW\.email_confirmed_at IS NOT NULL/i)
+    expect(signupSellerConfirmationMigration).toMatch(/v_metadata \? 'invitation_token' OR v_metadata \? 'team_role'/i)
+    expect(signupSellerConfirmationMigration).toMatch(/hanut_signup/i)
+    expect(signupSellerConfirmationMigration).toMatch(/PERFORM set_demo_trial\(p_user_id\)/i)
+    expect(signupSellerConfirmationMigration).toMatch(/Backfill already-confirmed self-signups/i)
   })
 
   it('adds the public shop, customer metadata, pending order status, and marketing tables', () => {
