@@ -97,6 +97,66 @@ describe('multi-tenant isolation', () => {
   })
 })
 
+describe('direct write guards', () => {
+  it('seller cannot directly UPDATE orders.status — no UPDATE policy exists', async () => {
+    const clientA = await authenticateAs(sellerA.email)
+
+    await clientA
+      .from('orders')
+      .update({ status: 'delivered' })
+      .eq('id', orderA)
+
+    const { data: order } = await adminClient.from('orders').select('status').eq('id', orderA).single()
+    expect(order!.status).toBe('new')
+  })
+
+  it('seller cannot directly UPDATE deliveries.cod_collected — trigger blocks it', async () => {
+    // Create a confirmed order then a delivery via service_role to get a delivery fixture.
+    const { error: statusError } = await adminClient.rpc('update_order_status', {
+      p_seller_id:  sellerA.id,
+      p_order_id:   orderA,
+      p_new_status: 'confirmed',
+      p_changed_by: sellerA.id,
+    })
+    expect(statusError).toBeNull()
+
+    const { data: deliveryId, error: deliveryError } = await adminClient.rpc('create_delivery_from_order', {
+      p_seller_id:      sellerA.id,
+      p_user_id:        sellerA.id,
+      p_order_id:       orderA,
+      p_delivery_type:  'carrier',
+      p_carrier:        'intigo',
+      p_tracking_number: null,
+      p_fee:            null,
+      p_vendor_note:    null,
+    })
+    expect(deliveryError).toBeNull()
+    expect(deliveryId).toBeTruthy()
+
+    const clientA = await authenticateAs(sellerA.email)
+
+    const { error } = await clientA
+      .from('deliveries')
+      .update({ cod_collected: true })
+      .eq('id', deliveryId)
+
+    expect(error).not.toBeNull()
+    expect(error!.message).toContain('DELIVERY_CRITICAL_FIELD_DIRECT_UPDATE_FORBIDDEN')
+
+    const { data: delivery } = await adminClient.from('deliveries').select('cod_collected').eq('id', deliveryId).single()
+    expect(delivery!.cod_collected).toBe(false)
+
+    // Cleanup: restore order status and delete delivery
+    await adminClient.from('deliveries').delete().eq('id', deliveryId)
+    await adminClient.rpc('update_order_status', {
+      p_seller_id:  sellerA.id,
+      p_order_id:   orderA,
+      p_new_status: 'new',
+      p_changed_by: sellerA.id,
+    })
+  })
+})
+
 describe('team member access', () => {
   it('active team member can read their seller orders', async () => {
     // Create a team member for sellerA

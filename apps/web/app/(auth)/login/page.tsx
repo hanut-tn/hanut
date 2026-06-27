@@ -28,14 +28,18 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const normalizedEmail = email.trim().toLowerCase()
+    const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password })
 
     if (error) {
-      setError(
-        error.message === 'Invalid login credentials'
-          ? 'Email ou mot de passe incorrect.'
-          : error.message
-      )
+      if (error.message === 'Invalid login credentials') {
+        setError('Email ou mot de passe incorrect.')
+      } else if (error.message.toLowerCase().includes('email not confirmed')) {
+        router.push(`/verify-email?email=${encodeURIComponent(normalizedEmail)}`)
+        return
+      } else {
+        setError('Une erreur est survenue. Réessayez.')
+      }
       setLoading(false)
       return
     }

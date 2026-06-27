@@ -153,6 +153,16 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/login', req.url))
   }
 
+  // Email non confirmé sur une route protégée → page de vérification.
+  // Supabase ne crée pas de session pour un user non confirmé quand "Confirm email"
+  // est activé, donc ce cas ne se produit qu'en cas de session résiduelle d'avant
+  // l'activation du paramètre, ou de signup sans confirmation activée côté Supabase.
+  if (!user.email_confirmed_at && !pathname.startsWith('/verify-email')) {
+    const verifyUrl = new URL('/verify-email', req.url)
+    if (user.email) verifyUrl.searchParams.set('email', user.email)
+    return NextResponse.redirect(verifyUrl)
+  }
+
   // Vérification démo expirée — uniquement pour les routes non-billing.
   if (!pathname.startsWith('/billing')) {
     // Lire subscription_end depuis les claims JWT (0 requête DB).

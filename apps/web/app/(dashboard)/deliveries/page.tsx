@@ -10,7 +10,7 @@ import { getUserContext } from '@/lib/get-context'
 import { redirect } from 'next/navigation'
 import * as Sentry from '@sentry/nextjs'
 import DeliveriesClient from '@/components/deliveries/DeliveriesClient'
-import { createDelivery, updateDelivery, deleteDelivery, markCodReversed, markSelfDeliveryComplete } from './actions'
+import { createDelivery, updateDelivery, deleteDelivery, markCodReversed, markSelfDeliveryComplete, fetchDeliveriesPage } from './actions'
 
 type Deliveries = Parameters<typeof DeliveriesClient>[0]['deliveries']
 type ShippableOrders = Parameters<typeof DeliveriesClient>[0]['shippableOrders']
@@ -156,6 +156,8 @@ export default async function DeliveriesPage() {
       deleteDelivery={deleteDelivery}
       codSummary={codSummary}
       codSummaryUnavailable={codSummaryUnavailable}
+      hasMore={normalizedDeliveries.length === 200}
+      loadMore={fetchDeliveriesPage}
     />
   )
 }

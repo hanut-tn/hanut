@@ -39,21 +39,24 @@ function request() {
       shop_name: 'Ma Boutique',
       email: 'seller@example.com',
       phone: '22123456',
-      password: 'password1',
+      password: 'Password1!',
       turnstile_token: 'valid-token',
     }),
   })
 }
 
-function mockServiceClient(trialError: { message: string } | null = null) {
-  const insert = vi.fn().mockResolvedValue({ error: null })
+function mockServiceClient(options: {
+  trialError?: { message: string } | null
+  insertError?: { code?: string; message: string } | null
+} = {}) {
+  const insert = vi.fn().mockResolvedValue({ error: options.insertError ?? null })
   const cleanupEq = vi.fn().mockResolvedValue({ error: null })
   const remove = vi.fn(() => ({ eq: cleanupEq }))
   const from = vi.fn((table: string) => {
     if (table !== 'sellers') throw new Error(`Unexpected table: ${table}`)
     return { insert, delete: remove }
   })
-  const rpc = vi.fn().mockResolvedValue({ error: trialError })
+  const rpc = vi.fn().mockResolvedValue({ error: options.trialError ?? null })
   const deleteUser = vi.fn().mockResolvedValue({ error: null })
 
   serviceMock.createServiceClient.mockReturnValue({
@@ -77,7 +80,27 @@ describe('POST /api/auth/register', () => {
     })
   })
 
-  it('creates the seller as Starter then activates the Pro trial through the RPC', async () => {
+  it('does not create the seller profile before email confirmation', async () => {
+    const response = await POST(request())
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ success: true, session: null })
+    expect(serviceMock.createServiceClient).not.toHaveBeenCalled()
+    expect(authClientMock.signUp).toHaveBeenCalledWith(expect.objectContaining({
+      options: expect.objectContaining({
+        data: expect.objectContaining({ hanut_signup: true }),
+      }),
+    }))
+  })
+
+  it('creates the seller immediately only when Supabase returns a session', async () => {
+    authClientMock.signUp.mockResolvedValue({
+      data: {
+        user: { id: 'seller-1' },
+        session: { access_token: 'access-token', refresh_token: 'refresh-token' },
+      },
+      error: null,
+    })
     const { insert, rpc, deleteUser } = mockServiceClient()
 
     const response = await POST(request())
@@ -90,21 +113,76 @@ describe('POST /api/auth/register', () => {
     expect(insert.mock.calls[0][0]).not.toHaveProperty('subscription_end')
     expect(rpc).toHaveBeenCalledWith('set_demo_trial', { p_seller_id: 'seller-1' })
     expect(deleteUser).not.toHaveBeenCalled()
+    await expect(response.json()).resolves.toEqual({
+      success: true,
+      session: { access_token: 'access-token', refresh_token: 'refresh-token' },
+    })
   })
 
   it('removes the partial seller and Auth user if trial activation fails', async () => {
+    authClientMock.signUp.mockResolvedValue({
+      data: {
+        user: { id: 'seller-1' },
+        session: { access_token: 'access-token', refresh_token: 'refresh-token' },
+      },
+      error: null,
+    })
     const { cleanupEq, remove, deleteUser } = mockServiceClient({
-      message: 'function set_demo_trial does not exist',
+      trialError: { message: 'function set_demo_trial does not exist' },
     })
 
     const response = await POST(request())
 
     expect(response.status).toBe(500)
     await expect(response.json()).resolves.toEqual({
-      error: "Impossible d'activer la démo Pro. Réessayez.",
+      error: 'Impossible de créer le profil. Réessayez.',
     })
     expect(remove).toHaveBeenCalled()
     expect(cleanupEq).toHaveBeenCalledWith('id', 'seller-1')
     expect(deleteUser).toHaveBeenCalledWith('seller-1')
+  })
+
+  it('keeps an existing seller for the same Auth user idempotently', async () => {
+    authClientMock.signUp.mockResolvedValue({
+      data: {
+        user: { id: 'seller-1' },
+        session: { access_token: 'access-token', refresh_token: 'refresh-token' },
+      },
+      error: null,
+    })
+    const { deleteUser, rpc } = mockServiceClient({
+      insertError: {
+        code: '23505',
+        message: 'duplicate key value violates unique constraint "sellers_pkey"',
+      },
+    })
+
+    const response = await POST(request())
+
+    expect(response.status).toBe(200)
+    expect(deleteUser).not.toHaveBeenCalled()
+    expect(rpc).toHaveBeenCalledWith('set_demo_trial', { p_seller_id: 'seller-1' })
+  })
+
+  it('does not report duplicate seller emails as server errors', async () => {
+    authClientMock.signUp.mockResolvedValue({
+      data: {
+        user: { id: 'seller-1' },
+        session: { access_token: 'access-token', refresh_token: 'refresh-token' },
+      },
+      error: null,
+    })
+    const { deleteUser, rpc } = mockServiceClient({
+      insertError: {
+        code: '23505',
+        message: 'duplicate key value violates unique constraint "sellers_email_key"',
+      },
+    })
+
+    const response = await POST(request())
+
+    expect(response.status).toBe(409)
+    expect(deleteUser).not.toHaveBeenCalled()
+    expect(rpc).not.toHaveBeenCalled()
   })
 })

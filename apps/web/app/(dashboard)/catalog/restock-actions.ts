@@ -4,7 +4,6 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { revalidatePath, revalidateTag } from 'next/cache'
-import { getVariantLabel } from '@/lib/variants'
 import { requireActive } from '@/lib/assert-active'
 
 export type RestockOrderInput = {
@@ -17,9 +16,6 @@ export type RestockOrderInput = {
 }
 
 export type CostUpdateMode = 'wac' | 'new' | 'keep'
-
-type ProductVariant = { size?: string; color?: string; name?: string; qty: number }
-type VariantRestock = { variant: string; quantity: number }
 
 export async function createRestockOrder(
   productId: string,
@@ -111,85 +107,20 @@ export async function receiveRestockOrder(
 
   if (!restock) return { error: 'Réapprovisionnement introuvable ou déjà traité' }
 
-  const { data: product } = await supabase
-    .from('products')
-    .select('stock, cost, price, variants')
-    .eq('id', restock.product_id)
-    .eq('seller_id', context.sellerId)
-    .single()
-
-  if (!product) return { error: 'Produit introuvable' }
-
-  const variants = (product.variants ?? []) as ProductVariant[]
-  const variantsQuantities = (restock.variants_quantities ?? []) as VariantRestock[]
-  if (variants.length > 0 && variantsQuantities.length === 0) {
-    return { error: 'Ce produit a des variantes. Renseignez les quantités reçues par variante.' }
-  }
-  const hasVariantRestock = variants.length > 0 && variantsQuantities.length > 0
-  const updatedVariants = hasVariantRestock
-    ? variants.map((v, index) => {
-        const qty = variantsQuantities.find(item => item.variant === getVariantLabel(v, index))?.quantity ?? 0
-        return { ...v, qty: v.qty + Math.max(0, qty) }
-      })
-    : null
-
-  const newStock = updatedVariants
-    ? updatedVariants.reduce((sum, v) => sum + v.qty, 0)
-    : product.stock + restock.total_quantity
-
-  let newCost: number | null = product.cost ?? null
-  const unitCost = restock.unit_cost as number | null
-  if (unitCost && unitCost > 0 && costUpdateMode !== 'keep') {
-    if (costUpdateMode === 'wac') {
-      newCost = product.cost && product.stock > 0
-        ? Math.round(((product.stock * product.cost + restock.total_quantity * unitCost) / (product.stock + restock.total_quantity)) * 100) / 100
-        : unitCost
-    } else if (costUpdateMode === 'new') {
-      newCost = unitCost
-    }
-  }
-
-  const productUpdate: Record<string, unknown> = { stock: newStock }
-  if (updatedVariants) productUpdate.variants = updatedVariants
-  if (newCost !== null && costUpdateMode !== 'keep') productUpdate.cost = newCost
-
-  const { error: stockError } = await supabase
-    .from('products')
-    .update(productUpdate)
-    .eq('id', restock.product_id)
-    .eq('seller_id', context.sellerId)
-
-  if (stockError) return { error: stockError.message }
-
-  const today = new Date().toISOString().slice(0, 10)
-  const { error: restockError } = await supabase
-    .from('restock_orders')
-    .update({ status: 'received', received_date: today, updated_at: new Date().toISOString() })
-    .eq('id', restockId)
-    .eq('seller_id', context.sellerId)
-
-  if (restockError) {
-    await supabase
-      .from('products')
-      .update({ stock: product.stock, cost: product.cost ?? null, variants })
-      .eq('id', restock.product_id)
-      .eq('seller_id', context.sellerId)
-    return { error: restockError.message }
-  }
-
-
-  await supabase.from('stock_movements').insert({
-    seller_id: context.sellerId,
-    product_id: restock.product_id,
-    quantity_before: product.stock,
-    quantity_after: newStock,
-    delta: restock.total_quantity,
-    movement_type: 'restock',
-    notes: 'Réapprovisionnement planifié reçu',
-    unit_cost: unitCost,
-    created_by: context.userId,
-    created_by_name: context.userName,
+  const { error: rpcError } = await supabase.rpc('receive_restock_order', {
+    p_seller_id: context.sellerId,
+    p_restock_id: restockId,
+    p_cost_update_mode: costUpdateMode,
+    p_changed_by: context.userId,
+    p_changed_by_name: context.userName,
   })
+
+  if (rpcError) {
+    if (rpcError.message.includes('RESTOCK_NOT_FOUND')) return { error: 'Réapprovisionnement introuvable ou déjà traité' }
+    if (rpcError.message.includes('PRODUCT_NOT_FOUND')) return { error: 'Produit introuvable' }
+    if (rpcError.message.includes('VARIANT_QUANTITIES_REQUIRED')) return { error: 'Ce produit a des variantes. Renseignez les quantités reçues par variante.' }
+    return { error: rpcError.message }
+  }
 
   await logActivity({
     sellerId: context.sellerId,

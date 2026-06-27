@@ -7,6 +7,9 @@ describe('auth redirect URLs', () => {
   beforeEach(() => {
     delete process.env.NEXT_PUBLIC_APP_URL
     delete process.env.NEXT_PUBLIC_VERCEL_URL
+    delete process.env.VERCEL_ENV
+    delete process.env.VERCEL_PROJECT_PRODUCTION_URL
+    delete process.env.VERCEL_URL
   })
 
   afterAll(() => {
@@ -29,9 +32,31 @@ describe('auth redirect URLs', () => {
     )
   })
 
+  it('omits next=/dashboard because dashboard is the callback default', () => {
+    expect(buildAuthCallbackUrl('/dashboard', 'https://hanut.tn')).toBe(
+      'https://hanut.tn/api/auth/callback',
+    )
+  })
+
   it('falls back to the current origin outside configured production', () => {
+    process.env.NEXT_PUBLIC_VERCEL_URL = 'hanut-generated.vercel.app'
+
     expect(getAppOrigin('https://hanut-preview.vercel.app/path')).toBe(
       'https://hanut-preview.vercel.app',
     )
+  })
+
+  it('uses Vercel production domain before generated deployment URLs in production', () => {
+    process.env.VERCEL_ENV = 'production'
+    process.env.VERCEL_PROJECT_PRODUCTION_URL = 'hanut.tn'
+    process.env.NEXT_PUBLIC_VERCEL_URL = 'hanut-generated.vercel.app'
+
+    expect(getAppOrigin('https://hanut-generated.vercel.app')).toBe('https://hanut.tn')
+  })
+
+  it('can fall back to the server-side Vercel deployment URL when no request origin exists', () => {
+    process.env.VERCEL_URL = 'hanut-generated.vercel.app'
+
+    expect(getAppOrigin()).toBe('https://hanut-generated.vercel.app')
   })
 })

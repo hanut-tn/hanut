@@ -48,14 +48,24 @@ function formatDate(iso: string) {
   })
 }
 
-export type TrackData = {
-  order_id: string
-  status: string
-  created_at: string
+export type TrackItem = {
   product_name: string
   product_image: string | null
   variant: string | null
   quantity: number
+  unit_price: number
+}
+
+export type TrackData = {
+  order_id: string
+  status: string
+  created_at: string
+  /** Champ legacy : utilisé en fallback si items est vide (commandes mono-article anciennes). */
+  product_name: string
+  product_image: string | null
+  variant: string | null
+  quantity: number
+  items: TrackItem[]
   cod_amount: number
   customer_name: string
   customer_city: string | null
@@ -98,6 +108,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
         product_image: json.product_image,
         variant:       json.variant,
         quantity:      json.quantity,
+        items:         json.items ?? [],
         cod_amount:    json.cod_amount,
         customer_name: json.customer_name,
         customer_city: json.customer_city,
@@ -177,23 +188,60 @@ export default function TrackingClient({ initialData, orderId }: Props) {
             </p>
           </div>
 
-          <div className="flex items-center gap-4">
-            {data.product_image ? (
-              <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-[#E7E5E4]">
-                <Image src={data.product_image} alt={data.product_name} fill sizes="64px" className="object-cover" />
+          {data.items.length > 0 ? (
+            /* Commande multi-articles (nouveau modèle) */
+            <div className="space-y-3">
+              {data.items.map((item, idx) => (
+                <div key={idx} className="flex items-center gap-3">
+                  {item.product_image ? (
+                    <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 border border-[#E7E5E4]">
+                      <Image src={item.product_image} alt={item.product_name} fill sizes="56px" className="object-cover" />
+                    </div>
+                  ) : (
+                    <div className="w-14 h-14 rounded-xl bg-[#F0FDF4] flex items-center justify-center shrink-0">
+                      <Package className="w-5 h-5 text-[#78716C]" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-[#1C1917] text-sm">{item.product_name}</p>
+                    {item.variant && <p className="text-xs text-[#78716C]">{item.variant}</p>}
+                    <p className="text-xs text-[#78716C]">× {item.quantity}</p>
+                  </div>
+                  {data.items.length > 1 && (
+                    <p className="text-sm font-semibold text-[#16A34A] shrink-0">
+                      {item.unit_price * item.quantity} DT
+                    </p>
+                  )}
+                </div>
+              ))}
+              <div className={`flex justify-between items-center${data.items.length > 1 ? ' pt-3 border-t border-[#E7E5E4]' : ' pt-0.5'}`}>
+                {data.items.length > 1
+                  ? <span className="text-sm text-[#78716C]">Total commande</span>
+                  : <span />
+                }
+                <p className="text-sm font-bold text-[#16A34A]">{data.cod_amount} DT</p>
               </div>
-            ) : (
-              <div className="w-16 h-16 rounded-xl bg-[#F0FDF4] flex items-center justify-center shrink-0">
-                <Package className="w-6 h-6 text-[#78716C]" />
-              </div>
-            )}
-            <div>
-              <p className="font-semibold text-[#1C1917]">{data.product_name}</p>
-              {data.variant && <p className="text-sm text-[#78716C]">{data.variant}</p>}
-              {data.quantity > 1 && <p className="text-sm text-[#78716C]">× {data.quantity}</p>}
-              <p className="text-sm font-bold text-[#16A34A] mt-0.5">{data.cod_amount} DT</p>
             </div>
-          </div>
+          ) : (
+            /* Commande legacy mono-article — rendu inchangé */
+            <div className="flex items-center gap-4">
+              {data.product_image ? (
+                <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-[#E7E5E4]">
+                  <Image src={data.product_image} alt={data.product_name} fill sizes="64px" className="object-cover" />
+                </div>
+              ) : (
+                <div className="w-16 h-16 rounded-xl bg-[#F0FDF4] flex items-center justify-center shrink-0">
+                  <Package className="w-6 h-6 text-[#78716C]" />
+                </div>
+              )}
+              <div>
+                <p className="font-semibold text-[#1C1917]">{data.product_name}</p>
+                {data.variant && <p className="text-sm text-[#78716C]">{data.variant}</p>}
+                {data.quantity > 1 && <p className="text-sm text-[#78716C]">× {data.quantity}</p>}
+                <p className="text-sm font-bold text-[#16A34A] mt-0.5">{data.cod_amount} DT</p>
+              </div>
+            </div>
+          )}
 
           {(data.customer_name || data.customer_city) && (
             <div className="pt-3 border-t border-[#E7E5E4] flex items-center gap-2 text-sm text-[#78716C]">
@@ -364,7 +412,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
 
       <footer className="py-6 text-center">
         <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-          <img src="/icon-16.png" alt="" width={16} height={16} style={{ borderRadius: '3px' }} />
+          <Image src="/icon-16.png" alt="" width={16} height={16} unoptimized style={{ borderRadius: '3px' }} />
           Propulsé par Hanut
         </Link>
       </footer>

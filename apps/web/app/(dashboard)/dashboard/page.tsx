@@ -232,6 +232,13 @@ export default async function DashboardPage() {
       )
       }
 
+      {(orderCount ?? 0) === 0 && (
+        <div className="flex items-start gap-3 bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl px-4 py-3 text-sm text-[#15803D]">
+          <ShoppingBag className="w-5 h-5 shrink-0 mt-0.5" />
+          <span>Bienvenue ! Créez votre première commande pour commencer à suivre vos ventes.</span>
+        </div>
+      )}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KPICard

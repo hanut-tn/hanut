@@ -8,6 +8,7 @@ const requiredEnvVars = [
 const securityEnvVars = [
   'TURNSTILE_SECRET_KEY',
   'NEXT_PUBLIC_TURNSTILE_SITE_KEY',
+  'OTP_HMAC_SECRET',
 ] as const
 
 export function validateEnv() {

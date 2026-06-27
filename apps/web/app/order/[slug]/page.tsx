@@ -82,7 +82,7 @@ export default async function PublicOrderPage({ params }: Props) {
       <footer className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-gray-100 py-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] text-center">
         <div className="flex items-center justify-center gap-4">
           <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-            <img src="/icon-16.png" alt="" width={16} height={16} style={{ borderRadius: '3px' }} />
+            <Image src="/icon-16.png" alt="" width={16} height={16} unoptimized style={{ borderRadius: '3px' }} />
             Propulsé par Hanut
           </Link>
           <Link href="/privacy" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">

@@ -115,7 +115,7 @@ describe('middleware — redirection /billing quand démo expirée', () => {
     const expiredDate = new Date(Date.now() - 1000).toISOString()
     supabaseSsrMock.createServerClient.mockReturnValue({
       auth: {
-        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1' } } }),
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1', email_confirmed_at: '2026-01-01T00:00:00.000Z' } } }),
       },
       from: vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: expiredDate })),
     })
@@ -135,7 +135,7 @@ describe('middleware — redirection /billing quand démo expirée', () => {
 
     supabaseSsrMock.createServerClient.mockReturnValue({
       auth: {
-        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'member-user-id' } } }),
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'member-user-id', email_confirmed_at: '2026-01-01T00:00:00.000Z' } } }),
       },
       from: vi.fn((table: string) => {
         if (table === 'sellers') {
@@ -159,7 +159,7 @@ describe('middleware — redirection /billing quand démo expirée', () => {
     const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
     supabaseSsrMock.createServerClient.mockReturnValue({
       auth: {
-        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1' } } }),
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1', email_confirmed_at: '2026-01-01T00:00:00.000Z' } } }),
       },
       from: vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: futureDate })),
     })

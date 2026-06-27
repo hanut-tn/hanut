@@ -26,9 +26,11 @@ END $$;
 CREATE SCHEMA IF NOT EXISTS auth;
 
 CREATE TABLE IF NOT EXISTS auth.users (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email      TEXT UNIQUE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email              TEXT UNIQUE,
+  email_confirmed_at TIMESTAMPTZ,
+  raw_user_meta_data JSONB DEFAULT '{}'::JSONB,
+  created_at         TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- auth.uid() retourne un UUID fixe pour les tests

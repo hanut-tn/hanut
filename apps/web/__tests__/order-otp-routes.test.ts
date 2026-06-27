@@ -122,7 +122,7 @@ function mockVerifyRpc(result: Record<string, unknown>) {
 describe('public order OTP routes', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'test-service-role-key')
+    vi.stubEnv('OTP_HMAC_SECRET', 'test-otp-hmac-secret')
     vi.stubEnv('RESEND_API_KEY', '')
     rateLimitMock.checkRateLimit.mockResolvedValue({ allowed: true, remaining: 2, resetIn: 600 })
     turnstileMock.verifyTurnstileToken.mockResolvedValue(true)

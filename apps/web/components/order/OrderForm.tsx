@@ -935,7 +935,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
           <PackageX className="text-red-500 w-6 h-6 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-semibold text-red-700">
-              {stockErrorScope === 'variant' ? 'Cette variante n&apos;est plus disponible' : 'Ce produit n&apos;est plus disponible'}
+              {stockErrorScope === 'variant' ? "Cette variante n'est plus disponible" : "Ce produit n'est plus disponible"}
             </p>
             <p className="text-xs text-red-600 mt-1">
               {stockErrorScope === 'variant'

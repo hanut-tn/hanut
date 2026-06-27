@@ -66,14 +66,11 @@ export default withSentryConfig(nextConfig, {
   // Désactive le tunnel (on n'a pas de /monitoring route)
   tunnelRoute: undefined,
 
-  // Upload des source maps uniquement si le token est disponible
+  // Upload des source maps uniquement si le token est disponible.
+  // Sans SENTRY_AUTH_TOKEN dans Vercel → disable:true → warnings "could not determine
+  // source map reference" disparaissent car l'upload n'est pas tenté.
   sourcemaps: {
     disable: !process.env.SENTRY_AUTH_TOKEN,
-  },
-
-  webpack: {
-    treeshake: {
-      removeDebugLogging: true,
-    },
+    deleteSourcemapsAfterUpload: true,
   },
 })

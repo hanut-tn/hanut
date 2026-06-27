@@ -1,9 +1,11 @@
 export const dynamic = 'force-dynamic'
 
+import * as Sentry from '@sentry/nextjs'
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
+import { ensureSignupSellerProfile, isConfirmedHanutSignupUser } from '@/lib/signup-profile'
 import { RoleProvider } from '@/lib/role-context'
 import { MobileNavProvider } from '@/lib/mobile-nav-context'
 import { SentryUserProvider } from '@/components/providers/SentryUserProvider'
@@ -53,6 +55,38 @@ export default async function DashboardLayout({ children }: { children: React.Re
         .from('team_members')
         .update({ user_id: user.id, status: 'active', joined_at: new Date().toISOString(), invitation_token: null })
         .eq('id', pending.id)
+    }
+  }
+
+  if (!invitationToken && user.email && isConfirmedHanutSignupUser(user)) {
+    const { data: existingSeller, error: existingSellerError } = await serviceClient
+      .from('sellers')
+      .select('id')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (existingSellerError) {
+      Sentry.captureException(new Error(existingSellerError.message), {
+        tags: { module: 'dashboard_layout', action: 'seller_lookup' },
+      })
+      redirect('/verify-email?confirmed=1&setup_error=1')
+    }
+
+    if (!existingSeller) {
+      const profile = await ensureSignupSellerProfile(serviceClient, {
+        userId: user.id,
+        email: user.email,
+        shopName: user.user_metadata?.name,
+        phone: user.user_metadata?.phone,
+      })
+
+      if (!profile.ok) {
+        Sentry.captureException(new Error(profile.error), {
+          tags: { module: 'dashboard_layout', action: 'seller_repair' },
+          extra: { duplicateEmail: Boolean(profile.duplicateEmail) },
+        })
+        redirect('/verify-email?confirmed=1&setup_error=1')
+      }
     }
   }
 

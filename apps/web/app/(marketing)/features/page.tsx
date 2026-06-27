@@ -82,9 +82,9 @@ function LinkMockup() {
           </div>
         </div>
         <div className="space-y-2.5">
-          <input readOnly className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-500 bg-gray-50" placeholder="Votre nom complet" />
-          <input readOnly className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-500 bg-gray-50" placeholder="+216 XX XXX XXX" />
-          <input readOnly className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-500 bg-gray-50" placeholder="Adresse de livraison" />
+          <input readOnly aria-hidden="true" tabIndex={-1} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-500 bg-gray-50" placeholder="Votre nom complet" />
+          <input readOnly aria-hidden="true" tabIndex={-1} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-500 bg-gray-50" placeholder="+216 XX XXX XXX" />
+          <input readOnly aria-hidden="true" tabIndex={-1} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-500 bg-gray-50" placeholder="Adresse de livraison" />
         </div>
         <button className="w-full bg-[#16A34A] text-white text-xs font-semibold py-2.5 rounded-xl">
           Commander — 85 DT

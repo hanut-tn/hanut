@@ -97,7 +97,7 @@ describe('middleware auth boundaries', () => {
   it('redirects authenticated homepage visitors to the dashboard', async () => {
     supabaseSsrMock.createServerClient.mockReturnValue({
       auth: {
-        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1' } } }),
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1', email_confirmed_at: '2026-01-01T00:00:00.000Z' } } }),
       },
     })
 
@@ -135,7 +135,7 @@ describe('middleware auth boundaries', () => {
   it('lets authenticated users reach protected routes', async () => {
     supabaseSsrMock.createServerClient.mockReturnValue({
       auth: {
-        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1' } } }),
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1', email_confirmed_at: '2026-01-01T00:00:00.000Z' } } }),
       },
       from: vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: null })),
     })
@@ -149,7 +149,7 @@ describe('middleware auth boundaries', () => {
     const expiredDate = new Date(Date.now() - 1000).toISOString()
     supabaseSsrMock.createServerClient.mockReturnValue({
       auth: {
-        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1' } } }),
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1', email_confirmed_at: '2026-01-01T00:00:00.000Z' } } }),
       },
       from: vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: expiredDate })),
     })
@@ -202,7 +202,7 @@ describe('middleware auth boundaries', () => {
 
     supabaseSsrMock.createServerClient.mockReturnValue({
       auth: {
-        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'member-1' } } }),
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'member-1', email_confirmed_at: '2026-01-01T00:00:00.000Z' } } }),
       },
       from,
     })
@@ -226,7 +226,7 @@ describe('middleware auth boundaries', () => {
 
     supabaseSsrMock.createServerClient.mockReturnValue({
       auth: {
-        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1' } } }),
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1', email_confirmed_at: '2026-01-01T00:00:00.000Z' } } }),
         getSession: vi.fn().mockResolvedValue({ data: { session: { access_token: jwtWithClaims } } }),
       },
       from: fromSpy,
@@ -248,7 +248,7 @@ describe('middleware auth boundaries', () => {
 
     supabaseSsrMock.createServerClient.mockReturnValue({
       auth: {
-        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1' } } }),
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1', email_confirmed_at: '2026-01-01T00:00:00.000Z' } } }),
         getSession: vi.fn().mockResolvedValue({ data: { session: { access_token: jwtWithoutClaims } } }),
       },
       from: fromSpy,
