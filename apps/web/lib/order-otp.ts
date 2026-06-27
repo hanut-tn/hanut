@@ -13,9 +13,9 @@ export function generateOrderOtp(): string {
 }
 
 export function hashOrderOtp(code: string, slug: string, email: string): string {
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const secret = process.env.OTP_HMAC_SECRET
   if (!secret) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required to hash order OTPs.')
+    throw new Error('OTP_HMAC_SECRET is required to hash order OTPs.')
   }
 
   return createHmac('sha256', secret)

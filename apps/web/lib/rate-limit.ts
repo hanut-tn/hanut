@@ -54,28 +54,29 @@ export async function checkRateLimit(
 }
 
 export function getClientIp(headers: Headers): string {
-  // x-vercel-forwarded-for : IP réelle injectée par l'infrastructure Vercel,
-  // uniquement fiable quand l'exécution est effectivement hébergée par Vercel.
+  // x-vercel-forwarded-for est injecté par l'infrastructure Vercel et ne peut
+  // pas être forgé par un client — fiable uniquement sur Vercel.
   if (process.env.VERCEL === '1' || process.env.VERCEL_ENV) {
     const vercelIp = firstIp(headers.get('x-vercel-forwarded-for'))
     if (vercelIp) return vercelIp
+
+    const realIp = firstIp(headers.get('x-real-ip'))
+    if (realIp) return realIp
+
+    const forwardedFor = headers.get('x-forwarded-for')
+    if (forwardedFor) {
+      const ips = forwardedFor.split(',').map(ip => ip.trim()).filter(Boolean)
+      const publicIp = ips.find(ip => !isPrivateIp(ip))
+      if (publicIp) return publicIp
+      if (ips[0]) return ips[0]
+    }
+
+    return 'anonymous'
   }
 
-  const realIp = firstIp(headers.get('x-real-ip'))
-  if (realIp) return realIp
-
-  // Fallback pour les environnements non-Vercel (dev local, autres hébergeurs).
-  // Ce chemin est best-effort et ne doit passer qu'après les headers proxy
-  // contrôlés par l'infrastructure.
-  const forwardedFor = headers.get('x-forwarded-for')
-  if (forwardedFor) {
-    const ips = forwardedFor.split(',').map(ip => ip.trim()).filter(Boolean)
-    const publicIp = ips.find(ip => !isPrivateIp(ip))
-    if (publicIp) return publicIp
-    if (ips[0]) return ips[0]
-  }
-
-  return 'anonymous'
+  // Hors Vercel : x-forwarded-for et x-real-ip sont forgables par le client —
+  // on ne les lit pas pour éviter les contournements du rate-limiting.
+  return 'unverified-ip'
 }
 
 function firstIp(value: string | null): string | null {

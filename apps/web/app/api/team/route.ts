@@ -119,6 +119,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 400 })
   }
 
+  // Token stocké en clair — risque acceptable car : durée de vie 7 jours,
+  // nullé à l'acceptation, protégé par RLS (seul le service_role y accède).
+  // Si RLS venait à être mal configuré, passer à SHA-256 via createHash('sha256').
   const invitationToken = randomBytes(32).toString('hex')
 
   const { data: member, error: insertError } = await serviceClient

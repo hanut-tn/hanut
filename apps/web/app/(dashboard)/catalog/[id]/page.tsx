@@ -53,16 +53,7 @@ export default async function ProductDetailPage({ params }: Props) {
     }>
   }
 
-  const stockMovementsRes = await supabase
-    .from('stock_movements')
-    .select('id, delta, quantity_before, quantity_after, movement_type, unit_cost, supplier, notes, created_by_name, created_at, variant_name')
-    .eq('product_id', id)
-    .eq('seller_id', context.sellerId)
-    .order('created_at', { ascending: false })
-    .limit(10)
-  const stockMovements = stockMovementsRes.data ?? []
-
-  const [{ data: rawStats }, { data: rawPlannedRestocks }] = await Promise.all([
+  const [{ data: rawStats }, { data: rawPlannedRestocks }, stockMovementsRes] = await Promise.all([
     supabase.rpc('get_product_stats', {
       p_seller_id: context.sellerId,
       p_product_id: id,
@@ -75,7 +66,16 @@ export default async function ProductDetailPage({ params }: Props) {
       .eq('seller_id', context.sellerId)
       .eq('status', 'planned')
       .order('created_at', { ascending: false }),
+
+    supabase
+      .from('stock_movements')
+      .select('id, delta, quantity_before, quantity_after, movement_type, unit_cost, supplier, notes, created_by_name, created_at, variant_name')
+      .eq('product_id', id)
+      .eq('seller_id', context.sellerId)
+      .order('created_at', { ascending: false })
+      .limit(10),
   ])
+  const stockMovements = stockMovementsRes.data ?? []
 
   const stats = rawStats as ProductStats | null
   const totalOrders = stats?.total_orders ?? 0

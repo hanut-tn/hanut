@@ -114,7 +114,13 @@ export async function POST(req: NextRequest) {
           { status: 409 }
         )
       }
-      await serviceClient.auth.admin.deleteUser(data.user.id).catch(() => {})
+      const orphanUserId = data.user!.id
+      await serviceClient.auth.admin.deleteUser(orphanUserId).catch(deleteErr => {
+        Sentry.captureException(deleteErr instanceof Error ? deleteErr : new Error(String(deleteErr)), {
+          tags: { module: 'auth_register', action: 'orphan_user_cleanup' },
+          extra: { userId: orphanUserId },
+        })
+      })
       Sentry.captureException(new Error(profile.error), {
         tags: { module: 'auth_register', action: 'seller_insert' },
       })

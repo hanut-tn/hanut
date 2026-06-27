@@ -4,7 +4,7 @@ import * as Sentry from '@sentry/nextjs'
 import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { requireActive } from '@/lib/assert-active'
 import { HanutAddressFieldsSchema } from '@/lib/address'
 
@@ -84,6 +84,7 @@ export async function updateCustomer(id: string, input: CustomerInput): Promise<
 
   revalidatePath('/customers')
   revalidatePath(`/customers/${id}`)
+  revalidateTag(`dashboard-${context.sellerId}`)
   return {}
 }
 
@@ -151,6 +152,7 @@ export async function deleteCustomer(id: string): Promise<{ error?: string }> {
   })
 
   revalidatePath('/customers')
+  revalidateTag(`dashboard-${context.sellerId}`)
   return {}
 }
 
@@ -214,5 +216,6 @@ export async function anonymizeCustomer(id: string): Promise<{ error?: string }>
 
   revalidatePath('/customers')
   revalidatePath(`/customers/${id}`)
+  revalidateTag(`dashboard-${context.sellerId}`)
   return {}
 }

@@ -143,6 +143,7 @@ function BusinessWaitlist() {
         onChange={e => setEmail(e.target.value)}
         placeholder="votre@email.com"
         required
+        aria-label="Votre adresse email"
         className="w-full text-sm px-3 py-2.5 rounded-xl border border-gray-200 text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300"
       />
       <button

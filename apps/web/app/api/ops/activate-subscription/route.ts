@@ -37,7 +37,8 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase.rpc('activate_paid_subscription', {
     p_seller_id:     seller_id,
     p_plan:          plan,
-    p_duration_days: months * 30,
+    p_duration_days: months * 30, // 1 mois = 30 jours calendaires (convention interne)
+
     p_activated_by:  activated_by,
   })
 

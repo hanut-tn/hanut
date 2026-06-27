@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 
-// Ancienne route conservée temporairement pour fournir une erreur explicite aux
-// clients obsolètes. La création publique passe désormais obligatoirement par
-// /api/orders/send-otp puis /api/orders/verify-otp.
+// Route dépréciée — retourne HTTP 410 Gone pour guider les anciens formulaires.
+// La création publique passe par /api/orders/send-otp puis /api/orders/verify-otp.
+// À supprimer une fois tous les formulaires publics mis à jour vers la version OTP.
 export async function POST() {
   return NextResponse.json(
     {

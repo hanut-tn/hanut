@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs'
 import type { createServiceClient } from '@/lib/supabase/service'
 
 type ServiceClient = ReturnType<typeof createServiceClient>
@@ -120,8 +121,19 @@ export async function ensureSignupSellerProfile(
 
   if (trialError) {
     if (inserted) {
-      await serviceClient.from('sellers').delete().eq('id', input.userId)
+      await serviceClient.from('sellers').delete().eq('id', input.userId).then(({ error: delErr }) => {
+        if (delErr) {
+          Sentry.captureException(new Error(`seller rollback failed: ${delErr.message}`), {
+            tags: { module: 'signup_profile', action: 'seller_rollback' },
+            extra: { userId: input.userId },
+          })
+        }
+      })
     }
+    Sentry.captureException(new Error(`set_demo_trial failed: ${trialError.message}`), {
+      tags: { module: 'signup_profile', action: 'set_demo_trial' },
+      extra: { userId: input.userId },
+    })
     return { ok: false, error: trialError.message }
   }
 

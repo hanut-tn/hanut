@@ -208,16 +208,8 @@ export async function GET(request: NextRequest) {
       verifiedUser = data.user ?? verifiedUser
     }
 
-    // Email de bienvenue pour les nouvelles inscriptions confirmées.
-    // Critères : destination = /dashboard + compte créé il y a moins d'1h.
-    const isSignupType = type === 'signup'
-    const isRecentAccount = verifiedUser?.created_at
-      ? Date.now() - new Date(verifiedUser.created_at).getTime() < 60 * 60 * 1000
-      : false
-
     const isSignupConfirmation =
-      isSignupType ||
-      (redirectPath === '/dashboard' && isRecentAccount) ||
+      type === 'signup' ||
       (verifiedUser ? isConfirmedHanutSignupUser(verifiedUser) : false)
 
     if (verifiedUser?.id && verifiedUser.email && isSignupConfirmation) {

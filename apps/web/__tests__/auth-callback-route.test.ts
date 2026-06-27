@@ -243,6 +243,29 @@ describe('GET /api/auth/callback', () => {
     expect(sentryContext.extra).not.toHaveProperty('email')
   })
 
+  it('does not create a seller profile for a recently-created account without type=signup', async () => {
+    const { insert } = mockServiceClient()
+    authMock.exchangeCodeForSession.mockResolvedValue({
+      data: {
+        user: {
+          id: 'seller-2',
+          email: 'other@example.com',
+          user_metadata: {},
+          created_at: new Date().toISOString(),
+        },
+      },
+      error: null,
+    })
+    const request = new NextRequest(
+      'https://hanut.test/api/auth/callback?code=auth-code',
+    )
+
+    const response = await GET(request)
+
+    expect(response.headers.get('location')).toBe('https://hanut.test/dashboard')
+    expect(insert).not.toHaveBeenCalled()
+  })
+
   it('shows a setup error if the seller profile cannot be created after confirmation', async () => {
     mockServiceClient({ trialError: { message: 'function set_demo_trial does not exist' } })
     authMock.verifyOtp.mockResolvedValue({
