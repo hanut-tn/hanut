@@ -26,7 +26,8 @@ export async function GET(req: NextRequest, { params }: Params) {
       customer_city, customer_governorate, customer_delegation,
       seller:sellers(phone),
       customer:customers(name, city, customer_governorate, customer_city, customer_delegation),
-      product:products(name, image_url)
+      product:products(name, image_url),
+      order_items(unit_price, quantity, variant, product:products(name, image_url))
     `)
     .eq('tracking_token', orderId)
     .is('deleted_at', null)
@@ -44,10 +45,22 @@ export async function GET(req: NextRequest, { params }: Params) {
     customer_city?: string | null
     customer_delegation?: string | null
   }
-  type ProductRow  = { name: string; image_url?: string | null }
+  type ProductRow   = { name: string; image_url?: string | null }
+  type OrderItemRow = { unit_price: number; quantity: number; variant?: string | null; product: ProductRow | ProductRow[] | null }
   const seller   = (Array.isArray(order.seller)   ? order.seller[0]   : order.seller)   as SellerRow   | null
   const customer = (Array.isArray(order.customer) ? order.customer[0] : order.customer) as CustomerRow | null
   const product  = (Array.isArray(order.product)  ? order.product[0]  : order.product)  as ProductRow  | null
+  const rawItems = (Array.isArray(order.order_items) ? order.order_items : []) as OrderItemRow[]
+  const items = rawItems.map(oi => {
+    const p = (Array.isArray(oi.product) ? oi.product[0] : oi.product) as ProductRow | null
+    return {
+      product_name:  p?.name      ?? '',
+      product_image: p?.image_url ?? null,
+      variant:       oi.variant   ?? null,
+      quantity:      oi.quantity,
+      unit_price:    oi.unit_price,
+    }
+  })
 
   const [{ data: delivery }, { data: history }] = await Promise.all([
     supabase
@@ -83,10 +96,11 @@ export async function GET(req: NextRequest, { params }: Params) {
     order_id:      orderId.slice(0, 8).toUpperCase(),
     status:        order.status,
     created_at:    order.created_at,
-    product_name:  product?.name ?? '',
+    product_name:  product?.name      ?? '',
     product_image: product?.image_url ?? null,
-    variant:       order.variant ?? null,
+    variant:       order.variant      ?? null,
     quantity:      order.quantity,
+    items,
     cod_amount:    order.cod_amount,
     customer_name: customer?.name?.split(' ')[0] ?? '',
     customer_city: customerLocation,

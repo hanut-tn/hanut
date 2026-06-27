@@ -60,6 +60,75 @@ function mockSupabaseOrder(order: unknown, delivery: unknown = null) {
   })
 }
 
+describe('GET /api/track/[orderId] — multi-article orders', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    rateLimitMock.checkRateLimit.mockResolvedValue({ allowed: true, remaining: 29, resetIn: 60 })
+  })
+
+  it('returns all items for a multi-article order', async () => {
+    mockSupabaseOrder({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      status: 'shipped',
+      cod_amount: 110,
+      variant: null,
+      quantity: 1,
+      created_at: new Date().toISOString(),
+      customer: { name: 'Mohamed Trabelsi', city: 'Sfax' },
+      product: { name: 'Produit Legacy', image_url: null },
+      order_items: [
+        { unit_price: 50, quantity: 1, variant: null,  product: { name: 'T-shirt blanc', image_url: null } },
+        { unit_price: 30, quantity: 2, variant: 'L',   product: { name: 'Casquette', image_url: 'https://example.com/cap.jpg' } },
+      ],
+    })
+
+    const response = await GET(trackRequest('multiitemtoken123'), makeParams('multiitemtoken123'))
+    const json = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(json.items).toHaveLength(2)
+    expect(json.items[0]).toEqual({
+      product_name: 'T-shirt blanc',
+      product_image: null,
+      variant: null,
+      quantity: 1,
+      unit_price: 50,
+    })
+    expect(json.items[1]).toEqual({
+      product_name: 'Casquette',
+      product_image: 'https://example.com/cap.jpg',
+      variant: 'L',
+      quantity: 2,
+      unit_price: 30,
+    })
+    expect(json.cod_amount).toBe(110)
+  })
+
+  it('returns empty items array for a legacy single-article order', async () => {
+    mockSupabaseOrder({
+      id: '550e8400-e29b-41d4-a716-446655440001',
+      status: 'delivered',
+      cod_amount: 85,
+      variant: 'M',
+      quantity: 2,
+      created_at: new Date().toISOString(),
+      customer: { name: 'Sara Ben Romdhane', city: 'Tunis' },
+      product: { name: 'Robe été', image_url: null },
+      order_items: [],
+    })
+
+    const response = await GET(trackRequest('legacysingletoken1'), makeParams('legacysingletoken1'))
+    const json = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(json.items).toHaveLength(0)
+    expect(json.product_name).toBe('Robe été')
+    expect(json.variant).toBe('M')
+    expect(json.quantity).toBe(2)
+    expect(json.cod_amount).toBe(85)
+  })
+})
+
 describe('GET /api/track/[orderId] — data exposure', () => {
   beforeEach(() => {
     vi.clearAllMocks()
