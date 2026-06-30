@@ -72,6 +72,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [turnstileToken, setTurnstileToken] = useState('')
   const [turnstileResetKey, setTurnstileResetKey] = useState(0)
+  const [termsAccepted, setTermsAccepted] = useState(false)
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
@@ -96,6 +97,7 @@ export default function RegisterPage() {
         phone: normalizedPhone || undefined,
         password,
         turnstile_token: turnstileToken || undefined,
+        terms_accepted: termsAccepted,
       }),
     }).catch(() => null)
 
@@ -204,7 +206,23 @@ export default function RegisterPage() {
           <TurnstileWidget onVerify={setTurnstileToken} resetKey={turnstileResetKey} />
         )}
 
-        <button type="submit" disabled={loading || (isTurnstileEnabled() && !turnstileToken)} className="btn-primary w-full">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={termsAccepted}
+            onChange={e => setTermsAccepted(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+            required
+          />
+          <span className="text-sm text-gray-600">
+            J&apos;accepte les{' '}
+            <Link href="/legal" className="font-medium text-brand-600 hover:text-brand-700 underline" target="_blank">Conditions Générales d&apos;Utilisation</Link>
+            {' '}et la{' '}
+            <Link href="/privacy" className="font-medium text-brand-600 hover:text-brand-700 underline" target="_blank">Politique de confidentialité</Link>
+          </span>
+        </label>
+
+        <button type="submit" disabled={loading || !termsAccepted || (isTurnstileEnabled() && !turnstileToken)} className="btn-primary w-full">
           {loading ? 'Création...' : 'Créer mon compte'}
         </button>
       </form>

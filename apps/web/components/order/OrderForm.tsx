@@ -171,10 +171,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
       setError("L'adresse détaillée est obligatoire.")
       return
     }
-    if (!landmark.trim()) {
-      setError('Le repère pour le livreur est obligatoire.')
-      return
-    }
+
     if (postalCode.trim() && !/^\d{4}$/.test(postalCode.trim())) {
       setError('Le code postal doit contenir 4 chiffres.')
       return
@@ -242,11 +239,6 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
       setOtpError('Entrez les 4 chiffres du code.')
       return
     }
-    if (isTurnstileEnabled() && !turnstileToken) {
-      setOtpError('Terminez la vérification anti-spam avant de valider.')
-      return
-    }
-
     otpSubmittingRef.current = true
     setOtpError(null)
     setLoading(true)
@@ -263,7 +255,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         customer_city: customerCity.trim(),
         customer_delegation: delegation.trim() || undefined,
         customer_address: address.trim(),
-        customer_landmark: landmark.trim(),
+        customer_landmark: landmark.trim() || undefined,
         customer_postal_code: postalCode.trim() || undefined,
         delivery_notes: deliveryNotes.trim() || undefined,
         turnstile_token: turnstileToken || undefined,
@@ -330,10 +322,6 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
 
   async function handleResendOtp() {
     if (loading) return
-    if (isTurnstileEnabled() && !turnstileToken) {
-      setOtpError('Terminez la vérification anti-spam avant de renvoyer le code.')
-      return
-    }
     setLoading(true)
     try {
       const res = await fetch('/api/orders/send-otp', {
@@ -500,16 +488,10 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
             <p className="text-sm text-center text-red-600">{otpError}</p>
           )}
 
-          {isTurnstileEnabled() && (
-            <div className="flex justify-center">
-              <TurnstileWidget onVerify={setTurnstileToken} resetKey={turnstileResetKey} />
-            </div>
-          )}
-
           <button
             type="button"
             onClick={() => handleOtpSubmit(otpDigits.join(''))}
-            disabled={loading || otpDigits.some(d => !d) || (isTurnstileEnabled() && !turnstileToken)}
+            disabled={loading || otpDigits.some(d => !d)}
             className="h-12 w-full touch-manipulation bg-[#16A34A] hover:bg-green-700 disabled:opacity-60 text-white font-bold rounded-2xl text-base transition-colors shadow-lg shadow-green-200"
           >
             {loading ? 'Vérification…' : 'Valider le code'}
@@ -663,21 +645,23 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
             value={address}
             onChange={e => setAddress(e.target.value)}
-            placeholder="Rue, numéro, quartier…"
+            placeholder="Ex: Rue Ibn Khaldoun, Résidence Les Jasmins"
             required
             autoComplete="street-address"
           />
         </div>
 
         <div>
-          <label htmlFor="order-landmark" className="block text-sm font-medium text-gray-700 mb-1.5">Repère pour le livreur *</label>
+          <label htmlFor="order-landmark" className="block text-sm font-medium text-gray-700 mb-1.5">
+            Repère pour le livreur
+            <span className="text-gray-400 font-normal ml-1">(optionnel)</span>
+          </label>
           <input
             id="order-landmark"
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
             value={landmark}
             onChange={e => setLandmark(e.target.value)}
-            placeholder="Près de la mosquée, café, école…"
-            required
+            placeholder="Ex: Face à la pharmacie, 2ème étage, immeuble bleu..."
           />
         </div>
 

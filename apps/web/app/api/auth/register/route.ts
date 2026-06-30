@@ -25,6 +25,7 @@ const RegisterSchema = z.object({
     }
   }),
   turnstile_token: z.string().optional(),
+  terms_accepted: z.boolean().refine(v => v === true, 'Vous devez accepter les CGU pour continuer.'),
 })
 
 function publicAuthClient() {

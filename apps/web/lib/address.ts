@@ -32,7 +32,7 @@ export const HanutAddressFieldsSchema = z.object({
   customer_city: requiredText(1, 100, 'La ville / délégation'),
   customer_delegation: optionalTrimmedString(100),
   customer_address: requiredText(2, 250, "L'adresse détaillée"),
-  customer_landmark: requiredText(2, 200, 'Le repère livreur'),
+  customer_landmark: optionalTrimmedString(200),
   customer_postal_code: z.preprocess(
     value => {
       if (typeof value !== 'string') return value

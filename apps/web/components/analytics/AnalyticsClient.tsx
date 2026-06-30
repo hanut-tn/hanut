@@ -13,6 +13,7 @@ type Props = {
   initialData: AnalyticsData
   plan: 'starter' | 'pro' | 'business'
   loadData: (from: string, to: string) => Promise<AnalyticsData | null>
+  slug?: string | null
 }
 
 type Period = 7 | 30 | 90
@@ -20,7 +21,7 @@ type ChartMode = 'orders' | 'ca'
 
 const PERIOD_LABELS: Record<Period, string> = { 7: '7 jours', 30: '30 jours', 90: '90 jours' }
 
-export default function AnalyticsClient({ initialData, plan, loadData }: Props) {
+export default function AnalyticsClient({ initialData, plan, loadData, slug }: Props) {
   const [data, setData]       = useState<AnalyticsData>(initialData)
   const [loading, setLoading] = useState(false)
   const [period, setPeriod]   = useState<Period>(30)
@@ -346,6 +347,44 @@ export default function AnalyticsClient({ initialData, plan, loadData }: Props) 
           )}
         </div>
       </div>
+
+      {/* Empty state : aucune commande sur la période */}
+      {totalOrders === 0 && (
+        customMode ? (
+          <div className="bg-white border border-[#E7E5E4] rounded-xl shadow-sm p-10 text-center">
+            <ShoppingBag className="w-10 h-10 mx-auto mb-3 text-[#E7E5E4]" />
+            <p className="font-medium text-[#1C1917]">Aucune commande sur cette période</p>
+            <p className="text-sm text-[#78716C] mt-1">Élargissez la période ou choisissez une autre plage de dates.</p>
+          </div>
+        ) : (
+          <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl p-6 text-center space-y-4">
+            <ShoppingBag className="w-10 h-10 mx-auto text-[#16A34A] opacity-60" />
+            <div>
+              <p className="font-semibold text-[#0B5E46]">Vos statistiques apparaîtront ici dès vos premières commandes livrées</p>
+              <p className="text-sm text-[#16A34A] mt-1">Partagez votre lien boutique pour commencer à recevoir des commandes !</p>
+            </div>
+            {slug ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/order/${slug}`
+                  navigator.clipboard?.writeText(url).catch(() => {})
+                }}
+                className="inline-flex items-center gap-2 bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
+              >
+                Copier mon lien boutique
+              </button>
+            ) : (
+              <Link
+                href="/settings?tab=link"
+                className="inline-flex items-center gap-2 bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
+              >
+                Créer mon lien boutique →
+              </Link>
+            )}
+          </div>
+        )
+      )}
 
       {/* Banner : coûts d'achat manquants */}
       {hasMissingCost && (

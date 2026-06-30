@@ -403,7 +403,7 @@ describe('updateDelivery — COD collected', () => {
 
     const result = await updateDelivery('delivery-1', { cod_reversed: false })
 
-    expect(result.error).toBe("Impossible d'annuler un COD déjà reversé.")
+    expect(result.error).toBe("Impossible d'annuler : le montant a déjà été transféré.")
   })
 })
 
@@ -448,7 +448,7 @@ describe('markCodReversed', () => {
   it('rejects invalid amounts before opening a database client', async () => {
     const result = await markCodReversed('delivery-1', Number.NaN)
 
-    expect(result.error).toBe('Montant de reversement invalide.')
+    expect(result.error).toBe('Montant invalide.')
     expect(serverMock.createServerClient).not.toHaveBeenCalled()
   })
 
@@ -461,7 +461,7 @@ describe('markCodReversed', () => {
 
     const result = await markCodReversed('delivery-1', 80)
 
-    expect(result.error).toBe('Ce COD a déjà été reversé.')
+    expect(result.error).toBe('Ce montant a déjà été transféré.')
   })
 })
 

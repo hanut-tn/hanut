@@ -31,7 +31,7 @@ vi.mock('@/lib/auth-redirect', () => ({
 
 import { POST } from '@/app/api/auth/register/route'
 
-function request() {
+function request(overrides: Record<string, unknown> = {}) {
   return new NextRequest('https://hanut.test/api/auth/register', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -41,6 +41,8 @@ function request() {
       phone: '22123456',
       password: 'Password1!',
       turnstile_token: 'valid-token',
+      terms_accepted: true,
+      ...overrides,
     }),
   })
 }
@@ -162,6 +164,14 @@ describe('POST /api/auth/register', () => {
     expect(response.status).toBe(200)
     expect(deleteUser).not.toHaveBeenCalled()
     expect(rpc).toHaveBeenCalledWith('set_demo_trial', { p_seller_id: 'seller-1' })
+  })
+
+  it('rejects when terms_accepted is false', async () => {
+    const response = await POST(request({ terms_accepted: false }))
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({
+      error: 'Vous devez accepter les CGU pour continuer.',
+    })
   })
 
   it('does not report duplicate seller emails as server errors', async () => {

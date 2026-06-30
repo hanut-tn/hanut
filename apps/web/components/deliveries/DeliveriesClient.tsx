@@ -68,7 +68,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'all',       label: 'Toutes' },
   { key: 'pending',   label: 'En cours' },
   { key: 'collected', label: 'COD collecté' },
-  { key: 'reversed',  label: 'COD reversé' },
+  { key: 'reversed',  label: 'Argent reçu' },
 ]
 
 function getOrder(d: Delivery): OrderInfo | null {
@@ -244,7 +244,7 @@ function DeliveryMobileCard({
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
             >
-              {delivery.cod_reversed ? '✓ COD reversé' : delivery.cod_collected ? 'COD reversé ?' : '—'}
+              {delivery.cod_reversed ? '✓ Argent reçu' : delivery.cod_collected ? 'Marquer comme reçu ?' : '—'}
             </button>
           )}
           <div className="shrink-0 text-right min-w-[40px]">
@@ -493,7 +493,7 @@ export default function DeliveriesClient({
           return
         }
         if (field === 'cod_collected' && newValue) setToast('✓ COD collecté · Commande marquée comme livrée')
-        else if (field === 'cod_reversed' && newValue) setToast('✓ COD reversé · Fonds reçus')
+        else if (field === 'cod_reversed' && newValue) setToast('✓ Argent reçu · Fonds transférés')
         router.refresh()
       } catch (err) {
         setAllDeliveries(list => list.map(del => del.id === d.id ? { ...del, [field]: prevValue } : del))
@@ -573,7 +573,7 @@ export default function DeliveriesClient({
         }
         return
       }
-      const label = action === 'cod_collected' ? 'COD collecté' : 'COD reversé'
+      const label = action === 'cod_collected' ? 'COD collecté' : 'Argent reçu'
       if (data.skipped > 0 && data.message) {
         setToast(`✓ ${data.updated} mise${data.updated > 1 ? 's' : ''} à jour · ${data.message}`)
       } else if (data.skipped > 0) {
@@ -651,10 +651,10 @@ export default function DeliveriesClient({
           <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-amber-800">
-              {codSummary.pending_reversal_amount.toFixed(0)} DT à reverser
+              {codSummary.pending_reversal_amount.toFixed(0)} DT en attente de transfert
             </p>
             <p className="text-xs text-amber-600">
-              {codSummary.pending_reversal_count} livraison{codSummary.pending_reversal_count > 1 ? 's' : ''} avec COD collecté non reversé
+              {codSummary.pending_reversal_count} livraison{codSummary.pending_reversal_count > 1 ? 's' : ''} avec COD collecté non transféré
             </p>
           </div>
         </div>
@@ -710,8 +710,8 @@ export default function DeliveriesClient({
       {/* KPI Cards */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {[
-          { label: 'COD collecté',   value: `${displayedTotalCollected.toFixed(0)} DT`, sub: `${displayedPendingReversalCount} en attente de reversement`, color: 'text-[#16A34A]', Icon: Banknote },
-          { label: 'COD reversé',    value: `${displayedTotalReversed.toFixed(0)} DT`,  sub: `${counts.reversed} livraisons soldées`,                 color: 'text-[#0B5E46]', Icon: ArrowDownCircle },
+          { label: 'COD collecté',   value: `${displayedTotalCollected.toFixed(0)} DT`, sub: `${displayedPendingReversalCount} en attente de transfert`, color: 'text-[#16A34A]', Icon: Banknote },
+          { label: 'Argent reçu',    value: `${displayedTotalReversed.toFixed(0)} DT`,  sub: `${counts.reversed} livraisons soldées`,                 color: 'text-[#0B5E46]', Icon: ArrowDownCircle },
           { label: 'Frais livreurs', value: `${displayedTotalFees.toFixed(0)} DT`,      sub: 'total transporteurs',                                   color: 'text-[#1C1917]', Icon: Receipt },
         ].map(s => (
           <div key={s.label} className="bg-white border border-[#E7E5E4] rounded-xl p-2 sm:p-5 shadow-sm">
@@ -778,7 +778,7 @@ export default function DeliveriesClient({
                 className="flex min-h-[44px] touch-manipulation items-center gap-2 bg-[#0B5E46] text-white rounded-lg px-3 py-1.5 text-sm disabled:opacity-50 transition-colors hover:bg-[#0a5240]"
               >
                 <ArrowDownCircle className="w-4 h-4" />
-                Marquer COD reversé
+                Confirmer la réception
               </button>
             )}
           </div>
@@ -865,7 +865,7 @@ export default function DeliveriesClient({
                   <th className="text-left text-xs font-semibold text-[#78716C] uppercase tracking-wider px-4 py-3 w-32">Transporteur</th>
                   <th className="text-left text-xs font-semibold text-[#78716C] uppercase tracking-wider px-4 py-3 w-44">N° suivi / Note</th>
                   <th className="text-center text-xs font-semibold text-[#78716C] uppercase tracking-wider px-4 py-3 w-36">COD collecté</th>
-                  <th className="text-center text-xs font-semibold text-[#78716C] uppercase tracking-wider px-4 py-3 w-32">COD reversé</th>
+                  <th className="text-center text-xs font-semibold text-[#78716C] uppercase tracking-wider px-4 py-3 w-32">Argent reçu</th>
                   <th className="text-right text-xs font-semibold text-[#78716C] uppercase tracking-wider px-4 py-3 w-24">Frais</th>
                   <th className="w-20 px-4 py-3" />
                 </tr>
@@ -1023,7 +1023,7 @@ export default function DeliveriesClient({
                                 ? 'bg-gray-100 text-gray-500'
                                 : 'bg-gray-100 text-gray-400'
                           }`}>
-                            {d.cod_reversed ? '✓ Reversé' : d.cod_collected ? 'Non reversé' : '—'}
+                            {d.cod_reversed ? '✓ Reçu' : d.cod_collected ? 'Non transféré' : '—'}
                           </span>
                         ) : (
                           <button
@@ -1038,7 +1038,7 @@ export default function DeliveriesClient({
                                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             }`}
                           >
-                            {d.cod_reversed ? '✓ Reversé' : d.cod_collected ? 'Non reversé' : '—'}
+                            {d.cod_reversed ? '✓ Reçu' : d.cod_collected ? 'Non transféré' : '—'}
                           </button>
                         )}
                       </td>

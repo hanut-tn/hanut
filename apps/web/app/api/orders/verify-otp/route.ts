@@ -88,9 +88,11 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Protection anti-spam indisponible. Réessayez.' }, 503)
   }
 
-  const turnstileOk = await verifyTurnstileToken(parsed.data.turnstile_token ?? '', ip)
-  if (!turnstileOk) {
-    return noStoreJson({ error: 'Vérification anti-spam échouée. Réessayez.' }, 403)
+  if (parsed.data.turnstile_token) {
+    const turnstileOk = await verifyTurnstileToken(parsed.data.turnstile_token, ip)
+    if (!turnstileOk) {
+      return noStoreJson({ error: 'Vérification anti-spam échouée. Réessayez.' }, 403)
+    }
   }
 
   try {

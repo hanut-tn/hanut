@@ -105,7 +105,7 @@ async function recordCodReversal(
   notes?: string
 ): Promise<DeliveryMutationResult> {
   if (context.role !== 'admin') return { error: 'Action réservée aux admins.' }
-  if (!Number.isFinite(amount) || amount <= 0) return { error: 'Montant de reversement invalide.' }
+  if (!Number.isFinite(amount) || amount <= 0) return { error: 'Montant invalide.' }
 
   const { error } = await supabase.rpc('mark_delivery_cod_reversed', {
     p_delivery_id: deliveryId,
@@ -117,8 +117,8 @@ async function recordCodReversal(
 
   if (error) {
     if (error.message.includes('UNAUTHORIZED')) return { error: 'Non autorisé.' }
-    if (error.message.includes('INVALID_REVERSAL_AMOUNT')) return { error: 'Montant de reversement invalide.' }
-    if (error.message.includes('COD_ALREADY_REVERSED')) return { error: 'Ce COD a déjà été reversé.' }
+    if (error.message.includes('INVALID_REVERSAL_AMOUNT')) return { error: 'Montant invalide.' }
+    if (error.message.includes('COD_ALREADY_REVERSED')) return { error: 'Ce montant a déjà été transféré.' }
     if (error.message.includes('DELIVERY_NOT_FOUND_OR_COD_NOT_COLLECTED')) {
       return { error: 'Livraison introuvable ou COD non encore collecté.' }
     }
@@ -321,7 +321,7 @@ export async function updateDelivery(
   }
 
   if (currentDelivery.cod_reversed === true && normalizedInput.cod_reversed === false) {
-    return { error: "Impossible d'annuler un COD déjà reversé." }
+    return { error: "Impossible d'annuler : le montant a déjà été transféré." }
   }
 
   const patch: Record<string, unknown> = { ...normalizedInput }
@@ -440,7 +440,7 @@ export async function markCodReversed(
   if (context.role !== 'admin') return { error: 'Action réservée aux admins.' }
   const activeCheck = requireActive(context)
   if (activeCheck) return activeCheck
-  if (!Number.isFinite(amount) || amount <= 0) return { error: 'Montant de reversement invalide.' }
+  if (!Number.isFinite(amount) || amount <= 0) return { error: 'Montant invalide.' }
 
   const supabase = await createServerClient()
   return recordCodReversal(context, supabase, deliveryId, amount, notes)
@@ -467,7 +467,7 @@ export async function deleteDelivery(id: string): Promise<{ error?: string }> {
   if (!order || order.seller_id !== context.sellerId) return { error: 'Non autorisé' }
 
   if (delivery.cod_collected) {
-    return { error: 'Impossible de supprimer cette livraison : le COD a déjà été collecté. Marquez-la comme COD reversé avant de la supprimer.' }
+    return { error: "Impossible de supprimer cette livraison : le COD a déjà été collecté. Confirmez la réception avant de la supprimer." }
   }
 
   const { error: deleteError } = await supabase.from('deliveries').delete().eq('id', id)

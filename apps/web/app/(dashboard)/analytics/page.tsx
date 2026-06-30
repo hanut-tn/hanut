@@ -38,17 +38,21 @@ export default async function AnalyticsPage() {
   from.setDate(from.getDate() - 30)
   from.setHours(0, 0, 0, 0)
 
-  const { data: raw } = await supabase.rpc('get_analytics_data', {
-    p_seller_id: context.sellerId,
-    p_from: from.toISOString(),
-    p_to: now.toISOString(),
-  })
+  const [{ data: raw }, { data: seller }] = await Promise.all([
+    supabase.rpc('get_analytics_data', {
+      p_seller_id: context.sellerId,
+      p_from: from.toISOString(),
+      p_to: now.toISOString(),
+    }),
+    supabase.from('sellers').select('slug').eq('id', context.sellerId).single(),
+  ])
 
   return (
     <AnalyticsClient
       initialData={(raw as AnalyticsData) ?? EMPTY_DATA}
       plan={context.plan}
       loadData={fetchAnalyticsData}
+      slug={seller?.slug ?? null}
     />
   )
 }
