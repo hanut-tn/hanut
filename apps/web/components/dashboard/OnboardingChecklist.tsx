@@ -6,14 +6,15 @@ import { CheckCircle2, Circle } from 'lucide-react'
 
 type Props = {
   productAdded: boolean
+  slugCreated: boolean
   linkCopied: boolean
   firstOrder: boolean
   slug: string | null
 }
 
-export default function OnboardingChecklist({ productAdded, linkCopied: initLC, firstOrder, slug }: Props) {
+export default function OnboardingChecklist({ productAdded, slugCreated, linkCopied: initLC, firstOrder, slug }: Props) {
   const router = useRouter()
-  const completedOnMount = useRef(productAdded && initLC && firstOrder).current
+  const completedOnMount = useRef(productAdded && slugCreated && initLC && firstOrder).current
   const [linkCopied, setLinkCopied] = useState(initLC)
   const [firstOrderSeen, setFirstOrderSeen] = useState(firstOrder)
   const [dismissed, setDismissed] = useState(false)
@@ -21,8 +22,8 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
   const [fadingOut, setFadingOut] = useState(false)
   const [hidden, setHidden] = useState(completedOnMount)
 
-  const completedCount = [productAdded, linkCopied, firstOrderSeen].filter(Boolean).length
-  const allDone = completedCount === 3
+  const completedCount = [productAdded, slugCreated, linkCopied, firstOrderSeen].filter(Boolean).length
+  const allDone = completedCount === 4
 
 
   useEffect(() => {
@@ -103,7 +104,7 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
       body: JSON.stringify({ action: 'first_order' }),
     }).catch(() => {})
 
-    if (productAdded && linkCopied) {
+    if (productAdded && slugCreated && linkCopied) {
       await fetch('/api/onboarding', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -148,11 +149,19 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
       action: () => router.push('/catalog'),
     },
     {
+      key: 'slug',
+      done: slugCreated,
+      title: "Créez l'URL de votre boutique",
+      desc: 'Choisissez une adresse personnalisée pour votre page de commande',
+      cta: "Créer mon URL",
+      action: () => router.push('/settings?tab=link'),
+    },
+    {
       key: 'link',
       done: linkCopied,
       title: 'Copiez votre lien de commande',
       desc: 'Partagez-le sur Instagram, WhatsApp ou TikTok',
-      cta: slug ? 'Copier mon lien' : 'Créer mon lien',
+      cta: 'Copier mon lien',
       action: handleCopyLink,
     },
     {
@@ -172,15 +181,15 @@ export default function OnboardingChecklist({ productAdded, linkCopied: initLC, 
         <div>
           <div className="flex items-start justify-between gap-3">
             <h2 className="font-bold text-[#0B5E46] text-base">Bienvenue sur Hanut</h2>
-            <p className="shrink-0 text-xs text-[#78716C] mt-1">{completedCount}/3 complétées</p>
+            <p className="shrink-0 text-xs text-[#78716C] mt-1">{completedCount}/4 complétées</p>
           </div>
-          <p className="text-sm text-[#16A34A] mt-0.5">Suivez ces 3 étapes pour recevoir des commandes</p>
+          <p className="text-sm text-[#16A34A] mt-0.5">Suivez ces 4 étapes pour recevoir des commandes</p>
         </div>
 
         <div className="w-full bg-[#BBF7D0] rounded-full h-2 overflow-hidden">
           <div
             className="bg-[#16A34A] h-2 rounded-full transition-all duration-500 ease-out"
-            style={{ width: `${(completedCount / 3) * 100}%` }}
+            style={{ width: `${(completedCount / 4) * 100}%` }}
           />
         </div>
       </div>

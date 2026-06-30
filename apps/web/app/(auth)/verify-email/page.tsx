@@ -2,12 +2,13 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { CheckCircle, Mail } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 function VerifyEmailContent() {
   const supabase = createClient()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const email = searchParams.get('email') ?? ''
   const confirmed = searchParams.get('confirmed') === '1'
@@ -16,6 +17,33 @@ function VerifyEmailContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cooldown, setCooldown] = useState(0)
+  const [retrying, setRetrying] = useState(false)
+  const [retryError, setRetryError] = useState<string | null>(null)
+
+  const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER
+  const whatsappBase = whatsappNumber ? `https://wa.me/${whatsappNumber}` : 'https://wa.me/21654727060'
+  const whatsappMsg = email
+    ? `Bonjour, j'ai un problème avec l'activation de mon compte Hanut. Mon email : ${email}`
+    : "Bonjour, j'ai un problème avec l'activation de mon compte Hanut."
+  const whatsappUrl = `${whatsappBase}?text=${encodeURIComponent(whatsappMsg)}`
+
+  async function handleRetry() {
+    setRetrying(true)
+    setRetryError(null)
+    try {
+      const res = await fetch('/api/auth/retry-profile', { method: 'POST' })
+      if (res.ok) {
+        router.push('/dashboard')
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setRetryError((data as { error?: string }).error ?? "L'activation a échoué. Contactez le support.")
+      }
+    } catch {
+      setRetryError('Erreur réseau. Vérifiez votre connexion.')
+    } finally {
+      setRetrying(false)
+    }
+  }
 
   useEffect(() => {
     if (cooldown <= 0) return
@@ -57,9 +85,26 @@ function VerifyEmailContent() {
           </div>
 
           {setupError ? (
-            <Link href="/contact" className="btn-primary w-full block">
-              Contacter le support
-            </Link>
+            <div className="space-y-3">
+              <button
+                onClick={handleRetry}
+                disabled={retrying}
+                className="btn-primary w-full disabled:opacity-50"
+              >
+                {retrying ? 'Activation en cours...' : 'Réessayer'}
+              </button>
+              {retryError && (
+                <p className="text-sm text-red-600">{retryError}</p>
+              )}
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-secondary w-full block text-center"
+              >
+                Contacter le support via WhatsApp
+              </a>
+            </div>
           ) : (
             <Link href="/dashboard" className="btn-primary w-full block">
               Accéder à mon tableau de bord

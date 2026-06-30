@@ -224,11 +224,16 @@ export async function GET(request: NextRequest) {
       if (!profile.ok) {
         Sentry.captureException(new Error(profile.error), {
           tags: { module: 'auth_callback', action: 'seller_profile' },
-          extra: { duplicateEmail: Boolean(profile.duplicateEmail) },
+          extra: {
+            duplicateEmail: Boolean(profile.duplicateEmail),
+            userId: verifiedUser.id,
+            email: verifiedUser.email,
+          },
         })
         const verifyUrl = new URL('/verify-email', requestUrl.origin)
         verifyUrl.searchParams.set('confirmed', '1')
         verifyUrl.searchParams.set('setup_error', '1')
+        if (verifiedUser.email) verifyUrl.searchParams.set('email', verifiedUser.email)
         return NextResponse.redirect(verifyUrl)
       }
 

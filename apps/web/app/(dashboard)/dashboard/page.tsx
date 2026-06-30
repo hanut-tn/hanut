@@ -225,6 +225,7 @@ export default async function DashboardPage() {
        (!seller?.onboarding_dismissed_until || new Date(seller.onboarding_dismissed_until) < new Date()) && (
         <OnboardingChecklist
           productAdded={(productCount ?? 0) > 0}
+          slugCreated={!!seller?.slug}
           linkCopied={onboardingSteps?.link_copied === true}
           firstOrder={(orderCount ?? 0) > 0 || onboardingSteps?.first_order === true}
           slug={seller?.slug ?? null}

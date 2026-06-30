@@ -56,10 +56,12 @@ function mockContext(overrides: Record<string, unknown> | null = {}) {
 
 function mockServerClient({
   steps = { product_added: false, link_copied: false, first_order: false },
+  slug = 'my-boutique',
   selectError = null,
   updateError = null,
 }: {
   steps?: Record<string, unknown>
+  slug?: string | null
   selectError?: { message: string } | null
   updateError?: { message: string } | null
 } = {}) {
@@ -67,7 +69,7 @@ function mockServerClient({
     select: vi.fn(() => selectQuery),
     eq: vi.fn(() => selectQuery),
     single: vi.fn().mockResolvedValue({
-      data: selectError ? null : { onboarding_steps: steps },
+      data: selectError ? null : { onboarding_steps: steps, slug },
       error: selectError,
     }),
   }
@@ -169,6 +171,16 @@ describe('PATCH /api/onboarding', () => {
     expect(updateQuery.eq).toHaveBeenCalledWith('id', 'seller-1')
     expect(cacheMock.revalidatePath).toHaveBeenCalledWith('/dashboard')
     expect(cacheMock.revalidateTag).toHaveBeenCalledWith('dashboard-seller-1')
+  })
+
+  it('rejects link_copied when seller has no slug', async () => {
+    mockContext()
+    mockServerClient({ slug: null })
+
+    const response = await PATCH(jsonRequest({ action: 'link_copied' }))
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({ error: expect.stringContaining('URL') })
   })
 
   it('surfaces Supabase update errors', async () => {

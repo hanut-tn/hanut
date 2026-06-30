@@ -255,7 +255,111 @@ describe('public order OTP routes', () => {
 
     expect(response.status).toBe(409)
     await expect(response.json()).resolves.toEqual({
-      error: 'Stock insuffisant. Ce produit vient d’être épuisé.',
+      error: "Stock insuffisant. Ce produit vient d'être épuisé.",
     })
+  })
+
+  it('sends a seller notification email after successful order creation', async () => {
+    vi.stubEnv('RESEND_API_KEY', 'test-resend-key')
+
+    const rpc = vi.fn().mockResolvedValue({
+      data: {
+        ok: true,
+        order_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        tracking_token: 'tracking-token',
+        seller_id: 'seller-1',
+      },
+      error: null,
+    })
+    const sellerQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: { email: 'vendeur@test.com', name: 'Ma Boutique' },
+        error: null,
+      }),
+    }
+    const productQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: { name: 'T-shirt', price: 50 }, error: null }),
+    }
+    serviceMock.createServiceClient
+      .mockReturnValueOnce({ rpc })
+      .mockReturnValue({
+        from: (table: string) => {
+          if (table === 'sellers') return sellerQuery
+          if (table === 'products') return productQuery
+          throw new Error(`Unexpected table in notify: ${table}`)
+        },
+      })
+
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response('{"id":"email-1"}', { status: 200 })
+    )
+
+    const response = await verifyOtp(verifyRequest())
+    expect(response.status).toBe(200)
+
+    await vi.waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'https://api.resend.com/emails',
+        expect.objectContaining({ method: 'POST' })
+      )
+    })
+
+    const call = fetchSpy.mock.calls.find(c => c[0] === 'https://api.resend.com/emails')
+    const body = JSON.parse(call![1]!.body as string)
+    expect(body.to).toBe('vendeur@test.com')
+    expect(body.subject).toContain('Fatima Ben Ali')
+
+    fetchSpy.mockRestore()
+  })
+
+  it('does not fail the route when seller notification email errors', async () => {
+    vi.stubEnv('RESEND_API_KEY', 'test-resend-key')
+
+    const rpc = vi.fn().mockResolvedValue({
+      data: {
+        ok: true,
+        order_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        tracking_token: 'tracking-token-2',
+        seller_id: 'seller-1',
+      },
+      error: null,
+    })
+    const sellerQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: { email: 'vendeur@test.com', name: 'Ma Boutique' },
+        error: null,
+      }),
+    }
+    const productQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }
+    serviceMock.createServiceClient
+      .mockReturnValueOnce({ rpc })
+      .mockReturnValue({
+        from: (table: string) => {
+          if (table === 'sellers') return sellerQuery
+          if (table === 'products') return productQuery
+          throw new Error(`Unexpected table in notify: ${table}`)
+        },
+      })
+
+    const fetchSpy = vi.spyOn(global, 'fetch').mockRejectedValue(new Error('Resend down'))
+
+    const response = await verifyOtp(verifyRequest())
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({
+      order_id: 'BBBBBBBB',
+      tracking_token: 'tracking-token-2',
+    })
+
+    fetchSpy.mockRestore()
   })
 })

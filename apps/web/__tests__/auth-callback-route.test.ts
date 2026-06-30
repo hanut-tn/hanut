@@ -286,11 +286,12 @@ describe('GET /api/auth/callback', () => {
 
     const response = await GET(request)
 
-    expect(response.headers.get('location')).toBe('https://hanut.test/verify-email?confirmed=1&setup_error=1')
+    expect(response.headers.get('location')).toBe('https://hanut.test/verify-email?confirmed=1&setup_error=1&email=seller%40example.com')
     expect(sentryMock.captureException).toHaveBeenCalledWith(
       expect.any(Error),
       expect.objectContaining({
         tags: { module: 'auth_callback', action: 'seller_profile' },
+        extra: expect.objectContaining({ userId: 'seller-1', email: 'seller@example.com' }),
       }),
     )
   })

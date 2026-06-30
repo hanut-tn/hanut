@@ -36,12 +36,16 @@ export async function PATCH(req: NextRequest) {
   if (body.action === 'link_copied' || body.action === 'first_order') {
     const { data: seller, error: selectError } = await supabase
       .from('sellers')
-      .select('onboarding_steps')
+      .select('onboarding_steps, slug')
       .eq('id', context.sellerId)
       .single()
 
     if (selectError) {
       return NextResponse.json({ error: selectError.message }, { status: 500 })
+    }
+
+    if (body.action === 'link_copied' && !seller?.slug) {
+      return NextResponse.json({ error: "Créez votre URL avant de copier le lien." }, { status: 400 })
     }
 
     const currentSteps = (seller?.onboarding_steps ?? {}) as Record<string, unknown>
