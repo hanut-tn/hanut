@@ -43,7 +43,7 @@ export default function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center mb-4">
-              <Image src="/logo-horizontal-blanc.svg" alt="Hanut" width={110} height={35} unoptimized />
+              <Image src="/logo-horizontal-blanc.svg" alt="Hanut" width={110} height={36} unoptimized />
             </Link>
             <p className="text-sm leading-relaxed text-gray-500">
               L&apos;outil de gestion pour vendeurs tunisiens
