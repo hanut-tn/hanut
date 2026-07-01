@@ -3,8 +3,13 @@ import { NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { ensureSignupSellerProfile } from '@/lib/signup-profile'
+import { checkOrigin } from '@/lib/csrf'
 
-export async function POST() {
+export async function POST(request: Request) {
+  if (!checkOrigin(request)) {
+    return NextResponse.json({ error: 'Origine non autorisée.' }, { status: 403 })
+  }
+
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
 

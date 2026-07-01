@@ -124,33 +124,36 @@ export async function deleteProduct(id: string): Promise<{ error?: string }> {
 
   const supabase = await createServerClient()
 
-  const { count: activeCount } = await supabase.from('orders')
-    .select('id', { count: 'exact', head: true })
+  // orders.product_id est le premier produit legacy de la commande.
+  // Les commandes multi-articles et les nouvelles créations doivent être vérifiées via order_items.
+  const { count: activeCount } = await supabase.from('order_items')
+    .select('id, orders!inner(id)', { count: 'exact', head: true })
     .eq('product_id', id)
     .eq('seller_id', context.sellerId)
-    .in('status', ['new', 'confirmed', 'shipped'])
-    .is('deleted_at', null)
+    .in('orders.status', ['pending', 'new', 'confirmed', 'shipped'])
+    .is('orders.deleted_at', null)
 
   if (activeCount && activeCount > 0) {
-    return { error: 'Ce produit a des commandes actives (nouvelles, confirmées ou expédiées) et ne peut pas être supprimé.' }
+    return { error: 'Ce produit a des commandes actives (en attente, nouvelles, confirmées ou expédiées) et ne peut pas être supprimé.' }
   }
 
-  const { count: linkedOrdersCount } = await supabase.from('orders')
-    .select('id', { count: 'exact', head: true })
+  const { count: linkedOrdersCount } = await supabase.from('order_items')
+    .select('id, orders!inner(id)', { count: 'exact', head: true })
     .eq('product_id', id)
     .eq('seller_id', context.sellerId)
-    .is('deleted_at', null)
+    .in('orders.status', ['cancelled', 'returned', 'delivered'])
+    .is('orders.deleted_at', null)
 
   if (linkedOrdersCount && linkedOrdersCount > 0) {
     return { error: 'Ce produit est lié à des commandes existantes et ne peut pas être supprimé définitivement.' }
   }
 
   // Bloquer si commandes en corbeille (FK constraint DB)
-  const { count: trashedCount } = await supabase.from('orders')
-    .select('id', { count: 'exact', head: true })
+  const { count: trashedCount } = await supabase.from('order_items')
+    .select('id, orders!inner(id)', { count: 'exact', head: true })
     .eq('product_id', id)
     .eq('seller_id', context.sellerId)
-    .not('deleted_at', 'is', null)
+    .not('orders.deleted_at', 'is', null)
 
   if (trashedCount && trashedCount > 0) {
     return { error: `Ce produit a ${trashedCount} commande${trashedCount > 1 ? 's' : ''} dans la corbeille. Videz la corbeille d'abord avant de supprimer ce produit.` }
