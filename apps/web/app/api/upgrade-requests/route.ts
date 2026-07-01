@@ -3,7 +3,7 @@ import { getUserContext } from '@/lib/get-context'
 import { createServiceClient } from '@/lib/supabase/service'
 import { checkOrigin } from '@/lib/csrf'
 
-const VALID_REQUESTED_PLANS = ['pro', 'business'] as const
+const VALID_REQUESTED_PLANS = ['pro'] as const
 
 export async function POST(req: NextRequest) {
   if (!checkOrigin(req)) {

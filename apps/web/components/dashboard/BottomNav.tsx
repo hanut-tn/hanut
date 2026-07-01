@@ -43,7 +43,7 @@ export default function BottomNav({ role, plan = 'starter' }: Props) {
   const pathname = usePathname()
   const { isSheetOpen, openSheet, closeSheet } = useMobileNav()
   const pendingCount = usePendingOrdersCount()
-  const hasTeamAccess = plan === 'pro' || plan === 'business'
+  const hasTeamAccess = plan !== 'starter'
 
   const primaryItems = PRIMARY_ITEMS.filter(item => item.roles.includes(role))
   const moreItems    = MORE_ITEMS.filter(item => item.roles.includes(role))

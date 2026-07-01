@@ -18,7 +18,7 @@ export async function POST(request: NextRequest, { params }: Params) {
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   if (context.role !== 'admin') return NextResponse.json({ error: 'Réservé aux admins' }, { status: 403 })
-  if (context.plan !== 'pro' && context.plan !== 'business') {
+  if (context.plan === 'starter') {
     return NextResponse.json({ error: 'Disponible dans le plan Pro' }, { status: 403 })
   }
   const activeCheck = requireActiveResponse(context)

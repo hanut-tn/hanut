@@ -66,13 +66,12 @@ const PLANS: {
 ]
 
 type PlanOption = (typeof PLANS)[number]
-type UpgradePlanKey = 'pro' | 'business'
+type UpgradePlanKey = 'pro'
 type UpgradePlan = PlanOption & { key: UpgradePlanKey }
 
 function getWhatsAppMessage(plan: UpgradePlanKey, vendorName: string): string {
   const messages = {
     pro: `Bonjour Hanut, je suis ${vendorName} et je voudrais passer au plan Pro (79 DT/mois). Pouvez-vous m'aider ?`,
-    business: `Bonjour Hanut, je suis ${vendorName} et je suis intéressé par le plan Business. Pouvez-vous m'informer de sa disponibilité ?`,
   }
   return encodeURIComponent(messages[plan])
 }
@@ -174,6 +173,7 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
   const pwStrength = getPasswordStrength(newPassword)
   const pendingEmailDisplay = emailSentTo ?? pendingEmail
   const upgradeWhatsappUrl = upgradePlan ? getWhatsAppUrl(upgradePlan.key, seller.name) : null
+  const hasTeamAccess = seller.plan !== 'starter'
 
   useEffect(() => {
     // Check if there is a pending email change already in progress
@@ -356,12 +356,12 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
             </span>
           </div>
         </div>
-        <div className={`grid gap-4 pt-4 border-t border-[#E7E5E4] text-center ${seller.plan === 'business' ? 'grid-cols-4' : 'grid-cols-3'}`}>
+        <div className={`grid gap-4 pt-4 border-t border-[#E7E5E4] text-center ${hasTeamAccess ? 'grid-cols-4' : 'grid-cols-3'}`}>
           {[
             { label: 'Produits',  val: stats.products  },
             { label: 'Clients',   val: stats.customers },
             { label: 'Commandes', val: stats.orders    },
-            ...(seller.plan === 'business' ? [{ label: 'Membres', val: stats.members }] : []),
+            ...(hasTeamAccess ? [{ label: 'Membres', val: stats.members }] : []),
           ].map(s => (
             <div key={s.label}>
               <p className="text-xl font-bold text-gray-900">{s.val}</p>
@@ -830,7 +830,8 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             {PLANS.map(plan => {
               const isCurrent = plan.key === seller.plan
-              const isPaidPlan = plan.key === 'pro' || plan.key === 'business'
+              const isBusiness = plan.key === 'business'
+              const isPaidPlan = plan.key === 'pro'
               const whatsappPlan = isPaidPlan ? plan as UpgradePlan : null
 
               return (
@@ -866,6 +867,10 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
                   {isCurrent ? (
                     <div className="w-full text-center py-2.5 rounded-lg bg-gray-100 text-gray-400 cursor-not-allowed text-sm font-medium">
                       Plan actuel
+                    </div>
+                  ) : isBusiness ? (
+                    <div className="w-full text-center py-2.5 rounded-lg bg-gray-100 text-gray-400 cursor-not-allowed text-sm font-medium">
+                      Bientôt disponible
                     </div>
                   ) : whatsappPlan ? (
                     <>
@@ -909,13 +914,13 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
               <div>
                 <p className="font-semibold text-gray-900">Gestion de l&apos;équipe</p>
                 <p className="text-sm text-gray-500">
-                  {seller.plan === 'business'
+                  {hasTeamAccess
                     ? 'Invitez des collaborateurs avec des rôles personnalisés'
-                    : 'Disponible dans le plan Business — invitez jusqu\'à 4 collaborateurs'}
+                    : 'Disponible dans le plan Pro — invitez jusqu\'à 3 collaborateurs'}
                 </p>
               </div>
             </div>
-            {seller.plan === 'business' ? (
+            {hasTeamAccess ? (
               <a
                 href="/team"
                 className="btn-secondary w-full text-center text-sm whitespace-nowrap sm:w-auto"
@@ -924,7 +929,7 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
               </a>
             ) : (
               <span className="inline-flex w-full items-center justify-center px-3 py-1.5 rounded-lg bg-[#F0FDF4] text-[#166534] border border-green-200 text-xs font-medium whitespace-nowrap sm:w-auto">
-                Plan Business requis
+                Plan Pro requis
               </span>
             )}
           </div>

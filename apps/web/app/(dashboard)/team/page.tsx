@@ -14,7 +14,7 @@ export default async function TeamPage() {
   const context = await getUserContext()
   if (!context) redirect('/login')
   if (context.role !== 'admin') redirect('/dashboard')
-  if (context.plan !== 'pro' && context.plan !== 'business') redirect('/settings?tab=abonnement')
+  if (context.plan === 'starter') redirect('/settings?tab=abonnement')
 
   const serviceClient = createServiceClient()
 

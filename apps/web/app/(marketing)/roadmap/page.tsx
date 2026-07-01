@@ -75,7 +75,7 @@ const IN_DEV: RoadmapItem[] = [
 
 const PLANNED: RoadmapItem[] = [
   {
-    title: 'Plan Business',
+    title: 'Offre avancée',
     desc: 'Multi-boutiques, équipe illimitée, accès API, rapport fiscal. En cours de préparation.',
   },
   {

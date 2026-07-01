@@ -32,7 +32,7 @@ const VerifyOtpSchema = z.object({
   variant: z.string().trim().max(100).optional(),
   quantity: z.coerce.number().int().min(1).max(99).optional(),
   notes: z.string().trim().max(500).optional(),
-  turnstile_token: z.string().optional(),
+  turnstile_token: z.string(),
   items: z.array(OrderItemInputSchema).max(20).optional(),
 }).merge(HanutAddressFieldsSchema)
 
@@ -43,6 +43,12 @@ type OtpRpcResult = {
   order_id?: string
   tracking_token?: string | null
   seller_id?: string
+}
+
+function getRequiredTurnstileToken(body: unknown): string | null {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return null
+  const token = (body as { turnstile_token?: unknown }).turnstile_token
+  return typeof token === 'string' && token.trim() ? token : null
 }
 
 function noStoreJson(body: Record<string, unknown>, status = 200) {
@@ -58,6 +64,17 @@ export async function POST(request: NextRequest) {
   }
 
   const rawBody = await request.json().catch(() => null)
+  const ip = getClientIp(request.headers)
+  const turnstileToken = getRequiredTurnstileToken(rawBody)
+  if (!turnstileToken) {
+    return noStoreJson({ error: 'Vérification de sécurité requise' }, 400)
+  }
+
+  const turnstileOk = await verifyTurnstileToken(turnstileToken, ip)
+  if (!turnstileOk) {
+    return noStoreJson({ error: 'Vérification anti-spam échouée. Réessayez.' }, 403)
+  }
+
   const parsed = VerifyOtpSchema.safeParse(rawBody)
   if (!parsed.success) {
     return noStoreJson(
@@ -77,7 +94,6 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Numéro de téléphone tunisien invalide.' }, 400)
   }
 
-  const ip = getClientIp(request.headers)
   try {
     const ipLimit = await checkRateLimit(ip, 'verify_otp_ip', 20, 10)
     if (!ipLimit.allowed) {
@@ -86,13 +102,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[verify-otp] rate-limit error:', error)
     return noStoreJson({ error: 'Protection anti-spam indisponible. Réessayez.' }, 503)
-  }
-
-  if (parsed.data.turnstile_token) {
-    const turnstileOk = await verifyTurnstileToken(parsed.data.turnstile_token, ip)
-    if (!turnstileOk) {
-      return noStoreJson({ error: 'Vérification anti-spam échouée. Réessayez.' }, 403)
-    }
   }
 
   try {

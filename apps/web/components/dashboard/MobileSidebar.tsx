@@ -39,7 +39,7 @@ export default function MobileSidebar({ role, sellerName, plan = 'starter' }: Pr
   const pathname     = usePathname()
   const { isDrawerOpen, closeDrawer } = useMobileNav()
   const pendingCount = usePendingOrdersCount()
-  const hasTeamAccess = plan === 'pro' || plan === 'business'
+  const hasTeamAccess = plan !== 'starter'
   const visible      = NAV_ITEMS.filter(item => item.roles.includes(role))
 
   const initials = sellerName

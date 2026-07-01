@@ -127,6 +127,7 @@ export const PLAN_LIMITS = {
     topStats: true,
     csvExport: true,
   },
+  // TODO: Business plan - pas encore disponible.
   business: {
     ordersPerMonth: Infinity,
     analyticsDays: 180,

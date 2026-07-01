@@ -400,7 +400,7 @@ export default function OrdersClient({
   }, [debouncedSearch])
 
   const isAdmin = role === 'admin'
-  const canExport = plan === 'pro' || plan === 'business'
+  const canExport = plan !== 'starter'
   const activeStatus: OrderStatus | null = tab !== 'all' && tab !== 'trash' ? tab : null
 
   const counts = useMemo(() => localTabCounts as Partial<Record<OrderStatus | 'all', number>>, [localTabCounts])

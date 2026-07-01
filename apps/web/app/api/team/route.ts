@@ -26,7 +26,7 @@ function getTeamMemberLimit(plan: keyof typeof PLAN_LIMITS) {
 export async function GET() {
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
-  if (context.plan !== 'pro' && context.plan !== 'business') {
+  if (context.plan === 'starter') {
     return NextResponse.json({ error: 'Disponible dans le plan Pro' }, { status: 403 })
   }
 
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
   const context = await getUserContext()
   if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   if (context.role !== 'admin') return NextResponse.json({ error: 'Réservé aux admins' }, { status: 403 })
-  if (context.plan !== 'pro' && context.plan !== 'business') {
+  if (context.plan === 'starter') {
     return NextResponse.json({ error: "La gestion d'équipe est disponible dans le plan Pro" }, { status: 403 })
   }
   const activeCheck = requireActiveResponse(context)

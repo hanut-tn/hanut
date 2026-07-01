@@ -17,8 +17,14 @@ import {
 const SendOtpSchema = z.object({
   slug: z.string().trim().min(1).max(120),
   email: z.string().trim().email().max(254),
-  turnstile_token: z.string().optional(),
+  turnstile_token: z.string(),
 })
+
+function getRequiredTurnstileToken(body: unknown): string | null {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return null
+  const token = (body as { turnstile_token?: unknown }).turnstile_token
+  return typeof token === 'string' && token.trim() ? token : null
+}
 
 function noStoreJson(body: Record<string, unknown>, status = 200) {
   return NextResponse.json(body, {
@@ -33,6 +39,17 @@ export async function POST(request: NextRequest) {
   }
 
   const rawBody = await request.json().catch(() => null)
+  const ip = getClientIp(request.headers)
+  const turnstileToken = getRequiredTurnstileToken(rawBody)
+  if (!turnstileToken) {
+    return noStoreJson({ error: 'Vérification de sécurité requise' }, 400)
+  }
+
+  const turnstileOk = await verifyTurnstileToken(turnstileToken, ip)
+  if (!turnstileOk) {
+    return noStoreJson({ error: 'Vérification anti-spam échouée. Réessayez.' }, 403)
+  }
+
   const parsed = SendOtpSchema.safeParse(rawBody)
   if (!parsed.success) {
     return noStoreJson({ error: 'Adresse email ou boutique invalide.' }, 400)
@@ -40,7 +57,6 @@ export async function POST(request: NextRequest) {
 
   const slug = normalizeOtpSlug(parsed.data.slug)
   const email = normalizeOtpEmail(parsed.data.email)
-  const ip = getClientIp(request.headers)
 
   try {
     const ipLimit = await checkRateLimit(ip, 'send_otp_ip', 3, 10)
@@ -50,13 +66,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[send-otp] rate-limit error:', error)
     return noStoreJson({ error: 'Protection anti-spam indisponible. Réessayez.' }, 503)
-  }
-
-  if (parsed.data.turnstile_token) {
-    const turnstileOk = await verifyTurnstileToken(parsed.data.turnstile_token, ip)
-    if (!turnstileOk) {
-      return noStoreJson({ error: 'Vérification anti-spam échouée. Réessayez.' }, 403)
-    }
   }
 
   try {

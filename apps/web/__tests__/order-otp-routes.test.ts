@@ -44,7 +44,7 @@ import { POST as verifyOtp } from '../app/api/orders/verify-otp/route'
 
 const PRODUCT_ID = '11111111-1111-4111-8111-111111111111'
 
-function sendRequest() {
+function sendRequest(overrides: Record<string, unknown> = {}) {
   return new NextRequest('https://hanut.test/api/orders/send-otp', {
     method: 'POST',
     headers: { 'content-type': 'application/json', origin: 'https://hanut.test' },
@@ -52,6 +52,7 @@ function sendRequest() {
       slug: 'demo-shop',
       email: 'CLIENT@Example.com',
       turnstile_token: 'send-token',
+      ...overrides,
     }),
   })
 }
@@ -130,6 +131,54 @@ describe('public order OTP routes', () => {
 
   afterEach(() => {
     vi.unstubAllEnvs()
+  })
+
+  it('rejects OTP sending without a Turnstile token', async () => {
+    const response = await sendOtp(sendRequest({ turnstile_token: undefined }))
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: 'Vérification de sécurité requise',
+    })
+    expect(turnstileMock.verifyTurnstileToken).not.toHaveBeenCalled()
+    expect(rateLimitMock.checkRateLimit).not.toHaveBeenCalled()
+    expect(serviceMock.createServiceClient).not.toHaveBeenCalled()
+  })
+
+  it('rejects OTP sending with an empty Turnstile token', async () => {
+    const response = await sendOtp(sendRequest({ turnstile_token: '' }))
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: 'Vérification de sécurité requise',
+    })
+    expect(turnstileMock.verifyTurnstileToken).not.toHaveBeenCalled()
+    expect(rateLimitMock.checkRateLimit).not.toHaveBeenCalled()
+    expect(serviceMock.createServiceClient).not.toHaveBeenCalled()
+  })
+
+  it('rejects OTP verification without a Turnstile token', async () => {
+    const response = await verifyOtp(verifyRequest({ turnstile_token: undefined }))
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: 'Vérification de sécurité requise',
+    })
+    expect(turnstileMock.verifyTurnstileToken).not.toHaveBeenCalled()
+    expect(rateLimitMock.checkRateLimit).not.toHaveBeenCalled()
+    expect(serviceMock.createServiceClient).not.toHaveBeenCalled()
+  })
+
+  it('rejects OTP verification with an empty Turnstile token', async () => {
+    const response = await verifyOtp(verifyRequest({ turnstile_token: '' }))
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: 'Vérification de sécurité requise',
+    })
+    expect(turnstileMock.verifyTurnstileToken).not.toHaveBeenCalled()
+    expect(rateLimitMock.checkRateLimit).not.toHaveBeenCalled()
+    expect(serviceMock.createServiceClient).not.toHaveBeenCalled()
   })
 
   it('protects OTP sending with two rate limits and Turnstile', async () => {
@@ -222,13 +271,7 @@ describe('public order OTP routes', () => {
     const response = await sendOtp(sendRequest())
 
     expect(response.status).toBe(403)
-    expect(rateLimitMock.checkRateLimit).toHaveBeenCalledTimes(1)
-    expect(rateLimitMock.checkRateLimit).toHaveBeenCalledWith(
-      '127.0.0.1',
-      'send_otp_ip',
-      3,
-      10,
-    )
+    expect(rateLimitMock.checkRateLimit).not.toHaveBeenCalled()
     expect(serviceMock.createServiceClient).not.toHaveBeenCalled()
   })
 

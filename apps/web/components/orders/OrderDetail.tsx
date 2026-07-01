@@ -118,8 +118,6 @@ export default function OrderDetail({
   const [isPending, startTransition] = useTransition()
   const [actionError, setActionError] = useState<string | null>(null)
   const [bannerDismissed, setBannerDismissed] = useState(false)
-  const [bannerLoading, setBannerLoading] = useState(false)
-  const [bannerDone, setBannerDone] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   // Modal création livraison (status confirmed) — 2 étapes
@@ -174,19 +172,6 @@ export default function OrderDetail({
     })
   }
 
-  async function linkToExisting() {
-    if (!linkedCustomer) return
-    setBannerLoading(true)
-    await fetch(`/api/orders/${order.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customer_id: linkedCustomer.id }),
-    })
-    setBannerDone(true)
-    setBannerLoading(false)
-    router.refresh()
-  }
-
   /* Build timeline steps from current status */
   const timelineItems: { icon: React.ElementType; label: string; date?: string; active: boolean }[] = [
     { icon: Clock, label: 'Commande créée', date: formatDate(order.created_at), active: true },
@@ -223,22 +208,22 @@ export default function OrderDetail({
       </Link>
 
       {/* Banners */}
-      {isPendingOrder && !bannerDismissed && !bannerDone && (
+      {isPendingOrder && !bannerDismissed && (
         hasExistingCustomer && linkedCustomer ? (
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-blue-900">
                 Ce numéro correspond au client <span className="underline">{linkedCustomer.name}</span>
               </p>
-              <p className="text-xs text-blue-600 mt-0.5">Lier cette commande à ce client existant&nbsp;?</p>
+              <p className="text-xs text-blue-600 mt-0.5">Ouvrez sa fiche pour vérifier les informations avant de traiter la commande.</p>
             </div>
             <div className="flex gap-2 shrink-0">
               <button onClick={() => setBannerDismissed(true)} className="text-xs px-3 py-1.5 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-100 transition-colors">
                 Ignorer
               </button>
-              <button onClick={linkToExisting} disabled={bannerLoading} className="text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors font-semibold">
-                {bannerLoading ? '...' : 'Lier'}
-              </button>
+              <Link href={`/customers/${linkedCustomer.id}`} className="text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-semibold">
+                Voir la fiche
+              </Link>
             </div>
           </div>
         ) : customer && (
@@ -257,12 +242,6 @@ export default function OrderDetail({
             </div>
           </div>
         )
-      )}
-
-      {bannerDone && (
-        <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 font-medium">
-          Client lié avec succès.
-        </div>
       )}
 
       {actionError && (
