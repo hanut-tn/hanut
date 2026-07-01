@@ -54,8 +54,8 @@ export default function Sidebar({ role, sellerName, plan = 'pro', daysLeft }: Pr
   return (
     <aside className="w-56 bg-white border-r border-[#E7E5E4] flex flex-col h-screen sticky top-0">
       {/* Logo */}
-      <div className="flex items-center px-4 py-5 border-b border-[#E7E5E4]">
-        <Image src="/logo-horizontal.svg" alt="Hanut" width={110} height={36} unoptimized />
+      <div className="flex items-center px-4 py-3 border-b border-[#E7E5E4]">
+        <Image src="/logo-horizontal.svg" alt="Hanut" width={96} height={32} unoptimized />
       </div>
 
       {/* Nav */}
