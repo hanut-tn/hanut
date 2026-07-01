@@ -419,7 +419,7 @@ export default function ProductDetailClient({
             </div>
             {currentCost != null && (
               <div className="flex items-center gap-4 text-sm text-[#78716C]">
-                <span>Coût : <strong className="text-[#1C1917]">{currentCost} DT</strong></span>
+                <span>Prix d&apos;achat : <strong className="text-[#1C1917]">{currentCost} DT</strong></span>
                 {margin !== null && (
                   <span className="text-[#16A34A] font-medium bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
                     Marge {margin}%

@@ -31,29 +31,6 @@ const STEPS = [
   },
 ]
 
-const TESTIMONIALS = [
-  {
-    quote:
-      "Avant je gérais tout sur WhatsApp et j'oubliais des commandes. Maintenant tout est centralisé et j'ai zéro perte.",
-    name: 'Yasmine B.',
-    role: 'Boutique mode — Tunis',
-    avatar: 'YB',
-  },
-  {
-    quote:
-      'Le lien de suivi a réduit mes appels clients. Mes clients savent où est leur colis sans m\'appeler.',
-    name: 'Karim M.',
-    role: 'Électronique — Sfax',
-    avatar: 'KM',
-  },
-  {
-    quote:
-      "J'ai multiplié mes ventes par 2 en 3 mois, sans changer ma façon de vendre. Hanut gère tout l'admin à ma place.",
-    name: 'Nour T.',
-    role: 'Beauté & Cosmétiques — Sousse',
-    avatar: 'NT',
-  },
-]
 
 // ─── Mockups ──────────────────────────────────────────────────────────────────
 
@@ -242,8 +219,7 @@ export default function LandingPage() {
         <CarrierBand />
         <FeaturesSection />
         <HowItWorks />
-        <DemoSection />
-        <TestimonialsSection />
+        <EarlyAdoptersSection />
         <PricingToggle />
         <CtaSection />
       </main>
@@ -265,7 +241,7 @@ function Hero() {
       <div className="relative max-w-4xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 bg-green-50 text-[#0B5E46] text-sm font-semibold px-4 py-1.5 rounded-full mb-8 border border-green-100">
           <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          Bêta privée · Démo Pro 14 jours · Aucune carte bancaire
+          Lancement en Tunisie · Démo Pro 14 jours · Aucune carte bancaire
         </div>
 
         <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-extrabold text-[#1C1917] leading-[1.1] tracking-tight mb-6">
@@ -293,7 +269,7 @@ function Hero() {
             href="#features"
             className="w-full sm:w-auto inline-flex items-center justify-center text-[#1C1917] border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-base font-medium px-8 py-3.5 rounded-xl transition-colors"
           >
-            Voir une démo
+            Voir les fonctionnalités
           </a>
         </div>
 
@@ -446,69 +422,28 @@ function HowItWorks() {
   )
 }
 
-// ─── Demo Section ─────────────────────────────────────────────────────────────
+// ─── Early Adopters ───────────────────────────────────────────────────────────
 
-function DemoSection() {
-  return (
-    <section className="py-16 sm:py-24 px-4 sm:px-6 bg-white">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-10">
-          <p className="text-sm font-semibold text-[#16A34A] uppercase tracking-widest mb-3">Démo</p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1C1917] tracking-tight">
-            Voyez Hanut en action
-          </h2>
-          <p className="mt-4 text-lg text-gray-500">30 secondes pour créer une commande, de A à Z</p>
-        </div>
-        <div className="relative aspect-video bg-[#0B5E46] rounded-2xl shadow-2xl overflow-hidden flex flex-col items-center justify-center gap-4">
-          <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <path d="M11 8L25 16L11 24V8Z" fill="white" />
-            </svg>
-          </div>
-          <p className="text-white/70 text-sm font-medium">Vidéo démo disponible bientôt</p>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-// ─── Testimonials ─────────────────────────────────────────────────────────────
-
-function TestimonialsSection() {
+function EarlyAdoptersSection() {
   return (
     <section id="about" className="py-24 sm:py-32 px-4 sm:px-6 bg-[#FAFAF9]">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-16">
-          <p className="text-sm font-semibold text-[#16A34A] uppercase tracking-widest mb-3">Témoignages</p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1C1917] tracking-tight">Ils utilisent Hanut</h2>
-          <p className="mt-4 text-lg text-gray-500">Des vendeurs tunisiens qui ont changé leur façon de gérer.</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {TESTIMONIALS.map((t, i) => (
-            <div key={i} className="bg-white rounded-2xl p-7 border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col">
-              <div className="flex gap-0.5 mb-5">
-                {Array.from({ length: 5 }).map((_, j) => (
-                  <svg key={j} width="16" height="16" viewBox="0 0 16 16" fill="#16A34A">
-                    <path d="M8 1L10 6H15L11 9L12.5 14L8 11L3.5 14L5 9L1 6H6L8 1Z" />
-                  </svg>
-                ))}
-              </div>
-              <blockquote className="text-gray-600 text-sm leading-relaxed mb-6 flex-1">
-                &ldquo;{t.quote}&rdquo;
-              </blockquote>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center shrink-0">
-                  <span className="text-[#0B5E46] text-xs font-bold">{t.avatar}</span>
-                </div>
-                <div>
-                  <p className="font-semibold text-[#1C1917] text-sm">{t.name}</p>
-                  <p className="text-xs text-gray-400">{t.role}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+      <div className="max-w-3xl mx-auto text-center">
+        <p className="text-sm font-semibold text-[#16A34A] uppercase tracking-widest mb-3">Communauté</p>
+        <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1C1917] tracking-tight mb-4">
+          Rejoignez les premiers vendeurs tunisiens sur Hanut
+        </h2>
+        <p className="text-lg text-gray-500 mb-10 max-w-xl mx-auto">
+          Hanut est en lancement actif en Tunisie. Faites partie des premiers à gérer vos commandes plus vite, plus simplement — sans changer votre façon de vendre.
+        </p>
+        <Link
+          href="/register"
+          className="inline-flex items-center justify-center gap-2 bg-[#16A34A] hover:bg-green-700 text-white text-base font-semibold px-8 py-3.5 rounded-xl transition-colors shadow-lg shadow-green-200"
+        >
+          Créer mon compte gratuitement
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
+            <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </Link>
       </div>
     </section>
   )
@@ -526,7 +461,7 @@ function CtaSection() {
           comme un pro ?
         </h2>
         <p className="text-green-200 text-lg mb-10">
-          Rejoignez les premiers vendeurs tunisiens en bêta privée. Démo Pro 14 jours incluse.
+          Rejoignez les premiers vendeurs tunisiens. Démo Pro 14 jours incluse.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link

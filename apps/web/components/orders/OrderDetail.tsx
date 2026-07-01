@@ -598,7 +598,7 @@ export default function OrderDetail({
               {totalCost > 0 && (
                 <>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#78716C]">Coût produit</span>
+                    <span className="text-sm text-[#78716C]">Prix d&apos;achat</span>
                     <span className="text-sm text-[#1C1917]">−{totalCost} DT</span>
                   </div>
                   <div className="pt-2 border-t border-[#E7E5E4] flex items-center justify-between">

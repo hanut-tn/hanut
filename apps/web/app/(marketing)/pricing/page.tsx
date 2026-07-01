@@ -171,7 +171,7 @@ export default function PricingPage() {
           </h1>
           <div className="inline-flex items-center gap-2 bg-green-50 border border-green-100 text-[#0B5E46] text-sm font-medium px-4 py-1.5 rounded-full mb-6">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            Bêta privée · Démo Pro 14 jours · Aucune carte bancaire
+            Lancement en Tunisie · Démo Pro 14 jours · Aucune carte bancaire
           </div>
           <p className="text-lg text-gray-500 mb-8">Sans engagement. Activation accompagnée sur WhatsApp.</p>
         </div>

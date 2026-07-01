@@ -109,7 +109,7 @@ function ProductCard({
           <p className="text-lg font-bold text-[#16A34A]">{product.price} DT</p>
           {product.cost != null && (
             <div className="flex items-center gap-3 mt-0.5">
-              <span className="text-xs text-[#78716C]">Coût : {product.cost} DT</span>
+              <span className="text-xs text-[#78716C]">Achat : {product.cost} DT</span>
               {margin !== null && (
                 <span className="text-xs text-[#78716C]">Marge : {margin}%</span>
               )}
@@ -224,7 +224,7 @@ function ProductListMobileCard({
 
           <p className="text-xs text-[#78716C] truncate">
             <span className="font-semibold text-[#16A34A]">{product.price} DT</span>
-            {product.cost != null && <> · Coût: {product.cost} DT</>}
+            {product.cost != null && <> · Achat : {product.cost} DT</>}
             {margin != null && <> · Marge: {margin}%</>}
           </p>
 
@@ -619,7 +619,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
           <table className="w-full text-sm">
             <thead className="bg-[#FAFAF9] border-b border-[#E7E5E4]">
               <tr>
-                {['Photo', 'Produit', 'Prix', 'Coût / Marge', 'Stock', 'Statut', 'Actions'].map(h => (
+                {['Photo', 'Produit', 'Prix', 'Achat / Marge', 'Stock', 'Statut', 'Actions'].map(h => (
                   <th
                     key={h}
                     className="text-left text-xs font-medium text-[#78716C] uppercase tracking-wide px-4 py-3 first:pl-5"

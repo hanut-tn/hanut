@@ -243,7 +243,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[#1C1917] mb-1">
-                      Coût de revient (DT)
+                      Prix d&apos;achat (DT)
                     </label>
                     <input
                     className="input"
@@ -252,8 +252,9 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                       step="0.01"
                       value={form.cost ?? ''}
                       onChange={e => set('cost', e.target.value ? parseFloat(e.target.value) : null)}
-                      placeholder="Optionnel"
+                      placeholder="Ex: 25 DT"
                     />
+                    <p className="mt-1 text-xs text-[#78716C]">Le prix auquel vous achetez ce produit. Utilisé pour calculer votre marge.</p>
                   </div>
                 </div>
 
@@ -325,45 +326,80 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                 </button>
               </div>
               {form.variants.length > 0 && (
-                <div className="-mx-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
-                  <div className="min-w-[520px] space-y-2">
-                  <div className="grid grid-cols-[1fr_1fr_80px_44px] gap-2 px-1">
+                <div className="space-y-2">
+                  {/* En-tête desktop uniquement */}
+                  <div className="hidden sm:grid grid-cols-[1fr_1fr_80px_44px] gap-2 px-1">
                     <span className="text-xs text-[#78716C]">Taille</span>
                     <span className="text-xs text-[#78716C]">Couleur</span>
                     <span className="text-xs text-[#78716C]">Qté</span>
                     <span />
                   </div>
                   {form.variants.map((v, i) => (
-                    <div key={i} className="grid grid-cols-[1fr_1fr_80px_44px] gap-2 items-center">
-                      <input
-                        className="input"
-                        value={v.size ?? ''}
-                        onChange={e => updateVariant(i, 'size', e.target.value)}
-                        placeholder="M, L, XL…"
-                      />
-                      <input
-                        className="input"
-                        value={v.color ?? ''}
-                        onChange={e => updateVariant(i, 'color', e.target.value)}
-                        placeholder="Noir, Blanc…"
-                      />
-                      <input
-                        className="input"
-                        type="number"
-                        min="0"
-                        value={v.qty}
-                        onChange={e => updateVariant(i, 'qty', parseInt(e.target.value) || 0)}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeVariant(i)}
-                        className="flex min-h-[44px] touch-manipulation items-center justify-center text-[#78716C] hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                    <div key={i}>
+                      {/* Mobile : carte empilée */}
+                      <div className="sm:hidden rounded-xl border border-[#E7E5E4] p-3 space-y-2">
+                        <div className="grid grid-cols-[1fr_44px] gap-2 items-center">
+                          <input
+                            className="input"
+                            value={v.size ?? ''}
+                            onChange={e => updateVariant(i, 'size', e.target.value)}
+                            placeholder="Taille (M, L, XL…)"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeVariant(i)}
+                            className="flex min-h-[44px] touch-manipulation items-center justify-center text-[#78716C] hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-[1fr_80px] gap-2">
+                          <input
+                            className="input"
+                            value={v.color ?? ''}
+                            onChange={e => updateVariant(i, 'color', e.target.value)}
+                            placeholder="Couleur (Noir, Blanc…)"
+                          />
+                          <input
+                            className="input"
+                            type="number"
+                            min="0"
+                            value={v.qty}
+                            onChange={e => updateVariant(i, 'qty', parseInt(e.target.value) || 0)}
+                          />
+                        </div>
+                      </div>
+                      {/* Desktop : ligne grille */}
+                      <div className="hidden sm:grid grid-cols-[1fr_1fr_80px_44px] gap-2 items-center">
+                        <input
+                          className="input"
+                          value={v.size ?? ''}
+                          onChange={e => updateVariant(i, 'size', e.target.value)}
+                          placeholder="M, L, XL…"
+                        />
+                        <input
+                          className="input"
+                          value={v.color ?? ''}
+                          onChange={e => updateVariant(i, 'color', e.target.value)}
+                          placeholder="Noir, Blanc…"
+                        />
+                        <input
+                          className="input"
+                          type="number"
+                          min="0"
+                          value={v.qty}
+                          onChange={e => updateVariant(i, 'qty', parseInt(e.target.value) || 0)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeVariant(i)}
+                          className="flex min-h-[44px] touch-manipulation items-center justify-center text-[#78716C] hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   ))}
-                  </div>
                 </div>
               )}
             </div>

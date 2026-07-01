@@ -133,7 +133,7 @@ export default function PricingToggle() {
           <p className="mt-4 text-lg text-gray-500">Sans engagement. Changez de plan quand vous voulez.</p>
           <div className="inline-flex items-center gap-2 bg-green-50 border border-green-100 text-[#0B5E46] text-sm font-medium px-4 py-1.5 rounded-full mt-4">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            Bêta privée · Démo Pro 14 jours · Aucune carte bancaire
+            Lancement en Tunisie · Démo Pro 14 jours · Aucune carte bancaire
           </div>
         </div>
 
