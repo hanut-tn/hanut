@@ -1,16 +1,34 @@
 #!/usr/bin/env bash
-# Applique le schéma de base + toutes les migrations sur une DB cible.
-# Contourne le problème de préfixes de date dupliqués de supabase db push.
+# ⚠️  DÉPRÉCIÉ — utilise supabase db push à la place.
 #
-# Usage :
-#   ./scripts/db-migrate.sh "postgresql://postgres:PASSWORD@HOST:5432/postgres"
+# Ce script réapplique TOUTES les migrations depuis zéro (DB vierge uniquement).
+# Il ne peut pas être utilisé sur une base existante.
 #
-# Exemples :
-#   # Staging Supabase (récupérer l'URL dans : Dashboard → Settings → Database → URI)
-#   ./scripts/db-migrate.sh "postgresql://postgres:monpassword@db.xxxx.supabase.co:5432/postgres"
+# Remplacements :
+#   Appliquer des migrations incrémentales → supabase db push
+#   Réinitialiser une base locale          → supabase db reset
+#   Vérifier l'état des migrations         → supabase migration list
 #
-#   # Local (après supabase start)
-#   ./scripts/db-migrate.sh "postgresql://postgres:postgres@localhost:54322/postgres"
+# Ce script reste disponible avec --force pour les cas exceptionnels
+# (ex: initialiser une toute nouvelle base vierge sans CLI).
+
+if [ "${1:-}" != "--force" ]; then
+  echo ""
+  echo "⚠️  Ce script est déprécié."
+  echo ""
+  echo "   Appliquer de nouvelles migrations :"
+  echo "     supabase db push"
+  echo ""
+  echo "   Vérifier l'état :"
+  echo "     supabase migration list"
+  echo ""
+  echo "   Pour forcer l'ancien comportement (DB vierge uniquement) :"
+  echo "     $0 --force <DATABASE_URL>"
+  echo ""
+  exit 1
+fi
+
+shift   # retire --force, le reste est la DB_URL
 
 set -euo pipefail
 
