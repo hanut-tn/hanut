@@ -258,7 +258,7 @@ function Hero() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
             href="/register"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#16A34A] hover:bg-green-700 text-white text-base font-semibold px-8 py-3.5 rounded-xl transition-colors shadow-lg shadow-green-200"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#16A34A] text-white text-base font-semibold px-8 py-3.5 rounded-lg transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97]"
           >
             Démo Pro 14 jours — Sans carte bancaire
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
@@ -267,7 +267,7 @@ function Hero() {
           </Link>
           <a
             href="#features"
-            className="w-full sm:w-auto inline-flex items-center justify-center text-[#1C1917] border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-base font-medium px-8 py-3.5 rounded-xl transition-colors"
+            className="w-full sm:w-auto inline-flex items-center justify-center text-[#16A34A] border border-[#16A34A] hover:bg-green-50 hover:border-[#15803D] hover:text-[#15803D] text-base font-medium px-8 py-3.5 rounded-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
           >
             Voir les fonctionnalités
           </a>
@@ -437,7 +437,7 @@ function EarlyAdoptersSection() {
         </p>
         <Link
           href="/register"
-          className="inline-flex items-center justify-center gap-2 bg-[#16A34A] hover:bg-green-700 text-white text-base font-semibold px-8 py-3.5 rounded-xl transition-colors shadow-lg shadow-green-200"
+          className="inline-flex items-center justify-center gap-2 bg-[#16A34A] text-white text-base font-semibold px-8 py-3.5 rounded-lg transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97]"
         >
           Créer mon compte gratuitement
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
@@ -466,7 +466,7 @@ function CtaSection() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             href="/register"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-[#0B5E46] hover:bg-green-50 text-base font-bold px-8 py-3.5 rounded-xl transition-colors shadow-lg"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-[#0B5E46] text-base font-bold px-8 py-3.5 rounded-lg transition-all duration-150 ease-out hover:bg-green-50 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-white/40 active:scale-[0.97]"
           >
             Démarrer la démo Pro
           </Link>
@@ -474,7 +474,7 @@ function CtaSection() {
             href={`${HANUT_CONTACT.whatsappUrl}?text=${encodeURIComponent('Bonjour Hanut, je voudrais une démonstration.')}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full sm:w-auto inline-flex items-center justify-center text-green-100 border border-green-600 hover:border-green-400 hover:text-white text-base font-medium px-8 py-3.5 rounded-xl transition-colors"
+            className="w-full sm:w-auto inline-flex items-center justify-center text-green-100 border border-green-600 hover:border-green-400 hover:text-white text-base font-medium px-8 py-3.5 rounded-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
           >
             Demander une démo
           </a>

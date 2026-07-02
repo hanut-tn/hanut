@@ -62,7 +62,7 @@ export default function WaitlistForm() {
           <button
             type="submit"
             disabled={status === 'loading' || (isTurnstileEnabled() && !turnstileToken)}
-            className="min-h-[44px] touch-manipulation bg-[#0B5E46] text-white rounded-lg px-4 py-2.5 text-sm font-medium whitespace-nowrap hover:bg-[#0a5240] disabled:opacity-50 transition-colors"
+            className="min-h-[44px] touch-manipulation bg-[#16A34A] text-white rounded-lg px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100"
           >
             {status === 'loading' ? '...' : 'Me prévenir des nouveautés'}
           </button>

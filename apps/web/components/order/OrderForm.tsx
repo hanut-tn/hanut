@@ -418,7 +418,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
           <p className="text-sm font-semibold text-[#1C1917]">Suivre ma commande</p>
           <a
             href={trackUrl}
-            className="flex items-center justify-center gap-2 min-h-[44px] w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold rounded-xl text-sm transition-colors touch-manipulation"
+            className="flex items-center justify-center gap-2 min-h-[44px] w-full bg-[#16A34A] text-white font-semibold rounded-lg text-sm transition-all duration-150 ease-out hover:bg-[#15803D] hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97] touch-manipulation"
           >
             <ExternalLink className="w-4 h-4" />
             Voir le statut de ma commande
@@ -428,7 +428,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
             onClick={() => {
               navigator.clipboard.writeText(trackUrl).catch(() => {})
             }}
-            className="flex items-center justify-center gap-2 min-h-[44px] w-full border border-[#E7E5E4] text-[#78716C] rounded-xl text-sm hover:bg-[#F5F5F4] transition-colors touch-manipulation"
+            className="flex items-center justify-center gap-2 min-h-[44px] w-full border border-[#16A34A] text-[#16A34A] rounded-lg text-sm transition-all duration-150 ease-out hover:bg-green-50 hover:border-[#15803D] hover:text-[#15803D] hover:scale-[1.03] active:scale-[0.97] touch-manipulation"
           >
             <Copy className="w-4 h-4" />
             Copier le lien de suivi
@@ -445,7 +445,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
             setTurnstileToken(''); setTurnstileResetKey(k => k + 1)
             setStep('form')
           }}
-          className="min-h-[44px] touch-manipulation text-sm font-medium text-[#16A34A] hover:underline"
+          className="min-h-[44px] touch-manipulation text-sm font-medium text-[#16A34A] transition-all duration-150 ease-out hover:scale-[1.03] hover:text-[#15803D] hover:underline active:scale-[0.97]"
         >
           Passer une autre commande →
         </button>
@@ -492,7 +492,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
             type="button"
             onClick={() => handleOtpSubmit(otpDigits.join(''))}
             disabled={loading || otpDigits.some(d => !d)}
-            className="h-12 w-full touch-manipulation bg-[#16A34A] hover:bg-green-700 disabled:opacity-60 text-white font-bold rounded-2xl text-base transition-colors shadow-lg shadow-green-200"
+            className="h-12 w-full touch-manipulation bg-[#16A34A] text-white font-bold rounded-lg text-base transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100"
           >
             {loading ? 'Vérification…' : 'Valider le code'}
           </button>
@@ -505,7 +505,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
                 type="button"
                 onClick={handleResendOtp}
                 disabled={loading}
-                className="text-sm text-[#16A34A] font-medium hover:underline disabled:opacity-60"
+                className="text-sm text-[#16A34A] font-medium transition-all duration-150 ease-out hover:scale-[1.03] hover:text-[#15803D] hover:underline active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
               >
                 Renvoyer le code
               </button>
@@ -522,7 +522,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
             setTurnstileToken('')
             setTurnstileResetKey(k => k + 1)
           }}
-          className="w-full text-sm text-gray-400 hover:text-gray-600 text-center py-2 touch-manipulation"
+          className="w-full text-sm text-gray-400 hover:text-gray-600 text-center py-2 touch-manipulation transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
         >
           ← Modifier mes informations
         </button>
@@ -783,7 +783,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
                         type="button"
                         disabled={isOut || currentQty <= 0}
                         onClick={() => setVariantQtys(prev => ({ ...prev, [label]: Math.max(0, (prev[label] ?? 0) - 1) }))}
-                        className="w-9 h-9 touch-manipulation rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-lg transition disabled:opacity-30"
+                        className="w-9 h-9 touch-manipulation rounded-lg border border-[#16A34A] flex items-center justify-center text-[#16A34A] hover:bg-green-50 font-bold text-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
                       >
                         −
                       </button>
@@ -794,7 +794,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
                         type="button"
                         disabled={isOut || currentQty >= v.qty}
                         onClick={() => setVariantQtys(prev => ({ ...prev, [label]: Math.min(v.qty, (prev[label] ?? 0) + 1) }))}
-                        className="w-9 h-9 touch-manipulation rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-lg transition disabled:opacity-30"
+                        className="w-9 h-9 touch-manipulation rounded-lg border border-[#16A34A] flex items-center justify-center text-[#16A34A] hover:bg-green-50 font-bold text-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
                       >
                         +
                       </button>
@@ -832,12 +832,12 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
                       setVariant(label)
                       setStockError(null)
                     }}
-                    className={`min-h-[44px] touch-manipulation rounded-lg px-3 py-2 text-sm transition-colors ${
+                    className={`min-h-[44px] touch-manipulation rounded-lg px-3 py-2 text-sm transition-all duration-150 ease-out ${
                       isOut
                         ? 'border border-[#E7E5E4] opacity-40 cursor-not-allowed line-through'
-                        : isSelected
-                          ? 'border-2 border-[#16A34A] bg-[#F0FDF4] text-[#166534] font-medium'
-                          : 'border border-[#E7E5E4] cursor-pointer hover:border-[#16A34A]'
+                      : isSelected
+                          ? 'border-2 border-[#16A34A] bg-[#F0FDF4] text-[#166534] font-medium hover:scale-[1.03] active:scale-[0.97]'
+                          : 'border border-[#16A34A] text-[#16A34A] cursor-pointer hover:bg-green-50 hover:border-[#15803D] hover:text-[#15803D] hover:scale-[1.03] active:scale-[0.97]'
                     }`}
                   >
                     {label}
@@ -861,7 +861,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
               <button
                 type="button"
                 onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                className="w-11 h-11 touch-manipulation rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-lg transition"
+                className="w-11 h-11 touch-manipulation rounded-lg border border-[#16A34A] flex items-center justify-center text-[#16A34A] hover:bg-green-50 font-bold text-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
               >
                 −
               </button>
@@ -870,7 +870,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
                 type="button"
                 onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
                 disabled={!selectedProduct || (hasVariants && !variant)}
-                className="w-11 h-11 touch-manipulation rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-lg transition disabled:opacity-40"
+                className="w-11 h-11 touch-manipulation rounded-lg border border-[#16A34A] flex items-center justify-center text-[#16A34A] hover:bg-green-50 font-bold text-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
               >
                 +
               </button>
@@ -936,7 +936,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
                 setStockError(null)
                 formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
               }}
-              className="mt-2 min-h-[44px] touch-manipulation text-xs font-semibold text-red-700 underline underline-offset-2"
+              className="mt-2 min-h-[44px] touch-manipulation text-xs font-semibold text-red-700 underline underline-offset-2 transition-all duration-150 ease-out hover:scale-[1.03] hover:text-red-800 active:scale-[0.97]"
             >
               {stockErrorScope === 'variant' ? 'Choisir une autre variante' : 'Choisir un autre produit'}
             </button>
@@ -953,7 +953,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
       <button
         type="submit"
         disabled={loading || (isTurnstileEnabled() && !turnstileToken)}
-        className="h-12 w-full touch-manipulation bg-[#16A34A] hover:bg-green-700 disabled:opacity-60 text-white font-bold rounded-2xl text-base transition-colors shadow-lg shadow-green-200"
+        className="h-12 w-full touch-manipulation bg-[#16A34A] text-white font-bold rounded-lg text-base transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100"
       >
         {loading ? 'Envoi du code…' : 'Commander'}
       </button>

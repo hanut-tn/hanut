@@ -51,13 +51,13 @@ export default function Navbar() {
         <div className="flex items-center gap-2 shrink-0">
           <Link
             href="/login"
-            className="hidden sm:inline-flex text-sm font-medium text-gray-600 hover:text-[#1C1917] px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+            className="hidden sm:inline-flex text-sm font-medium text-[#16A34A] hover:text-[#15803D] px-4 py-2 rounded-lg border border-transparent hover:border-[#16A34A] hover:bg-green-50 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
           >
             Se connecter
           </Link>
           <Link
             href="/register"
-            className="inline-flex items-center text-white text-sm font-semibold px-4 py-2 rounded-lg bg-[#16A34A] hover:bg-green-700 transition-colors shadow-sm"
+            className="inline-flex items-center text-white text-sm font-semibold px-4 py-2 rounded-lg bg-[#16A34A] transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97]"
           >
             Commencer
           </Link>
@@ -103,14 +103,14 @@ export default function Navbar() {
             <Link
               href="/login"
               onClick={() => setMenuOpen(false)}
-              className="w-full text-center py-2.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+              className="w-full text-center py-2.5 text-sm font-medium text-[#16A34A] border border-[#16A34A] rounded-lg hover:bg-green-50 hover:text-[#15803D] transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
             >
               Se connecter
             </Link>
             <Link
               href="/register"
               onClick={() => setMenuOpen(false)}
-              className="w-full text-center py-2.5 text-sm font-semibold text-white bg-[#16A34A] rounded-xl hover:bg-green-700 transition-colors"
+              className="w-full text-center py-2.5 text-sm font-semibold text-white bg-[#16A34A] rounded-lg transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97]"
             >
               Commencer gratuitement
             </Link>

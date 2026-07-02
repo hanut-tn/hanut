@@ -502,7 +502,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
                       <button
                         type="button"
                         onClick={() => removeCartItem(index)}
-                        className="text-red-400 hover:text-red-600 transition-colors p-1"
+                        className="text-red-400 hover:text-red-600 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] p-1"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

@@ -270,7 +270,7 @@ function DeliveryMobileCard({
           <button
             type="button"
             onClick={e => { e.stopPropagation(); onDelete(delivery) }}
-            className="flex-1 flex items-center justify-center gap-1.5 min-h-[44px] touch-manipulation text-sm text-[#78716C] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 min-h-[44px] touch-manipulation text-sm text-[#78716C] hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
           >
             <Trash2 className="w-4 h-4" />
             Supprimer
@@ -1064,7 +1064,7 @@ export default function DeliveriesClient({
                             <button
                               onClick={e => { e.stopPropagation(); setConfirmDelete(d) }}
                               aria-label="Supprimer la livraison"
-                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-[#78716C] hover:text-red-600 transition-colors"
+                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-[#78716C] hover:text-red-600 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
                             >
                               <Trash2 className="w-4 h-4" aria-hidden="true" />
                             </button>
@@ -1302,7 +1302,7 @@ export default function DeliveriesClient({
               <button
                 onClick={() => handleDelete(confirmDelete)}
                 disabled={isPending}
-                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-150 ease-out hover:bg-red-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-red-600/40 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100"
               >
                 {isPending ? 'Suppression...' : 'Supprimer'}
               </button>

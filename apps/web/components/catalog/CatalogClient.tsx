@@ -726,7 +726,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
                         {canWrite && (
                           <button
                             onClick={() => { setDeleteError(null); setConfirmDelete(p) }}
-                            className="p-1.5 text-[#78716C] hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-1.5 text-[#78716C] hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
                             title="Supprimer"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -773,7 +773,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
               <button
                 onClick={() => handleDelete(confirmDelete.id)}
                 disabled={isPending}
-                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-150 ease-out hover:bg-red-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-red-600/40 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100"
               >
                 {isPending ? 'Suppression...' : 'Supprimer'}
               </button>

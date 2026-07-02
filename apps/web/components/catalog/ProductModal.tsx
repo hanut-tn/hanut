@@ -348,7 +348,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                           <button
                             type="button"
                             onClick={() => removeVariant(i)}
-                            className="flex min-h-[44px] touch-manipulation items-center justify-center text-[#78716C] hover:text-red-500 transition-colors"
+                            className="flex min-h-[44px] touch-manipulation items-center justify-center text-[#78716C] hover:text-red-500 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -393,7 +393,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                         <button
                           type="button"
                           onClick={() => removeVariant(i)}
-                          className="flex min-h-[44px] touch-manipulation items-center justify-center text-[#78716C] hover:text-red-500 transition-colors"
+                          className="flex min-h-[44px] touch-manipulation items-center justify-center text-[#78716C] hover:text-red-500 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>

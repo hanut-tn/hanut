@@ -376,7 +376,7 @@ export default function ProductDetailClient({
               onClick={() => { setDeleteError(null); setShowDeleteModal(true) }}
               disabled={hasBlockingOrders}
               title={hasBlockingOrders ? 'Ce produit est lié à des commandes' : 'Supprimer ce produit'}
-              className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
             >
               <Trash2 className="w-4 h-4" />
               Supprimer
@@ -1007,7 +1007,7 @@ export default function ProductDetailClient({
             </div>
             <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
               <button onClick={() => setShowDeleteModal(false)} className="btn-secondary flex-1">Annuler</button>
-              <button onClick={handleDelete} disabled={isPending} className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 transition-colors">
+              <button onClick={handleDelete} disabled={isPending} className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-150 ease-out hover:bg-red-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-red-600/40 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100">
                 {isPending ? 'Suppression...' : 'Supprimer'}
               </button>
             </div>

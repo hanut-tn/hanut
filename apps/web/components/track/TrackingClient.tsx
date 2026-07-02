@@ -348,7 +348,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
                   href={data.delivery.seller_whatsapp}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-[#25D366] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#22c55e] transition-colors"
+                  className="inline-flex items-center gap-2 bg-[#25D366] text-white rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-150 ease-out hover:bg-[#22c55e] hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#25D366]/40 active:scale-[0.97]"
                 >
                   <MessageCircle className="w-4 h-4" />
                   Contacter le vendeur
@@ -381,7 +381,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
                   href={trackingUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm text-[#16A34A] hover:text-[#0B5E46] font-medium"
+                  className="inline-flex items-center gap-1.5 text-sm text-[#16A34A] hover:text-[#0B5E46] font-medium transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
                 >
                   Suivre mon colis sur {carrierConfig?.label}
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -396,7 +396,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
           <button
             onClick={refresh}
             disabled={isRefreshing}
-            className="flex items-center gap-2 text-xs text-[#78716C] hover:text-[#1C1917] mx-auto mt-4 min-h-[44px] px-4 rounded-lg hover:bg-[#F5F5F4] touch-manipulation transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 text-xs text-[#78716C] hover:text-[#1C1917] mx-auto mt-4 min-h-[44px] px-4 rounded-lg hover:bg-[#F5F5F4] touch-manipulation transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
           >
             <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
             Actualiser

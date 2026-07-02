@@ -1272,7 +1272,7 @@ export default function OrdersClient({
                               <button
                                 onClick={() => handleCancel(order.id)}
                                 disabled={isPending || updatingId === order.id}
-                                className="text-xs font-medium text-red-500 border border-red-200 hover:bg-red-50 disabled:opacity-50 px-2 py-1.5 rounded-lg transition-colors"
+                                className="text-xs font-medium text-red-500 border border-red-200 hover:bg-red-50 px-2 py-1.5 rounded-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
                               >
                                 {updatingId === order.id ? <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" /> : <X className="w-3.5 h-3.5" />}
                               </button>
@@ -1299,7 +1299,7 @@ export default function OrdersClient({
                               <button
                                 onClick={() => { setConfirmDelete(order); setActionError(null) }}
                                 aria-label="Supprimer la commande"
-                                className="w-8 h-8 flex items-center justify-center rounded-lg text-[#A8A29E] hover:text-red-500 hover:bg-red-50 transition-colors"
+                                className="w-8 h-8 flex items-center justify-center rounded-lg text-[#A8A29E] hover:text-red-500 hover:bg-red-50 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
                               >
                                 <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                               </button>
@@ -1415,7 +1415,7 @@ export default function OrdersClient({
                       </button>
                       <button
                         onClick={() => { setConfirmPermDelete(order); setPermDeleteInput(''); setActionError(null) }}
-                        className="flex-1 min-h-[44px] border border-red-300 text-red-600 rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+                        className="flex-1 min-h-[44px] border border-red-300 text-red-600 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all duration-150 ease-out hover:bg-red-50 hover:scale-[1.03] active:scale-[0.97]"
                       >
                         <Trash2 className="w-4 h-4" />
                         Supprimer déf.
@@ -1452,7 +1452,7 @@ export default function OrdersClient({
               <button
                 onClick={() => handleDelete(confirmDelete.id)}
                 disabled={isPending}
-                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-150 ease-out hover:bg-red-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-red-600/40 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100"
               >
                 {isPending ? 'Déplacement...' : 'Déplacer vers la corbeille'}
               </button>
@@ -1499,7 +1499,7 @@ export default function OrdersClient({
               <button
                 onClick={() => handlePermanentDelete(confirmPermDelete.id)}
                 disabled={isPending || permDeleteInput !== 'SUPPRIMER'}
-                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-150 ease-out hover:bg-red-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-red-600/40 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100"
               >
                 {isPending ? 'Suppression...' : 'Supprimer définitivement'}
               </button>

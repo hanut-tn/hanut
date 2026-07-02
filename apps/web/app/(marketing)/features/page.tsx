@@ -86,7 +86,7 @@ function LinkMockup() {
           <input readOnly aria-hidden="true" tabIndex={-1} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-500 bg-gray-50" placeholder="+216 XX XXX XXX" />
           <input readOnly aria-hidden="true" tabIndex={-1} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-500 bg-gray-50" placeholder="Adresse de livraison" />
         </div>
-        <button className="w-full bg-[#16A34A] text-white text-xs font-semibold py-2.5 rounded-xl">
+        <button className="w-full bg-[#16A34A] text-white text-xs font-semibold py-2.5 rounded-lg transition-all duration-150 ease-out hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97]">
           Commander — 85 DT
         </button>
       </div>
@@ -409,7 +409,7 @@ export default function FeaturesPage() {
           <p className="text-green-200 mb-8">Démo Pro 14 jours · Sans carte bancaire · Accès complet dès l&apos;inscription.</p>
           <Link
             href="/register"
-            className="inline-flex items-center gap-2 bg-white text-[#0B5E46] hover:bg-green-50 text-base font-bold px-8 py-3.5 rounded-xl transition-colors shadow-lg"
+            className="inline-flex items-center gap-2 bg-white text-[#0B5E46] hover:bg-green-50 text-base font-bold px-8 py-3.5 rounded-lg transition-all duration-150 ease-out hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-white/40 active:scale-[0.97]"
           >
             Commencer la démo
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">

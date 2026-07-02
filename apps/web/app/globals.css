@@ -20,14 +20,20 @@
 @layer components {
   .btn-primary {
     @apply bg-brand-600 text-white px-4 py-2 rounded-lg font-medium
-      hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
-      disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-[44px] touch-manipulation;
+      transition-all duration-150 ease-out shadow-none
+      hover:bg-brand-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-brand-500/40
+      active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:ring-offset-1
+      disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100
+      min-h-[44px] touch-manipulation;
   }
 
   .btn-secondary {
-    @apply bg-white text-gray-700 px-4 py-2 rounded-lg font-medium border border-gray-300
-      hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
-      disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-[44px] touch-manipulation;
+    @apply bg-transparent text-brand-600 px-4 py-2 rounded-lg font-medium border border-brand-600
+      transition-all duration-150 ease-out shadow-none
+      hover:bg-brand-50 hover:border-brand-700 hover:text-brand-700 hover:scale-[1.03]
+      active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:ring-offset-1
+      disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100
+      min-h-[44px] touch-manipulation;
   }
 
   .input {

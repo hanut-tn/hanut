@@ -113,7 +113,7 @@ function BusinessWaitlistInline() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-3 rounded-xl font-semibold text-sm bg-[#0B5E46] hover:bg-green-900 text-white transition-colors disabled:opacity-60"
+        className="w-full py-3 rounded-lg font-semibold text-sm bg-[#16A34A] text-white transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100"
       >
         {loading ? 'Envoi…' : 'Être notifié en priorité'}
       </button>
@@ -186,7 +186,7 @@ export default function PricingToggle() {
               ) : plan.name === 'Starter' ? (
                 <Link
                   href="/register"
-                  className={`w-full text-center py-3 rounded-xl font-semibold text-sm transition-colors bg-[#0B5E46] hover:bg-green-900 text-white`}
+                  className="w-full text-center py-3 rounded-lg font-semibold text-sm bg-[#16A34A] text-white transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97]"
                 >
                   {plan.cta}
                 </Link>
@@ -195,10 +195,10 @@ export default function PricingToggle() {
                   href={getPricingWhatsAppUrl(plan.name, plan.monthly)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`w-full py-3 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2 ${
+                  className={`w-full py-3 rounded-lg font-semibold text-sm transition-all duration-150 ease-out hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 active:scale-[0.97] flex items-center justify-center gap-2 ${
                     plan.highlighted
-                      ? 'bg-[#16A34A] hover:bg-green-500 text-white'
-                      : 'bg-[#0B5E46] hover:bg-green-900 text-white'
+                      ? 'bg-[#16A34A] hover:bg-green-500 hover:ring-[#16A34A]/40 text-white'
+                      : 'bg-[#16A34A] hover:bg-green-700 hover:ring-[#16A34A]/40 text-white'
                   }`}
                 >
                   <MessageCircle className="w-4 h-4" />

@@ -428,7 +428,7 @@ export default function OrderDetail({
                   <button
                     onClick={() => handleAction(() => cancelOrder(order.id))}
                     disabled={isPending}
-                    className="w-full px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                    className="w-full px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
                   >
                     Annuler la commande
                   </button>
@@ -447,7 +447,7 @@ export default function OrderDetail({
                   <button
                     onClick={() => handleAction(() => cancelOrder(order.id))}
                     disabled={isPending}
-                    className="w-full px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                    className="w-full px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
                   >
                     Annuler la commande
                   </button>
@@ -480,7 +480,7 @@ export default function OrderDetail({
                   <button
                     onClick={() => handleAction(() => cancelOrder(order.id))}
                     disabled={isPending}
-                    className="w-full px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                    className="w-full px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
                   >
                     Annuler la commande
                   </button>
@@ -499,7 +499,7 @@ export default function OrderDetail({
                   <button
                     onClick={() => handleAction(() => updateStatus(order.id, 'returned'))}
                     disabled={isPending}
-                    className="w-full px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                    className="w-full px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
                   >
                     Marquer comme retournée
                   </button>
@@ -518,7 +518,7 @@ export default function OrderDetail({
                   {canDelete && (
                     <button
                       onClick={() => setConfirmDelete(true)}
-                      className="w-full px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                      className="w-full px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
                     >
                       Supprimer cette commande
                     </button>
@@ -531,14 +531,14 @@ export default function OrderDetail({
                   <button
                     onClick={() => handleAction(() => cancelOrder(order.id))}
                     disabled={isPending}
-                    className="w-full px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                    className="w-full px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
                   >
                     {isPending ? 'Traitement...' : 'Annuler et remettre en stock'}
                   </button>
                   {canDelete && (
                     <button
                       onClick={() => setConfirmDelete(true)}
-                      className="w-full px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                      className="w-full px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
                     >
                       Supprimer cette commande
                     </button>
@@ -844,7 +844,7 @@ export default function OrderDetail({
                     router.push('/orders')
                   })
                 }}
-                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-150 ease-out hover:bg-red-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-red-600/40 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100"
               >
                 {isPending ? 'Déplacement...' : 'Déplacer vers la corbeille'}
               </button>

@@ -183,7 +183,7 @@ export default function ContactPage() {
                     <button
                       type="submit"
                       disabled={status === 'loading' || (isTurnstileEnabled() && !turnstileToken)}
-                      className="w-full bg-[#16A34A] hover:bg-green-700 text-white font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50"
+                      className="w-full bg-[#16A34A] text-white font-semibold py-2.5 rounded-lg transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100"
                     >
                       {status === 'loading' ? 'Envoi...' : 'Envoyer le message'}
                     </button>

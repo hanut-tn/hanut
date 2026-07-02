@@ -197,13 +197,13 @@ export default function AboutPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               href="/contact"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#16A34A] hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors shadow-lg shadow-green-100"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#16A34A] hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg transition-all duration-150 ease-out hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97]"
             >
               Nous contacter
             </Link>
             <Link
               href="/register"
-              className="w-full sm:w-auto inline-flex items-center justify-center text-[#0B5E46] border border-green-200 hover:bg-green-50 font-semibold px-6 py-3 rounded-xl transition-colors"
+              className="w-full sm:w-auto inline-flex items-center justify-center text-[#0B5E46] border border-[#16A34A] hover:bg-green-50 hover:border-green-700 hover:text-green-700 font-semibold px-6 py-3 rounded-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
             >
               Commencer gratuitement
             </Link>

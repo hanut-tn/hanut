@@ -105,7 +105,7 @@ export default async function BillingPage() {
             href={whatsappUrl('starter')}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full text-center py-3 rounded-xl font-semibold text-sm bg-[#0B5E46] hover:bg-green-900 text-white transition-colors"
+            className="w-full text-center py-3 rounded-lg font-semibold text-sm bg-[#16A34A] text-white transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97]"
           >
             Choisir Starter
           </a>
@@ -136,7 +136,7 @@ export default async function BillingPage() {
             href={whatsappUrl('pro')}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full text-center py-3 rounded-xl font-semibold text-sm bg-[#16A34A] hover:bg-green-500 text-white transition-colors"
+            className="w-full text-center py-3 rounded-lg font-semibold text-sm bg-[#16A34A] text-white transition-all duration-150 ease-out hover:bg-green-500 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97]"
           >
             Choisir Pro
           </a>

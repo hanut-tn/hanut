@@ -1066,7 +1066,7 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
                     type="button"
                     onClick={handleDeleteAccount}
                     disabled={deleteEmailInput !== seller.email || deletePending}
-                    className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
+                    className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-semibold py-2.5 rounded-lg transition-all duration-150 ease-out hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-red-600/40 active:scale-[0.97] disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100"
                   >
                     {deletePending ? 'Suppression...' : 'Supprimer définitivement'}
                   </button>
