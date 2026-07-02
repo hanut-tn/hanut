@@ -6,7 +6,7 @@ import { PLAN_LIMITS } from '@/lib/constants'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 const secureOrderRpc = readFileSync(
-  resolve(repoRoot, 'supabase/migrations/20260620_secure_order_rpc.sql'),
+  resolve(repoRoot, 'supabase/migrations/20260620000000_secure_order_rpc.sql'),
   'utf8',
 )
 

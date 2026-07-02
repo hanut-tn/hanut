@@ -6,7 +6,7 @@ import type { RateLimitResult } from '@/lib/rate-limit'
 import { verifyTurnstileToken } from '@/lib/turnstile'
 
 const WaitlistSchema = z.object({
-  email:           z.string().email(),
+  email:           z.string().trim().email(),
   turnstile_token: z.string().optional(),
 })
 

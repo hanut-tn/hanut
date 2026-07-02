@@ -483,13 +483,14 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
                 onChange={e => handleOtpDigit(i, e.target.value)}
                 onKeyDown={e => handleOtpKeyDown(i, e)}
                 autoComplete={i === 0 ? 'one-time-code' : 'off'}
+                aria-label={`Chiffre ${i + 1} du code de vérification`}
                 className="w-14 h-14 text-center text-2xl font-bold border-2 border-[#E7E5E4] rounded-xl outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition caret-transparent"
               />
             ))}
           </div>
 
           {otpError && (
-            <p className="text-sm text-center text-red-600">{otpError}</p>
+            <p role="alert" className="text-sm text-center text-red-600">{otpError}</p>
           )}
 
           {isTurnstileEnabled() && (

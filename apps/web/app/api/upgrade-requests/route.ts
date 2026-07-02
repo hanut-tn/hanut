@@ -11,15 +11,15 @@ export async function POST(req: NextRequest) {
   }
 
   const context = await getUserContext()
-  if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!context.isSeller) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+  if (!context.isSeller) return NextResponse.json({ error: 'Réservé au propriétaire' }, { status: 403 })
 
   const body = await req.json().catch(() => null)
-  if (!body) return NextResponse.json({ error: 'Invalid body' }, { status: 400 })
+  if (!body) return NextResponse.json({ error: 'Corps de requête invalide' }, { status: 400 })
 
   const { requested_plan } = body
   if (!VALID_REQUESTED_PLANS.includes(requested_plan)) {
-    return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
+    return NextResponse.json({ error: 'Plan invalide' }, { status: 400 })
   }
 
   const supabase = createServiceClient()
@@ -39,8 +39,8 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   const context = await getUserContext()
-  if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!context.isSeller) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+  if (!context.isSeller) return NextResponse.json({ error: 'Réservé au propriétaire' }, { status: 403 })
 
   const supabase = createServiceClient()
   const { data, error } = await supabase

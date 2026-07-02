@@ -376,6 +376,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
             <div className="relative">
               <input
                 className="input pr-8"
+                aria-label="Rechercher un client existant"
                 placeholder="Rechercher un client existant…"
                 value={search}
                 onChange={e => onSearchChange(e.target.value)}
@@ -431,40 +432,40 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
           )}
 
           <div>
-            <label className="block text-sm font-medium text-[#1C1917] mb-1">Téléphone <span className="text-red-500">*</span></label>
-            <input className="input" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+216 XX XXX XXX" />
+            <label htmlFor="no-phone" className="block text-sm font-medium text-[#1C1917] mb-1">Téléphone <span className="text-red-500">*</span></label>
+            <input id="no-phone" className="input" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+216 XX XXX XXX" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#1C1917] mb-1">Nom complet <span className="text-red-500">*</span></label>
-            <input className="input" value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Prénom Nom" />
+            <label htmlFor="no-name" className="block text-sm font-medium text-[#1C1917] mb-1">Nom complet <span className="text-red-500">*</span></label>
+            <input id="no-name" className="input" value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Prénom Nom" />
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-[#1C1917] mb-1">Gouvernorat <span className="text-red-500">*</span></label>
-              <select className="input bg-white" value={customerGovernorate} onChange={e => setCustomerGovernorate(e.target.value)}>
+              <label htmlFor="no-governorate" className="block text-sm font-medium text-[#1C1917] mb-1">Gouvernorat <span className="text-red-500">*</span></label>
+              <select id="no-governorate" className="input bg-white" value={customerGovernorate} onChange={e => setCustomerGovernorate(e.target.value)}>
                 <option value="">Sélectionner…</option>
                 {TUNISIAN_GOVERNORATES.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1C1917] mb-1">Ville / Délégation <span className="text-red-500">*</span></label>
-              <input className="input" value={customerCity} onChange={e => setCustomerCity(e.target.value)} placeholder="Sfax, Sakiet Ezzit…" />
+              <label htmlFor="no-city" className="block text-sm font-medium text-[#1C1917] mb-1">Ville / Délégation <span className="text-red-500">*</span></label>
+              <input id="no-city" className="input" value={customerCity} onChange={e => setCustomerCity(e.target.value)} placeholder="Sfax, Sakiet Ezzit…" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1C1917] mb-1">Adresse détaillée <span className="text-red-500">*</span></label>
-              <input className="input" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} placeholder="Rue, numéro, quartier…" />
+              <label htmlFor="no-address" className="block text-sm font-medium text-[#1C1917] mb-1">Adresse détaillée <span className="text-red-500">*</span></label>
+              <input id="no-address" className="input" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} placeholder="Rue, numéro, quartier…" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1C1917] mb-1">Repère livreur <span className="text-red-500">*</span></label>
-              <input className="input" value={customerLandmark} onChange={e => setCustomerLandmark(e.target.value)} placeholder="Près de la mosquée…" />
+              <label htmlFor="no-landmark" className="block text-sm font-medium text-[#1C1917] mb-1">Repère livreur <span className="text-red-500">*</span></label>
+              <input id="no-landmark" className="input" value={customerLandmark} onChange={e => setCustomerLandmark(e.target.value)} placeholder="Près de la mosquée…" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1C1917] mb-1">Code postal <span className="text-xs font-normal text-[#78716C]">(optionnel)</span></label>
-              <input className="input" inputMode="numeric" maxLength={4} value={customerPostalCode} onChange={e => setCustomerPostalCode(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="3000" />
+              <label htmlFor="no-postal" className="block text-sm font-medium text-[#1C1917] mb-1">Code postal <span className="text-xs font-normal text-[#78716C]">(optionnel)</span></label>
+              <input id="no-postal" className="input" inputMode="numeric" maxLength={4} value={customerPostalCode} onChange={e => setCustomerPostalCode(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="3000" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1C1917] mb-1">Délégation précise <span className="text-xs font-normal text-[#78716C]">(optionnel)</span></label>
-              <input className="input" value={customerDelegation} onChange={e => setCustomerDelegation(e.target.value)} placeholder="Si différente…" />
+              <label htmlFor="no-delegation" className="block text-sm font-medium text-[#1C1917] mb-1">Délégation précise <span className="text-xs font-normal text-[#78716C]">(optionnel)</span></label>
+              <input id="no-delegation" className="input" value={customerDelegation} onChange={e => setCustomerDelegation(e.target.value)} placeholder="Si différente…" />
             </div>
           </div>
 
@@ -510,8 +511,9 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-[#1C1917] mb-1">Produit <span className="text-red-500">*</span></label>
+                    <label htmlFor={`no-item-${index}-product`} className="block text-sm font-medium text-[#1C1917] mb-1">Produit <span className="text-red-500">*</span></label>
                     <select
+                      id={`no-item-${index}-product`}
                       className="input bg-white"
                       value={item.product_id}
                       onChange={e => updateCartItem(index, { product_id: e.target.value })}
@@ -559,8 +561,9 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-[#1C1917] mb-1">Quantité <span className="text-red-500">*</span></label>
+                      <label htmlFor={`no-item-${index}-qty`} className="block text-sm font-medium text-[#1C1917] mb-1">Quantité <span className="text-red-500">*</span></label>
                       <input
+                        id={`no-item-${index}-qty`}
                         className="input"
                         type="number"
                         min="1"
@@ -570,8 +573,9 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-[#1C1917] mb-1">Prix unitaire (DT)</label>
+                      <label htmlFor={`no-item-${index}-price`} className="block text-sm font-medium text-[#1C1917] mb-1">Prix unitaire (DT)</label>
                       <input
+                        id={`no-item-${index}-price`}
                         className="input"
                         type="number"
                         min="0"
@@ -606,10 +610,11 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
           </button>
 
           <div>
-            <label className="block text-sm font-medium text-[#1C1917] mb-1">
+            <label htmlFor="no-cod-amount" className="block text-sm font-medium text-[#1C1917] mb-1">
               Montant COD total (DT) <span className="text-red-500">*</span>
             </label>
             <input
+              id="no-cod-amount"
               className="input"
               type="number"
               min="0"
@@ -683,10 +688,11 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-[#1C1917] mb-1">
+            <label htmlFor="no-delivery-notes" className="block text-sm font-medium text-[#1C1917] mb-1">
               Notes de livraison <span className="text-xs font-normal text-[#78716C]">(optionnel)</span>
             </label>
             <textarea
+              id="no-delivery-notes"
               className="input resize-none"
               rows={3}
               value={deliveryNotes}

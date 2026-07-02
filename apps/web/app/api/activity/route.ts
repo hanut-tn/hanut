@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
 import { sanitizeDescription } from '@/lib/activity'
@@ -52,6 +53,15 @@ const ALLOWED_ACTION_TYPES = [
   'member_invited', 'member_removed', 'member_role_changed',
 ] as const
 
+const ActivityLogSchema = z.object({
+  action_type: z.enum(ALLOWED_ACTION_TYPES),
+  description: z.string().min(1).max(1000),
+  user_name: z.string().max(100).optional(),
+  entity_type: z.string().max(50).nullish(),
+  entity_id: z.string().max(100).nullish(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+})
+
 // POST /api/activity — réservé aux admins, action_type whitelist, seller_id forcé depuis contexte
 export async function POST(request: NextRequest) {
   if (!checkOrigin(request)) {
@@ -63,22 +73,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
   }
 
-  let body: Record<string, unknown>
+  let rawBody: unknown
   try {
-    body = await request.json()
+    rawBody = await request.json()
   } catch {
     return NextResponse.json({ error: 'Corps de requête invalide' }, { status: 400 })
   }
 
-  if (!ALLOWED_ACTION_TYPES.includes(body.action_type as typeof ALLOWED_ACTION_TYPES[number])) {
-    return NextResponse.json({ error: "Type d'action non autorisé" }, { status: 400 })
+  const parsed = ActivityLogSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Type d'action non autorisé ou données invalides" }, { status: 400 })
   }
+  const body = parsed.data
 
-  const description = typeof body.description === 'string'
-    ? sanitizeDescription(body.description).trim().slice(0, 200)
-    : ''
+  const description = sanitizeDescription(body.description).trim().slice(0, 200)
   if (!description) {
     return NextResponse.json({ error: 'Description requise' }, { status: 400 })
+  }
+
+  // metadata borné pour éviter le stockage de payloads arbitraires
+  const metadata = body.metadata ?? {}
+  if (JSON.stringify(metadata).length > 2_000) {
+    return NextResponse.json({ error: 'Metadata trop volumineuse' }, { status: 400 })
   }
 
   const serviceClient = createServiceClient()
@@ -86,12 +102,12 @@ export async function POST(request: NextRequest) {
   const { error } = await serviceClient.from('activity_logs').insert({
     seller_id: context.sellerId,           // toujours depuis le contexte
     user_id: context.userId,               // toujours depuis le contexte
-    user_name: typeof body.user_name === 'string' ? body.user_name.slice(0, 100) : '',
+    user_name: body.user_name?.slice(0, 100) ?? '',
     action_type: body.action_type,
-    entity_type: typeof body.entity_type === 'string' ? body.entity_type : null,
-    entity_id: typeof body.entity_id === 'string' ? body.entity_id : null,
+    entity_type: body.entity_type ?? null,
+    entity_id: body.entity_id ?? null,
     description,
-    metadata: body.metadata && typeof body.metadata === 'object' ? body.metadata : {},
+    metadata,
   })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

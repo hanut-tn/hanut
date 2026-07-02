@@ -19,8 +19,9 @@ export async function POST(req: NextRequest) {
 
   const { seller_id, plan, months = 1, activated_by = 'webhook:ops' } = body
 
-  if (!seller_id || typeof seller_id !== 'string') {
-    return NextResponse.json({ error: 'seller_id is required' }, { status: 400 })
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!seller_id || typeof seller_id !== 'string' || !UUID_RE.test(seller_id)) {
+    return NextResponse.json({ error: 'seller_id must be a valid UUID' }, { status: 400 })
   }
   // Plan Business non encore disponible — retiré jusqu'à implémentation complète.
   if (!plan || !['starter', 'pro'].includes(plan)) {

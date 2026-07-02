@@ -13,18 +13,24 @@ function isOnboardingAction(action: unknown): action is OnboardingAction {
 export async function PATCH(req: NextRequest) {
   if (!checkOrigin(req)) return NextResponse.json({ error: 'Origine non autorisée.' }, { status: 403 })
   const context = await getUserContext()
-  if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!context.isSeller) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!context) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+  if (!context.isSeller) return NextResponse.json({ error: 'Réservé au propriétaire' }, { status: 403 })
 
   const body = await req.json().catch(() => null)
-  if (!body?.action) return NextResponse.json({ error: 'Missing action' }, { status: 400 })
-  if (!isOnboardingAction(body.action)) return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+  if (!body?.action) return NextResponse.json({ error: 'Action manquante' }, { status: 400 })
+  if (!isOnboardingAction(body.action)) return NextResponse.json({ error: 'Action invalide' }, { status: 400 })
 
   const supabase = await createServerClient()
 
   if (body.action === 'dismiss') {
     const until = typeof body.until === 'string' ? body.until : null
-    if (!until) return NextResponse.json({ error: 'Missing until' }, { status: 400 })
+    if (!until) return NextResponse.json({ error: 'Date de report manquante' }, { status: 400 })
+    // Date ISO valide, dans le futur, bornée à 30 jours (l'UI envoie +7 jours)
+    const untilMs = Date.parse(until)
+    const maxMs = Date.now() + 30 * 24 * 60 * 60 * 1000
+    if (Number.isNaN(untilMs) || untilMs <= Date.now() || untilMs > maxMs) {
+      return NextResponse.json({ error: 'Date de report invalide' }, { status: 400 })
+    }
     const { error: updateError } = await supabase
       .from('sellers')
       .update({ onboarding_dismissed_until: until })

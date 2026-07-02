@@ -194,4 +194,44 @@ describe('PATCH /api/onboarding', () => {
     expect(cacheMock.revalidatePath).not.toHaveBeenCalled()
     expect(cacheMock.revalidateTag).not.toHaveBeenCalled()
   })
+
+  it('dismiss accepte une date valide à +7 jours', async () => {
+    mockContext()
+    const { updateQueryPayloads } = mockServerClient()
+    const until = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+
+    const response = await PATCH(jsonRequest({ action: 'dismiss', until }))
+
+    expect(response.status).toBe(200)
+    expect(updateQueryPayloads).toEqual([{ onboarding_dismissed_until: until }])
+  })
+
+  it('dismiss rejette une date non parsable', async () => {
+    mockContext()
+    mockServerClient()
+
+    const response = await PATCH(jsonRequest({ action: 'dismiss', until: 'pas-une-date' }))
+
+    expect(response.status).toBe(400)
+  })
+
+  it('dismiss rejette une date passée', async () => {
+    mockContext()
+    mockServerClient()
+    const until = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+
+    const response = await PATCH(jsonRequest({ action: 'dismiss', until }))
+
+    expect(response.status).toBe(400)
+  })
+
+  it('dismiss rejette une date au-delà de 30 jours', async () => {
+    mockContext()
+    mockServerClient()
+    const until = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
+
+    const response = await PATCH(jsonRequest({ action: 'dismiss', until }))
+
+    expect(response.status).toBe(400)
+  })
 })

@@ -15,15 +15,22 @@
 // mais ne doivent pas être considérés comme une
 // garantie de bon fonctionnement de la DB.
 import { describe, expect, it } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { PLAN_LIMITS } from '../lib/constants'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
+const migrationsDir = resolve(repoRoot, 'supabase/migrations')
+const allMigrationFiles = readdirSync(migrationsDir)
 
+// Résout par suffixe (nom sans timestamp) : les timestamps sont passés de
+// 8 à 14 chiffres pour le CLI Supabase et pourraient changer à nouveau.
 function migration(pathname: string) {
-  return readFileSync(resolve(repoRoot, 'supabase/migrations', pathname), 'utf8')
+  const suffix = pathname.replace(/^\d+/, '')
+  const match = allMigrationFiles.find(f => f.endsWith(suffix))
+  if (!match) throw new Error(`Migration introuvable pour: ${pathname}`)
+  return readFileSync(resolve(migrationsDir, match), 'utf8')
 }
 
 describe('Supabase migrations', () => {

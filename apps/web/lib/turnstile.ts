@@ -36,6 +36,7 @@ export async function verifyTurnstileToken(token: string, ip?: string): Promise<
       method: 'POST',
       body: formData,
       cache: 'no-store',
+      signal: AbortSignal.timeout(8_000),
     })
 
     if (!response.ok) return false

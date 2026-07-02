@@ -133,7 +133,14 @@ export async function POST(request: NextRequest) {
 
   let sent = true
   if (!resendApiKey) {
-    console.log(`[OTP DEV] Code pour ${email} (boutique: ${slug}): ${code}`)
+    if (process.env.NODE_ENV === 'production') {
+      // Sans clé Resend en prod, ne jamais logguer le code ni prétendre l'avoir envoyé.
+      console.error('[send-otp] RESEND_API_KEY manquante en production')
+      Sentry.captureException(new Error('send-otp: RESEND_API_KEY manquante en production'), { tags: { module: 'send-otp' } })
+      sent = false
+    } else {
+      console.log(`[OTP DEV] Code pour ${email} (boutique: ${slug}): ${code}`)
+    }
   } else {
     const sellerName = escapeEmailHtml(seller.name ?? slug)
     const logoUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://hanut.tn'}/icon-512.png`

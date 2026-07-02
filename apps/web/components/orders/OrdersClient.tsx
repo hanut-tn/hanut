@@ -2,6 +2,8 @@
 
 import { useState, useMemo, useTransition, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useShortcut } from '@/lib/use-shortcut'
 import {
   Search, SearchX, Download, Trash2, ChevronRight, ShoppingBag, Filter,
   X, Loader2, RotateCcw, ChevronDown, Calendar, Truck, User,
@@ -246,6 +248,8 @@ export default function OrdersClient({
   monthlyOrderCount = 0,
 }: Props) {
   const orderLimitReached = plan === 'starter' && monthlyOrderCount >= 100
+  const router = useRouter()
+  useShortcut('n', () => router.push('/orders/new'), !orderLimitReached)
   const [tab, setTab] = useState<OrderStatus | 'all' | 'trash'>('all')
   const [dateFilter, setDateFilter] = useState<DateFilter>('all')
   const [search, setSearch] = useState('')
@@ -823,6 +827,7 @@ export default function OrdersClient({
             )}
             <input
               className="w-full pl-9 pr-8 py-2 text-sm bg-white border border-[#E7E5E4] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#16A34A]/30 focus:border-[#16A34A] transition-all placeholder:text-[#A8A29E] sm:w-52"
+              aria-label="Rechercher une commande"
               placeholder="Rechercher par nom, téléphone..."
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -885,7 +890,7 @@ export default function OrdersClient({
               </div>
             </div>
           ) : (
-            <Link href="/orders/new" className="btn-primary text-center text-sm whitespace-nowrap">
+            <Link href="/orders/new" title="Raccourci : N" className="btn-primary text-center text-sm whitespace-nowrap">
               + Nouvelle commande
             </Link>
           )}

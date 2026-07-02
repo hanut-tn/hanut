@@ -1,7 +1,7 @@
 import type { OrderStatus } from '@hanut/types'
 
 // Valid order status transitions. Must stay in sync with the
-// order_status_transitions table (migration 20260622_add_status_transitions.sql).
+// order_status_transitions table (migration 20260622000000_add_status_transitions.sql).
 // delivered and cancelled are terminal. returned can be finalized as cancelled
 // through cancel_order_with_stock, which also restores stock atomically.
 // shipped → confirmed is a system-only rollback used when a delivery is deleted;

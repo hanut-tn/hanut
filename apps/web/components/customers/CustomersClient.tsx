@@ -401,6 +401,7 @@ export default function CustomersClient({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
           <input
             className="input pl-9"
+            aria-label="Rechercher un client"
             placeholder="Rechercher par nom, téléphone ou zone…"
             value={search}
             onChange={e => setSearch(e.target.value)}

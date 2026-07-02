@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useMemo, useRef } from 'react'
 import Link from 'next/link'
+import { useShortcut } from '@/lib/use-shortcut'
 import Image from 'next/image'
 import {
   Search, LayoutGrid, List, Plus, Package, SearchX,
@@ -291,6 +292,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const canWrite = role !== 'readonly'
+  useShortcut('p', () => setModal('new'), canWrite && modal === null)
 
   // État local pour l'optimistic delete
   const [allProducts, setAllProducts] = useState<Product[]>(products)
@@ -365,7 +367,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
           </p>
         </div>
         {canWrite && (
-          <button onClick={() => setModal('new')} className="btn-primary flex w-full items-center justify-center gap-2 text-sm sm:w-auto sm:self-auto">
+          <button onClick={() => setModal('new')} title="Raccourci : P" className="btn-primary flex w-full items-center justify-center gap-2 text-sm sm:w-auto sm:self-auto">
             <Plus className="w-4 h-4" />
             Nouveau produit
           </button>
@@ -399,6 +401,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
           <input
             className="input pl-9"
+            aria-label="Rechercher un produit"
             placeholder="Rechercher un produit..."
             value={search}
             onChange={e => setSearch(e.target.value)}
