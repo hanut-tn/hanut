@@ -239,6 +239,10 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
       setOtpError('Entrez les 4 chiffres du code.')
       return
     }
+    if (isTurnstileEnabled() && !turnstileToken) {
+      setOtpError('Vérification anti-spam en cours. Réessayez dans un instant.')
+      return
+    }
     otpSubmittingRef.current = true
     setOtpError(null)
     setLoading(true)
