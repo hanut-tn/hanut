@@ -488,10 +488,16 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
             <p className="text-sm text-center text-red-600">{otpError}</p>
           )}
 
+          {isTurnstileEnabled() && (
+            <div className="flex justify-center">
+              <TurnstileWidget onVerify={setTurnstileToken} resetKey={turnstileResetKey} />
+            </div>
+          )}
+
           <button
             type="button"
             onClick={() => handleOtpSubmit(otpDigits.join(''))}
-            disabled={loading || otpDigits.some(d => !d)}
+            disabled={loading || otpDigits.some(d => !d) || (isTurnstileEnabled() && !turnstileToken)}
             className="h-12 w-full touch-manipulation bg-[#16A34A] text-white font-bold rounded-lg text-base transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100"
           >
             {loading ? 'Vérification…' : 'Valider le code'}
@@ -504,7 +510,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
               <button
                 type="button"
                 onClick={handleResendOtp}
-                disabled={loading}
+                disabled={loading || (isTurnstileEnabled() && !turnstileToken)}
                 className="text-sm text-[#16A34A] font-medium transition-all duration-150 ease-out hover:scale-[1.03] hover:text-[#15803D] hover:underline active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
               >
                 Renvoyer le code
