@@ -119,11 +119,20 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Protection anti-spam indisponible. Réessayez.' }, 503)
   }
 
+  let codeHash: string
+  try {
+    codeHash = hashOrderOtp(parsed.data.code, slug, email)
+  } catch (err) {
+    console.error('[verify-otp] hashOrderOtp error:', err)
+    Sentry.captureException(err instanceof Error ? err : new Error(String(err)), { tags: { module: 'verify-otp', action: 'hash_otp' } })
+    return noStoreJson({ error: 'Erreur de configuration interne.' }, 500)
+  }
+
   const supabase = createServiceClient()
   const { data, error } = await supabase.rpc('create_public_order_with_otp', {
     p_slug: slug,
     p_email: email,
-    p_code_hash: hashOrderOtp(parsed.data.code, slug, email),
+    p_code_hash: codeHash,
     p_product_id: parsed.data.product_id || null,
     p_quantity: parsed.data.quantity ?? 1,
     p_customer_name: parsed.data.customer_name,
