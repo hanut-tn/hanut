@@ -204,6 +204,8 @@ async function postHandler(request: NextRequest) {
         ) {
           return noStoreJson({ error: 'Produit ou variante indisponible.' }, 409)
         }
+        console.error('[verify-otp] ORDER_CREATION_FAILED unhandled detail:', detail)
+        Sentry.captureException(new Error(`ORDER_CREATION_FAILED: ${detail}`), { tags: { module: 'verify-otp', action: 'order_creation' } })
         return noStoreJson({ error: 'Erreur lors de la création de la commande.' }, 500)
       }
       default:
