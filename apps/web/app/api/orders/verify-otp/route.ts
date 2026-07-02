@@ -59,6 +59,16 @@ function noStoreJson(body: Record<string, unknown>, status = 200) {
 }
 
 export async function POST(request: NextRequest) {
+  try {
+    return await postHandler(request)
+  } catch (err) {
+    console.error('[verify-otp] Unhandled exception:', err)
+    Sentry.captureException(err instanceof Error ? err : new Error(String(err)), { tags: { module: 'verify-otp', action: 'unhandled' } })
+    return noStoreJson({ error: 'Erreur interne inattendue.' }, 500)
+  }
+}
+
+async function postHandler(request: NextRequest) {
   if (!checkOrigin(request)) {
     return noStoreJson({ error: 'Origine non autorisée.' }, 403)
   }
