@@ -1,9 +1,7 @@
-'use client'
-
-import { useState } from 'react'
 import Link from 'next/link'
-import { MessageCircle } from 'lucide-react'
-import { HANUT_CONTACT } from '@/lib/constants'
+
+// Aperçu tarifs de la landing : Starter + Pro uniquement, 5 features max.
+// Le détail complet (dont le plan Business à venir) vit sur /pricing.
 
 type Plan = {
   name: string
@@ -11,9 +9,7 @@ type Plan = {
   desc: string
   badge?: string
   features: string[]
-  cta: string
   highlighted: boolean
-  comingSoon?: boolean
 }
 
 const PLANS: Plan[] = [
@@ -24,15 +20,10 @@ const PLANS: Plan[] = [
     features: [
       '100 commandes / mois',
       'Catalogue produits illimité',
-      'Lien de commande public /order',
-      'Suivi commande client /track',
-      'Gestion stock en temps réel',
-      'Fiche client',
-      'Gestion livraisons COD (5 transporteurs)',
+      'Lien de commande public',
+      'Livraisons COD (5 transporteurs)',
       'Analytics 30 jours',
-      'Support WhatsApp',
     ],
-    cta: 'Démarrer la démo Pro',
     highlighted: false,
   },
   {
@@ -42,172 +33,91 @@ const PLANS: Plan[] = [
     badge: 'Recommandé',
     features: [
       'Commandes illimitées',
-      'Analytics 180 jours + comparaison période',
-      'Historique mouvements stock',
+      'Analytics 180 jours + comparaison',
       'Fiche client CRM (tags et notes)',
       'Export CSV commandes et analytics',
-      'Top produits, clients et villes',
       'Équipe jusqu\'à 3 membres',
-      'Support prioritaire WhatsApp',
     ],
-    cta: 'Choisir Pro',
     highlighted: true,
-  },
-  {
-    name: 'Business',
-    monthly: 0,
-    desc: 'En cours de préparation',
-    badge: 'Bientôt disponible',
-    features: [
-      'Aperçu : multi-boutiques',
-      'Aperçu : accès API',
-      'Aperçu : équipe illimitée',
-      'Aperçu : rapport fiscal',
-    ],
-    cta: 'Être notifié',
-    highlighted: false,
-    comingSoon: true,
   },
 ]
 
-function getPricingWhatsAppUrl(planName: string, price: number): string {
-  const message = `Bonjour Hanut, je voudrais m'abonner au plan ${planName} (${price} DT/mois).`
-  return `${HANUT_CONTACT.whatsappUrl}?text=${encodeURIComponent(message)}`
-}
-
-function BusinessWaitlistInline() {
-  const [email, setEmail] = useState('')
-  const [done, setDone] = useState(false)
-  const [loading, setLoading] = useState(false)
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!email) return
-    setLoading(true)
-    try {
-      await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      })
-    } finally {
-      setDone(true)
-      setLoading(false)
-    }
-  }
-
-  if (done) {
-    return <p className="text-center text-sm text-gray-500 py-2">Vous serez notifié dès l&apos;ouverture du plan Business.</p>
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-2">
-      <input
-        type="email"
-        value={email}
-        onChange={e => setEmail(e.target.value)}
-        placeholder="votre@email.com"
-        required
-        className="w-full text-sm px-3 py-2.5 rounded-xl border border-gray-200 text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300"
-      />
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full py-3 rounded-lg font-semibold text-sm bg-[#16A34A] text-white transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100"
-      >
-        {loading ? 'Envoi…' : 'Être notifié en priorité'}
-      </button>
-    </form>
-  )
-}
-
 export default function PricingToggle() {
   return (
-    <section id="pricing" className="py-24 sm:py-32 px-4 sm:px-6 bg-[#F5F5F4]">
-      <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-12">
-          <p className="text-sm font-semibold text-[#16A34A] uppercase tracking-widest mb-3">Tarifs</p>
+    <section id="pricing" className="py-20 sm:py-32 px-4 sm:px-6 bg-[#F5F5F4]">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-14">
+          <p className="text-sm font-semibold text-brand-600 uppercase tracking-widest mb-3">Tarifs</p>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1C1917] tracking-tight">
             Des tarifs simples et transparents
           </h2>
-          <p className="mt-4 text-lg text-gray-500">Sans engagement. Changez de plan quand vous voulez.</p>
-          <div className="inline-flex items-center gap-2 bg-green-50 border border-green-100 text-[#0B5E46] text-sm font-medium px-4 py-1.5 rounded-full mt-4">
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            Lancement en Tunisie · Démo Pro 14 jours · Aucune carte bancaire
-          </div>
+          <p className="mt-4 text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
+            Sans engagement. Changez de plan quand vous voulez.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-          {PLANS.map((plan, i) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto items-stretch">
+          {PLANS.map(plan => (
             <div
-              key={i}
-              className={`relative rounded-2xl p-7 flex flex-col transition-all ${
+              key={plan.name}
+              className={`relative rounded-2xl p-8 flex flex-col bg-white ${
                 plan.highlighted
-                  ? 'bg-[#0B5E46] text-white shadow-2xl md:scale-105'
-                  : 'bg-white border border-gray-200 shadow-sm hover:shadow-md'
+                  ? 'ring-2 ring-brand-600 shadow-xl'
+                  : 'border border-gray-200 shadow-sm'
               }`}
             >
               {plan.badge && (
-                <span className={`absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-bold px-4 py-1 rounded-full whitespace-nowrap ${plan.comingSoon ? 'bg-gray-400 text-white' : 'bg-[#16A34A] text-white'}`}>
+                <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-bold px-4 py-1 rounded-full whitespace-nowrap bg-brand-600 text-white">
                   {plan.badge}
                 </span>
               )}
 
               <div className="mb-6">
-                <p className={`font-bold text-sm mb-0.5 ${plan.highlighted ? 'text-green-300' : 'text-gray-500'}`}>
-                  {plan.name}
-                </p>
-                <p className={`text-xs mb-3 ${plan.highlighted ? 'text-green-200' : 'text-gray-400'}`}>{plan.desc}</p>
-                {plan.comingSoon ? null : (
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-black">{plan.monthly}</span>
-                    <span className={`text-sm ${plan.highlighted ? 'text-green-200' : 'text-gray-400'}`}>DT / mois</span>
-                  </div>
-                )}
+                <p className="font-bold text-sm text-gray-500 mb-0.5">{plan.name}</p>
+                <p className="text-xs text-gray-400 mb-4">{plan.desc}</p>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-5xl font-black text-[#1C1917]">{plan.monthly}</span>
+                  <span className="text-sm text-gray-400">DT / mois</span>
+                </div>
               </div>
 
-              {plan.comingSoon && (
-                <p className="text-xs text-gray-400 font-semibold mb-2 uppercase tracking-wide">Aperçu</p>
-              )}
-              <ul className="space-y-2.5 flex-1 mb-7">
+              <ul className="space-y-3 flex-1 mb-8">
                 {plan.features.map(f => (
                   <li key={f} className="flex items-start gap-2.5 text-sm">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 mt-0.5">
-                      <circle cx="8" cy="8" r="7" fill={plan.highlighted ? 'rgba(74,222,128,0.15)' : plan.comingSoon ? '#F3F4F6' : '#DCFCE7'} />
-                      <path d="M5 8L7 10L11 6" stroke={plan.highlighted ? '#4ADE80' : plan.comingSoon ? '#9CA3AF' : '#16A34A'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 mt-0.5" aria-hidden="true">
+                      <circle cx="8" cy="8" r="7" fill="#DCFCE7" />
+                      <path d="M5 8L7 10L11 6" stroke="#16A34A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
-                    <span className={plan.highlighted ? 'text-green-50' : plan.comingSoon ? 'text-gray-400' : 'text-gray-600'}>{f}</span>
+                    <span className="text-gray-600">{f}</span>
                   </li>
                 ))}
               </ul>
 
-              {plan.comingSoon ? (
-                <BusinessWaitlistInline />
-              ) : plan.name === 'Starter' ? (
+              {plan.highlighted ? (
                 <Link
                   href="/register"
-                  className="w-full text-center py-3 rounded-lg font-semibold text-sm bg-[#16A34A] text-white transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97]"
+                  className="w-full py-3.5 rounded-lg font-semibold text-sm bg-brand-600 text-white transition-all duration-150 ease-out hover:bg-brand-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-brand-500/40 active:scale-[0.97] flex items-center justify-center gap-2"
                 >
-                  {plan.cta}
+                  Essayer Pro 14 jours
                 </Link>
               ) : (
-                <a
-                  href={getPricingWhatsAppUrl(plan.name, plan.monthly)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`w-full py-3 rounded-lg font-semibold text-sm transition-all duration-150 ease-out hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 active:scale-[0.97] flex items-center justify-center gap-2 ${
-                    plan.highlighted
-                      ? 'bg-[#16A34A] hover:bg-green-500 hover:ring-[#16A34A]/40 text-white'
-                      : 'bg-[#16A34A] hover:bg-green-700 hover:ring-[#16A34A]/40 text-white'
-                  }`}
+                <Link
+                  href="/register"
+                  className="w-full text-center py-3.5 rounded-lg font-semibold text-sm text-brand-600 border border-brand-600 transition-all duration-150 ease-out hover:bg-brand-50 hover:text-brand-700 hover:border-brand-700 hover:scale-[1.03] active:scale-[0.97]"
                 >
-                  <MessageCircle className="w-4 h-4" />
-                  Choisir Pro
-                </a>
+                  Choisir Starter
+                </Link>
               )}
             </div>
           ))}
         </div>
+
+        <p className="text-center mt-10 text-sm text-gray-500">
+          L&apos;essai gratuit de 14 jours démarre sur le plan Pro ·{' '}
+          <Link href="/pricing" className="text-brand-600 font-semibold hover:underline">
+            Comparer tous les plans →
+          </Link>
+        </p>
       </div>
     </section>
   )

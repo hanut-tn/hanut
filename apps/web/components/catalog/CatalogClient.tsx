@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useTransition, useMemo, useRef } from 'react'
+import { useEffect, useState, useTransition, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useShortcut } from '@/lib/use-shortcut'
 import Image from 'next/image'
@@ -293,6 +294,18 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
   const [isPending, startTransition] = useTransition()
   const canWrite = role !== 'readonly'
   useShortcut('p', () => setModal('new'), canWrite && modal === null)
+
+  useEffect(() => {
+    if (!confirmDelete) return
+    const previousOverflow = document.body.style.overflow
+    const previousHtmlOverflow = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.documentElement.style.overflow = previousHtmlOverflow
+    }
+  }, [confirmDelete])
 
   // État local pour l'optimistic delete
   const [allProducts, setAllProducts] = useState<Product[]>(products)
@@ -747,13 +760,13 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
       ))}
 
       {/* Confirm delete modal */}
-      {confirmDelete && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
-          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
-            <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
+      {confirmDelete && createPortal(
+        <div className="fixed inset-0 z-[100] overflow-hidden overscroll-contain bg-white sm:flex sm:items-center sm:justify-center sm:bg-black/40 sm:p-4">
+          <div className="fixed inset-0 z-[101] flex h-[100dvh] w-full flex-col bg-white shadow-xl sm:relative sm:inset-auto sm:z-auto sm:h-auto sm:max-h-[calc(100dvh-4rem)] sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+            <div className="shrink-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
               <h3 className="font-semibold text-[#1C1917]">Supprimer ce produit ?</h3>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 [-webkit-overflow-scrolling:touch]">
             <p className="text-sm text-[#78716C] mb-1">
               &quot;{confirmDelete.name}&quot; sera supprimé définitivement.
             </p>
@@ -766,7 +779,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
               </div>
             )}
             </div>
-            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
+            <div className="shrink-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:flex-row sm:px-6 sm:pb-4">
               <button
                 onClick={() => { setConfirmDelete(null); setDeleteError(null) }}
                 className="btn-secondary flex-1"
@@ -782,7 +795,8 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Product modal */}

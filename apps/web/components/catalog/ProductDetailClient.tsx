@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef, useTransition } from 'react'
+import { useEffect, useState, useRef, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -144,6 +145,20 @@ export default function ProductDetailClient({
   const [localPlannedRestocks, setLocalPlannedRestocks] = useState<PlannedRestock[]>(plannedRestocks)
 
   const hasVariants = currentVariants.length > 0
+  const renderModal = (node: React.ReactNode) =>
+    typeof document === 'undefined' ? null : createPortal(node, document.body)
+
+  useEffect(() => {
+    if (!showStockModal && !showDeleteModal) return
+    const previousOverflow = document.body.style.overflow
+    const previousHtmlOverflow = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.documentElement.style.overflow = previousHtmlOverflow
+    }
+  }, [showStockModal, showDeleteModal])
 
   function openStockModal() {
     setAdjustType('restock')
@@ -666,12 +681,12 @@ export default function ProductDetailClient({
       )}
 
       {/* ── MODAL AJUSTER LE STOCK ── */}
-      {showStockModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
-          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-lg sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+      {showStockModal && renderModal(
+        <div className="fixed inset-0 z-[100] overflow-hidden overscroll-contain bg-white sm:flex sm:items-center sm:justify-center sm:bg-black/40 sm:p-4">
+          <div className="fixed inset-0 z-[101] flex h-[100dvh] w-full flex-col bg-white shadow-xl sm:relative sm:inset-auto sm:z-auto sm:h-auto sm:max-h-[calc(100dvh-4rem)] sm:max-w-lg sm:rounded-xl sm:border sm:border-[#E7E5E4]">
 
             {/* Header */}
-            <div className="sticky top-0 z-10 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
+            <div className="shrink-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-[#1C1917] text-lg">Ajuster le stock</h3>
@@ -686,7 +701,7 @@ export default function ProductDetailClient({
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-6 [-webkit-overflow-scrolling:touch]">
               {/* Sélection du type */}
               <div>
                 <p className="text-sm font-medium text-[#1C1917] mb-3">Raison de l&apos;ajustement</p>
@@ -978,7 +993,7 @@ export default function ProductDetailClient({
             </div>
 
             {/* Footer */}
-            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
+            <div className="shrink-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:flex-row sm:px-6 sm:pb-4">
               <button onClick={() => setShowStockModal(false)} className="btn-secondary flex-1">Annuler</button>
               <button
                 onClick={handleAdjustStock}
@@ -993,19 +1008,19 @@ export default function ProductDetailClient({
       )}
 
       {/* ── MODAL SUPPRESSION ── */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
-          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
-            <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
+      {showDeleteModal && renderModal(
+        <div className="fixed inset-0 z-[100] overflow-hidden overscroll-contain bg-white sm:flex sm:items-center sm:justify-center sm:bg-black/40 sm:p-4">
+          <div className="fixed inset-0 z-[101] flex h-[100dvh] w-full flex-col bg-white shadow-xl sm:relative sm:inset-auto sm:z-auto sm:h-auto sm:max-h-[calc(100dvh-4rem)] sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+            <div className="shrink-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
               <h3 className="font-semibold text-[#1C1917]">Supprimer ce produit ?</h3>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 [-webkit-overflow-scrolling:touch]">
               <p className="text-sm text-[#78716C]">&quot;{product.name}&quot; sera supprimé définitivement. Cette action est irréversible.</p>
               {deleteError && (
                 <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">{deleteError}</div>
               )}
             </div>
-            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
+            <div className="shrink-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:flex-row sm:px-6 sm:pb-4">
               <button onClick={() => setShowDeleteModal(false)} className="btn-secondary flex-1">Annuler</button>
               <button onClick={handleDelete} disabled={isPending} className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-150 ease-out hover:bg-red-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-red-600/40 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100">
                 {isPending ? 'Suppression...' : 'Supprimer'}

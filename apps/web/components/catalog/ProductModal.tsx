@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Upload, Plus, Trash2 } from 'lucide-react'
 import type { Product, ProductVariant } from '@hanut/types'
 import type { ProductInput } from '@/app/(dashboard)/catalog/actions'
@@ -55,6 +56,17 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [saving, onClose])
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    const previousHtmlOverflow = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.documentElement.style.overflow = previousHtmlOverflow
+    }
+  }, [])
 
   const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
   const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif']
@@ -133,10 +145,10 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:p-4">
-      <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:mx-auto sm:my-8 sm:min-h-0 sm:max-h-[calc(100svh-4rem)] sm:max-w-2xl sm:rounded-xl sm:border sm:border-[#E7E5E4]">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] overflow-hidden overscroll-contain bg-white sm:bg-black/40 sm:p-4">
+      <div className="fixed inset-0 z-[101] flex h-[100dvh] w-full flex-col bg-white shadow-xl sm:relative sm:inset-auto sm:z-auto sm:mx-auto sm:my-8 sm:h-auto sm:max-h-[calc(100dvh-4rem)] sm:max-w-2xl sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+        <div className="shrink-0 flex items-center justify-between border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
           <h2 className="font-semibold text-[#1C1917]">
             {product ? 'Modifier le produit' : 'Nouveau produit'}
           </h2>
@@ -150,7 +162,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
         </div>
 
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-          <div className="flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain p-4 sm:p-6 [-webkit-overflow-scrolling:touch]">
             {/* Two-column: image left, fields right */}
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               {/* Image upload */}
@@ -420,7 +432,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
             </div>
           )}
 
-          <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
+          <div className="shrink-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:flex-row sm:px-6 sm:pb-4">
             <button type="button" onClick={onClose} className="btn-secondary flex-1">
               Annuler
             </button>
@@ -430,6 +442,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

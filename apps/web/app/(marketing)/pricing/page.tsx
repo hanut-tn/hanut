@@ -2,8 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { MessageCircle } from 'lucide-react'
-import { HANUT_CONTACT } from '@/lib/constants'
 
 type Plan = {
   name: string
@@ -33,7 +31,7 @@ const PLANS: Plan[] = [
       'Analytics 30 jours',
       'Support WhatsApp',
     ],
-    cta: 'Démarrer la démo Pro',
+    cta: 'Choisir Starter',
   },
   {
     name: 'Pro',
@@ -51,7 +49,7 @@ const PLANS: Plan[] = [
       'Équipe jusqu\'à 3 membres',
       'Support prioritaire WhatsApp',
     ],
-    cta: 'Choisir Pro',
+    cta: 'Essayer Pro 14 jours',
   },
   {
     name: 'Business',
@@ -102,11 +100,6 @@ const FAQ = [
     a: "Toute inscription vous donne automatiquement accès au plan Pro pendant 14 jours, sans carte bancaire. Pas d'action requise — la démo commence dès que vous créez votre compte.",
   },
 ]
-
-function getPricingWhatsAppUrl(planName: string, price: number): string {
-  const message = `Bonjour Hanut, je voudrais m'abonner au plan ${planName} (${price} DT/mois).`
-  return `${HANUT_CONTACT.whatsappUrl}?text=${encodeURIComponent(message)}`
-}
 
 function BusinessWaitlist() {
   const [email, setEmail] = useState('')
@@ -173,7 +166,7 @@ export default function PricingPage() {
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
             Lancement en Tunisie · Démo Pro 14 jours · Aucune carte bancaire
           </div>
-          <p className="text-lg text-gray-500 mb-8">Sans engagement. Activation accompagnée sur WhatsApp.</p>
+          <p className="text-lg text-gray-500 mb-8">Sans engagement. Création de compte en ligne, sans carte bancaire.</p>
         </div>
       </section>
 
@@ -226,27 +219,17 @@ export default function PricingPage() {
 
                 {plan.comingSoon ? (
                   <BusinessWaitlist />
-                ) : plan.name === 'Starter' ? (
+                ) : (
                   <Link
                     href="/register"
-                    className="w-full text-center py-3 rounded-lg font-semibold text-sm bg-[#16A34A] text-white transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97]"
-                  >
-                    {plan.cta}
-                  </Link>
-                ) : (
-                  <a
-                    href={getPricingWhatsAppUrl(plan.name, plan.monthly)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`w-full py-3 rounded-lg font-semibold text-sm transition-all duration-150 ease-out hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 active:scale-[0.97] flex items-center justify-center gap-2 ${
+                    className={`w-full text-center py-3 rounded-lg font-semibold text-sm transition-all duration-150 ease-out hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 active:scale-[0.97] ${
                       plan.highlighted
                         ? 'bg-[#16A34A] hover:bg-green-500 hover:ring-[#16A34A]/40 text-white'
                         : 'bg-[#16A34A] hover:bg-green-700 hover:ring-[#16A34A]/40 text-white'
                     }`}
                   >
-                    <MessageCircle className="w-4 h-4" />
-                    Choisir Pro
-                  </a>
+                    {plan.cta}
+                  </Link>
                 )}
               </div>
             ))}
@@ -325,7 +308,7 @@ export default function PricingPage() {
             href="/register"
             className="inline-flex items-center gap-2 bg-white text-[#0B5E46] text-base font-bold px-8 py-3.5 rounded-lg transition-all duration-150 ease-out hover:bg-green-50 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-white/40 active:scale-[0.97]"
           >
-            Commencer la démo
+            Essayer Pro 14 jours
           </Link>
         </div>
       </section>

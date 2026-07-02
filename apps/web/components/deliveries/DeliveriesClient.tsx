@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import {
   Truck, ExternalLink, CheckCircle2, ArrowDownCircle,
@@ -351,12 +352,26 @@ export default function DeliveriesClient({
   const [isBulkPending, setIsBulkPending] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const canReverseCod = role === 'admin'
+  const renderModal = (node: React.ReactNode) =>
+    typeof document === 'undefined' ? null : createPortal(node, document.body)
 
   useEffect(() => {
     if (!toast) return
     const t = setTimeout(() => setToast(null), 3000)
     return () => clearTimeout(t)
   }, [toast])
+
+  useEffect(() => {
+    if (!showAdd && !editDelivery && !confirmDelete && !completeModal) return
+    const previousOverflow = document.body.style.overflow
+    const previousHtmlOverflow = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.documentElement.style.overflow = previousHtmlOverflow
+    }
+  }, [showAdd, editDelivery, confirmDelete, completeModal])
 
   const filtered = allDeliveries.filter(d => {
     if (tab === 'pending')   { if (d.cod_collected) return false }
@@ -1094,17 +1109,17 @@ export default function DeliveriesClient({
       )}
 
       {/* ── MODAL Nouvelle livraison ── */}
-      {showAdd && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
-          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-md sm:rounded-xl sm:border sm:border-[#E7E5E4]">
-            <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6 flex items-center justify-between">
+      {showAdd && renderModal(
+        <div className="fixed inset-0 z-[100] overflow-hidden overscroll-contain bg-white sm:flex sm:items-center sm:justify-center sm:bg-black/40 sm:p-4">
+          <div className="fixed inset-0 z-[101] flex h-[100dvh] w-full flex-col bg-white shadow-xl sm:relative sm:inset-auto sm:z-auto sm:h-auto sm:max-h-[calc(100dvh-4rem)] sm:max-w-md sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+            <div className="shrink-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6 flex items-center justify-between">
               <h3 className="font-semibold text-[#1C1917] text-lg">Nouvelle livraison</h3>
               <button type="button" onClick={() => setShowAdd(false)} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C] transition-colors">
                 <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
             <form onSubmit={handleAdd} className="flex min-h-0 flex-1 flex-col">
-              <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 sm:p-6 [-webkit-overflow-scrolling:touch]">
                 <div>
                   <label className="block text-sm font-medium text-[#1C1917] mb-1">Commande expédiée *</label>
                   <select className="input" value={addOrderId} onChange={e => setAddOrderId(e.target.value)} required>
@@ -1204,7 +1219,7 @@ export default function DeliveriesClient({
                   <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{addError}</p>
                 )}
               </div>
-              <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
+              <div className="shrink-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:flex-row sm:px-6 sm:pb-4">
                 <button type="button" onClick={() => setShowAdd(false)} className="btn-secondary flex-1">Annuler</button>
                 <button type="submit" disabled={isPending} className="btn-primary flex-1">
                   {isPending ? 'Création...' : 'Créer'}
@@ -1216,17 +1231,17 @@ export default function DeliveriesClient({
       )}
 
       {/* ── MODAL Modifier livraison ── */}
-      {editDelivery && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
-          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
-            <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6 flex items-center justify-between">
+      {editDelivery && renderModal(
+        <div className="fixed inset-0 z-[100] overflow-hidden overscroll-contain bg-white sm:flex sm:items-center sm:justify-center sm:bg-black/40 sm:p-4">
+          <div className="fixed inset-0 z-[101] flex h-[100dvh] w-full flex-col bg-white shadow-xl sm:relative sm:inset-auto sm:z-auto sm:h-auto sm:max-h-[calc(100dvh-4rem)] sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+            <div className="shrink-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6 flex items-center justify-between">
               <h3 className="font-semibold text-[#1C1917] text-lg">Modifier la livraison</h3>
               <button type="button" onClick={() => setEditDelivery(null)} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C] transition-colors">
                 <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
             <form onSubmit={handleEditSave} className="flex min-h-0 flex-1 flex-col">
-              <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 sm:p-6 [-webkit-overflow-scrolling:touch]">
                 {editDelivery.delivery_type === 'carrier' && (
                   <>
                     <div>
@@ -1270,7 +1285,7 @@ export default function DeliveriesClient({
                   </div>
                 )}
               </div>
-              <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
+              <div className="shrink-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:flex-row sm:px-6 sm:pb-4">
                 <button type="button" onClick={() => setEditDelivery(null)} className="btn-secondary flex-1">Annuler</button>
                 <button type="submit" disabled={isPending} className="btn-primary flex-1">
                   {isPending ? 'Sauvegarde...' : 'Enregistrer'}
@@ -1282,22 +1297,22 @@ export default function DeliveriesClient({
       )}
 
       {/* ── MODAL Confirmation suppression ── */}
-      {confirmDelete && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
-          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
-            <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6 flex items-center justify-between">
+      {confirmDelete && renderModal(
+        <div className="fixed inset-0 z-[100] overflow-hidden overscroll-contain bg-white sm:flex sm:items-center sm:justify-center sm:bg-black/40 sm:p-4">
+          <div className="fixed inset-0 z-[101] flex h-[100dvh] w-full flex-col bg-white shadow-xl sm:relative sm:inset-auto sm:z-auto sm:h-auto sm:max-h-[calc(100dvh-4rem)] sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+            <div className="shrink-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6 flex items-center justify-between">
               <h3 className="font-semibold text-[#1C1917]">Supprimer cette livraison ?</h3>
               <button type="button" onClick={() => setConfirmDelete(null)} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] text-[#78716C] transition-colors">
                 <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 [-webkit-overflow-scrolling:touch]">
               <p className="text-sm text-[#78716C]">
                 {getOrder(confirmDelete)?.customer?.name}{' '}
                 — {confirmDelete.delivery_type === 'self' ? 'Livraison personnelle' : (confirmDelete.carrier ? getCarrierConfig(confirmDelete.carrier).label : '—')}
               </p>
             </div>
-            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
+            <div className="shrink-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:flex-row sm:px-6 sm:pb-4">
               <button onClick={() => setConfirmDelete(null)} className="btn-secondary flex-1">Annuler</button>
               <button
                 onClick={() => handleDelete(confirmDelete)}
@@ -1312,10 +1327,10 @@ export default function DeliveriesClient({
       )}
 
       {/* ── MODAL Compléter livraison (transporteur uniquement) ── */}
-      {completeModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-4">
-          <div className="flex min-h-[100svh] w-full flex-col bg-white shadow-xl sm:min-h-0 sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
-            <div className="sticky top-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6 flex items-center justify-between">
+      {completeModal && renderModal(
+        <div className="fixed inset-0 z-[100] overflow-hidden overscroll-contain bg-white sm:flex sm:items-center sm:justify-center sm:bg-black/40 sm:p-4">
+          <div className="fixed inset-0 z-[101] flex h-[100dvh] w-full flex-col bg-white shadow-xl sm:relative sm:inset-auto sm:z-auto sm:h-auto sm:max-h-[calc(100dvh-4rem)] sm:max-w-sm sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+            <div className="shrink-0 border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6 flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-[#1C1917]">Compléter la livraison</h3>
                 <p className="text-xs text-[#78716C] mt-0.5">
@@ -1328,7 +1343,7 @@ export default function DeliveriesClient({
               </button>
             </div>
             <form onSubmit={handleComplete} className="flex min-h-0 flex-1 flex-col">
-              <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 sm:p-6 [-webkit-overflow-scrolling:touch]">
                 <div>
                   <label className="block text-sm font-medium text-[#1C1917] mb-1">N° de suivi *</label>
                   <input
@@ -1355,7 +1370,7 @@ export default function DeliveriesClient({
                   <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{completeError}</p>
                 )}
               </div>
-              <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 sm:flex-row sm:px-6">
+              <div className="shrink-0 flex flex-col-reverse gap-2 border-t border-[#E7E5E4] bg-white px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:flex-row sm:px-6 sm:pb-4">
                 <button type="button" onClick={() => setCompleteModal(null)} className="btn-secondary flex-1">Annuler</button>
                 <button type="submit" disabled={isPending} className="btn-primary flex-1">
                   {isPending ? 'Enregistrement...' : 'Enregistrer'}

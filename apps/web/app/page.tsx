@@ -1,9 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import {
+  Package, Users, Link2, MapPin, FileSpreadsheet, Smartphone,
+  MessageCircle, ClipboardCheck, Truck, Inbox, PackageCheck, Banknote,
+} from 'lucide-react'
 import MarketingNavbar from '@/components/marketing/Navbar'
 import MarketingFooter from '@/components/marketing/Footer'
 import PricingToggle from '@/components/marketing/PricingToggle'
-import WaitlistForm from '@/components/marketing/WaitlistForm'
 import { HANUT_CONTACT } from '@/lib/constants'
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -12,19 +15,19 @@ const CARRIERS = ['IntiGo', 'Navex', 'Adex', 'Aramex', 'Best Delivery']
 
 const STEPS = [
   {
-    emoji: '💬',
+    icon: MessageCircle,
     num: '01',
-    title: 'Tu reçois le DM WhatsApp',
-    desc: 'Un client commande via Instagram ou WhatsApp. Tu récupères son numéro et sa demande.',
+    title: 'Vous recevez le DM WhatsApp',
+    desc: 'Un client commande via Instagram ou WhatsApp. Vous récupérez son numéro et sa demande.',
   },
   {
-    emoji: '⚡',
+    icon: ClipboardCheck,
     num: '02',
-    title: 'Tu saisis la commande en 30 sec',
-    desc: "Entre le téléphone — Hanut retrouve le client. Sélectionne le produit, confirme. C'est tout.",
+    title: 'Vous saisissez la commande en 30 sec',
+    desc: "Entrez le téléphone — Hanut retrouve le client. Sélectionnez le produit, confirmez. C'est tout.",
   },
   {
-    emoji: '✅',
+    icon: Truck,
     num: '03',
     title: 'Le livreur part, le client peut suivre',
     desc: "Crée la livraison dans Hanut avec le transporteur choisi. Le client peut suivre sa commande sur sa page dédiée.",
@@ -45,6 +48,54 @@ function MockupShell({ url, children }: { url: string; children: React.ReactNode
       </div>
       {children}
     </div>
+  )
+}
+
+function DashboardMockup() {
+  const recent = [
+    { name: 'Fatima K.', product: 'iPhone 14 Pro', amount: 580, status: 'En cours', cls: 'bg-blue-100 text-blue-700' },
+    { name: 'Mehdi B.', product: 'Air Force 1 Blanc', amount: 185, status: 'Livré', cls: 'bg-green-100 text-green-700' },
+    { name: 'Sara A.', product: 'MAC Lipstick Ruby', amount: 45, status: 'Confirmée', cls: 'bg-sky-50 text-sky-700 border border-sky-200' },
+  ]
+  return (
+    <MockupShell url="hanut.tn/dashboard">
+      <div className="p-5 space-y-4">
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-brand-50 rounded-xl p-3 text-center">
+            <p className="text-lg font-extrabold text-brand-700">24</p>
+            <p className="text-xs text-brand-600 mt-0.5">Commandes</p>
+          </div>
+          <div className="bg-blue-50 rounded-xl p-3 text-center">
+            <p className="text-lg font-extrabold text-blue-700">3,240</p>
+            <p className="text-xs text-blue-600 mt-0.5">CA (DT)</p>
+          </div>
+          <div className="bg-orange-50 rounded-xl p-3 text-center">
+            <p className="text-lg font-extrabold text-orange-700">7</p>
+            <p className="text-xs text-orange-600 mt-0.5">À livrer</p>
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-gray-400 mb-2">Dernières commandes</p>
+          <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden">
+            {recent.map((o, i) => (
+              <div key={i} className="px-4 py-3 flex items-center gap-3 bg-white">
+                <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 bg-brand-50 text-[#0B5E46]">
+                  {o.name.split(' ').map(w => w[0]).join('')}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-gray-900 truncate">{o.name}</p>
+                  <p className="text-xs text-gray-400 truncate">{o.product}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-xs font-bold text-gray-900">{o.amount} DT</p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${o.cls}`}>{o.status}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </MockupShell>
   )
 }
 
@@ -109,7 +160,7 @@ function DeliveriesMockup() {
         ].map((d, i) => (
           <div key={i} className="border border-gray-100 rounded-xl p-3.5 flex items-center gap-3">
             <div className="w-8 h-8 bg-[#0B5E46] rounded-lg flex items-center justify-center shrink-0">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
               </svg>
             </div>
@@ -167,7 +218,7 @@ function AnalyticsMockup() {
           <p className="text-xs font-semibold text-gray-400 mb-2">Top produit</p>
           <div className="flex items-center gap-2.5">
             <div className="w-6 h-6 bg-[#16A34A] rounded-full flex items-center justify-center shrink-0">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="white" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
             </div>
             <div className="flex-1">
               <p className="text-xs font-semibold text-gray-900">iPhone 14 Pro</p>
@@ -186,23 +237,23 @@ function AnalyticsMockup() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export const metadata: Metadata = {
-  title: 'Hanut — Gérez vos commandes WhatsApp en 30 secondes',
+  title: 'Hanut — Gérez vos commandes WhatsApp et Instagram',
   description: "L'outil de gestion pour vendeurs tunisiens. Commandes, stock, livraisons COD et clients — tout dans un seul tableau de bord. Sans site e-commerce.",
   keywords: 'gestion commandes tunisie, whatsapp vendeur, COD tunisie, livraison tunisie, intigo navex',
   openGraph: {
-    title: 'Hanut — Gérez vos commandes WhatsApp en 30 secondes',
+    title: 'Hanut — Gérez vos commandes WhatsApp et Instagram',
     description: "L'outil fait pour les vendeurs tunisiens qui vendent via WhatsApp et Instagram.",
     url: 'https://hanut.tn',
     siteName: 'Hanut',
     locale: 'fr_TN',
     type: 'website',
-    images: [{ url: 'https://hanut.tn/icon-512.png', width: 512, height: 512, alt: 'Hanut' }],
+    images: [{ url: 'https://hanut.tn/og-image.png', width: 1200, height: 628, alt: 'Hanut — Gérez vos commandes WhatsApp et Instagram' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Hanut — Gérez vos commandes WhatsApp en 30 secondes',
+    title: 'Hanut — Gérez vos commandes WhatsApp et Instagram',
     description: "L'outil fait pour les vendeurs tunisiens qui vendent via WhatsApp et Instagram.",
-    images: ['https://hanut.tn/icon-512.png'],
+    images: ['https://hanut.tn/og-image.png'],
   },
   robots: {
     index: true,
@@ -232,60 +283,64 @@ export default function LandingPage() {
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden pt-20 pb-10 sm:pt-28 sm:pb-16 px-4 sm:px-6">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-green-50 rounded-full opacity-70 blur-3xl" />
-        <div className="absolute top-10 -left-20 w-64 h-64 bg-green-100 rounded-full opacity-30 blur-3xl" />
+    <section className="relative overflow-hidden pt-16 pb-16 sm:pt-24 sm:pb-24 px-4 sm:px-6">
+      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-brand-50 rounded-full opacity-60 blur-3xl" />
+        <div className="absolute top-10 -left-20 w-64 h-64 bg-brand-100 rounded-full opacity-20 blur-3xl" />
       </div>
 
-      <div className="relative max-w-4xl mx-auto text-center">
-        <div className="inline-flex items-center gap-2 bg-green-50 text-[#0B5E46] text-sm font-semibold px-4 py-1.5 rounded-full mb-8 border border-green-100">
-          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          Lancement en Tunisie · Démo Pro 14 jours · Aucune carte bancaire
-        </div>
+      <div className="relative max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-12 lg:gap-16">
+        <div className="text-center lg:text-left">
+          <div className="inline-flex items-center gap-2 bg-brand-50 text-[#0B5E46] text-sm font-semibold px-4 py-1.5 rounded-full mb-8 border border-brand-100">
+            <span className="w-2 h-2 bg-brand-500 rounded-full animate-pulse" />
+            Lancement en Tunisie
+          </div>
 
-        <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-extrabold text-[#1C1917] leading-[1.1] tracking-tight mb-6">
-          Gérez toutes vos commandes
-          <br />
-          <span className="text-[#16A34A]">WhatsApp en 30 secondes</span>
-        </h1>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#1C1917] leading-[1.08] tracking-tight mb-6">
+            Gérez vos commandes
+            <br />
+            <span className="text-brand-600">WhatsApp et Instagram</span>
+          </h1>
 
-        <p className="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-          L&apos;outil fait pour les vendeurs tunisiens. Commandes, stock, livraisons COD
-          {' '}— tout dans un seul tableau de bord.
-        </p>
+          <p className="text-lg sm:text-xl text-gray-500 max-w-xl mx-auto lg:mx-0 mb-10 leading-relaxed">
+            Saisissez une commande en 30 secondes. Stock et livraisons COD restent synchronisés dans un seul tableau de bord.
+          </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <Link
-            href="/register"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#16A34A] text-white text-base font-semibold px-8 py-3.5 rounded-lg transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97]"
-          >
-            Démo Pro 14 jours — Sans carte bancaire
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
-              <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </Link>
-          <a
-            href="#features"
-            className="w-full sm:w-auto inline-flex items-center justify-center text-[#16A34A] border border-[#16A34A] hover:bg-green-50 hover:border-[#15803D] hover:text-[#15803D] text-base font-medium px-8 py-3.5 rounded-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
-          >
-            Voir les fonctionnalités
-          </a>
-        </div>
-
-        <div className="flex items-center justify-center gap-5 mt-8 flex-wrap">
-          {['Sans carte bancaire', 'Annulable à tout moment', 'Support en français'].map((t, i) => (
-            <span key={i} className="flex items-center gap-1.5 text-sm text-gray-400">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <circle cx="7" cy="7" r="6" stroke="#4ADE80" strokeWidth="1.5"/>
-                <path d="M4.5 7L6.5 9L9.5 5" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <div className="flex flex-col sm:flex-row items-center lg:justify-start justify-center gap-5">
+            <Link
+              href="/register"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-brand-600 text-white text-lg font-semibold px-8 py-4 rounded-lg transition-all duration-150 ease-out hover:bg-brand-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-brand-500/40 active:scale-[0.97]"
+            >
+              Essayer Pro 14 jours
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0" aria-hidden="true">
+                <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              {t}
-            </span>
-          ))}
+            </Link>
+            <a
+              href="#features"
+              className="inline-flex items-center gap-1.5 text-brand-600 hover:text-brand-700 text-base font-semibold transition-colors"
+            >
+              Voir les fonctionnalités
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M2 7H12M12 7L8 3M12 7L8 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </a>
+          </div>
+
+          <p className="text-sm text-gray-400 mt-6">
+            Plan Pro gratuit 14 jours · Aucune carte bancaire · Annulation libre
+          </p>
         </div>
 
-        <WaitlistForm />
+        <div className="relative w-full max-w-md mx-auto lg:max-w-none">
+          <div
+            className="absolute -inset-6 bg-brand-50/60 rounded-3xl -rotate-2 pointer-events-none"
+            aria-hidden="true"
+          />
+          <div className="relative">
+            <DashboardMockup />
+          </div>
+        </div>
       </div>
     </section>
   )
@@ -340,7 +395,7 @@ function FeaturesSection() {
     <section id="features" className="py-24 sm:py-32 px-4 sm:px-6">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-20">
-          <p className="text-sm font-semibold text-[#16A34A] uppercase tracking-widest mb-3">Fonctionnalités</p>
+          <p className="text-sm font-semibold text-brand-600 uppercase tracking-widest mb-3">Fonctionnalités</p>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#1C1917] tracking-tight">
             Votre plateforme tout-en-un
           </h2>
@@ -358,7 +413,7 @@ function FeaturesSection() {
               }`}
             >
               <div className="flex-1 min-w-0">
-                <span className="inline-block text-xs font-bold text-[#16A34A] bg-green-50 px-3 py-1 rounded-full uppercase tracking-widest mb-5">
+                <span className="inline-block text-xs font-bold text-brand-600 bg-brand-50 px-3 py-1 rounded-full uppercase tracking-widest mb-5">
                   {f.tag}
                 </span>
                 <h3 className="text-2xl sm:text-3xl font-extrabold text-[#1C1917] leading-tight mb-4">
@@ -367,10 +422,10 @@ function FeaturesSection() {
                 <p className="text-base text-gray-500 leading-relaxed mb-6">{f.body}</p>
                 <a
                   href="#pricing"
-                  className="inline-flex items-center gap-2 text-[#16A34A] font-semibold text-sm hover:underline"
+                  className="inline-flex items-center gap-2 text-brand-600 font-semibold text-sm hover:underline"
                 >
                   En savoir plus
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                     <path d="M2 7H12M12 7L8 3M12 7L8 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </a>
@@ -379,8 +434,66 @@ function FeaturesSection() {
             </div>
           ))}
         </div>
+
+        <SecondaryFeaturesGrid />
       </div>
     </section>
+  )
+}
+
+const SECONDARY_FEATURES = [
+  {
+    icon: Package,
+    title: 'Stock en temps réel',
+    desc: 'Chaque commande met le stock à jour. Alertes en rupture.',
+  },
+  {
+    icon: Users,
+    title: 'Fiches clients',
+    desc: 'Historique, tags et notes sur chacun de vos clients.',
+  },
+  {
+    icon: Link2,
+    title: 'Lien de commande public',
+    desc: 'Vos clients commandent seuls via votre lien hanut.tn.',
+  },
+  {
+    icon: MapPin,
+    title: 'Suivi client',
+    desc: 'Une page de suivi dédiée pour chaque commande expédiée.',
+  },
+  {
+    icon: FileSpreadsheet,
+    title: 'Export CSV',
+    desc: 'Exportez commandes et analytics en un clic.',
+  },
+  {
+    icon: Smartphone,
+    title: 'Pensé pour le mobile',
+    desc: 'Gérez tout depuis votre téléphone, où que vous soyez.',
+  },
+]
+
+function SecondaryFeaturesGrid() {
+  return (
+    <div className="mt-24 sm:mt-32">
+      <div className="text-center mb-12">
+        <h3 className="text-2xl sm:text-3xl font-extrabold text-[#1C1917] tracking-tight">
+          Et tout ce qu&apos;il faut autour
+        </h3>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        {SECONDARY_FEATURES.map(f => (
+          <div key={f.title} className="bg-gray-50 rounded-2xl p-6">
+            <div className="inline-flex items-center justify-center bg-brand-50 rounded-lg p-2 mb-4">
+              <f.icon className="w-6 h-6 text-brand-600" aria-hidden="true" />
+            </div>
+            <p className="font-bold text-[#1C1917] mb-1.5">{f.title}</p>
+            <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -391,7 +504,7 @@ function HowItWorks() {
     <section className="py-24 sm:py-32 px-4 sm:px-6 bg-[#F5F5F4]">
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-16">
-          <p className="text-sm font-semibold text-[#16A34A] uppercase tracking-widest mb-3">Comment ça marche</p>
+          <p className="text-sm font-semibold text-brand-600 uppercase tracking-widest mb-3">Comment ça marche</p>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1C1917] tracking-tight">
             De la commande au COD en 3 étapes
           </h2>
@@ -405,9 +518,9 @@ function HowItWorks() {
               <div key={i} className="relative flex flex-col items-center text-center">
                 <div className="relative mb-6">
                   <div className="w-24 h-24 bg-white rounded-2xl shadow-md border border-gray-100 flex items-center justify-center">
-                    <span className="text-3xl">{s.emoji}</span>
+                    <s.icon className="w-9 h-9 text-brand-600" strokeWidth={1.75} aria-hidden="true" />
                   </div>
-                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-[#16A34A] rounded-full flex items-center justify-center shadow-sm">
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-brand-600 rounded-full flex items-center justify-center shadow-sm">
                     <span className="text-white text-xs font-bold">{i + 1}</span>
                   </div>
                 </div>
@@ -424,23 +537,55 @@ function HowItWorks() {
 
 // ─── Early Adopters ───────────────────────────────────────────────────────────
 
+const EARLY_BENEFITS = [
+  {
+    icon: Inbox,
+    title: 'Fini les commandes perdues dans les DMs',
+    desc: 'Chaque commande est enregistrée, suivie et retrouvable en 2 secondes.',
+  },
+  {
+    icon: PackageCheck,
+    title: 'Stock toujours à jour',
+    desc: 'Plus de vente sans stock : chaque commande décrémente automatiquement.',
+  },
+  {
+    icon: Banknote,
+    title: 'COD suivi automatiquement',
+    desc: 'Vous savez exactement combien chaque livreur vous doit, en permanence.',
+  },
+]
+
 function EarlyAdoptersSection() {
   return (
-    <section id="about" className="py-24 sm:py-32 px-4 sm:px-6 bg-[#FAFAF9]">
-      <div className="max-w-3xl mx-auto text-center">
-        <p className="text-sm font-semibold text-[#16A34A] uppercase tracking-widest mb-3">Communauté</p>
+    <section id="about" className="py-20 sm:py-32 px-4 sm:px-6 bg-[#FAFAF9]">
+      <div className="max-w-5xl mx-auto text-center">
+        <p className="text-sm font-semibold text-brand-600 uppercase tracking-widest mb-3">Communauté</p>
         <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1C1917] tracking-tight mb-4">
-          Rejoignez les premiers vendeurs tunisiens sur Hanut
+          Rejoignez les premiers vendeurs tunisiens
         </h2>
-        <p className="text-lg text-gray-500 mb-10 max-w-xl mx-auto">
-          Hanut est en lancement actif en Tunisie. Faites partie des premiers à gérer vos commandes plus vite, plus simplement — sans changer votre façon de vendre.
+        <p className="text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
+          Hanut est en lancement actif en Tunisie. Gérez vos commandes plus vite,
+          sans changer votre façon de vendre.
         </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12 mb-14 text-left">
+          {EARLY_BENEFITS.map(b => (
+            <div key={b.title} className="bg-gray-50 rounded-2xl p-6">
+              <div className="inline-flex items-center justify-center bg-brand-50 rounded-lg p-2 mb-4">
+                <b.icon className="w-6 h-6 text-brand-600" aria-hidden="true" />
+              </div>
+              <p className="font-bold text-[#1C1917] mb-1.5 leading-snug">{b.title}</p>
+              <p className="text-sm text-gray-500 leading-relaxed">{b.desc}</p>
+            </div>
+          ))}
+        </div>
+
         <Link
           href="/register"
-          className="inline-flex items-center justify-center gap-2 bg-[#16A34A] text-white text-base font-semibold px-8 py-3.5 rounded-lg transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97]"
+          className="inline-flex items-center justify-center gap-2 bg-brand-600 text-white text-base font-semibold px-8 py-4 rounded-lg transition-all duration-150 ease-out hover:bg-brand-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-brand-500/40 active:scale-[0.97]"
         >
-          Créer mon compte gratuitement
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
+          Essayer Pro 14 jours
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0" aria-hidden="true">
             <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </Link>
@@ -453,32 +598,31 @@ function EarlyAdoptersSection() {
 
 function CtaSection() {
   return (
-    <section className="py-24 px-4 sm:px-6 bg-[#0B5E46]">
-      <div className="max-w-3xl mx-auto text-center">
+    <section className="py-20 sm:py-28 px-4 sm:px-6 bg-[#0B5E46]">
+      <div className="max-w-2xl mx-auto text-center">
         <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-4">
-          Prêt à gérer votre business
-          <br />
-          comme un pro ?
+          Prêt à gérer votre business comme un pro ?
         </h2>
-        <p className="text-green-200 text-lg mb-10">
-          Rejoignez les premiers vendeurs tunisiens. Démo Pro 14 jours incluse.
+        <p className="text-green-200 text-lg mb-10 leading-relaxed">
+          Rejoignez les premiers vendeurs tunisiens sur Hanut.
         </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link
-            href="/register"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-[#0B5E46] text-base font-bold px-8 py-3.5 rounded-lg transition-all duration-150 ease-out hover:bg-green-50 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-white/40 active:scale-[0.97]"
-          >
-            Démarrer la démo Pro
-          </Link>
+        <Link
+          href="/register"
+          className="inline-flex items-center justify-center gap-2 bg-white text-[#0B5E46] text-lg font-bold px-8 py-4 rounded-lg transition-all duration-150 ease-out hover:bg-green-50 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-white/40 active:scale-[0.97]"
+        >
+          Essayer Pro 14 jours
+        </Link>
+        <p className="text-sm text-green-200/80 mt-6">
+          Plan Pro gratuit 14 jours · Aucune carte bancaire ·{' '}
           <a
             href={`${HANUT_CONTACT.whatsappUrl}?text=${encodeURIComponent('Bonjour Hanut, je voudrais une démonstration.')}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full sm:w-auto inline-flex items-center justify-center text-green-100 border border-green-600 hover:border-green-400 hover:text-white text-base font-medium px-8 py-3.5 rounded-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
+            className="underline hover:text-white transition-colors"
           >
-            Demander une démo
+            Demander une démo WhatsApp
           </a>
-        </div>
+        </p>
       </div>
     </section>
   )

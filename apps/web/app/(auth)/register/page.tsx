@@ -64,7 +64,7 @@ export default function RegisterPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  const [shopName, setShopName] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
@@ -92,7 +92,7 @@ export default function RegisterPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        shop_name: shopName.trim(),
+        shop_name: displayName.trim(),
         email: normalizedEmail,
         phone: normalizedPhone || undefined,
         password,
@@ -131,22 +131,25 @@ export default function RegisterPage() {
 
   return (
     <div className="card p-8">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">Créer votre boutique</h2>
+      <h2 className="text-xl font-semibold text-gray-900 mb-6">Créer votre compte</h2>
 
       <form onSubmit={handleRegister} className="space-y-4">
         <div>
-          <label htmlFor="shopName" className="block text-sm font-medium text-gray-700 mb-1">
-            Nom de la boutique
+          <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-1">
+            Nom
           </label>
           <input
-            id="shopName"
+            id="displayName"
             type="text"
-            value={shopName}
-            onChange={e => setShopName(e.target.value)}
+            value={displayName}
+            onChange={e => setDisplayName(e.target.value)}
             className="input"
-            placeholder="Ma boutique"
+            placeholder="Votre nom"
             required
           />
+          <p className="mt-1 text-xs text-gray-500">
+            Ce nom s&apos;affiche dans le dashboard. Le nom de boutique se configure ensuite avec votre lien de commande.
+          </p>
         </div>
 
         <div>

@@ -11,7 +11,7 @@ import { ensureSignupSellerProfile } from '@/lib/signup-profile'
 const PASSWORD_ERROR = 'Le mot de passe doit contenir au moins 8 caractères, une majuscule, un chiffre et un caractère spécial.'
 
 const RegisterSchema = z.object({
-  shop_name: z.string().min(2, 'Nom de boutique trop court').max(100),
+  shop_name: z.string().min(2, 'Nom trop court').max(100),
   email: z.string().email('Email invalide'),
   phone: z.string().max(30).optional(),
   password: z.string().superRefine((val, ctx) => {

@@ -30,8 +30,8 @@ export default function Navbar() {
       scrolled ? 'border-b border-gray-100 shadow-sm' : ''
     }`}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-6">
-        <Link href="/" className="flex items-center shrink-0">
-          <Image src="/logo-horizontal.svg" alt="Hanut" width={96} height={32} priority unoptimized />
+        <Link href="/" className="flex items-center shrink-0 overflow-visible">
+          <Image src="/logo-horizontal.svg" alt="Hanut" width={100} height={32} priority unoptimized className="h-8 w-auto" />
         </Link>
 
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-500">
@@ -59,14 +59,14 @@ export default function Navbar() {
             href="/register"
             className="inline-flex items-center text-white text-sm font-semibold px-4 py-2 rounded-lg bg-[#16A34A] transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97]"
           >
-            Commencer
+            Essayer Pro
           </Link>
           <button
             className="md:hidden ml-1 p-2 rounded-lg hover:bg-gray-100 transition-colors"
             onClick={() => setMenuOpen(v => !v)}
             aria-label="Menu"
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               {menuOpen ? (
                 <path d="M4 4L16 16M16 4L4 16" stroke="#374151" strokeWidth="1.5" strokeLinecap="round"/>
               ) : (
@@ -112,7 +112,7 @@ export default function Navbar() {
               onClick={() => setMenuOpen(false)}
               className="w-full text-center py-2.5 text-sm font-semibold text-white bg-[#16A34A] rounded-lg transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97]"
             >
-              Commencer gratuitement
+              Essayer Pro 14 jours
             </Link>
           </div>
         </div>
