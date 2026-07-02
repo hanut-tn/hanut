@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
     p_notes: parsed.data.notes || null,
     p_customer_governorate: parsed.data.customer_governorate,
     p_customer_delegation: parsed.data.customer_delegation || null,
-    p_customer_landmark: parsed.data.customer_landmark,
+    p_customer_landmark: parsed.data.customer_landmark ?? null,
     p_customer_postal_code: parsed.data.customer_postal_code || null,
     p_delivery_notes: parsed.data.delivery_notes || null,
     p_items: parsed.data.items && parsed.data.items.length > 0 ? parsed.data.items : null,
