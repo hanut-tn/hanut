@@ -180,6 +180,65 @@ describe('GET /api/auth/callback', () => {
     expect(body.html).not.toContain('<Shop & Co>')
   })
 
+  it('redirects an existing confirmed seller clicking a password-reset link to /reset-password, not /verify-email', async () => {
+    // Régression : isConfirmedHanutSignupUser() matche tout compte déjà
+    // confirmé (email confirmé + nom renseigné), y compris pour un lien de
+    // type recovery. Sans le filtre sur `type`, ce cas était traité à tort
+    // comme une confirmation d'inscription.
+    const { insert, rpc } = mockServiceClient()
+    process.env.RESEND_API_KEY = 'resend-test-key'
+    const fetchMock = vi.fn().mockResolvedValue(new Response('', { status: 202 }))
+    vi.stubGlobal('fetch', fetchMock)
+    authMock.verifyOtp.mockResolvedValue({
+      data: {
+        user: {
+          id: 'seller-1',
+          email: 'seller@example.com',
+          email_confirmed_at: '2026-01-01T00:00:00.000Z',
+          user_metadata: { name: 'Seller Shop', hanut_signup: true },
+          created_at: '2026-01-01T00:00:00.000Z',
+        },
+      },
+      error: null,
+    })
+    const request = new NextRequest(
+      'https://hanut.test/api/auth/callback' +
+      '?next=%2Freset-password&token_hash=recovery-token&type=recovery',
+    )
+
+    const response = await GET(request)
+
+    expect(response.headers.get('location')).toBe('https://hanut.test/reset-password')
+    expect(insert).not.toHaveBeenCalled()
+    expect(rpc).not.toHaveBeenCalled()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('redirects an existing confirmed seller changing email to /dashboard, not /verify-email', async () => {
+    const { insert } = mockServiceClient()
+    authMock.verifyOtp.mockResolvedValue({
+      data: {
+        user: {
+          id: 'seller-1',
+          email: 'new-email@example.com',
+          email_confirmed_at: '2026-01-01T00:00:00.000Z',
+          user_metadata: { name: 'Seller Shop', hanut_signup: true },
+          created_at: '2026-01-01T00:00:00.000Z',
+        },
+      },
+      error: null,
+    })
+    const request = new NextRequest(
+      'https://hanut.test/api/auth/callback' +
+      '?next=%2Fdashboard&token_hash=email-change-token&type=email_change',
+    )
+
+    const response = await GET(request)
+
+    expect(response.headers.get('location')).toBe('https://hanut.test/dashboard')
+    expect(insert).not.toHaveBeenCalled()
+  })
+
   it('creates the seller profile from the current session if the code exchange omits user data', async () => {
     const { insert, rpc } = mockServiceClient()
     authMock.exchangeCodeForSession.mockResolvedValue({

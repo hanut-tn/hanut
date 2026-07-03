@@ -91,9 +91,23 @@ export async function GET(request: NextRequest) {
       verifiedUser = data.user ?? verifiedUser
     }
 
+    // isConfirmedHanutSignupUser() a un chemin de repli qui matche tout compte
+    // vendeur déjà confirmé (email confirmé + nom renseigné). Sans filtre sur
+    // `type`, un lien de reset password ou de changement d'email pour un compte
+    // existant matchait aussi ce repli et était traité à tort comme une
+    // confirmation d'inscription (mauvaise redirection vers /verify-email,
+    // email de bienvenue renvoyé en double). On restreint donc ce repli aux
+    // seuls cas où le lien est réellement lié à une inscription :
+    // - type === 'signup' : première confirmation (lien app custom)
+    // - type === 'magiclink' : renvoi de confirmation (lien app custom)
+    // - type === null (flux ?code=, sans `type` dans l'URL) : ancien lien
+    //   natif Supabase / template de secours, seul cas où on n'a aucun
+    //   moyen de connaître le type autrement que par l'heuristique.
+    // 'recovery' et 'email_change' ont toujours un `type` explicite dans nos
+    // liens et ne doivent donc jamais retomber sur ce repli.
     const isSignupConfirmation =
       type === 'signup' ||
-      (verifiedUser ? isConfirmedHanutSignupUser(verifiedUser) : false)
+      ((type === 'magiclink' || type === null) && verifiedUser ? isConfirmedHanutSignupUser(verifiedUser) : false)
 
     if (verifiedUser?.id && verifiedUser.email && isSignupConfirmation) {
       const serviceClient = createServiceClient()
