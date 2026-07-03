@@ -3,7 +3,10 @@
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import type { Product } from '@hanut/types'
-import { PackageX, Package, Copy, ExternalLink } from 'lucide-react'
+import {
+  PackageX, Package, Copy, ExternalLink, User, Phone, Mail, MapPin, Building2,
+  Home, Landmark, Hash, MessageSquare, Wallet, ShoppingBag, CheckCircle2,
+} from 'lucide-react'
 import { TUNISIAN_GOVERNORATES, isValidTunisianPhone, formatTunisianPhone } from '@/lib/constants'
 import { getVariantLabel } from '@/lib/variants'
 import { TurnstileWidget, isTurnstileEnabled } from '@/components/ui/TurnstileWidget'
@@ -402,7 +405,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
       <button
         type="button"
         onClick={toggleLang}
-        className="text-sm font-medium text-gray-500 border border-gray-200 rounded-lg px-3 py-1.5 min-h-[36px] touch-manipulation transition-all duration-150 ease-out hover:bg-gray-50 hover:text-[#1C1917] hover:scale-[1.03] active:scale-[0.97]"
+        className="text-sm font-medium text-gray-500 bg-white border border-gray-200 rounded-full px-3.5 py-1.5 min-h-[36px] shadow-sm touch-manipulation transition-all duration-150 ease-out hover:bg-gray-50 hover:text-[#1C1917] hover:scale-[1.03] active:scale-[0.97]"
       >
         {t.common.langToggle}
       </button>
@@ -417,11 +420,8 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
 
     inner = (
       <div className="flex flex-col items-center text-center py-10 space-y-5">
-        <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center">
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-            <circle cx="20" cy="20" r="19" stroke="#16A34A" strokeWidth="2"/>
-            <path d="M12 20L17 25L28 14" stroke="#16A34A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+        <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center ring-8 ring-green-50/60">
+          <CheckCircle2 className="w-10 h-10 text-[#16A34A]" strokeWidth={2} />
         </div>
         <div>
           <h2 className="text-2xl font-extrabold text-[#1C1917]">{t.success.title}</h2>
@@ -430,12 +430,12 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
           </p>
         </div>
 
-        <div className="bg-[#F5F5F4] rounded-xl px-6 py-4">
+        <div className="bg-[#F5F5F4] rounded-xl px-6 py-4 border-2 border-dashed border-[#D6D3D1]">
           <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">{t.success.orderNumberLabel}</p>
           <p className="text-xl font-bold text-[#0B5E46] tracking-wider font-mono">#{submitted.orderId}</p>
         </div>
 
-        <div className="w-full bg-white border border-[#E7E5E4] rounded-2xl p-4 space-y-3">
+        <div className="w-full bg-white border border-[#E7E5E4] rounded-2xl p-4 space-y-3 shadow-sm">
           <p className="text-sm font-semibold text-[#1C1917]">{t.success.trackMyOrderTitle}</p>
           <a
             href={trackUrl}
@@ -499,7 +499,11 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
                 onKeyDown={e => handleOtpKeyDown(i, e)}
                 autoComplete={i === 0 ? 'one-time-code' : 'off'}
                 aria-label={t.otp.digitAriaLabel(i + 1)}
-                className="w-14 h-14 text-center text-2xl font-bold border-2 border-[#E7E5E4] rounded-xl outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition caret-transparent"
+                className={`w-14 h-14 text-center text-2xl font-bold border-2 rounded-xl outline-none focus:ring-2 focus:ring-green-100 transition caret-transparent ${
+                  otpDigits[i]
+                    ? 'border-[#16A34A] bg-[#F0FDF4] text-[#0B5E46]'
+                    : 'border-[#E7E5E4] focus:border-[#16A34A]'
+                }`}
               />
             ))}
           </div>
@@ -559,30 +563,38 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
     const isMultiVariant = hasVariants && selectedProduct && selectedProduct.variants.length > 1
 
     inner = (
-      <form ref={formTopRef} onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <h1 className="text-xl font-bold text-[#1C1917]">{t.header.title}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{t.header.at} <span className="font-medium">{sellerName}</span></p>
+      <form ref={formTopRef} onSubmit={handleSubmit} className="space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-full bg-[#0B5E46] text-white flex items-center justify-center font-bold text-base shrink-0">
+            {sellerName.trim().charAt(0).toUpperCase() || '?'}
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-[#1C1917]">{t.header.title}</h1>
+            <p className="text-sm text-gray-500 mt-0.5">{t.header.at} <span className="font-medium">{sellerName}</span></p>
+          </div>
         </div>
 
         {/* ── Coordonnées ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4">
-          <p className="text-sm font-bold text-[#1C1917] flex items-center gap-2">
-            <span className="w-5 h-5 bg-[#0B5E46] rounded-full text-white text-xs flex items-center justify-center">1</span>
+        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm space-y-4">
+          <p className="text-base font-bold text-[#1C1917] flex items-center gap-3">
+            <span className="w-8 h-8 bg-[#0B5E46] rounded-xl text-white text-sm flex items-center justify-center shadow-sm shrink-0">1</span>
             {t.customer.sectionTitle}
           </p>
 
           <div>
             <label htmlFor="order-name" className="block text-sm font-medium text-gray-700 mb-1.5">{t.customer.fullNameLabel}</label>
-            <input
-              id="order-name"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder={t.customer.fullNamePlaceholder}
-              required
-              autoComplete="name"
-            />
+            <div className="relative">
+              <User className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <input
+                id="order-name"
+                className="w-full border border-gray-200 rounded-xl ps-11 pe-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder={t.customer.fullNamePlaceholder}
+                required
+                autoComplete="name"
+              />
+            </div>
           </div>
 
           <div>
@@ -591,7 +603,8 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
               <span className="text-gray-400 font-normal ml-1">{t.customer.phoneDigitsHint}</span>
             </label>
             <div className="flex gap-2">
-              <span className="flex items-center px-3 bg-[#F5F5F4] border border-gray-200 rounded-xl text-base font-medium text-gray-500 shrink-0">
+              <span className="flex items-center gap-1.5 px-3 bg-[#F5F5F4] border border-gray-200 rounded-xl text-base font-medium text-gray-500 shrink-0">
+                <Phone className="w-3.5 h-3.5" />
                 +216
               </span>
               <input
@@ -617,17 +630,20 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
 
           <div>
             <label htmlFor="order-email" className="block text-sm font-medium text-gray-700 mb-1.5">{t.customer.emailLabel}</label>
-            <input
-              id="order-email"
-              className={`w-full border rounded-xl px-4 py-3 text-base outline-none focus:ring-2 transition ${emailError ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-gray-200 focus:border-[#16A34A] focus:ring-green-100'}`}
-              type="email"
-              value={email}
-              onChange={e => { setEmail(e.target.value); setEmailError(null) }}
-              placeholder={t.customer.emailPlaceholder}
-              required
-              autoComplete="email"
-              inputMode="email"
-            />
+            <div className="relative">
+              <Mail className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <input
+                id="order-email"
+                className={`w-full border rounded-xl ps-11 pe-4 py-3 text-base outline-none focus:ring-2 transition ${emailError ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-gray-200 focus:border-[#16A34A] focus:ring-green-100'}`}
+                type="email"
+                value={email}
+                onChange={e => { setEmail(e.target.value); setEmailError(null) }}
+                placeholder={t.customer.emailPlaceholder}
+                required
+                autoComplete="email"
+                inputMode="email"
+              />
+            </div>
             {emailError
               ? <p className="text-xs text-red-600 mt-1">{emailError}</p>
               : <p className="text-xs text-gray-400 mt-1">{t.customer.emailHelper}</p>
@@ -636,44 +652,53 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
 
           <div>
             <label htmlFor="order-governorate" className="block text-sm font-medium text-gray-700 mb-1.5">{t.customer.governorateLabel}</label>
-            <select
-              id="order-governorate"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition bg-white"
-              value={governorate}
-              onChange={e => setGovernorate(e.target.value)}
-              required
-            >
-              <option value="">{t.customer.governoratePlaceholder}</option>
-              {TUNISIAN_GOVERNORATES.map(g => (
-                <option key={g} value={g}>{g}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <MapPin className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <select
+                id="order-governorate"
+                className="w-full border border-gray-200 rounded-xl ps-11 pe-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition bg-white"
+                value={governorate}
+                onChange={e => setGovernorate(e.target.value)}
+                required
+              >
+                <option value="">{t.customer.governoratePlaceholder}</option>
+                {TUNISIAN_GOVERNORATES.map(g => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div>
             <label htmlFor="order-city" className="block text-sm font-medium text-gray-700 mb-1.5">{t.customer.cityLabel}</label>
-            <input
-              id="order-city"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
-              value={customerCity}
-              onChange={e => setCustomerCity(e.target.value)}
-              placeholder={t.customer.cityPlaceholder}
-              required
-              autoComplete="address-level2"
-            />
+            <div className="relative">
+              <Building2 className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <input
+                id="order-city"
+                className="w-full border border-gray-200 rounded-xl ps-11 pe-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
+                value={customerCity}
+                onChange={e => setCustomerCity(e.target.value)}
+                placeholder={t.customer.cityPlaceholder}
+                required
+                autoComplete="address-level2"
+              />
+            </div>
           </div>
 
           <div>
             <label htmlFor="order-address" className="block text-sm font-medium text-gray-700 mb-1.5">{t.customer.addressLabel}</label>
-            <input
-              id="order-address"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
-              value={address}
-              onChange={e => setAddress(e.target.value)}
-              placeholder={t.customer.addressPlaceholder}
-              required
-              autoComplete="street-address"
-            />
+            <div className="relative">
+              <Home className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <input
+                id="order-address"
+                className="w-full border border-gray-200 rounded-xl ps-11 pe-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
+                value={address}
+                onChange={e => setAddress(e.target.value)}
+                placeholder={t.customer.addressPlaceholder}
+                required
+                autoComplete="street-address"
+              />
+            </div>
           </div>
 
           <div>
@@ -681,13 +706,16 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
               {t.customer.landmarkLabel}
               <span className="text-gray-400 font-normal ml-1">{t.common.optional}</span>
             </label>
-            <input
-              id="order-landmark"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
-              value={landmark}
-              onChange={e => setLandmark(e.target.value)}
-              placeholder={t.customer.landmarkPlaceholder}
-            />
+            <div className="relative">
+              <Landmark className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <input
+                id="order-landmark"
+                className="w-full border border-gray-200 rounded-xl ps-11 pe-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
+                value={landmark}
+                onChange={e => setLandmark(e.target.value)}
+                placeholder={t.customer.landmarkPlaceholder}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -695,58 +723,67 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
               <label htmlFor="order-postal-code" className="block text-sm font-medium text-gray-700 mb-1.5">
                 {t.customer.postalCodeLabel} <span className="text-gray-400 font-normal">{t.common.optional}</span>
               </label>
-              <input
-                id="order-postal-code"
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
-                value={postalCode}
-                onChange={e => setPostalCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                placeholder={t.customer.postalCodePlaceholder}
-                inputMode="numeric"
-                maxLength={4}
-                autoComplete="postal-code"
-              />
+              <div className="relative">
+                <Hash className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <input
+                  id="order-postal-code"
+                  className="w-full border border-gray-200 rounded-xl ps-11 pe-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
+                  value={postalCode}
+                  onChange={e => setPostalCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  placeholder={t.customer.postalCodePlaceholder}
+                  inputMode="numeric"
+                  maxLength={4}
+                  autoComplete="postal-code"
+                />
+              </div>
             </div>
             <div>
               <label htmlFor="order-delegation" className="block text-sm font-medium text-gray-700 mb-1.5">
                 {t.customer.delegationLabel} <span className="text-gray-400 font-normal">{t.common.optional}</span>
               </label>
-              <input
-                id="order-delegation"
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
-                value={delegation}
-                onChange={e => setDelegation(e.target.value)}
-                placeholder={t.customer.delegationPlaceholder}
-              />
+              <div className="relative">
+                <MapPin className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <input
+                  id="order-delegation"
+                  className="w-full border border-gray-200 rounded-xl ps-11 pe-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
+                  value={delegation}
+                  onChange={e => setDelegation(e.target.value)}
+                  placeholder={t.customer.delegationPlaceholder}
+                />
+              </div>
             </div>
           </div>
         </div>
 
         {/* ── Produit ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4">
-          <p className="text-sm font-bold text-[#1C1917] flex items-center gap-2">
-            <span className="w-5 h-5 bg-[#0B5E46] rounded-full text-white text-xs flex items-center justify-center">2</span>
+        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm space-y-4">
+          <p className="text-base font-bold text-[#1C1917] flex items-center gap-3">
+            <span className="w-8 h-8 bg-[#0B5E46] rounded-xl text-white text-sm flex items-center justify-center shadow-sm shrink-0">2</span>
             {t.order.sectionTitle}
           </p>
 
           <div>
             <label htmlFor="order-product" className="block text-sm font-medium text-gray-700 mb-1.5">{t.order.productLabel}</label>
-            <select
-              id="order-product"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition bg-white"
-              value={productId}
-              onChange={e => setProductId(e.target.value)}
-              required
-            >
-              <option value="">{t.order.productPlaceholder}</option>
-              {visibleProducts.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.name} — {p.price} DT
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <Package className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <select
+                id="order-product"
+                className="w-full border border-gray-200 rounded-xl ps-11 pe-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition bg-white"
+                value={productId}
+                onChange={e => setProductId(e.target.value)}
+                required
+              >
+                <option value="">{t.order.productPlaceholder}</option>
+                {visibleProducts.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} — {p.price} DT
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {selectedProduct && (
-              <div className="mt-2 bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl p-3 flex items-center gap-3 transition-all duration-200">
+              <div className="mt-2 bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl p-3.5 flex items-center gap-3 shadow-sm transition-all duration-200">
                 {selectedProduct.image_url ? (
                   <Image
                     src={selectedProduct.image_url}
@@ -830,7 +867,10 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
               </div>
               {multiVariantQtyTotal > 0 && (
                 <div className="mt-3 bg-[#F5F5F4] rounded-xl px-4 py-3 flex items-center justify-between">
-                  <span className="text-sm text-gray-500">{t.order.totalCod}</span>
+                  <span className="text-sm text-gray-500 flex items-center gap-1.5">
+                    <Wallet className="w-4 h-4" />
+                    {t.order.totalCod}
+                  </span>
                   <span className="text-lg font-extrabold text-[#0B5E46]">
                     {(selectedProduct.price * multiVariantQtyTotal).toFixed(0)} DT
                   </span>
@@ -910,7 +950,10 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
 
           {selectedProduct && !isMultiVariant && (
             <div className="bg-[#F5F5F4] rounded-xl px-4 py-3 flex items-center justify-between">
-              <span className="text-sm text-gray-500">{t.order.totalCod}</span>
+              <span className="text-sm text-gray-500 flex items-center gap-1.5">
+                <Wallet className="w-4 h-4" />
+                {t.order.totalCod}
+              </span>
               <span className="text-lg font-extrabold text-[#0B5E46]">
                 {(selectedProduct.price * quantity).toFixed(0)} DT
               </span>
@@ -919,18 +962,21 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         </div>
 
         {/* ── Note ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             {t.notes.label}
             <span className="text-gray-400 font-normal ml-1">{t.common.optional}</span>
           </label>
-          <textarea
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition resize-none"
-            rows={3}
-            value={deliveryNotes}
-            onChange={e => setDeliveryNotes(e.target.value)}
-            placeholder={t.notes.placeholder}
-          />
+          <div className="relative">
+            <MessageSquare className="absolute start-3.5 top-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
+            <textarea
+              className="w-full border border-gray-200 rounded-xl ps-11 pe-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition resize-none"
+              rows={3}
+              value={deliveryNotes}
+              onChange={e => setDeliveryNotes(e.target.value)}
+              placeholder={t.notes.placeholder}
+            />
+          </div>
         </div>
 
         {error && (
@@ -980,7 +1026,14 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
           disabled={loading || (isTurnstileEnabled() && !turnstileToken)}
           className="h-12 w-full touch-manipulation bg-[#16A34A] text-white font-bold rounded-lg text-base transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100"
         >
-          {loading ? t.submit.sendingCode : t.submit.orderButton}
+          {loading ? (
+            t.submit.sendingCode
+          ) : (
+            <span className="flex items-center justify-center gap-2">
+              <ShoppingBag className="w-4 h-4" />
+              {t.submit.orderButton}
+            </span>
+          )}
         </button>
 
         <p className="text-xs text-[#78716C] text-center mt-2">
