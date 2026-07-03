@@ -1,3 +1,5 @@
+import { isPrivateOrLocalOrigin, isVercelDeploymentOrigin, normalizeOrigin } from '@/lib/safe-origin'
+
 type EmailButton = {
   label: string
   href: string
@@ -29,44 +31,22 @@ type OrderLine = {
 const DEFAULT_FROM = 'Hanut <noreply@hanut.tn>'
 const DEFAULT_PUBLIC_ASSET_URL = 'https://hanut.tn'
 
-function normalizeOrigin(value?: string | null): string | null {
-  if (!value) return null
-  try {
-    const url = new URL(value.includes('://') ? value : `https://${value}`)
-    return url.origin
-  } catch {
-    return null
-  }
-}
-
-function isPrivateOrLocalOrigin(origin: string): boolean {
-  try {
-    const hostname = new URL(origin).hostname
-    return (
-      hostname === 'localhost' ||
-      hostname === '127.0.0.1' ||
-      hostname === '::1' ||
-      hostname.startsWith('10.') ||
-      hostname.startsWith('192.168.') ||
-      /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
-    )
-  } catch {
-    return true
-  }
-}
-
 function getAppUrl() {
-  return (process.env.NEXT_PUBLIC_APP_URL ?? 'https://hanut.tn').replace(/\/$/, '')
+  const configured = normalizeOrigin(process.env.NEXT_PUBLIC_APP_URL)
+  if (configured && !isPrivateOrLocalOrigin(configured) && !isVercelDeploymentOrigin(configured)) {
+    return configured
+  }
+  return DEFAULT_PUBLIC_ASSET_URL
 }
 
 function getEmailAssetUrl() {
   const explicitAssetUrl = normalizeOrigin(
     process.env.NEXT_PUBLIC_EMAIL_ASSET_URL ?? process.env.HANUT_EMAIL_ASSET_URL,
   )
-  if (explicitAssetUrl) return explicitAssetUrl
+  if (explicitAssetUrl && !isVercelDeploymentOrigin(explicitAssetUrl)) return explicitAssetUrl
 
   const appUrl = normalizeOrigin(process.env.NEXT_PUBLIC_APP_URL)
-  if (appUrl && !isPrivateOrLocalOrigin(appUrl)) return appUrl
+  if (appUrl && !isPrivateOrLocalOrigin(appUrl) && !isVercelDeploymentOrigin(appUrl)) return appUrl
 
   return DEFAULT_PUBLIC_ASSET_URL
 }

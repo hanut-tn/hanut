@@ -73,4 +73,17 @@ describe('auth redirect URLs', () => {
 
     expect(getAppOrigin()).toBe('https://hanut.tn')
   })
+
+  it('ignores NEXT_PUBLIC_APP_URL itself if it is misconfigured to a Vercel deployment domain', () => {
+    // Régression : NEXT_PUBLIC_APP_URL avait été configurée par erreur sur
+    // l'alias de branche Vercel (hanut-web-git-main-*.vercel.app), et le
+    // code lui faisait confiance sans vérifier — un lien d'invitation
+    // pointait alors vers ce domaine au lieu de hanut.tn.
+    process.env.NEXT_PUBLIC_APP_URL = 'https://hanut-web-git-main-hanut-s-projects.vercel.app'
+
+    expect(getAppOrigin()).toBe('https://hanut.tn')
+    expect(getAppOrigin('https://hanut-web-git-main-hanut-s-projects.vercel.app')).toBe(
+      'https://hanut.tn',
+    )
+  })
 })
