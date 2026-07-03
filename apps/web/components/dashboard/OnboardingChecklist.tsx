@@ -151,9 +151,9 @@ export default function OnboardingChecklist({ productAdded, slugCreated, linkCop
     {
       key: 'slug',
       done: slugCreated,
-      title: "Créez l'URL de votre boutique",
-      desc: 'Choisissez une adresse personnalisée pour votre page de commande',
-      cta: "Créer mon URL",
+      title: "Personnalisez l'URL de votre boutique",
+      desc: 'Une adresse par défaut a été créée — personnalisez-la si besoin',
+      cta: "Personnaliser mon URL",
       action: () => router.push('/settings?tab=link'),
     },
     {

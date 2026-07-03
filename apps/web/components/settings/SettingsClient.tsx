@@ -320,6 +320,15 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
         await updateSlug(newSlug)
         setSlugMsg({ type: 'success', text: 'Lien mis à jour avec succès.' })
         setSlugAvailable(null)
+        // Un slug par défaut est déjà généré à l'inscription — cette étape
+        // de l'onboarding ne doit se cocher que lorsque le vendeur a
+        // explicitement enregistré/confirmé son URL, pas dès la création
+        // du compte.
+        fetch('/api/onboarding', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'slug_confirmed' }),
+        }).catch(() => {})
       } catch (err) {
         setSlugMsg({ type: 'error', text: err instanceof Error ? err.message : 'Erreur inconnue' })
       }

@@ -124,6 +124,31 @@ describe('PATCH /api/onboarding', () => {
     expect(cacheMock.revalidateTag).not.toHaveBeenCalled()
   })
 
+  it('marks the slug step as confirmed while preserving existing steps', async () => {
+    // Régression : un slug par défaut est généré automatiquement à
+    // l'inscription (trigger DB), donc cette étape ne doit plus se baser
+    // sur la simple présence de seller.slug — seulement sur une action
+    // explicite du vendeur.
+    mockContext()
+    const { updateQuery, updateQueryPayloads } = mockServerClient({
+      steps: { product_added: true, slug_confirmed: false },
+    })
+
+    const response = await PATCH(jsonRequest({ action: 'slug_confirmed' }))
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ success: true })
+    expect(updateQueryPayloads).toEqual([
+      {
+        onboarding_steps: {
+          product_added: true,
+          slug_confirmed: true,
+        },
+      },
+    ])
+    expect(updateQuery.eq).toHaveBeenCalledWith('id', 'seller-1')
+  })
+
   it('marks the public link as copied while preserving existing steps', async () => {
     mockContext()
     const { selectQuery, updateQuery, updateQueryPayloads } = mockServerClient({

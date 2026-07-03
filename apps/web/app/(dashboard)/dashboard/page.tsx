@@ -201,7 +201,7 @@ export default async function DashboardPage() {
   })
   const chartMax = Math.max(...chartData.map(d => d.value), 1)
   const hasWeeklyData = chartData.some(d => d.value > 0)
-  const onboardingSteps = seller?.onboarding_steps as { link_copied?: boolean; first_order?: boolean } | null
+  const onboardingSteps = seller?.onboarding_steps as { slug_confirmed?: boolean; link_copied?: boolean; first_order?: boolean } | null
 
   // COD pending — count query scopée ce mois (même périmètre que l'ancienne formule)
   const codPending = codPendingCount ?? 0
@@ -225,7 +225,7 @@ export default async function DashboardPage() {
        (!seller?.onboarding_dismissed_until || new Date(seller.onboarding_dismissed_until) < new Date()) && (
         <OnboardingChecklist
           productAdded={(productCount ?? 0) > 0}
-          slugCreated={!!seller?.slug}
+          slugCreated={onboardingSteps?.slug_confirmed === true}
           linkCopied={onboardingSteps?.link_copied === true}
           firstOrder={(orderCount ?? 0) > 0 || onboardingSteps?.first_order === true}
           slug={seller?.slug ?? null}

@@ -4,10 +4,16 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 import { NextRequest, NextResponse } from 'next/server'
 import { checkOrigin } from '@/lib/csrf'
 
-type OnboardingAction = 'link_copied' | 'first_order' | 'complete' | 'dismiss'
+type OnboardingAction = 'slug_confirmed' | 'link_copied' | 'first_order' | 'complete' | 'dismiss'
 
 function isOnboardingAction(action: unknown): action is OnboardingAction {
-  return action === 'link_copied' || action === 'first_order' || action === 'complete' || action === 'dismiss'
+  return (
+    action === 'slug_confirmed' ||
+    action === 'link_copied' ||
+    action === 'first_order' ||
+    action === 'complete' ||
+    action === 'dismiss'
+  )
 }
 
 export async function PATCH(req: NextRequest) {
@@ -39,7 +45,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: true })
   }
 
-  if (body.action === 'link_copied' || body.action === 'first_order') {
+  if (body.action === 'slug_confirmed' || body.action === 'link_copied' || body.action === 'first_order') {
     const { data: seller, error: selectError } = await supabase
       .from('sellers')
       .select('onboarding_steps, slug')
