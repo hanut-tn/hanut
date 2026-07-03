@@ -9,9 +9,9 @@ import { sendSignupConfirmationEmail } from '@/lib/email'
 import { isPasswordValid, PASSWORD_ERROR_MESSAGE } from '@/lib/password-policy'
 
 const RegisterSchema = z.object({
-  shop_name: z.string().min(2, 'Nom trop court').max(100),
+  shop_name: z.string().min(2, 'Nom trop court').max(100, 'Nom trop long'),
   email: z.string().email('Email invalide'),
-  phone: z.string().max(30).optional(),
+  phone: z.string().max(30, 'Numéro de téléphone trop long').optional(),
   password: z.string().superRefine((val, ctx) => {
     if (!isPasswordValid(val)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: PASSWORD_ERROR_MESSAGE })

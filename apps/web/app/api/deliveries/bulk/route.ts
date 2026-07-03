@@ -7,7 +7,7 @@ import { getUserContext } from '@/lib/get-context'
 import { requireActiveResponse } from '@/lib/assert-active'
 
 const BulkDeliverySchema = z.object({
-  ids: z.array(z.string().min(1)).min(1, 'Aucune livraison sélectionnée').max(100, 'Maximum 100 livraisons à la fois'),
+  ids: z.array(z.string().min(1, 'Identifiant de livraison invalide')).min(1, 'Aucune livraison sélectionnée').max(100, 'Maximum 100 livraisons à la fois'),
   action: z.enum(['cod_collected', 'cod_reversed']),
 })
 

@@ -55,10 +55,10 @@ const ALLOWED_ACTION_TYPES = [
 
 const ActivityLogSchema = z.object({
   action_type: z.enum(ALLOWED_ACTION_TYPES),
-  description: z.string().min(1).max(1000),
-  user_name: z.string().max(100).optional(),
-  entity_type: z.string().max(50).nullish(),
-  entity_id: z.string().max(100).nullish(),
+  description: z.string().min(1, 'Description requise.').max(1000, 'Description trop longue.'),
+  user_name: z.string().max(100, 'Nom trop long.').optional(),
+  entity_type: z.string().max(50, 'Type trop long.').nullish(),
+  entity_id: z.string().max(100, 'Identifiant trop long.').nullish(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 })
 

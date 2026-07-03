@@ -6,8 +6,8 @@ import { checkOrigin } from '@/lib/csrf'
 import { requireActiveResponse } from '@/lib/assert-active'
 
 const UpdateCustomerTagsSchema = z.object({
-  tags: z.array(z.string().min(1).max(50)).max(20).optional(),
-  notes: z.string().max(2000).optional(),
+  tags: z.array(z.string().min(1, 'Tag invalide.').max(50, 'Tag trop long.')).max(20, 'Maximum 20 tags.').optional(),
+  notes: z.string().max(2000, 'Notes trop longues (2000 caractères maximum).').optional(),
 })
 
 type Params = { params: Promise<{ id: string }> }

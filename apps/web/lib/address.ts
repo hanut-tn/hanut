@@ -6,14 +6,14 @@ import {
   isValidTunisianPhone,
 } from '@/lib/constants'
 
-function optionalTrimmedString(max: number) {
+function optionalTrimmedString(max: number, label: string) {
   return z.preprocess(
     value => {
       if (typeof value !== 'string') return value
       const trimmed = value.trim()
       return trimmed ? trimmed : undefined
     },
-    z.string().trim().max(max).optional(),
+    z.string().trim().max(max, `${label} est trop long.`).optional(),
   )
 }
 
@@ -30,9 +30,9 @@ export const HanutAddressFieldsSchema = z.object({
       'Gouvernorat invalide.',
     ),
   customer_city: requiredText(1, 100, 'La ville / délégation'),
-  customer_delegation: optionalTrimmedString(100),
+  customer_delegation: optionalTrimmedString(100, 'La délégation'),
   customer_address: requiredText(2, 250, "L'adresse détaillée"),
-  customer_landmark: optionalTrimmedString(200),
+  customer_landmark: optionalTrimmedString(200, 'Le repère'),
   customer_postal_code: z.preprocess(
     value => {
       if (typeof value !== 'string') return value
@@ -44,7 +44,7 @@ export const HanutAddressFieldsSchema = z.object({
       .regex(/^\d{4}$/, 'Le code postal doit contenir 4 chiffres.')
       .optional(),
   ),
-  delivery_notes: optionalTrimmedString(500),
+  delivery_notes: optionalTrimmedString(500, 'Les notes de livraison'),
 })
 
 export const HanutContactAddressSchema = HanutAddressFieldsSchema.extend({

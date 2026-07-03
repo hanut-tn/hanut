@@ -9,7 +9,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { sendEmailChangeCurrentEmail, sendEmailChangeNewEmail } from '@/lib/email'
 
 const ChangeEmailSchema = z.object({
-  email: z.string().trim().email('Email invalide').max(254),
+  email: z.string().trim().email('Email invalide').max(254, 'Adresse email trop longue.'),
 })
 
 export async function POST(request: NextRequest) {

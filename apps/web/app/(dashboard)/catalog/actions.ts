@@ -10,9 +10,9 @@ import { getVariantLabel, sumVariantStock } from '@/lib/variants'
 import { requireActive } from '@/lib/assert-active'
 
 const ProductVariantSchema = z.object({
-  size: z.string().max(50).optional(),
-  color: z.string().max(50).optional(),
-  qty: z.number().int().min(0),
+  size: z.string().max(50, 'Taille trop longue.').optional(),
+  color: z.string().max(50, 'Couleur trop longue.').optional(),
+  qty: z.number().int('Quantité invalide.').min(0, 'La quantité ne peut pas être négative.'),
 })
 
 const ProductSchema = z.object({

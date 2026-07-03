@@ -17,23 +17,23 @@ import {
 import { HanutAddressFieldsSchema } from '@/lib/address'
 
 const OrderItemInputSchema = z.object({
-  product_id: z.string().uuid(),
-  variant: z.string().trim().max(100).optional(),
-  quantity: z.coerce.number().int().min(1).max(99),
+  product_id: z.string().uuid('Produit invalide.'),
+  variant: z.string().trim().max(100, 'Variante trop longue.').optional(),
+  quantity: z.coerce.number().int('Quantité invalide.').min(1, 'Quantité minimum : 1.').max(99, 'Quantité maximum : 99.'),
 })
 
 const VerifyOtpSchema = z.object({
-  slug: z.string().trim().min(1).max(120),
-  email: z.string().trim().email().max(254),
-  code: z.string().regex(/^\d{4}$/),
-  customer_name: z.string().trim().min(2).max(100),
-  customer_phone: z.string().min(1),
-  product_id: z.string().uuid().optional(),
-  variant: z.string().trim().max(100).optional(),
-  quantity: z.coerce.number().int().min(1).max(99).optional(),
-  notes: z.string().trim().max(500).optional(),
+  slug: z.string().trim().min(1, 'Boutique manquante.').max(120, 'Boutique invalide.'),
+  email: z.string().trim().email('Adresse email invalide.').max(254, 'Adresse email trop longue.'),
+  code: z.string().regex(/^\d{4}$/, 'Le code doit contenir 4 chiffres.'),
+  customer_name: z.string().trim().min(2, 'Le nom doit contenir au moins 2 caractères.').max(100, 'Le nom est trop long.'),
+  customer_phone: z.string().min(1, 'Le téléphone est obligatoire.'),
+  product_id: z.string().uuid('Produit invalide.').optional(),
+  variant: z.string().trim().max(100, 'Variante trop longue.').optional(),
+  quantity: z.coerce.number().int('Quantité invalide.').min(1, 'Quantité minimum : 1.').max(99, 'Quantité maximum : 99.').optional(),
+  notes: z.string().trim().max(500, 'Notes trop longues (500 caractères maximum).').optional(),
   turnstile_token: z.string(),
-  items: z.array(OrderItemInputSchema).max(20).optional(),
+  items: z.array(OrderItemInputSchema).max(20, 'Maximum 20 articles.').optional(),
 }).merge(HanutAddressFieldsSchema)
 
 type OtpRpcResult = {
