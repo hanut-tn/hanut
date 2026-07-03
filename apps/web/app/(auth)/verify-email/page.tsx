@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CheckCircle, Mail } from 'lucide-react'
+import { HANUT_CONTACT } from '@/lib/constants'
 
 function VerifyEmailContent() {
   const router = useRouter()
@@ -109,6 +110,12 @@ function VerifyEmailContent() {
               >
                 Contacter le support via WhatsApp
               </a>
+              <p className="text-xs text-[#78716C]">
+                Un problème ? Contactez-nous sur{' '}
+                <a href={`mailto:${HANUT_CONTACT.email}`} className="text-[#16A34A] hover:underline">
+                  {HANUT_CONTACT.email}
+                </a>
+              </p>
             </div>
           ) : (
             <Link href="/dashboard" className="btn-primary w-full block">

@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://www.hanut.tn'),
   title: 'Hanut — Gestion commandes WhatsApp',
   description: 'Gérez vos commandes WhatsApp, votre stock et vos livraisons depuis un seul tableau de bord.',
+  authors: [{ name: 'Hanut', url: 'https://www.hanut.tn' }],
   openGraph: {
     images: [{ url: '/og-image.png', width: 1200, height: 628, alt: 'Hanut — Gérez vos commandes WhatsApp et Instagram' }],
   },

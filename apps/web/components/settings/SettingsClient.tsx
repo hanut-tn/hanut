@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mail, AlertTriangle, MessageCircle, Clock, Info, Check, X as XIcon } from 'lucide-react'
+import { Mail, AlertTriangle, MessageCircle, Clock, Info, Check, X as XIcon, LifeBuoy } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { ProfileInput } from '@/app/(dashboard)/settings/actions'
 import { HANUT_CONTACT } from '@/lib/constants'
@@ -1084,6 +1084,22 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
           </div>
         </div>
       )}
+
+      {/* Aide — toujours visible, quel que soit l'onglet actif */}
+      <div className="card p-5 flex items-center gap-4">
+        <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center shrink-0">
+          <LifeBuoy className="w-5 h-5 text-brand-600" aria-hidden="true" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-gray-900">Besoin d&apos;aide ?</p>
+          <p className="text-sm text-gray-500">
+            Pour toute question :{' '}
+            <a href={`mailto:${HANUT_CONTACT.supportEmail}`} className="text-brand-600 font-medium hover:underline">
+              {HANUT_CONTACT.supportEmail}
+            </a>
+          </p>
+        </div>
+      </div>
     </div>
   )
 }

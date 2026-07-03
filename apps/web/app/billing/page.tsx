@@ -149,6 +149,12 @@ export default async function BillingPage() {
           Se déconnecter
         </Link>
       </p>
+      <p className="text-center text-xs text-gray-400 mt-2">
+        Question sur la facturation ?{' '}
+        <a href={`mailto:${HANUT_CONTACT.email}`} className="underline hover:text-gray-600">
+          {HANUT_CONTACT.email}
+        </a>
+      </p>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { HANUT_CONTACT } from '@/lib/constants'
 
 export const metadata: Metadata = {
   title: "Politique de confidentialité — Hanut",
@@ -65,7 +66,7 @@ export default function PrivacyPage() {
           </p>
           <p className="mt-2">
             Pour exercer ces droits, contactez-nous à{' '}
-            <a href="mailto:hanut.tn@gmail.com" className="text-[#16A34A] hover:underline">hanut.tn@gmail.com</a>.
+            <a href={`mailto:${HANUT_CONTACT.email}`} className="text-[#16A34A] hover:underline">{HANUT_CONTACT.email}</a>.
             La suppression du compte est également accessible directement depuis les paramètres de l&apos;application
             (Paramètres → Sécurité → Supprimer mon compte).
           </p>
@@ -89,7 +90,7 @@ export default function PrivacyPage() {
           <h2 className="text-xl font-semibold text-[#1C1917] mb-3">7. Contact</h2>
           <p>
             Pour toute question relative à la protection de vos données :{' '}
-            <a href="mailto:hanut.tn@gmail.com" className="text-[#16A34A] hover:underline">hanut.tn@gmail.com</a>
+            <a href={`mailto:${HANUT_CONTACT.email}`} className="text-[#16A34A] hover:underline">{HANUT_CONTACT.email}</a>
           </p>
         </section>
 

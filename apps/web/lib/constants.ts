@@ -103,7 +103,8 @@ export function getCarrierConfig(carrier: string): CarrierConfig {
 export const HANUT_CONTACT = {
   whatsapp: '+21654727060',
   whatsappUrl: 'https://wa.me/21654727060',
-  email: 'hanut.tn@gmail.com',
+  email: 'contact@hanut.tn',
+  supportEmail: 'support@hanut.tn',
 } as const
 
 export const PLAN_LIMITS = {

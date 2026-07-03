@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { HANUT_CONTACT } from '@/lib/constants'
 
 export const metadata: Metadata = {
   title: "Conditions Générales d'Utilisation — Hanut",
@@ -21,7 +22,7 @@ export default function LegalPage() {
           <p>
             Hanut est une plateforme de gestion de commandes COD (paiement à la livraison) destinée aux
             vendeurs tunisiens. Le service est édité par Hanut, en cours d&apos;enregistrement légal en Tunisie.
-            Contact : <a href="mailto:hanut.tn@gmail.com" className="text-[#16A34A] hover:underline">hanut.tn@gmail.com</a>.
+            Contact : <a href={`mailto:${HANUT_CONTACT.email}`} className="text-[#16A34A] hover:underline">{HANUT_CONTACT.email}</a>.
           </p>
         </section>
 
@@ -73,7 +74,7 @@ export default function LegalPage() {
           <h2 className="text-xl font-semibold text-[#1C1917] mb-3">7. Contact</h2>
           <p>
             Pour toute question relative aux présentes conditions :{' '}
-            <a href="mailto:hanut.tn@gmail.com" className="text-[#16A34A] hover:underline">hanut.tn@gmail.com</a>
+            <a href={`mailto:${HANUT_CONTACT.email}`} className="text-[#16A34A] hover:underline">{HANUT_CONTACT.email}</a>
           </p>
         </section>
 

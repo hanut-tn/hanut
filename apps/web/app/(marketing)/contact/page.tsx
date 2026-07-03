@@ -115,7 +115,7 @@ export default function ContactPage() {
 
               {/* Email */}
               <a
-                href="mailto:hanut.tn@gmail.com"
+                href={`mailto:${HANUT_CONTACT.email}`}
                 className="flex items-center gap-4 bg-white rounded-2xl border border-gray-200 shadow-sm p-5 hover:shadow-md transition-all hover:border-blue-200 group"
               >
                 <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center shrink-0">
@@ -126,7 +126,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <p className="font-bold text-[#1C1917]">Email</p>
-                  <p className="text-sm text-[#16A34A] font-medium mt-0.5">hanut.tn@gmail.com</p>
+                  <p className="text-sm text-[#16A34A] font-medium mt-0.5">{HANUT_CONTACT.email}</p>
                 </div>
               </a>
 
@@ -195,6 +195,12 @@ export default function ContactPage() {
                     </button>
                   </form>
                 )}
+                <p className="text-xs text-gray-400 text-center mt-4">
+                  Vous pouvez aussi nous écrire directement à{' '}
+                  <a href={`mailto:${HANUT_CONTACT.email}`} className="text-[#16A34A] font-medium hover:underline">
+                    {HANUT_CONTACT.email}
+                  </a>
+                </p>
               </div>
             </div>
 

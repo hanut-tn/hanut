@@ -1,5 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { Mail } from 'lucide-react'
+import { HANUT_CONTACT } from '@/lib/constants'
 
 const COLS = [
   {
@@ -61,6 +63,17 @@ export default function Footer() {
                     </Link>
                   </li>
                 ))}
+                {col.title === 'Ressources' && (
+                  <li>
+                    <a
+                      href={`mailto:${HANUT_CONTACT.email}`}
+                      className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white transition-colors"
+                    >
+                      <Mail className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                      {HANUT_CONTACT.email}
+                    </a>
+                  </li>
+                )}
               </ul>
             </div>
           ))}
