@@ -9,30 +9,24 @@ import {
 } from 'lucide-react'
 import { getCarrierConfig } from '@/lib/constants'
 import type { CarrierName } from '@hanut/types'
+import { useLang, type Lang } from '@/lib/i18n/use-lang'
+import { trackingTranslations, type TrackingDict } from '@/lib/i18n/tracking'
 
-const STATUS_MESSAGE: Record<string, string> = {
-  pending:   'Votre commande est en attente de confirmation. Le vendeur vous contactera bientôt.',
-  new:       'Votre commande est confirmée ! On prépare votre colis.',
-  confirmed: 'Votre commande est confirmée ! On prépare votre colis.',
-  shipped:   'Votre colis est en route ! Livraison prévue sous 24–48h.',
-  delivered: 'Votre commande a été livrée. Merci pour votre confiance !',
-  returned:  "Votre commande a été retournée. Contactez le vendeur pour plus d'informations.",
-  cancelled: 'Votre commande a été annulée. Contactez le vendeur pour plus d’informations.',
-}
-
-function getStatusMessage(status: string, deliveryType: 'self' | 'carrier'): string {
+function getStatusMessage(t: TrackingDict, status: string, deliveryType: 'self' | 'carrier'): string {
   if (status === 'shipped' && deliveryType === 'self') {
-    return 'Votre commande est prise en charge directement par la boutique.'
+    return t.status.shippedSelf
   }
-  return STATUS_MESSAGE[status] ?? 'Statut en cours de mise à jour.'
+  const map: Record<string, string> = {
+    pending: t.status.pending,
+    new: t.status.confirmedOrNew,
+    confirmed: t.status.confirmedOrNew,
+    shipped: t.status.shipped,
+    delivered: t.status.delivered,
+    returned: t.status.returned,
+    cancelled: t.status.cancelled,
+  }
+  return map[status] ?? t.status.updating
 }
-
-const TRACKING_STEPS = [
-  { key: 'received',  label: 'Commande reçue',       matchStatuses: ['pending', 'new'] },
-  { key: 'confirmed', label: 'Commande confirmée',    matchStatuses: ['confirmed'] },
-  { key: 'shipped',   label: 'En cours de livraison', matchStatuses: ['shipped'] },
-  { key: 'delivered', label: 'Livrée',                matchStatuses: ['delivered'] },
-] as const
 
 function getCurrentStepIndex(status: string): number {
   if (status === 'pending' || status === 'new') return 0
@@ -42,9 +36,10 @@ function getCurrentStepIndex(status: string): number {
   return -1
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('fr-TN', {
+function formatDate(iso: string, lang: Lang) {
+  return new Date(iso).toLocaleDateString(lang === 'ar' ? 'ar-TN' : 'fr-TN', {
     day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+    numberingSystem: 'latn',
   })
 }
 
@@ -91,6 +86,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
   const isRefreshingRef = useRef(false)
   const lastUpdatedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { lang, t, isRtl, toggleLang } = useLang(trackingTranslations)
 
   const refresh = useCallback(async () => {
     if (isRefreshingRef.current) return
@@ -148,6 +144,13 @@ export default function TrackingClient({ initialData, orderId }: Props) {
   const isReturned     = currentStatus === 'returned'
   const isCancelled    = currentStatus === 'cancelled'
 
+  const TRACKING_STEPS = [
+    { key: 'received',  label: t.steps.received,  matchStatuses: ['pending', 'new'] },
+    { key: 'confirmed', label: t.steps.confirmed, matchStatuses: ['confirmed'] },
+    { key: 'shipped',   label: t.steps.shipped,   matchStatuses: ['shipped'] },
+    { key: 'delivered', label: t.steps.delivered, matchStatuses: ['delivered'] },
+  ] as const
+
   const statusMap = new Map<string, string>()
   for (const h of data.status_history) {
     statusMap.set(h.status, h.changed_at)
@@ -168,12 +171,21 @@ export default function TrackingClient({ initialData, orderId }: Props) {
   const carrierConfig = carrier ? getCarrierConfig(carrier) : null
 
   return (
-    <div className="min-h-screen bg-[#FAFAF9]">
+    <div dir={isRtl ? 'rtl' : 'ltr'} className={isRtl ? 'font-arabic min-h-screen bg-[#FAFAF9]' : 'min-h-screen bg-[#FAFAF9]'}>
       {/* Header */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
           <Image src="/logo-horizontal.svg" alt="Hanut" width={90} height={29} unoptimized />
-          <span className="text-xs text-[#78716C]">Suivi de commande</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-[#78716C]">{t.header.title}</span>
+            <button
+              type="button"
+              onClick={toggleLang}
+              className="text-xs font-medium text-gray-500 border border-gray-200 rounded-lg px-2.5 py-1 min-h-[32px] touch-manipulation transition-all duration-150 ease-out hover:bg-gray-50 hover:text-[#1C1917] hover:scale-[1.03] active:scale-[0.97]"
+            >
+              {t.common.langToggle}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -184,7 +196,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
           <div>
             <p className="text-xs text-[#78716C] font-mono">#{data.order_id}</p>
             <p className="text-xs text-[#78716C] mt-0.5">
-              Passée le {new Date(data.created_at).toLocaleDateString('fr-TN', { day: '2-digit', month: 'long', year: 'numeric' })}
+              {t.card.placedOn(new Date(data.created_at).toLocaleDateString(lang === 'ar' ? 'ar-TN' : 'fr-TN', { day: '2-digit', month: 'long', year: 'numeric', numberingSystem: 'latn' }))}
             </p>
           </div>
 
@@ -216,7 +228,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
               ))}
               <div className={`flex justify-between items-center${data.items.length > 1 ? ' pt-3 border-t border-[#E7E5E4]' : ' pt-0.5'}`}>
                 {data.items.length > 1
-                  ? <span className="text-sm text-[#78716C]">Total commande</span>
+                  ? <span className="text-sm text-[#78716C]">{t.card.totalOrder}</span>
                   : <span />
                 }
                 <p className="text-sm font-bold text-[#16A34A]">{data.cod_amount} DT</p>
@@ -258,12 +270,12 @@ export default function TrackingClient({ initialData, orderId }: Props) {
           : currentStatus === 'cancelled' ? 'bg-gray-50 text-gray-700 border border-gray-200'
           : 'bg-blue-50 text-blue-700 border border-blue-200'
         }`}>
-          {getStatusMessage(currentStatus, deliveryType)}
+          {getStatusMessage(t, currentStatus, deliveryType)}
         </div>
 
         {/* Timeline */}
         <div className="bg-white border border-[#E7E5E4] rounded-2xl p-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-[#1C1917] mb-4">Suivi</h2>
+          <h2 className="text-sm font-semibold text-[#1C1917] mb-4">{t.timeline.title}</h2>
           <div className="space-y-0">
             {timelineSteps.map((step, i) => {
               const isCurrent = (step.matchStatuses as readonly string[]).includes(currentStatus)
@@ -297,7 +309,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
                       {step.label}
                     </p>
                     {changedAt && (isDone || isCurrent) && (
-                      <p className="text-xs text-[#78716C] mt-0.5">{formatDate(changedAt)}</p>
+                      <p className="text-xs text-[#78716C] mt-0.5">{formatDate(changedAt, lang)}</p>
                     )}
                   </div>
                 </div>
@@ -314,11 +326,11 @@ export default function TrackingClient({ initialData, orderId }: Props) {
                 )}
                 <div>
                   <p className={`text-sm font-semibold ${isCancelled ? 'text-gray-700' : 'text-red-700'}`}>
-                    {isCancelled ? 'Commande annulée' : 'Commande retournée'}
+                    {isCancelled ? t.steps.cancelledLabel : t.steps.returnedLabel}
                   </p>
                   {statusMap.get(currentStatus) && (
                     <p className={`text-xs mt-0.5 ${isCancelled ? 'text-gray-500' : 'text-red-500'}`}>
-                      {formatDate(statusMap.get(currentStatus)!)}
+                      {formatDate(statusMap.get(currentStatus)!, lang)}
                     </p>
                   )}
                 </div>
@@ -332,11 +344,11 @@ export default function TrackingClient({ initialData, orderId }: Props) {
           <div className="bg-white border border-[#E7E5E4] rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <User className="w-4 h-4 text-blue-600" />
-              <h2 className="text-sm font-semibold text-[#1C1917]">Prise en charge par la boutique</h2>
+              <h2 className="text-sm font-semibold text-[#1C1917]">{t.selfDelivery.title}</h2>
             </div>
             <div className="space-y-3">
               <p className="text-sm text-[#78716C]">
-                La boutique effectue la livraison directement. Le vendeur vous contactera pour confirmer l&apos;heure et le lieu de livraison.
+                {t.selfDelivery.description}
               </p>
               {data.delivery.vendor_note && (
                 <p className="text-sm text-[#1C1917] bg-[#FAFAF9] rounded-lg px-3 py-2 italic">
@@ -351,7 +363,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
                   className="inline-flex items-center gap-2 bg-[#25D366] text-white rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-150 ease-out hover:bg-[#22c55e] hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#25D366]/40 active:scale-[0.97]"
                 >
                   <MessageCircle className="w-4 h-4" />
-                  Contacter le vendeur
+                  {t.selfDelivery.contactSeller}
                 </a>
               )}
             </div>
@@ -363,7 +375,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
           <div className="bg-white border border-[#E7E5E4] rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <Truck className="w-4 h-4 text-[#78716C]" />
-              <h2 className="text-sm font-semibold text-[#1C1917]">Suivi transporteur</h2>
+              <h2 className="text-sm font-semibold text-[#1C1917]">{t.carrier.title}</h2>
             </div>
             <div className="space-y-2">
               {carrierConfig && (
@@ -374,7 +386,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
               {data.delivery.tracking ? (
                 <p className="font-mono text-sm text-[#1C1917]">{data.delivery.tracking}</p>
               ) : (
-                <p className="text-sm text-[#78716C]">Numéro de suivi non disponible</p>
+                <p className="text-sm text-[#78716C]">{t.carrier.trackingUnavailable}</p>
               )}
               {trackingUrl && (
                 <a
@@ -383,7 +395,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 text-sm text-[#16A34A] hover:text-[#0B5E46] font-medium transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
                 >
-                  Suivre mon colis sur {carrierConfig?.label}
+                  {t.carrier.trackMyParcelOn(carrierConfig?.label ?? '')}
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               )}
@@ -399,12 +411,12 @@ export default function TrackingClient({ initialData, orderId }: Props) {
             className="flex items-center gap-2 text-xs text-[#78716C] hover:text-[#1C1917] mx-auto mt-4 min-h-[44px] px-4 rounded-lg hover:bg-[#F5F5F4] touch-manipulation transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
           >
             <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Actualiser
+            {t.refresh.button}
           </button>
           {lastUpdated ? (
-            <p className="text-xs text-[#16A34A]">Mis à jour à {lastUpdated}</p>
+            <p className="text-xs text-[#16A34A]">{t.refresh.updatedAt(lastUpdated)}</p>
           ) : (
-            <p className="text-xs text-[#A8A29E]">Mise à jour automatique toutes les 30 secondes</p>
+            <p className="text-xs text-[#A8A29E]">{t.refresh.autoUpdateNotice}</p>
           )}
         </div>
 
@@ -413,7 +425,7 @@ export default function TrackingClient({ initialData, orderId }: Props) {
       <footer className="py-6 text-center">
         <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
           <Image src="/icon-16.png" alt="" width={16} height={16} unoptimized style={{ borderRadius: '3px' }} />
-          Propulsé par Hanut
+          {t.footer.poweredBy}
         </Link>
       </footer>
     </div>

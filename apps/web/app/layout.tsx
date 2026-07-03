@@ -1,7 +1,18 @@
 import type { Metadata } from 'next'
+import { Noto_Sans_Arabic } from 'next/font/google'
 import { headers } from 'next/headers'
 import { CspNonceProvider } from '@/components/providers/CspNonceProvider'
 import './globals.css'
+
+// Self-hébergée par next/font (pas d'appel réseau à l'exécution, compatible
+// avec la CSP à nonce déjà en place). Chargée pour tout le site : le
+// formulaire de commande et le suivi de commande basculent dessus via la
+// classe .font-arabic quand l'utilisateur choisit l'arabe.
+const notoSansArabic = Noto_Sans_Arabic({
+  subsets: ['arabic'],
+  variable: '--font-noto-arabic',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   // www, pas l'apex : hanut.tn redirige (308) vers www.hanut.tn, une
@@ -34,7 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const nonce = (await headers()).get('x-nonce') ?? undefined
 
   return (
-    <html lang="fr">
+    <html lang="fr" className={notoSansArabic.variable}>
       <body>
         <CspNonceProvider nonce={nonce}>
           {children}

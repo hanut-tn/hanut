@@ -7,6 +7,8 @@ import { PackageX, Package, Copy, ExternalLink } from 'lucide-react'
 import { TUNISIAN_GOVERNORATES, isValidTunisianPhone, formatTunisianPhone } from '@/lib/constants'
 import { getVariantLabel } from '@/lib/variants'
 import { TurnstileWidget, isTurnstileEnabled } from '@/components/ui/TurnstileWidget'
+import { useLang } from '@/lib/i18n/use-lang'
+import { orderFormTranslations } from '@/lib/i18n/order-form'
 
 type Props = {
   sellerSlug: string
@@ -27,6 +29,7 @@ function isValidEmail(value: string): boolean {
 
 export default function OrderForm({ sellerSlug, sellerName, products: initialProducts }: Props) {
   const formTopRef = useRef<HTMLFormElement>(null)
+  const { t, isRtl, toggleLang } = useLang(orderFormTranslations)
 
   // ── Form state ────────────────────────────────────────────────────────────────
   const [name, setName] = useState('')
@@ -111,15 +114,15 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
   // Resend OTP countdown
   useEffect(() => {
     if (resendCooldown <= 0) return
-    const t = setTimeout(() => setResendCooldown(c => c - 1), 1000)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setResendCooldown(c => c - 1), 1000)
+    return () => clearTimeout(timer)
   }, [resendCooldown])
 
   function handlePhoneChange(value: string) {
     const cleaned = formatTunisianPhone(value)
     setPhone(cleaned)
     if (cleaned.length === 8 && !isValidTunisianPhone(cleaned)) {
-      setPhoneError('Numéro tunisien invalide. Ex: 22 123 456')
+      setPhoneError(t.errors.phoneInvalidBlur)
     } else {
       setPhoneError(null)
     }
@@ -148,55 +151,55 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
     setStockError(null)
 
     if (!isValidTunisianPhone(phone)) {
-      setError('Numéro de téléphone invalide. Entrez 8 chiffres (ex: 22 123 456).')
+      setError(t.errors.phoneInvalidSubmit)
       return
     }
     if (!name.trim()) {
-      setError('Le nom complet est obligatoire.')
+      setError(t.errors.nameRequired)
       return
     }
     if (!isValidEmail(email)) {
-      setEmailError('Adresse email invalide.')
+      setEmailError(t.errors.emailInvalid)
       return
     }
     if (!governorate) {
-      setError('Le gouvernorat est obligatoire.')
+      setError(t.errors.governorateRequired)
       return
     }
     if (!customerCity.trim()) {
-      setError('La ville / délégation est obligatoire.')
+      setError(t.errors.cityRequired)
       return
     }
     if (!address.trim()) {
-      setError("L'adresse détaillée est obligatoire.")
+      setError(t.errors.addressRequired)
       return
     }
 
     if (postalCode.trim() && !/^\d{4}$/.test(postalCode.trim())) {
-      setError('Le code postal doit contenir 4 chiffres.')
+      setError(t.errors.postalCodeInvalid)
       return
     }
     if (!productId) {
-      setError('Sélectionnez un produit.')
+      setError(t.errors.productRequired)
       return
     }
     if (hasVariants && selectedProduct && selectedProduct.variants.length > 1) {
       if (multiVariantQtyTotal === 0) {
-        setError('Sélectionnez au moins une variante avec une quantité supérieure à 0.')
+        setError(t.errors.variantQtyRequired)
         return
       }
     } else {
       if (hasVariants && !variant) {
-        setError('Veuillez choisir une variante.')
+        setError(t.errors.variantRequired)
         return
       }
       if (selectedProduct && quantity > maxQty) {
-        setError(`Stock disponible : ${maxQty} unité(s).`)
+        setError(t.errors.stockAvailableError(maxQty))
         return
       }
     }
     if (isTurnstileEnabled() && !turnstileToken) {
-      setError('Vérification anti-spam échouée. Réessayez.')
+      setError(t.errors.turnstileFailed)
       return
     }
 
@@ -215,7 +218,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
       setTurnstileToken('')
       setTurnstileResetKey(k => k + 1)
       if (!res.ok) {
-        setError(data.error ?? "Erreur lors de l'envoi du code. Réessayez.")
+        setError(data.error ?? t.errors.sendOtpError)
         return
       }
       setOtpDigits(['', '', '', ''])
@@ -226,7 +229,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
     } catch {
       setTurnstileToken('')
       setTurnstileResetKey(k => k + 1)
-      setError('Erreur réseau. Vérifiez votre connexion et réessayez.')
+      setError(t.errors.networkError)
     } finally {
       setLoading(false)
     }
@@ -236,11 +239,11 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
   async function handleOtpSubmit(code: string) {
     if (loading || otpSubmittingRef.current) return
     if (code.length !== 4) {
-      setOtpError('Entrez les 4 chiffres du code.')
+      setOtpError(t.otp.otpEmpty)
       return
     }
     if (isTurnstileEnabled() && !turnstileToken) {
-      setOtpError('Vérification anti-spam en cours. Réessayez dans un instant.')
+      setOtpError(t.otp.otpTurnstilePending)
       return
     }
     otpSubmittingRef.current = true
@@ -280,7 +283,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
       setTurnstileToken('')
       setTurnstileResetKey(k => k + 1)
       if (!res.ok) {
-        const msg: string = data.error ?? 'Code invalide. Réessayez.'
+        const msg: string = data.error ?? t.otp.otpInvalid
         const isStockError =
           msg.toLowerCase().includes('insuffisant') || msg.toLowerCase().includes('stock')
         if (isStockError) {
@@ -316,7 +319,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
     } catch {
       setTurnstileToken('')
       setTurnstileResetKey(k => k + 1)
-      setOtpError('Erreur réseau. Vérifiez votre connexion et réessayez.')
+      setOtpError(t.otp.otpNetworkError)
       setOtpDigits(['', '', '', ''])
     } finally {
       otpSubmittingRef.current = false
@@ -346,12 +349,12 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
         setTimeout(() => otpRef0.current?.focus(), 100)
       } else {
         const data = await res.json()
-        setOtpError(data.error ?? "Erreur lors de l'envoi. Réessayez.")
+        setOtpError(data.error ?? t.otp.otpSendError)
       }
     } catch {
       setTurnstileToken('')
       setTurnstileResetKey(k => k + 1)
-      setOtpError('Erreur réseau. Réessayez.')
+      setOtpError(t.otp.otpNetworkError)
     } finally {
       setLoading(false)
     }
@@ -394,11 +397,25 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
     }
   }
 
+  const langToggleButton = (
+    <div className="flex justify-end mb-3">
+      <button
+        type="button"
+        onClick={toggleLang}
+        className="text-sm font-medium text-gray-500 border border-gray-200 rounded-lg px-3 py-1.5 min-h-[36px] touch-manipulation transition-all duration-150 ease-out hover:bg-gray-50 hover:text-[#1C1917] hover:scale-[1.03] active:scale-[0.97]"
+      >
+        {t.common.langToggle}
+      </button>
+    </div>
+  )
+
+  let inner: React.ReactNode
+
   // ── Confirmation screen ───────────────────────────────────────────────────────
   if (submitted) {
     const trackUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/track/${submitted.trackingToken}`
 
-    return (
+    inner = (
       <div className="flex flex-col items-center text-center py-10 space-y-5">
         <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center">
           <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
@@ -407,25 +424,25 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
           </svg>
         </div>
         <div>
-          <h2 className="text-2xl font-extrabold text-[#1C1917]">Commande envoyée !</h2>
+          <h2 className="text-2xl font-extrabold text-[#1C1917]">{t.success.title}</h2>
           <p className="text-gray-500 mt-2 max-w-sm">
-            Le vendeur <span className="font-semibold text-[#1C1917]">{sellerName}</span> vous contactera pour confirmer votre commande.
+            {t.success.description(sellerName)}
           </p>
         </div>
 
         <div className="bg-[#F5F5F4] rounded-xl px-6 py-4">
-          <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Numéro de commande</p>
+          <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">{t.success.orderNumberLabel}</p>
           <p className="text-xl font-bold text-[#0B5E46] tracking-wider font-mono">#{submitted.orderId}</p>
         </div>
 
         <div className="w-full bg-white border border-[#E7E5E4] rounded-2xl p-4 space-y-3">
-          <p className="text-sm font-semibold text-[#1C1917]">Suivre ma commande</p>
+          <p className="text-sm font-semibold text-[#1C1917]">{t.success.trackMyOrderTitle}</p>
           <a
             href={trackUrl}
             className="flex items-center justify-center gap-2 min-h-[44px] w-full bg-[#16A34A] text-white font-semibold rounded-lg text-sm transition-all duration-150 ease-out hover:bg-[#15803D] hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97] touch-manipulation"
           >
             <ExternalLink className="w-4 h-4" />
-            Voir le statut de ma commande
+            {t.success.viewOrderStatus}
           </a>
           <button
             type="button"
@@ -435,7 +452,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
             className="flex items-center justify-center gap-2 min-h-[44px] w-full border border-[#16A34A] text-[#16A34A] rounded-lg text-sm transition-all duration-150 ease-out hover:bg-green-50 hover:border-[#15803D] hover:text-[#15803D] hover:scale-[1.03] active:scale-[0.97] touch-manipulation"
           >
             <Copy className="w-4 h-4" />
-            Copier le lien de suivi
+            {t.success.copyTrackingLink}
           </button>
         </div>
 
@@ -451,20 +468,18 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
           }}
           className="min-h-[44px] touch-manipulation text-sm font-medium text-[#16A34A] transition-all duration-150 ease-out hover:scale-[1.03] hover:text-[#15803D] hover:underline active:scale-[0.97]"
         >
-          Passer une autre commande →
+          {t.success.placeAnotherOrder}
         </button>
       </div>
     )
-  }
-
-  // ── OTP screen ────────────────────────────────────────────────────────────────
-  if (step === 'otp') {
-    return (
+  } else if (step === 'otp') {
+    // ── OTP screen ────────────────────────────────────────────────────────────────
+    inner = (
       <div className="space-y-4">
         <div className="text-center">
-          <h2 className="text-xl font-bold text-[#1C1917]">Vérification par email</h2>
+          <h2 className="text-xl font-bold text-[#1C1917]">{t.otp.title}</h2>
           <p className="text-sm text-gray-500 mt-1.5">
-            Un code à 4 chiffres a été envoyé à
+            {t.otp.sentTo}
           </p>
           <p className="text-sm font-semibold text-[#1C1917] mt-0.5 break-all">{email}</p>
         </div>
@@ -483,7 +498,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
                 onChange={e => handleOtpDigit(i, e.target.value)}
                 onKeyDown={e => handleOtpKeyDown(i, e)}
                 autoComplete={i === 0 ? 'one-time-code' : 'off'}
-                aria-label={`Chiffre ${i + 1} du code de vérification`}
+                aria-label={t.otp.digitAriaLabel(i + 1)}
                 className="w-14 h-14 text-center text-2xl font-bold border-2 border-[#E7E5E4] rounded-xl outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition caret-transparent"
               />
             ))}
@@ -505,12 +520,12 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
             disabled={loading || otpDigits.some(d => !d) || (isTurnstileEnabled() && !turnstileToken)}
             className="h-12 w-full touch-manipulation bg-[#16A34A] text-white font-bold rounded-lg text-base transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100"
           >
-            {loading ? 'Vérification…' : 'Valider le code'}
+            {loading ? t.otp.verifying : t.otp.validateCode}
           </button>
 
           <div className="text-center">
             {resendCooldown > 0 ? (
-              <p className="text-sm text-gray-400">Renvoyer dans {resendCooldown}s</p>
+              <p className="text-sm text-gray-400">{t.otp.resendIn(resendCooldown)}</p>
             ) : (
               <button
                 type="button"
@@ -518,7 +533,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
                 disabled={loading || (isTurnstileEnabled() && !turnstileToken)}
                 className="text-sm text-[#16A34A] font-medium transition-all duration-150 ease-out hover:scale-[1.03] hover:text-[#15803D] hover:underline active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
               >
-                Renvoyer le code
+                {t.otp.resendCode}
               </button>
             )}
           </div>
@@ -535,446 +550,451 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
           }}
           className="w-full text-sm text-gray-400 hover:text-gray-600 text-center py-2 touch-manipulation transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
         >
-          ← Modifier mes informations
+          {t.otp.backToEdit}
         </button>
       </div>
     )
-  }
+  } else {
+    // ── Order form ────────────────────────────────────────────────────────────────
+    const isMultiVariant = hasVariants && selectedProduct && selectedProduct.variants.length > 1
 
-  // ── Order form ────────────────────────────────────────────────────────────────
-  const isMultiVariant = hasVariants && selectedProduct && selectedProduct.variants.length > 1
-
-  return (
-    <form ref={formTopRef} onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-[#1C1917]">Passer une commande</h1>
-        <p className="text-sm text-gray-500 mt-0.5">chez <span className="font-medium">{sellerName}</span></p>
-      </div>
-
-      {/* ── Coordonnées ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4">
-        <p className="text-sm font-bold text-[#1C1917] flex items-center gap-2">
-          <span className="w-5 h-5 bg-[#0B5E46] rounded-full text-white text-xs flex items-center justify-center">1</span>
-          Vos coordonnées
-        </p>
-
+    inner = (
+      <form ref={formTopRef} onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="order-name" className="block text-sm font-medium text-gray-700 mb-1.5">Nom complet *</label>
-          <input
-            id="order-name"
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="Prénom Nom"
-            required
-            autoComplete="name"
-          />
+          <h1 className="text-xl font-bold text-[#1C1917]">{t.header.title}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{t.header.at} <span className="font-medium">{sellerName}</span></p>
         </div>
 
-        <div>
-          <label htmlFor="order-phone" className="block text-sm font-medium text-gray-700 mb-1.5">
-            Numéro de téléphone *
-            <span className="text-gray-400 font-normal ml-1">(8 chiffres)</span>
-          </label>
-          <div className="flex gap-2">
-            <span className="flex items-center px-3 bg-[#F5F5F4] border border-gray-200 rounded-xl text-base font-medium text-gray-500 shrink-0">
-              +216
-            </span>
+        {/* ── Coordonnées ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4">
+          <p className="text-sm font-bold text-[#1C1917] flex items-center gap-2">
+            <span className="w-5 h-5 bg-[#0B5E46] rounded-full text-white text-xs flex items-center justify-center">1</span>
+            {t.customer.sectionTitle}
+          </p>
+
+          <div>
+            <label htmlFor="order-name" className="block text-sm font-medium text-gray-700 mb-1.5">{t.customer.fullNameLabel}</label>
             <input
-              id="order-phone"
-              className={`min-w-0 flex-1 border rounded-xl px-4 py-3 text-base outline-none focus:ring-2 transition ${phoneError ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-gray-200 focus:border-[#16A34A] focus:ring-green-100'}`}
-              type="tel"
-              value={phone}
-              onChange={e => handlePhoneChange(e.target.value)}
-              onBlur={() => {
-                if (phone.length > 0 && !isValidTunisianPhone(phone)) {
-                  setPhoneError('Numéro tunisien invalide. Ex: 22 123 456')
-                }
-              }}
-              placeholder="22 123 456"
-              maxLength={8}
+              id="order-name"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder={t.customer.fullNamePlaceholder}
               required
-              inputMode="numeric"
-              autoComplete="tel"
+              autoComplete="name"
             />
           </div>
-          {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
-        </div>
 
-        <div>
-          <label htmlFor="order-email" className="block text-sm font-medium text-gray-700 mb-1.5">Adresse email *</label>
-          <input
-            id="order-email"
-            className={`w-full border rounded-xl px-4 py-3 text-base outline-none focus:ring-2 transition ${emailError ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-gray-200 focus:border-[#16A34A] focus:ring-green-100'}`}
-            type="email"
-            value={email}
-            onChange={e => { setEmail(e.target.value); setEmailError(null) }}
-            placeholder="vous@exemple.com"
-            required
-            autoComplete="email"
-            inputMode="email"
-          />
-          {emailError
-            ? <p className="text-xs text-red-600 mt-1">{emailError}</p>
-            : <p className="text-xs text-gray-400 mt-1">Un code de vérification vous sera envoyé par email.</p>
-          }
-        </div>
-
-        <div>
-          <label htmlFor="order-governorate" className="block text-sm font-medium text-gray-700 mb-1.5">Gouvernorat *</label>
-          <select
-            id="order-governorate"
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition bg-white"
-            value={governorate}
-            onChange={e => setGovernorate(e.target.value)}
-            required
-          >
-            <option value="">Sélectionner…</option>
-            {TUNISIAN_GOVERNORATES.map(g => (
-              <option key={g} value={g}>{g}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="order-city" className="block text-sm font-medium text-gray-700 mb-1.5">Ville / Délégation *</label>
-          <input
-            id="order-city"
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
-            value={customerCity}
-            onChange={e => setCustomerCity(e.target.value)}
-            placeholder="Sfax, Sakiet Ezzit…"
-            required
-            autoComplete="address-level2"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="order-address" className="block text-sm font-medium text-gray-700 mb-1.5">Adresse détaillée *</label>
-          <input
-            id="order-address"
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
-            value={address}
-            onChange={e => setAddress(e.target.value)}
-            placeholder="Ex: Rue Ibn Khaldoun, Résidence Les Jasmins"
-            required
-            autoComplete="street-address"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="order-landmark" className="block text-sm font-medium text-gray-700 mb-1.5">
-            Repère pour le livreur
-            <span className="text-gray-400 font-normal ml-1">(optionnel)</span>
-          </label>
-          <input
-            id="order-landmark"
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
-            value={landmark}
-            onChange={e => setLandmark(e.target.value)}
-            placeholder="Ex: Face à la pharmacie, 2ème étage, immeuble bleu..."
-          />
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label htmlFor="order-postal-code" className="block text-sm font-medium text-gray-700 mb-1.5">
-              Code postal <span className="text-gray-400 font-normal">(optionnel)</span>
+            <label htmlFor="order-phone" className="block text-sm font-medium text-gray-700 mb-1.5">
+              {t.customer.phoneLabel}
+              <span className="text-gray-400 font-normal ml-1">{t.customer.phoneDigitsHint}</span>
+            </label>
+            <div className="flex gap-2">
+              <span className="flex items-center px-3 bg-[#F5F5F4] border border-gray-200 rounded-xl text-base font-medium text-gray-500 shrink-0">
+                +216
+              </span>
+              <input
+                id="order-phone"
+                className={`min-w-0 flex-1 border rounded-xl px-4 py-3 text-base outline-none focus:ring-2 transition ${phoneError ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-gray-200 focus:border-[#16A34A] focus:ring-green-100'}`}
+                type="tel"
+                value={phone}
+                onChange={e => handlePhoneChange(e.target.value)}
+                onBlur={() => {
+                  if (phone.length > 0 && !isValidTunisianPhone(phone)) {
+                    setPhoneError(t.errors.phoneInvalidBlur)
+                  }
+                }}
+                placeholder={t.customer.phonePlaceholder}
+                maxLength={8}
+                required
+                inputMode="numeric"
+                autoComplete="tel"
+              />
+            </div>
+            {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
+          </div>
+
+          <div>
+            <label htmlFor="order-email" className="block text-sm font-medium text-gray-700 mb-1.5">{t.customer.emailLabel}</label>
+            <input
+              id="order-email"
+              className={`w-full border rounded-xl px-4 py-3 text-base outline-none focus:ring-2 transition ${emailError ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-gray-200 focus:border-[#16A34A] focus:ring-green-100'}`}
+              type="email"
+              value={email}
+              onChange={e => { setEmail(e.target.value); setEmailError(null) }}
+              placeholder={t.customer.emailPlaceholder}
+              required
+              autoComplete="email"
+              inputMode="email"
+            />
+            {emailError
+              ? <p className="text-xs text-red-600 mt-1">{emailError}</p>
+              : <p className="text-xs text-gray-400 mt-1">{t.customer.emailHelper}</p>
+            }
+          </div>
+
+          <div>
+            <label htmlFor="order-governorate" className="block text-sm font-medium text-gray-700 mb-1.5">{t.customer.governorateLabel}</label>
+            <select
+              id="order-governorate"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition bg-white"
+              value={governorate}
+              onChange={e => setGovernorate(e.target.value)}
+              required
+            >
+              <option value="">{t.customer.governoratePlaceholder}</option>
+              {TUNISIAN_GOVERNORATES.map(g => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="order-city" className="block text-sm font-medium text-gray-700 mb-1.5">{t.customer.cityLabel}</label>
+            <input
+              id="order-city"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
+              value={customerCity}
+              onChange={e => setCustomerCity(e.target.value)}
+              placeholder={t.customer.cityPlaceholder}
+              required
+              autoComplete="address-level2"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="order-address" className="block text-sm font-medium text-gray-700 mb-1.5">{t.customer.addressLabel}</label>
+            <input
+              id="order-address"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
+              value={address}
+              onChange={e => setAddress(e.target.value)}
+              placeholder={t.customer.addressPlaceholder}
+              required
+              autoComplete="street-address"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="order-landmark" className="block text-sm font-medium text-gray-700 mb-1.5">
+              {t.customer.landmarkLabel}
+              <span className="text-gray-400 font-normal ml-1">{t.common.optional}</span>
             </label>
             <input
-              id="order-postal-code"
+              id="order-landmark"
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
-              value={postalCode}
-              onChange={e => setPostalCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
-              placeholder="3000"
-              inputMode="numeric"
-              maxLength={4}
-              autoComplete="postal-code"
+              value={landmark}
+              onChange={e => setLandmark(e.target.value)}
+              placeholder={t.customer.landmarkPlaceholder}
             />
           </div>
-          <div>
-            <label htmlFor="order-delegation" className="block text-sm font-medium text-gray-700 mb-1.5">
-              Délégation précise <span className="text-gray-400 font-normal">(optionnel)</span>
-            </label>
-            <input
-              id="order-delegation"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
-              value={delegation}
-              onChange={e => setDelegation(e.target.value)}
-              placeholder="Si différente…"
-            />
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="order-postal-code" className="block text-sm font-medium text-gray-700 mb-1.5">
+                {t.customer.postalCodeLabel} <span className="text-gray-400 font-normal">{t.common.optional}</span>
+              </label>
+              <input
+                id="order-postal-code"
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
+                value={postalCode}
+                onChange={e => setPostalCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                placeholder={t.customer.postalCodePlaceholder}
+                inputMode="numeric"
+                maxLength={4}
+                autoComplete="postal-code"
+              />
+            </div>
+            <div>
+              <label htmlFor="order-delegation" className="block text-sm font-medium text-gray-700 mb-1.5">
+                {t.customer.delegationLabel} <span className="text-gray-400 font-normal">{t.common.optional}</span>
+              </label>
+              <input
+                id="order-delegation"
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition"
+                value={delegation}
+                onChange={e => setDelegation(e.target.value)}
+                placeholder={t.customer.delegationPlaceholder}
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Produit ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4">
-        <p className="text-sm font-bold text-[#1C1917] flex items-center gap-2">
-          <span className="w-5 h-5 bg-[#0B5E46] rounded-full text-white text-xs flex items-center justify-center">2</span>
-          Votre commande
-        </p>
+        {/* ── Produit ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4">
+          <p className="text-sm font-bold text-[#1C1917] flex items-center gap-2">
+            <span className="w-5 h-5 bg-[#0B5E46] rounded-full text-white text-xs flex items-center justify-center">2</span>
+            {t.order.sectionTitle}
+          </p>
 
-        <div>
-          <label htmlFor="order-product" className="block text-sm font-medium text-gray-700 mb-1.5">Produit *</label>
-          <select
-            id="order-product"
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition bg-white"
-            value={productId}
-            onChange={e => setProductId(e.target.value)}
-            required
-          >
-            <option value="">Sélectionner un produit…</option>
-            {visibleProducts.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.name} — {p.price} DT
-              </option>
-            ))}
-          </select>
+          <div>
+            <label htmlFor="order-product" className="block text-sm font-medium text-gray-700 mb-1.5">{t.order.productLabel}</label>
+            <select
+              id="order-product"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition bg-white"
+              value={productId}
+              onChange={e => setProductId(e.target.value)}
+              required
+            >
+              <option value="">{t.order.productPlaceholder}</option>
+              {visibleProducts.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.name} — {p.price} DT
+                </option>
+              ))}
+            </select>
 
-          {selectedProduct && (
-            <div className="mt-2 bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl p-3 flex items-center gap-3 transition-all duration-200">
-              {selectedProduct.image_url ? (
-                <Image
-                  src={selectedProduct.image_url}
-                  alt={selectedProduct.name}
-                  width={64}
-                  height={64}
-                  className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
-                />
-              ) : (
-                <div className="w-16 h-16 bg-[#E7E5E4] rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Package className="w-6 h-6 text-[#78716C]" />
+            {selectedProduct && (
+              <div className="mt-2 bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl p-3 flex items-center gap-3 transition-all duration-200">
+                {selectedProduct.image_url ? (
+                  <Image
+                    src={selectedProduct.image_url}
+                    alt={selectedProduct.name}
+                    width={64}
+                    height={64}
+                    className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-16 h-16 bg-[#E7E5E4] rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Package className="w-6 h-6 text-[#78716C]" />
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm font-semibold text-[#1C1917]">{selectedProduct.name}</p>
+                  <p className="text-sm font-bold text-[#16A34A]">{selectedProduct.price} DT</p>
+                  {!hasVariants && (
+                    <p className="text-xs text-[#78716C]">
+                      {t.order.stockAvailable(selectedProduct.stock)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Multi-variant grid */}
+          {isMultiVariant && selectedProduct && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t.order.variantsQtyLabel}
+              </label>
+              <div className="space-y-2">
+                {selectedProduct.variants.map((v, i) => {
+                  const label = getVariantLabel(v, i)
+                  const isOut = v.qty === 0 || exhaustedVariantKeys.has(getVariantKey(productId, label))
+                  const currentQty = variantQtys[label] ?? 0
+                  return (
+                    <div
+                      key={i}
+                      className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
+                        isOut
+                          ? 'border-[#E7E5E4] opacity-40'
+                          : currentQty > 0
+                            ? 'border-[#16A34A] bg-[#F0FDF4]'
+                            : 'border-gray-200'
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium ${isOut ? 'line-through text-gray-400' : 'text-[#1C1917]'}`}>
+                          {label}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {isOut ? t.order.variantExhausted : t.order.variantDispo(v.qty)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          disabled={isOut || currentQty <= 0}
+                          onClick={() => setVariantQtys(prev => ({ ...prev, [label]: Math.max(0, (prev[label] ?? 0) - 1) }))}
+                          className="w-9 h-9 touch-manipulation rounded-lg border border-[#16A34A] flex items-center justify-center text-[#16A34A] hover:bg-green-50 font-bold text-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
+                        >
+                          −
+                        </button>
+                        <span className="w-6 text-center text-base font-bold text-[#1C1917]">
+                          {currentQty}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={isOut || currentQty >= v.qty}
+                          onClick={() => setVariantQtys(prev => ({ ...prev, [label]: Math.min(v.qty, (prev[label] ?? 0) + 1) }))}
+                          className="w-9 h-9 touch-manipulation rounded-lg border border-[#16A34A] flex items-center justify-center text-[#16A34A] hover:bg-green-50 font-bold text-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              {multiVariantQtyTotal > 0 && (
+                <div className="mt-3 bg-[#F5F5F4] rounded-xl px-4 py-3 flex items-center justify-between">
+                  <span className="text-sm text-gray-500">{t.order.totalCod}</span>
+                  <span className="text-lg font-extrabold text-[#0B5E46]">
+                    {(selectedProduct.price * multiVariantQtyTotal).toFixed(0)} DT
+                  </span>
                 </div>
               )}
-              <div>
-                <p className="text-sm font-semibold text-[#1C1917]">{selectedProduct.name}</p>
-                <p className="text-sm font-bold text-[#16A34A]">{selectedProduct.price} DT</p>
-                {!hasVariants && (
-                  <p className="text-xs text-[#78716C]">
-                    Stock disponible : {selectedProduct.stock} unité{selectedProduct.stock !== 1 ? 's' : ''}
-                  </p>
+            </div>
+          )}
+
+          {/* Single variant selector */}
+          {hasVariants && selectedProduct && !isMultiVariant && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.order.variantSingleLabel}</label>
+              <div className="flex flex-wrap gap-2">
+                {selectedProduct.variants.map((v, i) => {
+                  const label = getVariantLabel(v, i)
+                  const isOut = v.qty === 0 || exhaustedVariantKeys.has(getVariantKey(productId, label))
+                  const isSelected = variant === label
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      disabled={isOut}
+                      onClick={() => {
+                        setVariant(label)
+                        setStockError(null)
+                      }}
+                      className={`min-h-[44px] touch-manipulation rounded-lg px-3 py-2 text-sm transition-all duration-150 ease-out ${
+                        isOut
+                          ? 'border border-[#E7E5E4] opacity-40 cursor-not-allowed line-through'
+                        : isSelected
+                            ? 'border-2 border-[#16A34A] bg-[#F0FDF4] text-[#166534] font-medium hover:scale-[1.03] active:scale-[0.97]'
+                            : 'border border-[#16A34A] text-[#16A34A] cursor-pointer hover:bg-green-50 hover:border-[#15803D] hover:text-[#15803D] hover:scale-[1.03] active:scale-[0.97]'
+                      }`}
+                    >
+                      {label}
+                      {isOut ? (
+                        <span className="ml-1 text-xs">{t.order.variantExhaustedInline}</span>
+                      ) : (
+                        <span className="ml-1 text-xs text-gray-400">{t.order.variantDispoInline(v.qty)}</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Quantity for non-multi-variant */}
+          {!isMultiVariant && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.order.quantityLabel}</label>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                  className="w-11 h-11 touch-manipulation rounded-lg border border-[#16A34A] flex items-center justify-center text-[#16A34A] hover:bg-green-50 font-bold text-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
+                >
+                  −
+                </button>
+                <span className="text-lg font-bold text-[#1C1917] w-8 text-center">{quantity}</span>
+                <button
+                  type="button"
+                  onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
+                  disabled={!selectedProduct || (hasVariants && !variant)}
+                  className="w-11 h-11 touch-manipulation rounded-lg border border-[#16A34A] flex items-center justify-center text-[#16A34A] hover:bg-green-50 font-bold text-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
+                >
+                  +
+                </button>
+                {selectedProduct && (
+                  <span className="text-xs text-gray-400 ml-1">
+                    {selectedVariant ? t.order.variantDispo(selectedVariant.qty) : !hasVariants ? t.order.variantDispo(selectedProduct.stock) : ''}
+                  </span>
                 )}
               </div>
             </div>
           )}
+
+          {selectedProduct && !isMultiVariant && (
+            <div className="bg-[#F5F5F4] rounded-xl px-4 py-3 flex items-center justify-between">
+              <span className="text-sm text-gray-500">{t.order.totalCod}</span>
+              <span className="text-lg font-extrabold text-[#0B5E46]">
+                {(selectedProduct.price * quantity).toFixed(0)} DT
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Multi-variant grid */}
-        {isMultiVariant && selectedProduct && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Variantes et quantités *
-            </label>
-            <div className="space-y-2">
-              {selectedProduct.variants.map((v, i) => {
-                const label = getVariantLabel(v, i)
-                const isOut = v.qty === 0 || exhaustedVariantKeys.has(getVariantKey(productId, label))
-                const currentQty = variantQtys[label] ?? 0
-                return (
-                  <div
-                    key={i}
-                    className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
-                      isOut
-                        ? 'border-[#E7E5E4] opacity-40'
-                        : currentQty > 0
-                          ? 'border-[#16A34A] bg-[#F0FDF4]'
-                          : 'border-gray-200'
-                    }`}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium ${isOut ? 'line-through text-gray-400' : 'text-[#1C1917]'}`}>
-                        {label}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {isOut ? 'Épuisée' : `${v.qty} dispo`}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        disabled={isOut || currentQty <= 0}
-                        onClick={() => setVariantQtys(prev => ({ ...prev, [label]: Math.max(0, (prev[label] ?? 0) - 1) }))}
-                        className="w-9 h-9 touch-manipulation rounded-lg border border-[#16A34A] flex items-center justify-center text-[#16A34A] hover:bg-green-50 font-bold text-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
-                      >
-                        −
-                      </button>
-                      <span className="w-6 text-center text-base font-bold text-[#1C1917]">
-                        {currentQty}
-                      </span>
-                      <button
-                        type="button"
-                        disabled={isOut || currentQty >= v.qty}
-                        onClick={() => setVariantQtys(prev => ({ ...prev, [label]: Math.min(v.qty, (prev[label] ?? 0) + 1) }))}
-                        className="w-9 h-9 touch-manipulation rounded-lg border border-[#16A34A] flex items-center justify-center text-[#16A34A] hover:bg-green-50 font-bold text-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-            {multiVariantQtyTotal > 0 && (
-              <div className="mt-3 bg-[#F5F5F4] rounded-xl px-4 py-3 flex items-center justify-between">
-                <span className="text-sm text-gray-500">Total à payer (COD)</span>
-                <span className="text-lg font-extrabold text-[#0B5E46]">
-                  {(selectedProduct.price * multiVariantQtyTotal).toFixed(0)} DT
-                </span>
-              </div>
-            )}
+        {/* ── Note ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            {t.notes.label}
+            <span className="text-gray-400 font-normal ml-1">{t.common.optional}</span>
+          </label>
+          <textarea
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition resize-none"
+            rows={3}
+            value={deliveryNotes}
+            onChange={e => setDeliveryNotes(e.target.value)}
+            placeholder={t.notes.placeholder}
+          />
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+            {error}
           </div>
         )}
 
-        {/* Single variant selector */}
-        {hasVariants && selectedProduct && !isMultiVariant && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Variante *</label>
-            <div className="flex flex-wrap gap-2">
-              {selectedProduct.variants.map((v, i) => {
-                const label = getVariantLabel(v, i)
-                const isOut = v.qty === 0 || exhaustedVariantKeys.has(getVariantKey(productId, label))
-                const isSelected = variant === label
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    disabled={isOut}
-                    onClick={() => {
-                      setVariant(label)
-                      setStockError(null)
-                    }}
-                    className={`min-h-[44px] touch-manipulation rounded-lg px-3 py-2 text-sm transition-all duration-150 ease-out ${
-                      isOut
-                        ? 'border border-[#E7E5E4] opacity-40 cursor-not-allowed line-through'
-                      : isSelected
-                          ? 'border-2 border-[#16A34A] bg-[#F0FDF4] text-[#166534] font-medium hover:scale-[1.03] active:scale-[0.97]'
-                          : 'border border-[#16A34A] text-[#16A34A] cursor-pointer hover:bg-green-50 hover:border-[#15803D] hover:text-[#15803D] hover:scale-[1.03] active:scale-[0.97]'
-                    }`}
-                  >
-                    {label}
-                    {isOut ? (
-                      <span className="ml-1 text-xs">— épuisée</span>
-                    ) : (
-                      <span className="ml-1 text-xs text-gray-400">— {v.qty} dispo</span>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Quantity for non-multi-variant */}
-        {!isMultiVariant && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Quantité *</label>
-            <div className="flex items-center gap-3">
+        {stockError && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+            <PackageX className="text-red-500 w-6 h-6 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-red-700">
+                {stockErrorScope === 'variant' ? t.stockError.variantUnavailableTitle : t.stockError.productUnavailableTitle}
+              </p>
+              <p className="text-xs text-red-600 mt-1">
+                {stockErrorScope === 'variant'
+                  ? t.stockError.variantUnavailableDesc
+                  : t.stockError.productUnavailableDesc}
+              </p>
               <button
                 type="button"
-                onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                className="w-11 h-11 touch-manipulation rounded-lg border border-[#16A34A] flex items-center justify-center text-[#16A34A] hover:bg-green-50 font-bold text-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
+                onClick={() => {
+                  if (stockErrorScope === 'product') setProductId('')
+                  setVariant('')
+                  setQuantity(1)
+                  setVariantQtys({})
+                  setStockError(null)
+                  formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }}
+                className="mt-2 min-h-[44px] touch-manipulation text-xs font-semibold text-red-700 underline underline-offset-2 transition-all duration-150 ease-out hover:scale-[1.03] hover:text-red-800 active:scale-[0.97]"
               >
-                −
+                {stockErrorScope === 'variant' ? t.stockError.chooseAnotherVariant : t.stockError.chooseAnotherProduct}
               </button>
-              <span className="text-lg font-bold text-[#1C1917] w-8 text-center">{quantity}</span>
-              <button
-                type="button"
-                onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
-                disabled={!selectedProduct || (hasVariants && !variant)}
-                className="w-11 h-11 touch-manipulation rounded-lg border border-[#16A34A] flex items-center justify-center text-[#16A34A] hover:bg-green-50 font-bold text-lg transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
-              >
-                +
-              </button>
-              {selectedProduct && (
-                <span className="text-xs text-gray-400 ml-1">
-                  {selectedVariant ? `${selectedVariant.qty} dispo` : !hasVariants ? `${selectedProduct.stock} dispo` : ''}
-                </span>
-              )}
             </div>
           </div>
         )}
 
-        {selectedProduct && !isMultiVariant && (
-          <div className="bg-[#F5F5F4] rounded-xl px-4 py-3 flex items-center justify-between">
-            <span className="text-sm text-gray-500">Total à payer (COD)</span>
-            <span className="text-lg font-extrabold text-[#0B5E46]">
-              {(selectedProduct.price * quantity).toFixed(0)} DT
-            </span>
+        {isTurnstileEnabled() && (
+          <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+            <TurnstileWidget onVerify={setTurnstileToken} resetKey={turnstileResetKey} />
           </div>
         )}
-      </div>
 
-      {/* ── Note ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
-          Notes de livraison
-          <span className="text-gray-400 font-normal ml-1">(optionnel)</span>
-        </label>
-        <textarea
-          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition resize-none"
-          rows={3}
-          value={deliveryNotes}
-          onChange={e => setDeliveryNotes(e.target.value)}
-          placeholder="Appeler avant livraison, créneau préféré…"
-        />
-      </div>
+        <button
+          type="submit"
+          disabled={loading || (isTurnstileEnabled() && !turnstileToken)}
+          className="h-12 w-full touch-manipulation bg-[#16A34A] text-white font-bold rounded-lg text-base transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100"
+        >
+          {loading ? t.submit.sendingCode : t.submit.orderButton}
+        </button>
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
-          {error}
-        </div>
-      )}
+        <p className="text-xs text-[#78716C] text-center mt-2">
+          {t.legal.text}{' '}
+          <a href="/privacy" className="underline hover:text-[#1C1917]">{t.legal.privacyLink}</a>.
+        </p>
+      </form>
+    )
+  }
 
-      {stockError && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-          <PackageX className="text-red-500 w-6 h-6 shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-red-700">
-              {stockErrorScope === 'variant' ? "Cette variante n'est plus disponible" : "Ce produit n'est plus disponible"}
-            </p>
-            <p className="text-xs text-red-600 mt-1">
-              {stockErrorScope === 'variant'
-                ? "Le stock de cette variante vient d'être épuisé. Choisissez une autre variante ou un autre produit."
-                : "Le stock de ce produit vient d'être épuisé. Choisissez un autre produit ou revenez plus tard."}
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                if (stockErrorScope === 'product') setProductId('')
-                setVariant('')
-                setQuantity(1)
-                setVariantQtys({})
-                setStockError(null)
-                formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }}
-              className="mt-2 min-h-[44px] touch-manipulation text-xs font-semibold text-red-700 underline underline-offset-2 transition-all duration-150 ease-out hover:scale-[1.03] hover:text-red-800 active:scale-[0.97]"
-            >
-              {stockErrorScope === 'variant' ? 'Choisir une autre variante' : 'Choisir un autre produit'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {isTurnstileEnabled() && (
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
-          <TurnstileWidget onVerify={setTurnstileToken} resetKey={turnstileResetKey} />
-        </div>
-      )}
-
-      <button
-        type="submit"
-        disabled={loading || (isTurnstileEnabled() && !turnstileToken)}
-        className="h-12 w-full touch-manipulation bg-[#16A34A] text-white font-bold rounded-lg text-base transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:ring-0 disabled:active:scale-100"
-      >
-        {loading ? 'Envoi du code…' : 'Commander'}
-      </button>
-
-      <p className="text-xs text-[#78716C] text-center mt-2">
-        En passant cette commande, vous acceptez que vos données personnelles (nom, adresse e-mail, téléphone, adresse)
-        soient transmises au vendeur pour le traitement de votre commande COD. Conformément à la loi
-        organique n° 2004-63, vous disposez d&apos;un droit d&apos;accès et de rectification.{' '}
-        <a href="/privacy" className="underline hover:text-[#1C1917]">Politique de confidentialité</a>.
-      </p>
-    </form>
+  return (
+    <div dir={isRtl ? 'rtl' : 'ltr'} className={isRtl ? 'font-arabic' : undefined}>
+      {langToggleButton}
+      {inner}
+    </div>
   )
 }

@@ -56,4 +56,8 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+
+  .font-arabic {
+    font-family: var(--font-noto-arabic), sans-serif;
+  }
 }
