@@ -13,6 +13,14 @@ const turnstileMock = vi.hoisted(() => ({
   verifyTurnstileToken: vi.fn(),
 }))
 
+const emailMock = vi.hoisted(() => ({
+  sendContactMessageNotification: vi.fn(),
+}))
+
+const sentryMock = vi.hoisted(() => ({
+  captureException: vi.fn(),
+}))
+
 vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: serviceMock.createServiceClient,
 }))
@@ -25,6 +33,12 @@ vi.mock('@/lib/rate-limit', () => ({
 vi.mock('@/lib/turnstile', () => ({
   verifyTurnstileToken: turnstileMock.verifyTurnstileToken,
 }))
+
+vi.mock('@/lib/email', () => ({
+  sendContactMessageNotification: emailMock.sendContactMessageNotification,
+}))
+
+vi.mock('@sentry/nextjs', () => sentryMock)
 
 import { POST } from '../app/api/contact/route'
 
@@ -54,6 +68,7 @@ describe('POST /api/contact', () => {
     vi.clearAllMocks()
     rateLimitMock.checkRateLimit.mockResolvedValue({ allowed: true, resetIn: 0 })
     turnstileMock.verifyTurnstileToken.mockResolvedValue(true)
+    emailMock.sendContactMessageNotification.mockResolvedValue(undefined)
   })
 
   it('retourne 503 si le rate-limit est indisponible', async () => {
@@ -109,5 +124,35 @@ describe('POST /api/contact', () => {
     expect(response.status).toBe(500)
     const body = await response.json()
     expect(body.error).not.toContain('constraint')
+  })
+
+  it('notifie l\'équipe par email avec les infos du message', async () => {
+    mockInsert()
+
+    const response = await POST(contactRequest(VALID_BODY))
+    await response.json()
+
+    expect(emailMock.sendContactMessageNotification).toHaveBeenCalledWith({
+      to: 'contact@hanut.tn',
+      name: 'Yasmine Ben Ali',
+      fromEmail: 'yasmine@email.com',
+      message: VALID_BODY.message,
+    })
+  })
+
+  it('n\'échoue pas la requête si la notification email échoue', async () => {
+    mockInsert()
+    emailMock.sendContactMessageNotification.mockRejectedValue(new Error('resend down'))
+
+    const response = await POST(contactRequest(VALID_BODY))
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ message: 'Message envoyé !' })
+  })
+
+  it('ne notifie pas l\'équipe si l\'insert en base échoue', async () => {
+    mockInsert({ message: 'db error' })
+    await POST(contactRequest(VALID_BODY))
+    expect(emailMock.sendContactMessageNotification).not.toHaveBeenCalled()
   })
 })

@@ -1,14 +1,17 @@
+import * as Sentry from '@sentry/nextjs'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import type { RateLimitResult } from '@/lib/rate-limit'
 import { verifyTurnstileToken } from '@/lib/turnstile'
+import { sendContactMessageNotification } from '@/lib/email'
+import { HANUT_CONTACT } from '@/lib/constants'
 
 const ContactSchema = z.object({
-  name:            z.string().trim().min(2).max(100),
-  email:           z.string().trim().email(),
-  message:         z.string().trim().min(10).max(2000),
+  name:            z.string().trim().min(2, 'Le nom doit contenir au moins 2 caractères.').max(100, 'Le nom est trop long.'),
+  email:           z.string().trim().email('Adresse email invalide.'),
+  message:         z.string().trim().min(10, 'Le message doit contenir au moins 10 caractères.').max(2000, 'Le message est trop long (2000 caractères maximum).'),
   turnstile_token: z.string().optional(),
 })
 
@@ -55,13 +58,31 @@ export async function POST(req: Request) {
     )
   }
   const supabase = createServiceClient()
+  const trimmedName = name.trim()
+  const trimmedEmail = email.trim().toLowerCase()
+  const trimmedMessage = message.trim()
+
   const { error } = await supabase.from('contact_messages').insert({
-    name: name.trim(),
-    email: email.trim().toLowerCase(),
-    message: message.trim(),
+    name: trimmedName,
+    email: trimmedEmail,
+    message: trimmedMessage,
   })
   if (error) {
     return NextResponse.json({ error: "Erreur lors de l'envoi" }, { status: 500 })
   }
+
+  // Le message est déjà en base (source de vérité, consultable sur /admin) —
+  // un échec d'envoi de la notification ne doit pas faire échouer la requête.
+  sendContactMessageNotification({
+    to: HANUT_CONTACT.email,
+    name: trimmedName,
+    fromEmail: trimmedEmail,
+    message: trimmedMessage,
+  }).catch(err => {
+    Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
+      tags: { module: 'contact', action: 'notify_team' },
+    })
+  })
+
   return NextResponse.json({ message: 'Message envoyé !' })
 }

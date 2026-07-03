@@ -394,3 +394,31 @@ export function sendSellerNewOrderEmail(opts: {
     text: `Nouvelle commande Hanut de ${opts.customerName} (${opts.customerPhone}). Voir : ${opts.orderUrl}`,
   })
 }
+
+export function sendContactMessageNotification(opts: {
+  to: string
+  name: string
+  fromEmail: string
+  message: string
+}) {
+  const safeMessage = escapeEmailHtml(opts.message).replace(/\n/g, '<br>')
+  return sendHanutEmail({
+    to: opts.to,
+    subject: `Nouveau message de contact - ${opts.name}`,
+    title: 'Nouveau message de contact',
+    preview: `${opts.name} vient d’écrire depuis le formulaire de contact Hanut.`,
+    intro: 'Un visiteur vient d’envoyer un message depuis la page contact de Hanut.',
+    cards: [{
+      title: 'Expéditeur',
+      html: `
+        <p style="margin:0 0 4px;color:#1C1917;font-size:16px;font-weight:700">${escapeEmailHtml(opts.name)}</p>
+        <p style="margin:0;color:#78716C;font-size:15px">${escapeEmailHtml(opts.fromEmail)}</p>
+      `,
+    }, {
+      title: 'Message',
+      html: `<p style="margin:0;color:#1C1917;font-size:15px;line-height:1.7">${safeMessage}</p>`,
+    }],
+    button: { label: 'Répondre par email', href: `mailto:${opts.fromEmail}` },
+    text: `Nouveau message de contact de ${opts.name} (${opts.fromEmail}) :\n\n${opts.message}`,
+  })
+}
