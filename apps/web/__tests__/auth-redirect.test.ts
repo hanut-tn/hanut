@@ -50,12 +50,8 @@ describe('auth redirect URLs', () => {
     )
   })
 
-  it('falls back to the current origin outside configured production', () => {
-    process.env.NEXT_PUBLIC_VERCEL_URL = 'hanut-generated.vercel.app'
-
-    expect(getAppOrigin('https://hanut-preview.vercel.app/path')).toBe(
-      'https://hanut-preview.vercel.app',
-    )
+  it('never emits an auto-generated Vercel deployment URL, even as the request origin', () => {
+    expect(getAppOrigin('https://hanut-preview.vercel.app/path')).toBe('https://hanut.tn')
   })
 
   it('uses the request origin instead of localhost for LAN testing', () => {
@@ -66,17 +62,15 @@ describe('auth redirect URLs', () => {
     )
   })
 
-  it('uses Vercel production domain before generated deployment URLs in production', () => {
-    process.env.VERCEL_ENV = 'production'
-    process.env.VERCEL_PROJECT_PRODUCTION_URL = 'hanut.tn'
-    process.env.NEXT_PUBLIC_VERCEL_URL = 'hanut-generated.vercel.app'
+  it('uses the configured app URL over the request origin', () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://hanut.tn'
 
     expect(getAppOrigin('https://hanut-generated.vercel.app')).toBe('https://hanut.tn')
   })
 
-  it('can fall back to the server-side Vercel deployment URL when no request origin exists', () => {
+  it('falls back to the production domain when no request origin exists', () => {
     process.env.VERCEL_URL = 'hanut-generated.vercel.app'
 
-    expect(getAppOrigin()).toBe('https://hanut-generated.vercel.app')
+    expect(getAppOrigin()).toBe('https://hanut.tn')
   })
 })
