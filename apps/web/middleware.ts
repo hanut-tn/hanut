@@ -25,6 +25,8 @@ const PUBLIC_PATHS = [
   '/billing',
   '/api/auth/register',
   '/api/auth/callback',
+  '/api/auth/forgot-password',
+  '/api/auth/resend-confirmation',
   '/api/contact',
   '/api/waitlist',
   '/api/csp-report',

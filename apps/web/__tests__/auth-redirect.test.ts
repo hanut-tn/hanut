@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
-import { buildAuthCallbackUrl, getAppOrigin } from '@/lib/auth-redirect'
+import { buildAuthCallbackUrl, buildAuthEmailActionUrl, getAppOrigin } from '@/lib/auth-redirect'
 
 const originalEnv = { ...process.env }
 
@@ -38,11 +38,31 @@ describe('auth redirect URLs', () => {
     )
   })
 
+  it('builds direct auth email action URLs with token_hash and type', () => {
+    expect(
+      buildAuthEmailActionUrl({
+        tokenHash: 'invite-token',
+        type: 'invite',
+        nextPath: '/accept-invitation',
+      }, 'https://hanut.tn'),
+    ).toBe(
+      'https://hanut.tn/api/auth/callback?token_hash=invite-token&type=invite&next=%2Faccept-invitation',
+    )
+  })
+
   it('falls back to the current origin outside configured production', () => {
     process.env.NEXT_PUBLIC_VERCEL_URL = 'hanut-generated.vercel.app'
 
     expect(getAppOrigin('https://hanut-preview.vercel.app/path')).toBe(
       'https://hanut-preview.vercel.app',
+    )
+  })
+
+  it('uses the request origin instead of localhost for LAN testing', () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000'
+
+    expect(getAppOrigin('http://192.168.1.7:3001/dashboard')).toBe(
+      'http://192.168.1.7:3001',
     )
   })
 

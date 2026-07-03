@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/nextjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { buildAuthCallbackUrl } from '@/lib/auth-redirect'
+import { buildAuthCallbackUrl, buildAuthEmailActionUrl } from '@/lib/auth-redirect'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { createServiceClient } from '@/lib/supabase/service'
 import { sendPasswordResetEmail } from '@/lib/email'
@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
     },
   })
 
-  if (error || !data?.properties?.action_link) {
-    Sentry.captureException(new Error(`forgot-password generateLink: ${error?.message ?? 'missing action link'}`), {
+  if (error || !data?.properties?.hashed_token) {
+    Sentry.captureException(new Error(`forgot-password generateLink: ${error?.message ?? 'missing hashed token'}`), {
       tags: { module: 'forgot_password', action: 'generate_link' },
     })
     // Ne pas révéler si l'email existe ou non.
@@ -50,7 +50,11 @@ export async function POST(request: NextRequest) {
   try {
     await sendPasswordResetEmail({
       to: email,
-      resetUrl: data.properties.action_link,
+      resetUrl: buildAuthEmailActionUrl({
+        tokenHash: data.properties.hashed_token,
+        type: 'recovery',
+        nextPath: '/reset-password',
+      }, request.nextUrl.origin),
     })
   } catch (emailError) {
     Sentry.captureException(emailError instanceof Error ? emailError : new Error(String(emailError)), {

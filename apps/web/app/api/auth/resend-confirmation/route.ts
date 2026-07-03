@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/nextjs'
 import type { User } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { buildAuthCallbackUrl } from '@/lib/auth-redirect'
+import { buildAuthCallbackUrl, buildAuthEmailActionUrl } from '@/lib/auth-redirect'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { createServiceClient } from '@/lib/supabase/service'
 import { sendSignupConfirmationEmail } from '@/lib/email'
@@ -71,8 +71,8 @@ export async function POST(request: NextRequest) {
     },
   })
 
-  if (error || !data?.properties?.action_link) {
-    Sentry.captureException(new Error(`resend confirmation generateLink: ${error?.message ?? 'missing action link'}`), {
+  if (error || !data?.properties?.hashed_token) {
+    Sentry.captureException(new Error(`resend confirmation generateLink: ${error?.message ?? 'missing hashed token'}`), {
       tags: { module: 'resend_confirmation', action: 'generate_link' },
     })
     return NextResponse.json({ success: true })
@@ -82,7 +82,11 @@ export async function POST(request: NextRequest) {
     await sendSignupConfirmationEmail({
       to: email,
       name: typeof user.user_metadata?.name === 'string' ? user.user_metadata.name : null,
-      confirmationUrl: data.properties.action_link,
+      confirmationUrl: buildAuthEmailActionUrl({
+        tokenHash: data.properties.hashed_token,
+        type: 'magiclink',
+        nextPath: '/dashboard',
+      }, request.nextUrl.origin),
     })
   } catch (emailError) {
     Sentry.captureException(emailError instanceof Error ? emailError : new Error(String(emailError)), {

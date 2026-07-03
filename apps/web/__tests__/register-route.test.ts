@@ -24,6 +24,7 @@ vi.mock('@/lib/turnstile', () => turnstileMock)
 vi.mock('@/lib/email', () => emailMock)
 vi.mock('@/lib/auth-redirect', () => ({
   buildAuthCallbackUrl: vi.fn(() => 'https://hanut.test/api/auth/callback?next=%2Fdashboard'),
+  buildAuthEmailActionUrl: vi.fn(({ tokenHash }) => `https://hanut.test/api/auth/callback?token_hash=${tokenHash}&type=signup`),
 }))
 
 import { POST } from '@/app/api/auth/register/route'
@@ -47,6 +48,7 @@ function request(overrides: Record<string, unknown> = {}) {
 function mockServiceClient(options: {
   generateError?: { message: string } | null
   actionLink?: string | null
+  hashedToken?: string | null
 } = {}) {
   const from = vi.fn()
   const rpc = vi.fn()
@@ -55,6 +57,7 @@ function mockServiceClient(options: {
       user: { id: 'seller-1' },
       properties: {
         action_link: options.actionLink ?? 'https://supabase.test/verify?token=signup-token',
+        hashed_token: options.hashedToken ?? 'signup-token',
       },
     },
     error: options.generateError ?? null,
@@ -100,7 +103,7 @@ describe('POST /api/auth/register', () => {
     expect(emailMock.sendSignupConfirmationEmail).toHaveBeenCalledWith({
       to: 'seller@example.com',
       name: 'Ma Boutique',
-      confirmationUrl: 'https://supabase.test/verify?token=signup-token',
+      confirmationUrl: 'https://hanut.test/api/auth/callback?token_hash=signup-token&type=signup',
     })
   })
 

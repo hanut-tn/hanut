@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { verifyTurnstileToken } from '@/lib/turnstile'
-import { buildAuthCallbackUrl } from '@/lib/auth-redirect'
+import { buildAuthCallbackUrl, buildAuthEmailActionUrl } from '@/lib/auth-redirect'
 import { sendSignupConfirmationEmail } from '@/lib/email'
 
 const PASSWORD_ERROR = 'Le mot de passe doit contenir au moins 8 caractères, une majuscule, un chiffre et un caractère spécial.'
@@ -88,11 +88,32 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Erreur lors de la création du compte.' }, { status: 500 })
   }
 
+  const tokenHash = data.properties?.hashed_token
+  if (!tokenHash) {
+    await serviceClient.auth.admin.deleteUser(data.user.id).catch(deleteErr => {
+      Sentry.captureException(deleteErr instanceof Error ? deleteErr : new Error(String(deleteErr)), {
+        tags: { module: 'auth_register', action: 'orphan_user_cleanup' },
+        extra: { userId: data.user?.id },
+      })
+    })
+    Sentry.captureException(new Error('signup generateLink: missing hashed token'), {
+      tags: { module: 'auth_register', action: 'confirmation_email' },
+    })
+    return NextResponse.json(
+      { error: "Impossible d'envoyer l'email de confirmation. Réessayez." },
+      { status: 503 }
+    )
+  }
+
   try {
     await sendSignupConfirmationEmail({
       to: email,
       name: shop_name,
-      confirmationUrl: data.properties.action_link,
+      confirmationUrl: buildAuthEmailActionUrl({
+        tokenHash,
+        type: 'signup',
+        nextPath: '/dashboard',
+      }, req.nextUrl.origin),
     })
   } catch (emailError) {
     await serviceClient.auth.admin.deleteUser(data.user.id).catch(deleteErr => {

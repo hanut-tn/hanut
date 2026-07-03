@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/nextjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { checkOrigin } from '@/lib/csrf'
-import { buildAuthCallbackUrl } from '@/lib/auth-redirect'
+import { buildAuthCallbackUrl, buildAuthEmailActionUrl } from '@/lib/auth-redirect'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { createServerClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
@@ -67,10 +67,10 @@ export async function POST(request: NextRequest) {
   if (
     currentError ||
     newError ||
-    !currentLink?.properties?.action_link ||
-    !newLink?.properties?.action_link
+    !currentLink?.properties?.hashed_token ||
+    !newLink?.properties?.hashed_token
   ) {
-    Sentry.captureException(new Error(`email change generateLink: ${currentError?.message ?? newError?.message ?? 'missing action link'}`), {
+    Sentry.captureException(new Error(`email change generateLink: ${currentError?.message ?? newError?.message ?? 'missing hashed token'}`), {
       tags: { module: 'change_email', action: 'generate_link' },
     })
     return NextResponse.json({ error: "Impossible de préparer le changement d'email." }, { status: 500 })
@@ -81,11 +81,19 @@ export async function POST(request: NextRequest) {
       sendEmailChangeCurrentEmail({
         to: currentEmail,
         newEmail,
-        confirmationUrl: currentLink.properties.action_link,
+        confirmationUrl: buildAuthEmailActionUrl({
+          tokenHash: currentLink.properties.hashed_token,
+          type: 'email_change',
+          nextPath: '/dashboard',
+        }, request.nextUrl.origin),
       }),
       sendEmailChangeNewEmail({
         to: newEmail,
-        confirmationUrl: newLink.properties.action_link,
+        confirmationUrl: buildAuthEmailActionUrl({
+          tokenHash: newLink.properties.hashed_token,
+          type: 'email_change',
+          nextPath: '/dashboard',
+        }, request.nextUrl.origin),
       }),
     ])
   } catch (emailError) {

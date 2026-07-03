@@ -53,6 +53,8 @@ describe('middleware auth boundaries', () => {
       '/api/auth/register',
       '/api/auth/callback',
       '/api/auth/callback?code=abc123',
+      '/api/auth/forgot-password',
+      '/api/auth/resend-confirmation',
       '/api/orders/send-otp',
       '/api/orders/verify-otp',
     ]
@@ -169,6 +171,15 @@ describe('middleware auth boundaries', () => {
   it('allows /api/auth/register without session', async () => {
     const response = await middleware(requestFor('/api/auth/register'))
     expect(response.headers.get('location')).toBeNull()
+    expect(supabaseSsrMock.createServerClient).not.toHaveBeenCalled()
+  })
+
+  it('allows public auth email endpoints without session', async () => {
+    const forgotPassword = await middleware(requestFor('/api/auth/forgot-password'))
+    const resendConfirmation = await middleware(requestFor('/api/auth/resend-confirmation'))
+
+    expect(forgotPassword.headers.get('location')).toBeNull()
+    expect(resendConfirmation.headers.get('location')).toBeNull()
     expect(supabaseSsrMock.createServerClient).not.toHaveBeenCalled()
   })
 

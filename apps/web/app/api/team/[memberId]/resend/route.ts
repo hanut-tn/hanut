@@ -8,7 +8,7 @@ import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { checkOrigin } from '@/lib/csrf'
 import { requireActiveResponse } from '@/lib/assert-active'
-import { buildAuthCallbackUrl } from '@/lib/auth-redirect'
+import { buildAuthCallbackUrl, buildAuthEmailActionUrl } from '@/lib/auth-redirect'
 import { sendTeamInvitationEmail } from '@/lib/email'
 
 type Params = {
@@ -76,8 +76,8 @@ export async function POST(request: NextRequest, { params }: Params) {
     },
   })
 
-  if (inviteError || !inviteData?.properties?.action_link) {
-    Sentry.captureException(new Error(`team invite resend generateLink: ${inviteError?.message ?? 'missing action link'}`), {
+  if (inviteError || !inviteData?.properties?.hashed_token) {
+    Sentry.captureException(new Error(`team invite resend generateLink: ${inviteError?.message ?? 'missing hashed token'}`), {
       tags: { module: 'team', action: 'resend_invitation_link' },
     })
     await serviceClient
@@ -98,7 +98,11 @@ export async function POST(request: NextRequest, { params }: Params) {
   try {
     await sendTeamInvitationEmail({
       to: member.email,
-      invitationUrl: inviteData.properties.action_link,
+      invitationUrl: buildAuthEmailActionUrl({
+        tokenHash: inviteData.properties.hashed_token,
+        type: 'invite',
+        nextPath: '/accept-invitation',
+      }, request.nextUrl.origin),
       inviterEmail: user?.email,
       roleLabel: ROLE_LABELS[member.role] ?? member.role,
     })

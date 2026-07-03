@@ -11,7 +11,7 @@ import { getUserContext } from '@/lib/get-context'
 import { logActivity } from '@/lib/activity'
 import { PLAN_LIMITS } from '@/lib/constants'
 import { requireActiveResponse } from '@/lib/assert-active'
-import { buildAuthCallbackUrl } from '@/lib/auth-redirect'
+import { buildAuthCallbackUrl, buildAuthEmailActionUrl } from '@/lib/auth-redirect'
 import { sendTeamInvitationEmail } from '@/lib/email'
 
 const InviteMemberSchema = z.object({
@@ -155,8 +155,8 @@ export async function POST(request: NextRequest) {
     },
   })
 
-  if (inviteError || !inviteData?.properties?.action_link) {
-    Sentry.captureException(new Error(`team invite generateLink: ${inviteError?.message ?? 'missing action link'}`), { tags: { module: 'team' } })
+  if (inviteError || !inviteData?.properties?.hashed_token) {
+    Sentry.captureException(new Error(`team invite generateLink: ${inviteError?.message ?? 'missing hashed token'}`), { tags: { module: 'team' } })
     await serviceClient.from('team_members').delete().eq('id', member.id)
     return NextResponse.json({ error: `Erreur d'invitation : ${inviteError?.message ?? 'lien manquant'}` }, { status: 500 })
   }
@@ -166,7 +166,11 @@ export async function POST(request: NextRequest) {
   try {
     await sendTeamInvitationEmail({
       to: email,
-      invitationUrl: inviteData.properties.action_link,
+      invitationUrl: buildAuthEmailActionUrl({
+        tokenHash: inviteData.properties.hashed_token,
+        type: 'invite',
+        nextPath: '/accept-invitation',
+      }, request.nextUrl.origin),
       inviterEmail: user?.email,
       roleLabel: ROLE_LABELS[role] ?? role,
     })
