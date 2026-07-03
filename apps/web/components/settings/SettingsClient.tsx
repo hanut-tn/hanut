@@ -203,22 +203,30 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
     if (!trimmed || trimmed === seller.email) return
     setEmailMsg(null)
     setEmailPending(true)
-    const { error } = await supabase.auth.updateUser({ email: trimmed })
+    const response = await fetch('/api/auth/change-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: trimmed }),
+    }).catch(() => null)
     setEmailPending(false)
-    if (error) {
-      setEmailMsg({ type: 'error', text: error.message })
+    if (!response) {
+      setEmailMsg({ type: 'error', text: 'Erreur réseau. Vérifiez votre connexion.' })
+    } else if (!response.ok) {
+      const data = await response.json().catch(() => ({} as { error?: string }))
+      setEmailMsg({ type: 'error', text: data.error ?? "Impossible d'envoyer les emails de confirmation." })
     } else {
       setEmailSentTo(trimmed)
     }
   }
 
-  async function handleCancelEmailChange() {
-    const { error } = await supabase.auth.updateUser({ email: seller.email })
-    if (!error) {
-      setPendingEmail(null)
-      setEmailSentTo(null)
-      setNewEmail(seller.email)
-    }
+  function handleCancelEmailChange() {
+    setPendingEmail(null)
+    setEmailSentTo(null)
+    setNewEmail(seller.email)
+    setEmailMsg({
+      type: 'success',
+      text: 'Demande masquée. Ignorez les emails de confirmation déjà envoyés si vous ne souhaitez pas changer d’adresse.',
+    })
   }
 
   async function handlePasswordChange(e: React.FormEvent) {

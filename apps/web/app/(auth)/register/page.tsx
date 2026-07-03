@@ -131,6 +131,13 @@ export default function RegisterPage() {
 
   return (
     <div className="card p-8">
+      <Link
+        href="/"
+        className="mb-5 inline-flex text-sm font-medium text-[#16A34A] hover:text-[#0B5E46] hover:underline"
+      >
+        ← Retour à l&apos;accueil
+      </Link>
+
       <h2 className="text-xl font-semibold text-gray-900 mb-6">Créer votre compte</h2>
 
       <form onSubmit={handleRegister} className="space-y-4">

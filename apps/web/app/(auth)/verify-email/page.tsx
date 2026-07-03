@@ -4,10 +4,8 @@ import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CheckCircle, Mail } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 
 function VerifyEmailContent() {
-  const supabase = createClient()
   const router = useRouter()
   const searchParams = useSearchParams()
   const email = searchParams.get('email') ?? ''
@@ -56,10 +54,17 @@ function VerifyEmailContent() {
     setError(null)
     setResent(false)
     setLoading(true)
-    const { error } = await supabase.auth.resend({ type: 'signup', email })
+    const response = await fetch('/api/auth/resend-confirmation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    }).catch(() => null)
     setLoading(false)
-    if (error) {
-      setError("Impossible de renvoyer l'email. Réessayez dans un moment.")
+    if (!response) {
+      setError('Erreur réseau. Vérifiez votre connexion.')
+    } else if (!response.ok) {
+      const data = await response.json().catch(() => ({} as { error?: string }))
+      setError(data.error ?? "Impossible de renvoyer l'email. Réessayez dans un moment.")
     } else {
       setResent(true)
       setCooldown(60)

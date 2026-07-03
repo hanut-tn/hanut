@@ -7,8 +7,8 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { verifyTurnstileToken } from '@/lib/turnstile'
 import { formatTunisianPhone, isValidTunisianPhone } from '@/lib/constants'
+import { sendSellerNewOrderEmail } from '@/lib/email'
 import {
-  escapeEmailHtml,
   hashOrderOtp,
   normalizeOtpEmail,
   normalizeOtpSlug,
@@ -254,6 +254,12 @@ type NotifyOpts = {
   items?: Array<{ product_id: string; variant?: string; quantity: number }> | null
 }
 
+type SellerOrderLine = {
+  label: string
+  quantity: number
+  total?: string
+}
+
 async function notifySellerNewOrder(opts: NotifyOpts): Promise<void> {
   const resendApiKey = process.env.RESEND_API_KEY
   if (!resendApiKey) return
@@ -269,78 +275,39 @@ async function notifySellerNewOrder(opts: NotifyOpts): Promise<void> {
   if (!seller?.email) return
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://hanut.tn'
-  const logoUrl = `${appUrl}/icon-512.png`
   const orderUrl = `${appUrl}/orders/${opts.orderId}`
 
-  let productHtml = ''
+  let lines: SellerOrderLine[] = []
   if (opts.items && opts.items.length > 0) {
     const ids = [...new Set(opts.items.map(i => i.product_id))]
     const { data: products } = await supabase.from('products').select('id, name, price').in('id', ids)
     const map = new Map((products ?? []).map(p => [p.id, p]))
-    const lines = opts.items.map(item => {
+    lines = opts.items.map(item => {
       const p = map.get(item.product_id)
       const label = p ? (item.variant ? `${p.name} — ${item.variant}` : p.name) : 'Produit'
-      const total = p ? ` — <strong>${(p.price * item.quantity).toFixed(2)} DT</strong>` : ''
-      return `<li>${escapeEmailHtml(label)} × ${item.quantity}${total}</li>`
-    }).join('')
-    productHtml = `<ul style="margin:8px 0 0;padding-left:18px;color:#1C1917">${lines}</ul>`
+      return {
+        label,
+        quantity: item.quantity,
+        total: p ? `${(p.price * item.quantity).toFixed(2)} DT` : undefined,
+      }
+    })
   } else if (opts.productId) {
     const { data: p } = await supabase.from('products').select('name, price').eq('id', opts.productId).single()
     if (p) {
       const label = opts.variant ? `${p.name} — ${opts.variant}` : p.name
-      const total = (p.price * opts.quantity).toFixed(2)
-      productHtml = `<p style="margin:8px 0 0;color:#1C1917">${escapeEmailHtml(label)} × ${opts.quantity} — <strong>${total} DT</strong></p>`
+      lines = [{
+        label,
+        quantity: opts.quantity,
+        total: `${(p.price * opts.quantity).toFixed(2)} DT`,
+      }]
     }
   }
 
-  const html = `
-    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
-      <img src="${logoUrl}" alt="Hanut" width="48" height="48"
-           style="display:block;margin:0 0 20px;border-radius:10px" />
-      <h2 style="color:#1C1917;margin:0 0 6px">Nouvelle commande reçue 🛍️</h2>
-      <p style="color:#78716C;margin:0 0 24px">
-        Une commande vient d'être passée sur votre boutique Hanut.
-      </p>
-
-      <div style="background:#F5F5F4;border-radius:12px;padding:20px;margin:0 0 16px">
-        <p style="margin:0 0 6px;font-size:12px;font-weight:600;color:#78716C;text-transform:uppercase;letter-spacing:.5px">Client</p>
-        <p style="margin:0 0 2px;font-weight:600;color:#1C1917">${escapeEmailHtml(opts.customerName)}</p>
-        <p style="margin:0;color:#78716C">${escapeEmailHtml(opts.customerPhone)}</p>
-      </div>
-
-      ${productHtml ? `
-      <div style="background:#F5F5F4;border-radius:12px;padding:20px;margin:0 0 28px">
-        <p style="margin:0 0 6px;font-size:12px;font-weight:600;color:#78716C;text-transform:uppercase;letter-spacing:.5px">Produit(s)</p>
-        ${productHtml}
-      </div>
-      ` : '<div style="margin-bottom:28px"></div>'}
-
-      <div style="text-align:center">
-        <a href="${orderUrl}"
-           style="display:inline-block;background:#16A34A;color:#ffffff;font-size:15px;font-weight:600;
-                  text-decoration:none;padding:14px 32px;border-radius:10px">
-          Voir la commande →
-        </a>
-      </div>
-    </div>
-  `
-
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${resendApiKey}`,
-    },
-    body: JSON.stringify({
-      from: process.env.RESEND_FROM_EMAIL ?? 'Hanut <noreply@hanut.tn>',
-      to: seller.email,
-      subject: `🛍️ Nouvelle commande reçue — ${opts.customerName}`,
-      html,
-    }),
-    signal: AbortSignal.timeout(8_000),
+  await sendSellerNewOrderEmail({
+    to: seller.email,
+    orderUrl,
+    customerName: opts.customerName,
+    customerPhone: opts.customerPhone,
+    lines,
   })
-
-  if (!response.ok) {
-    throw new Error(`Seller notification email failed: HTTP ${response.status}`)
-  }
 }

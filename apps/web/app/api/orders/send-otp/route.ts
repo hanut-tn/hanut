@@ -5,8 +5,8 @@ import { checkOrigin } from '@/lib/csrf'
 import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { verifyTurnstileToken } from '@/lib/turnstile'
+import { sendOrderOtpEmail } from '@/lib/email'
 import {
-  escapeEmailHtml,
   generateOrderOtp,
   hashOrderOtp,
   normalizeOtpEmail,
@@ -132,69 +132,17 @@ export async function POST(request: NextRequest) {
   }
 
   let sent = true
-  if (!resendApiKey) {
-    if (process.env.NODE_ENV === 'production') {
-      // Sans clé Resend en prod, ne jamais logguer le code ni prétendre l'avoir envoyé.
-      console.error('[send-otp] RESEND_API_KEY manquante en production')
-      Sentry.captureException(new Error('send-otp: RESEND_API_KEY manquante en production'), { tags: { module: 'send-otp' } })
-      sent = false
-    } else {
-      console.log(`[OTP DEV] Code pour ${email} (boutique: ${slug}): ${code}`)
-    }
-  } else {
-    const sellerName = escapeEmailHtml(seller.name ?? slug)
-    const logoUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://hanut.tn'}/icon-512.png`
-    const emailBody = JSON.stringify({
-      from: process.env.RESEND_FROM_EMAIL ?? 'Hanut <noreply@hanut.tn>',
-      to: email,
-      subject: `${code} — votre code de vérification`,
-      html: `
-        <div style="font-family:sans-serif;max-width:420px;margin:0 auto;padding:32px 24px">
-          <img src="${logoUrl}" alt="Hanut" width="48" height="48" style="display:block;margin:0 0 20px;border-radius:10px" />
-          <h2 style="color:#1C1917;margin:0 0 8px">Vérification de commande</h2>
-          <p style="color:#78716C;margin:0 0 24px">
-            Votre code pour commander chez <strong style="color:#1C1917">${sellerName}</strong> :
-          </p>
-          <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:24px;text-align:center;margin:0 0 24px">
-            <span style="font-size:40px;font-weight:900;letter-spacing:14px;color:#0B5E46;font-family:monospace">${code}</span>
-          </div>
-          <p style="color:#78716C;font-size:14px;margin:0 0 8px">Ce code expire dans <strong>5 minutes</strong>.</p>
-          <p style="color:#A8A29E;font-size:12px;margin:0">
-            Si vous n'avez pas initié cette commande, ignorez cet email.
-          </p>
-        </div>
-      `,
+  await sendOrderOtpEmail({
+    to: email,
+    code,
+    sellerName: seller.name ?? slug,
+  }).catch(err => {
+    sent = false
+    console.error('[send-otp] email error:', err)
+    Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
+      tags: { module: 'send-otp', action: 'send_email' },
     })
-
-    let emailResponse: Response | null = null
-    for (let attempt = 0; attempt < 2 && !emailResponse?.ok; attempt++) {
-      emailResponse = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${resendApiKey}`,
-        },
-        body: emailBody,
-        signal: AbortSignal.timeout(10_000),
-      }).catch(err => {
-        console.error(`[send-otp] Resend network error (attempt ${attempt + 1}):`, err)
-        if (attempt === 1) {
-          Sentry.captureException(new Error(`send-otp Resend network error: ${err?.message}`), { tags: { module: 'send-otp' } })
-        }
-        return null
-      })
-    }
-
-    sent = Boolean(emailResponse?.ok)
-    if (!sent && emailResponse) {
-      const errBody = await emailResponse.text().catch(() => '')
-      console.error('[send-otp] Resend error:', errBody)
-      Sentry.captureException(
-        new Error(`send-otp Resend HTTP ${emailResponse.status}: ${errBody.slice(0, 200)}`),
-        { tags: { module: 'send-otp' } }
-      )
-    }
-  }
+  })
 
   if (!sent) {
     // Ne supprime pas un éventuel code plus récent écrit par une requête concurrente.

@@ -12,6 +12,7 @@ import { logActivity } from '@/lib/activity'
 import { PLAN_LIMITS } from '@/lib/constants'
 import { requireActiveResponse } from '@/lib/assert-active'
 import { buildAuthCallbackUrl } from '@/lib/auth-redirect'
+import { sendTeamInvitationEmail } from '@/lib/email'
 
 const InviteMemberSchema = z.object({
   email: z.string().min(1, 'Email requis').regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Email invalide'),
@@ -145,18 +146,48 @@ export async function POST(request: NextRequest) {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(email, {
-    redirectTo: buildAuthCallbackUrl('/accept-invitation', request.nextUrl.origin),
-    data: { invited_by: user?.email, team_role: role, invitation_token: invitationToken },
+  const { data: inviteData, error: inviteError } = await serviceClient.auth.admin.generateLink({
+    type: 'invite',
+    email,
+    options: {
+      redirectTo: buildAuthCallbackUrl('/accept-invitation', request.nextUrl.origin),
+      data: { invited_by: user?.email, team_role: role, invitation_token: invitationToken },
+    },
   })
 
-  if (inviteError) {
-    Sentry.captureException(new Error(`team invite auth.admin.inviteUserByEmail: ${inviteError.message}`), { tags: { module: 'team' } })
+  if (inviteError || !inviteData?.properties?.action_link) {
+    Sentry.captureException(new Error(`team invite generateLink: ${inviteError?.message ?? 'missing action link'}`), { tags: { module: 'team' } })
     await serviceClient.from('team_members').delete().eq('id', member.id)
-    return NextResponse.json({ error: `Erreur d'invitation : ${inviteError.message}` }, { status: 500 })
+    return NextResponse.json({ error: `Erreur d'invitation : ${inviteError?.message ?? 'lien manquant'}` }, { status: 500 })
   }
 
   const ROLE_LABELS: Record<string, string> = { operator: 'Opérateur', readonly: 'Lecture seule' }
+
+  try {
+    await sendTeamInvitationEmail({
+      to: email,
+      invitationUrl: inviteData.properties.action_link,
+      inviterEmail: user?.email,
+      roleLabel: ROLE_LABELS[role] ?? role,
+    })
+  } catch (emailError) {
+    Sentry.captureException(emailError instanceof Error ? emailError : new Error(String(emailError)), {
+      tags: { module: 'team', action: 'send_invitation_email' },
+    })
+    await serviceClient.from('team_members').delete().eq('id', member.id)
+    if (inviteData.user?.id) {
+      await serviceClient.auth.admin.deleteUser(inviteData.user.id).catch(deleteErr => {
+        Sentry.captureException(deleteErr instanceof Error ? deleteErr : new Error(String(deleteErr)), {
+          tags: { module: 'team', action: 'invite_user_cleanup' },
+          extra: { userId: inviteData.user?.id },
+        })
+      })
+    }
+    return NextResponse.json(
+      { error: "Impossible d'envoyer l'email d'invitation. Réessayez." },
+      { status: 503 }
+    )
+  }
 
   await logActivity({
     sellerId: context.sellerId,

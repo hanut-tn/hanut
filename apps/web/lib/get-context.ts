@@ -54,7 +54,7 @@ export const getUserContext = cacheFn(async (): Promise<UserContext | null> => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  // Un compte créé par inviteUserByEmail conserve ce marqueur dans ses
+  // Un compte créé par invitation équipe conserve ce marqueur dans ses
   // métadonnées Auth. Il ne doit jamais devenir propriétaire de boutique par
   // accident si son accès équipe est ensuite supprimé.
   const isInvitedUser = typeof user.user_metadata?.invitation_token === 'string'

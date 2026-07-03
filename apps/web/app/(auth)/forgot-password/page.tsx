@@ -3,11 +3,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { CheckCircle2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { buildAuthCallbackUrl } from '@/lib/auth-redirect'
 
 export default function ForgotPasswordPage() {
-  const supabase = createClient()
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -17,11 +14,19 @@ export default function ForgotPasswordPage() {
     e.preventDefault()
     setError(null)
     setLoading(true)
-    const redirectTo = buildAuthCallbackUrl('/reset-password', window.location.origin)
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo })
+    const response = await fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim() }),
+    }).catch(() => null)
     setLoading(false)
-    if (error) {
-      setError(error.message)
+    if (!response) {
+      setError('Erreur réseau. Vérifiez votre connexion.')
+      return
+    }
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({} as { error?: string }))
+      setError(data.error ?? "Impossible d'envoyer l'email. Réessayez.")
     } else {
       setSent(true)
     }
