@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   let rl: RateLimitResult
 
   try {
-    rl = await checkRateLimit(ip, 'contact', 5, 60)
+    rl = await checkRateLimit(ip, 'contact', 3, 1)
   } catch {
     return NextResponse.json(
       { error: 'Protection anti-spam indisponible. Réessayez dans quelques minutes.' },
