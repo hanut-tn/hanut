@@ -1,6 +1,9 @@
 import { isLocalOrigin, isVercelDeploymentOrigin, normalizeOrigin } from '@/lib/safe-origin'
 
-const DEFAULT_PRODUCTION_ORIGIN = 'https://hanut.tn'
+// hanut.tn redirige (308) vers www.hanut.tn au niveau du domaine — utiliser
+// directement www évite ce saut de redirection, non fiable pour les <img>
+// dans les clients email et inutile pour les liens cliqués.
+const DEFAULT_PRODUCTION_ORIGIN = 'https://www.hanut.tn'
 
 export function getAppOrigin(fallbackOrigin?: string): string {
   const configuredOrigin = normalizeOrigin(process.env.NEXT_PUBLIC_APP_URL)

@@ -29,9 +29,12 @@ type OrderLine = {
 }
 
 const DEFAULT_FROM = 'Hanut <noreply@hanut.tn>'
-const DEFAULT_PUBLIC_ASSET_URL = 'https://hanut.tn'
+// hanut.tn redirige (308) vers www.hanut.tn au niveau du domaine — un <img>
+// dans un email ne suit pas cette redirection de façon fiable, d'où un logo
+// qui ne s'affichait dans aucun email tant que ce host pointait sur l'apex.
+const DEFAULT_PUBLIC_ASSET_URL = 'https://www.hanut.tn'
 
-function getAppUrl() {
+export function getAppUrl() {
   const configured = normalizeOrigin(process.env.NEXT_PUBLIC_APP_URL)
   if (configured && !isPrivateOrLocalOrigin(configured) && !isVercelDeploymentOrigin(configured)) {
     return configured

@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /dashboard/
-Sitemap: https://hanut.tn/sitemap.xml
+Sitemap: https://www.hanut.tn/sitemap.xml

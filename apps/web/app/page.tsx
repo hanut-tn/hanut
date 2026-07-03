@@ -240,17 +240,17 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Hanut — Gérez vos commandes WhatsApp et Instagram',
     description: "L'outil fait pour les vendeurs tunisiens qui vendent via WhatsApp et Instagram.",
-    url: 'https://hanut.tn',
+    url: 'https://www.hanut.tn',
     siteName: 'Hanut',
     locale: 'fr_TN',
     type: 'website',
-    images: [{ url: 'https://hanut.tn/og-image.png', width: 1200, height: 628, alt: 'Hanut — Gérez vos commandes WhatsApp et Instagram' }],
+    images: [{ url: 'https://www.hanut.tn/og-image.png', width: 1200, height: 628, alt: 'Hanut — Gérez vos commandes WhatsApp et Instagram' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Hanut — Gérez vos commandes WhatsApp et Instagram',
     description: "L'outil fait pour les vendeurs tunisiens qui vendent via WhatsApp et Instagram.",
-    images: ['https://hanut.tn/og-image.png'],
+    images: ['https://www.hanut.tn/og-image.png'],
   },
   robots: {
     index: true,

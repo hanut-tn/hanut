@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     siteName: 'Hanut',
     locale: 'fr_TN',
     type: 'website',
-    images: [{ url: 'https://hanut.tn/icon-512.png', width: 512, height: 512, alt: 'Hanut' }],
+    images: [{ url: 'https://www.hanut.tn/icon-512.png', width: 512, height: 512, alt: 'Hanut' }],
   },
 }
 

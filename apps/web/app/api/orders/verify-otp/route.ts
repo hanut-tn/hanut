@@ -7,7 +7,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { verifyTurnstileToken } from '@/lib/turnstile'
 import { formatTunisianPhone, isValidTunisianPhone } from '@/lib/constants'
-import { sendSellerNewOrderEmail } from '@/lib/email'
+import { getAppUrl, sendSellerNewOrderEmail } from '@/lib/email'
 import {
   hashOrderOtp,
   normalizeOtpEmail,
@@ -274,8 +274,7 @@ async function notifySellerNewOrder(opts: NotifyOpts): Promise<void> {
 
   if (!seller?.email) return
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://hanut.tn'
-  const orderUrl = `${appUrl}/orders/${opts.orderId}`
+  const orderUrl = `${getAppUrl()}/orders/${opts.orderId}`
 
   let lines: SellerOrderLine[] = []
   if (opts.items && opts.items.length > 0) {

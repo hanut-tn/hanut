@@ -25,7 +25,7 @@ export default async function SettingsPage({ searchParams }: Props) {
   const serviceClient = createServiceClient()
 
   const headersList = await headers()
-  const host = headersList.get('host') ?? 'hanut.tn'
+  const host = headersList.get('host') ?? 'www.hanut.tn'
   const appUrl = host.startsWith('localhost') ? `http://${host}` : `https://${host}`
 
   const { data: seller } = await serviceClient

@@ -17,24 +17,24 @@ describe('auth redirect URLs', () => {
   })
 
   it('uses the canonical app URL instead of a temporary deployment origin', () => {
-    process.env.NEXT_PUBLIC_APP_URL = 'https://hanut.tn/'
+    process.env.NEXT_PUBLIC_APP_URL = 'https://www.hanut.tn/'
 
     expect(
       buildAuthCallbackUrl('/reset-password', 'https://temporary-preview.vercel.app'),
-    ).toBe('https://hanut.tn/api/auth/callback?next=%2Freset-password')
+    ).toBe('https://www.hanut.tn/api/auth/callback?next=%2Freset-password')
   })
 
   it('builds the team invitation callback to set a password', () => {
-    process.env.NEXT_PUBLIC_APP_URL = 'https://hanut.tn'
+    process.env.NEXT_PUBLIC_APP_URL = 'https://www.hanut.tn'
 
     expect(buildAuthCallbackUrl('/accept-invitation')).toBe(
-      'https://hanut.tn/api/auth/callback?next=%2Faccept-invitation',
+      'https://www.hanut.tn/api/auth/callback?next=%2Faccept-invitation',
     )
   })
 
   it('omits next=/dashboard because dashboard is the callback default', () => {
-    expect(buildAuthCallbackUrl('/dashboard', 'https://hanut.tn')).toBe(
-      'https://hanut.tn/api/auth/callback',
+    expect(buildAuthCallbackUrl('/dashboard', 'https://www.hanut.tn')).toBe(
+      'https://www.hanut.tn/api/auth/callback',
     )
   })
 
@@ -44,14 +44,14 @@ describe('auth redirect URLs', () => {
         tokenHash: 'invite-token',
         type: 'invite',
         nextPath: '/accept-invitation',
-      }, 'https://hanut.tn'),
+      }, 'https://www.hanut.tn'),
     ).toBe(
-      'https://hanut.tn/api/auth/callback?token_hash=invite-token&type=invite&next=%2Faccept-invitation',
+      'https://www.hanut.tn/api/auth/callback?token_hash=invite-token&type=invite&next=%2Faccept-invitation',
     )
   })
 
   it('never emits an auto-generated Vercel deployment URL, even as the request origin', () => {
-    expect(getAppOrigin('https://hanut-preview.vercel.app/path')).toBe('https://hanut.tn')
+    expect(getAppOrigin('https://hanut-preview.vercel.app/path')).toBe('https://www.hanut.tn')
   })
 
   it('uses the request origin instead of localhost for LAN testing', () => {
@@ -63,27 +63,33 @@ describe('auth redirect URLs', () => {
   })
 
   it('uses the configured app URL over the request origin', () => {
-    process.env.NEXT_PUBLIC_APP_URL = 'https://hanut.tn'
+    process.env.NEXT_PUBLIC_APP_URL = 'https://www.hanut.tn'
 
-    expect(getAppOrigin('https://hanut-generated.vercel.app')).toBe('https://hanut.tn')
+    expect(getAppOrigin('https://hanut-generated.vercel.app')).toBe('https://www.hanut.tn')
   })
 
   it('falls back to the production domain when no request origin exists', () => {
     process.env.VERCEL_URL = 'hanut-generated.vercel.app'
 
-    expect(getAppOrigin()).toBe('https://hanut.tn')
+    expect(getAppOrigin()).toBe('https://www.hanut.tn')
   })
 
   it('ignores NEXT_PUBLIC_APP_URL itself if it is misconfigured to a Vercel deployment domain', () => {
     // Régression : NEXT_PUBLIC_APP_URL avait été configurée par erreur sur
     // l'alias de branche Vercel (hanut-web-git-main-*.vercel.app), et le
     // code lui faisait confiance sans vérifier — un lien d'invitation
-    // pointait alors vers ce domaine au lieu de hanut.tn.
+    // pointait alors vers ce domaine au lieu de www.hanut.tn.
     process.env.NEXT_PUBLIC_APP_URL = 'https://hanut-web-git-main-hanut-s-projects.vercel.app'
 
-    expect(getAppOrigin()).toBe('https://hanut.tn')
+    expect(getAppOrigin()).toBe('https://www.hanut.tn')
     expect(getAppOrigin('https://hanut-web-git-main-hanut-s-projects.vercel.app')).toBe(
-      'https://hanut.tn',
+      'https://www.hanut.tn',
     )
+  })
+
+  it('rewrites the bare apex domain to www, since hanut.tn redirects and <img> tags do not follow it reliably', () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://hanut.tn'
+
+    expect(getAppOrigin()).toBe('https://www.hanut.tn')
   })
 })

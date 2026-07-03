@@ -4,7 +4,10 @@ import { CspNonceProvider } from '@/components/providers/CspNonceProvider'
 import './globals.css'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://hanut.tn'),
+  // www, pas l'apex : hanut.tn redirige (308) vers www.hanut.tn, une
+  // redirection que les crawlers de preview de lien (WhatsApp, etc.) ne
+  // suivent pas toujours de façon fiable pour récupérer og-image.png.
+  metadataBase: new URL('https://www.hanut.tn'),
   title: 'Hanut — Gestion commandes WhatsApp',
   description: 'Gérez vos commandes WhatsApp, votre stock et vos livraisons depuis un seul tableau de bord.',
   openGraph: {
