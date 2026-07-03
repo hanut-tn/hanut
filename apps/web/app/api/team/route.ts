@@ -179,7 +179,12 @@ export async function POST(request: NextRequest) {
       tags: { module: 'team', action: 'send_invitation_email' },
     })
     await serviceClient.from('team_members').delete().eq('id', member.id)
-    if (inviteData.user?.id) {
+    // Sécurité : ne supprimer le compte Auth que s'il vient d'être créé par
+    // cette invitation (pas encore confirmé). Le check sellers ci-dessus ne
+    // couvre que les emails déjà vendeurs — un email appartenant à un compte
+    // Auth confirmé pour une autre raison (ex. membre d'une autre équipe)
+    // ne doit jamais être supprimé ici.
+    if (inviteData.user?.id && !inviteData.user.email_confirmed_at) {
       await serviceClient.auth.admin.deleteUser(inviteData.user.id).catch(deleteErr => {
         Sentry.captureException(deleteErr instanceof Error ? deleteErr : new Error(String(deleteErr)), {
           tags: { module: 'team', action: 'invite_user_cleanup' },

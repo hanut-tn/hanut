@@ -88,6 +88,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Erreur lors de la création du compte.' }, { status: 500 })
   }
 
+  // Sécurité : generateLink({type:'signup'}) peut, pour un email déjà
+  // enregistré, renvoyer l'utilisateur EXISTANT sans lever d'erreur
+  // "user already registered" détectable (message exact dépendant de la
+  // version de Supabase). S'il est déjà confirmé, ce n'est pas un compte
+  // fraîchement créé par cette requête : ne jamais le laisser atteindre
+  // les branches de nettoyage plus bas, qui suppriment le compte Auth en
+  // cas d'échec — ça supprimerait le compte d'un client existant.
+  if (data.user.email_confirmed_at) {
+    return NextResponse.json(
+      { error: 'Un compte existe déjà avec cet email. Connectez-vous.' },
+      { status: 409 }
+    )
+  }
+
   const tokenHash = data.properties?.hashed_token
   if (!tokenHash) {
     await serviceClient.auth.admin.deleteUser(data.user.id).catch(deleteErr => {
