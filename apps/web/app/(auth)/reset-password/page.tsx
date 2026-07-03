@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { isPasswordValid, PASSWORD_ERROR_MESSAGE } from '@/lib/password-policy'
+import PasswordStrengthIndicator from '@/components/ui/PasswordStrengthIndicator'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
@@ -18,12 +20,8 @@ export default function ResetPasswordPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    if (password.length < 8) {
-      setError('Le mot de passe doit contenir au moins 8 caractères.')
-      return
-    }
-    if (!/\d/.test(password)) {
-      setError('Le mot de passe doit contenir au moins 1 chiffre.')
+    if (!isPasswordValid(password)) {
+      setError(PASSWORD_ERROR_MESSAGE)
       return
     }
     if (password !== confirm) {
@@ -66,10 +64,11 @@ export default function ResetPasswordPage() {
             value={password}
             onChange={e => setPassword(e.target.value)}
             className="input"
-            placeholder="Minimum 8 caractères, 1 chiffre"
+            placeholder="Minimum 8 caractères"
             required
             autoComplete="new-password"
           />
+          <PasswordStrengthIndicator password={password} />
         </div>
 
         <div>

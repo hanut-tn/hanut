@@ -6,21 +6,15 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { verifyTurnstileToken } from '@/lib/turnstile'
 import { buildAuthCallbackUrl, buildAuthEmailActionUrl } from '@/lib/auth-redirect'
 import { sendSignupConfirmationEmail } from '@/lib/email'
-
-const PASSWORD_ERROR = 'Le mot de passe doit contenir au moins 8 caractères, une majuscule, un chiffre et un caractère spécial.'
+import { isPasswordValid, PASSWORD_ERROR_MESSAGE } from '@/lib/password-policy'
 
 const RegisterSchema = z.object({
   shop_name: z.string().min(2, 'Nom trop court').max(100),
   email: z.string().email('Email invalide'),
   phone: z.string().max(30).optional(),
   password: z.string().superRefine((val, ctx) => {
-    if (
-      val.length < 8 ||
-      !/[A-Z]/.test(val) ||
-      !/[0-9]/.test(val) ||
-      !/[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(val)
-    ) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: PASSWORD_ERROR })
+    if (!isPasswordValid(val)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: PASSWORD_ERROR_MESSAGE })
     }
   }),
   turnstile_token: z.string().optional(),

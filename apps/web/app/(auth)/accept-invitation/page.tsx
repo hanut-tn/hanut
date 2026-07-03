@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle2, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { isPasswordValid, PASSWORD_ERROR_MESSAGE } from '@/lib/password-policy'
+import PasswordStrengthIndicator from '@/components/ui/PasswordStrengthIndicator'
 
 export default function AcceptInvitationPage() {
   const router = useRouter()
@@ -18,12 +20,8 @@ export default function AcceptInvitationPage() {
     e.preventDefault()
     setError(null)
 
-    if (password.length < 8) {
-      setError('Le mot de passe doit contenir au moins 8 caractères.')
-      return
-    }
-    if (!/\d/.test(password)) {
-      setError('Le mot de passe doit contenir au moins 1 chiffre.')
+    if (!isPasswordValid(password)) {
+      setError(PASSWORD_ERROR_MESSAGE)
       return
     }
     if (password !== confirm) {
@@ -83,10 +81,11 @@ export default function AcceptInvitationPage() {
             value={password}
             onChange={e => setPassword(e.target.value)}
             className="input"
-            placeholder="Minimum 8 caractères, 1 chiffre"
+            placeholder="Minimum 8 caractères"
             required
             autoComplete="new-password"
           />
+          <PasswordStrengthIndicator password={password} />
         </div>
 
         <div>
