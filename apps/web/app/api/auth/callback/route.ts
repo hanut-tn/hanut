@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/nextjs'
 import { createServerClient } from '@supabase/ssr'
 import type { EmailOtpType } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { ensureSignupSellerProfile, isConfirmedHanutSignupUser } from '@/lib/signup-profile'
@@ -135,12 +135,19 @@ export async function GET(request: NextRequest) {
       }
 
       const name = verifiedUser.user_metadata?.name as string | undefined
-      sendWelcomeEmail({ to: verifiedUser.email, name }).catch(err => {
-        Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
-          tags: { module: 'auth_callback', action: 'welcome_email' },
-          extra: { hasEmail: Boolean(verifiedUser?.email) },
+      const welcomeEmail = verifiedUser.email
+      // after() garde la fonction serverless active le temps de l'envoi :
+      // sans ça, Vercel peut geler l'exécution dès la redirection renvoyée
+      // et tuer la requête Resend en plein vol (fire-and-forget non fiable
+      // en serverless).
+      after(() =>
+        sendWelcomeEmail({ to: welcomeEmail, name }).catch(err => {
+          Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
+            tags: { module: 'auth_callback', action: 'welcome_email' },
+            extra: { hasEmail: Boolean(welcomeEmail) },
+          })
         })
-      })
+      )
     }
 
     if (isSignupConfirmation) {

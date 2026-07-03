@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/nextjs'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { checkOrigin } from '@/lib/csrf'
@@ -216,24 +216,31 @@ async function postHandler(request: NextRequest) {
   if (!result.order_id || !result.tracking_token || !result.seller_id) {
     return noStoreJson({ error: 'Réponse de création invalide.' }, 500)
   }
+  const sellerId = result.seller_id
+  const orderId = result.order_id
 
-  revalidateTag(`dashboard-${result.seller_id}`)
+  revalidateTag(`dashboard-${sellerId}`)
 
-  void notifySellerNewOrder({
-    sellerId: result.seller_id,
-    orderId: result.order_id,
-    customerName: parsed.data.customer_name,
-    customerPhone: phone,
-    productId: parsed.data.product_id,
-    variant: parsed.data.variant,
-    quantity: parsed.data.quantity ?? 1,
-    items: parsed.data.items,
-  }).catch(err => {
-    Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
-      tags: { module: 'verify-otp', action: 'notify_seller' },
-      extra: { sellerId: result.seller_id, orderId: result.order_id },
+  // after() garde la fonction serverless active le temps de l'envoi : sans
+  // ça, Vercel peut geler l'exécution dès la réponse renvoyée et tuer la
+  // requête Resend en plein vol (fire-and-forget non fiable en serverless).
+  after(() =>
+    notifySellerNewOrder({
+      sellerId,
+      orderId,
+      customerName: parsed.data.customer_name,
+      customerPhone: phone,
+      productId: parsed.data.product_id,
+      variant: parsed.data.variant,
+      quantity: parsed.data.quantity ?? 1,
+      items: parsed.data.items,
+    }).catch(err => {
+      Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
+        tags: { module: 'verify-otp', action: 'notify_seller' },
+        extra: { sellerId, orderId },
+      })
     })
-  })
+  )
 
   return noStoreJson({
     order_id: result.order_id.slice(0, 8).toUpperCase(),

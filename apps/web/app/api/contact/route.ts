@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/nextjs'
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
@@ -73,16 +73,21 @@ export async function POST(req: Request) {
 
   // Le message est déjà en base (source de vérité, consultable sur /admin) —
   // un échec d'envoi de la notification ne doit pas faire échouer la requête.
-  sendContactMessageNotification({
-    to: HANUT_CONTACT.email,
-    name: trimmedName,
-    fromEmail: trimmedEmail,
-    message: trimmedMessage,
-  }).catch(err => {
-    Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
-      tags: { module: 'contact', action: 'notify_team' },
+  // after() garde la fonction serverless active le temps de l'envoi : sans
+  // ça, Vercel peut geler l'exécution dès la réponse renvoyée et tuer la
+  // requête Resend en plein vol (fire-and-forget non fiable en serverless).
+  after(() =>
+    sendContactMessageNotification({
+      to: HANUT_CONTACT.email,
+      name: trimmedName,
+      fromEmail: trimmedEmail,
+      message: trimmedMessage,
+    }).catch(err => {
+      Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
+        tags: { module: 'contact', action: 'notify_team' },
+      })
     })
-  })
+  )
 
   return NextResponse.json({ message: 'Message envoyé !' })
 }

@@ -21,5 +21,6 @@ export default defineConfig({
       '__tests__/e2e/**/*.test.ts',
     ],
     restoreMocks: true,
+    setupFiles: ['./vitest.setup.ts'],
   },
 })
