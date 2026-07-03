@@ -9,7 +9,7 @@ const NAV_LINKS = [
   { label: 'Fonctionnalités', href: '/features' },
   { label: 'Roadmap', href: '/roadmap' },
   { label: 'Tarifs', href: '/pricing' },
-  { label: 'Livreurs', href: '/carriers' },
+  { label: 'Transporteurs', href: '/carriers' },
   { label: 'À propos', href: '/about' },
   { label: 'Contact', href: '/contact' },
 ]
@@ -27,14 +27,14 @@ export default function Navbar() {
 
   return (
     <header className={`sticky top-0 z-50 bg-white/95 backdrop-blur-md transition-all duration-200 ${
-      scrolled ? 'border-b border-gray-100 shadow-sm' : ''
+      scrolled ? 'border-b border-neutral-100 shadow-sm' : ''
     }`}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-6">
         <Link href="/" className="flex items-center shrink-0 overflow-visible">
           <Image src="/logo-horizontal.svg" alt="Hanut" width={100} height={32} priority unoptimized className="h-8 w-auto" />
         </Link>
 
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-500">
+        <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-neutral-500">
           {NAV_LINKS.map(l => (
             <Link
               key={l.href}
@@ -51,20 +51,22 @@ export default function Navbar() {
         <div className="flex items-center gap-2 shrink-0">
           <Link
             href="/login"
-            className="hidden sm:inline-flex text-sm font-medium text-[#16A34A] hover:text-[#15803D] px-4 py-2 rounded-lg border border-transparent hover:border-[#16A34A] hover:bg-green-50 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
+            className="hidden sm:inline-flex items-center min-h-[44px] text-sm font-medium text-brand-600 hover:text-brand-700 px-4 rounded-lg border border-transparent hover:border-brand-600 hover:bg-brand-50 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
           >
             Se connecter
           </Link>
           <Link
             href="/register"
-            className="inline-flex items-center text-white text-sm font-semibold px-4 py-2 rounded-lg bg-[#16A34A] transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97]"
+            className="inline-flex items-center min-h-[44px] text-white text-sm font-semibold px-4 rounded-lg bg-brand-600 transition-all duration-150 ease-out hover:bg-brand-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-brand-600/40 active:scale-[0.97]"
           >
-            Essayer Pro
+            Essayer Pro 14 jours
           </Link>
           <button
-            className="md:hidden ml-1 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            className="lg:hidden ml-1 w-11 h-11 flex items-center justify-center rounded-lg hover:bg-neutral-100 transition-colors"
             onClick={() => setMenuOpen(v => !v)}
             aria-label="Menu"
+            aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               {menuOpen ? (
@@ -82,7 +84,7 @@ export default function Navbar() {
       </div>
 
       {menuOpen && (
-        <div className="md:hidden border-t border-gray-100 bg-white shadow-lg">
+        <div id="mobile-menu" className="lg:hidden border-t border-neutral-100 bg-white shadow-lg max-h-[calc(100dvh-4rem)] overflow-y-auto">
           <div className="px-4 py-3 space-y-1">
             {NAV_LINKS.map(l => (
               <Link
@@ -91,26 +93,26 @@ export default function Navbar() {
                 onClick={() => setMenuOpen(false)}
                 className={`block py-2.5 px-3 rounded-lg text-sm font-medium transition-colors ${
                   pathname === l.href
-                    ? 'bg-green-50 text-[#0B5E46]'
-                    : 'text-gray-600 hover:text-[#1C1917] hover:bg-gray-50'
+                    ? 'bg-brand-50 text-[#0B5E46]'
+                    : 'text-neutral-600 hover:text-[#1C1917] hover:bg-neutral-50'
                 }`}
               >
                 {l.label}
               </Link>
             ))}
           </div>
-          <div className="px-4 pb-4 flex flex-col gap-2 border-t border-gray-100 pt-3">
+          <div className="px-4 pb-4 flex flex-col gap-2 border-t border-neutral-100 pt-3">
             <Link
               href="/login"
               onClick={() => setMenuOpen(false)}
-              className="w-full text-center py-2.5 text-sm font-medium text-[#16A34A] border border-[#16A34A] rounded-lg hover:bg-green-50 hover:text-[#15803D] transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
+              className="w-full text-center py-2.5 text-sm font-medium text-brand-600 border border-brand-600 rounded-lg hover:bg-brand-50 hover:text-brand-700 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
             >
               Se connecter
             </Link>
             <Link
               href="/register"
               onClick={() => setMenuOpen(false)}
-              className="w-full text-center py-2.5 text-sm font-semibold text-white bg-[#16A34A] rounded-lg transition-all duration-150 ease-out hover:bg-green-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-[#16A34A]/40 active:scale-[0.97]"
+              className="w-full text-center py-2.5 text-sm font-semibold text-white bg-brand-600 rounded-lg transition-all duration-150 ease-out hover:bg-brand-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-brand-600/40 active:scale-[0.97]"
             >
               Essayer Pro 14 jours
             </Link>

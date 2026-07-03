@@ -42,16 +42,16 @@ const PLANS: Plan[] = [
   },
 ]
 
-export default function PricingToggle() {
+export default function PricingSection() {
   return (
-    <section id="pricing" className="py-20 sm:py-32 px-4 sm:px-6 bg-[#F5F5F4]">
+    <section id="pricing" className="py-24 sm:py-32 px-4 sm:px-6 bg-[#F5F5F4]">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-14">
           <p className="text-sm font-semibold text-brand-600 uppercase tracking-widest mb-3">Tarifs</p>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1C1917] tracking-tight">
             Des tarifs simples et transparents
           </h2>
-          <p className="mt-4 text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
+          <p className="mt-4 text-lg text-neutral-500 max-w-2xl mx-auto leading-relaxed">
             Sans engagement. Changez de plan quand vous voulez.
           </p>
         </div>
@@ -63,7 +63,7 @@ export default function PricingToggle() {
               className={`relative rounded-2xl p-8 flex flex-col bg-white ${
                 plan.highlighted
                   ? 'ring-2 ring-brand-600 shadow-xl'
-                  : 'border border-gray-200 shadow-sm'
+                  : 'border border-neutral-200 shadow-sm'
               }`}
             >
               {plan.badge && (
@@ -73,11 +73,11 @@ export default function PricingToggle() {
               )}
 
               <div className="mb-6">
-                <p className="font-bold text-sm text-gray-500 mb-0.5">{plan.name}</p>
-                <p className="text-xs text-gray-400 mb-4">{plan.desc}</p>
+                <p className="font-bold text-sm text-neutral-500 mb-0.5">{plan.name}</p>
+                <p className="text-xs text-neutral-600 mb-4">{plan.desc}</p>
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-5xl font-black text-[#1C1917]">{plan.monthly}</span>
-                  <span className="text-sm text-gray-400">DT / mois</span>
+                  <span className="text-sm text-neutral-600">DT / mois</span>
                 </div>
               </div>
 
@@ -88,7 +88,7 @@ export default function PricingToggle() {
                       <circle cx="8" cy="8" r="7" fill="#DCFCE7" />
                       <path d="M5 8L7 10L11 6" stroke="#16A34A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
-                    <span className="text-gray-600">{f}</span>
+                    <span className="text-neutral-600">{f}</span>
                   </li>
                 ))}
               </ul>
@@ -96,7 +96,7 @@ export default function PricingToggle() {
               {plan.highlighted ? (
                 <Link
                   href="/register"
-                  className="w-full py-3.5 rounded-lg font-semibold text-sm bg-brand-600 text-white transition-all duration-150 ease-out hover:bg-brand-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-brand-500/40 active:scale-[0.97] flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-lg font-semibold text-sm bg-brand-600 text-white transition-all duration-150 ease-out hover:bg-brand-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-brand-600/40 active:scale-[0.97] flex items-center justify-center gap-2"
                 >
                   Essayer Pro 14 jours
                 </Link>
@@ -112,7 +112,7 @@ export default function PricingToggle() {
           ))}
         </div>
 
-        <p className="text-center mt-10 text-sm text-gray-500">
+        <p className="text-center mt-10 text-sm text-neutral-500">
           L&apos;essai gratuit de 14 jours démarre sur le plan Pro ·{' '}
           <Link href="/pricing" className="text-brand-600 font-semibold hover:underline">
             Comparer tous les plans →
