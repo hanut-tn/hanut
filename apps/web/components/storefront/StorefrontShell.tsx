@@ -3,13 +3,14 @@
 import { useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ShoppingCart, Store } from 'lucide-react'
+import { ShoppingCart } from 'lucide-react'
 import { useLang } from '@/lib/i18n/use-lang'
 import { storefrontTranslations } from '@/lib/i18n/storefront'
 import {
   addItemToCart, cartTotals, type CartItem, type StorefrontProduct,
 } from '@/lib/storefront/cart'
 import ProductGrid from './ProductGrid'
+import StorefrontBanner from './StorefrontBanner'
 import ProductQuickModal from './ProductQuickModal'
 import CartBar from './CartBar'
 import CartDrawer from './CartDrawer'
@@ -22,10 +23,12 @@ type Step = 'catalog' | 'checkout' | 'otp' | 'confirmation'
 type Props = {
   sellerSlug: string
   sellerName: string
+  shopDescription: string | null
+  bannerUrl: string | null
   products: StorefrontProduct[]
 }
 
-export default function StorefrontShell({ sellerSlug, sellerName, products }: Props) {
+export default function StorefrontShell({ sellerSlug, sellerName, shopDescription, bannerUrl, products }: Props) {
   const { t, isRtl, toggleLang } = useLang(storefrontTranslations)
 
   const [cart, setCart] = useState<CartItem[]>([])
@@ -101,16 +104,13 @@ export default function StorefrontShell({ sellerSlug, sellerName, products }: Pr
   const showCartUi = step === 'catalog'
 
   return (
-    <div dir={isRtl ? 'rtl' : 'ltr'} className={`min-h-screen bg-[#FAFAF9] ${isRtl ? 'font-arabic' : ''}`}>
-      {/* Header sticky */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-30">
+    <div dir={isRtl ? 'rtl' : 'ltr'} className={`min-h-screen bg-gray-50 ${isRtl ? 'font-arabic' : ''}`}>
+      {/* Navbar Hanut sticky */}
+      <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-[#0B5E46] text-white flex items-center justify-center font-bold text-sm shrink-0">
-              {sellerName.trim().charAt(0).toUpperCase() || <Store className="w-4 h-4" />}
-            </div>
-            <p className="font-bold text-[#1C1917] truncate">{sellerName}</p>
-          </div>
+          <Link href="/" className="flex items-center shrink-0" aria-label="Hanut">
+            <Image src="/logo-horizontal.svg" alt="Hanut" width={84} height={27} unoptimized />
+          </Link>
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
@@ -137,6 +137,16 @@ export default function StorefrontShell({ sellerSlug, sellerName, products }: Pr
           </div>
         </div>
       </header>
+
+      {/* Bannière boutique */}
+      {step === 'catalog' && (
+        <StorefrontBanner
+          shopName={sellerName}
+          shopDescription={shopDescription}
+          bannerUrl={bannerUrl}
+          t={t}
+        />
+      )}
 
       {/* Contenu */}
       <main className={`max-w-5xl mx-auto ${showCartUi && cart.length > 0 ? 'pb-28' : 'pb-10'}`}>

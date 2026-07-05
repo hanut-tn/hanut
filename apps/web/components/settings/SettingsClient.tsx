@@ -4,7 +4,8 @@ import { useState, useTransition, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Mail, AlertTriangle, MessageCircle, Clock, Info, Check, X as XIcon, LifeBuoy } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import type { ProfileInput } from '@/app/(dashboard)/settings/actions'
+import type { ProfileInput, ShopBrandingInput } from '@/app/(dashboard)/settings/actions'
+import { uploadProductImage } from '@/app/(dashboard)/catalog/actions'
 import { HANUT_CONTACT } from '@/lib/constants'
 
 const PLAN_CONFIG = {
@@ -88,6 +89,9 @@ type Seller = {
   subscription_end: string | null
   created_at: string | null
   slug: string | null
+  shop_name: string | null
+  shop_description: string | null
+  banner_url: string | null
 }
 
 type Props = {
@@ -98,6 +102,7 @@ type Props = {
   monthlyOrderCount?: number | null
   updateProfile: (input: ProfileInput) => Promise<void>
   updateSlug: (slug: string) => Promise<void>
+  updateShopBranding: (input: ShopBrandingInput) => Promise<void>
   checkSlugAvailability: (slug: string) => Promise<boolean>
 }
 
@@ -115,7 +120,7 @@ function getPasswordStrength(pw: string): { level: 'weak' | 'medium' | 'strong';
   return { level: 'weak', label: 'Faible', color: 'bg-red-400' }
 }
 
-export default function SettingsClient({ seller, stats, appUrl, initialTab, monthlyOrderCount, updateProfile, updateSlug, checkSlugAvailability }: Props) {
+export default function SettingsClient({ seller, stats, appUrl, initialTab, monthlyOrderCount, updateProfile, updateSlug, updateShopBranding, checkSlugAvailability }: Props) {
   const BASE_URL = appUrl.replace(/\/$/, '')
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
@@ -126,6 +131,14 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
   const [name, setName] = useState(seller.name)
   const [phone, setPhone] = useState(seller.phone)
   const [profileMsg, setProfileMsg] = useState<Msg | null>(null)
+
+  // Boutique publique (branding)
+  const [shopName, setShopName] = useState(seller.shop_name ?? '')
+  const [shopDescription, setShopDescription] = useState(seller.shop_description ?? '')
+  const [bannerUrl, setBannerUrl] = useState<string | null>(seller.banner_url)
+  const [bannerUploading, setBannerUploading] = useState(false)
+  const [brandingMsg, setBrandingMsg] = useState<Msg | null>(null)
+  const bannerInputRef = useRef<HTMLInputElement>(null)
 
   // Email change
   const [newEmail, setNewEmail] = useState(seller.email)
@@ -310,6 +323,40 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
         setSlugChecking(false)
       }, 500)
     }
+  }
+
+  async function handleBannerFile(file: File) {
+    setBrandingMsg(null)
+    if (file.size > 5 * 1024 * 1024) {
+      setBrandingMsg({ type: 'error', text: "L'image ne doit pas dépasser 5 Mo." })
+      return
+    }
+    setBannerUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const { url, error } = await uploadProductImage(fd)
+      if (error || !url) throw new Error(error ?? "Échec de l'upload")
+      setBannerUrl(url)
+    } catch (err) {
+      setBrandingMsg({ type: 'error', text: err instanceof Error ? err.message : 'Erreur inconnue' })
+    } finally {
+      setBannerUploading(false)
+      if (bannerInputRef.current) bannerInputRef.current.value = ''
+    }
+  }
+
+  function handleBrandingSave(e: React.FormEvent) {
+    e.preventDefault()
+    setBrandingMsg(null)
+    startTransition(async () => {
+      try {
+        await updateShopBranding({ shopName, shopDescription, bannerUrl })
+        setBrandingMsg({ type: 'success', text: 'Boutique mise à jour avec succès.' })
+      } catch (err) {
+        setBrandingMsg({ type: 'error', text: err instanceof Error ? err.message : 'Erreur inconnue' })
+      }
+    })
   }
 
   function handleSlugSave(e: React.FormEvent) {
@@ -572,6 +619,126 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
               </div>
             )}
           </div>
+
+          <form onSubmit={handleBrandingSave} className="card p-5 space-y-4">
+            <div>
+              <h2 className="font-semibold text-gray-900 mb-0.5">Votre boutique publique</h2>
+              <p className="text-sm text-gray-500">
+                Personnalisez ce que vos clients voient en haut de votre boutique.
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="shop-name" className="block text-sm font-medium text-gray-700 mb-1">
+                Nom de la boutique
+              </label>
+              <input
+                id="shop-name"
+                className="input"
+                value={shopName}
+                onChange={e => setShopName(e.target.value)}
+                placeholder={seller.name || 'Ma boutique'}
+                maxLength={100}
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Laissez vide pour afficher le nom de votre compte ({seller.name}).
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="shop-description" className="block text-sm font-medium text-gray-700 mb-1">
+                Description <span className="text-gray-400 font-normal">(optionnel)</span>
+              </label>
+              <textarea
+                id="shop-description"
+                className="input resize-none"
+                rows={2}
+                value={shopDescription}
+                onChange={e => setShopDescription(e.target.value)}
+                placeholder="Ex: Parfums et cosmétiques — livraison partout en Tunisie"
+                maxLength={300}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Image bannière <span className="text-gray-400 font-normal">(optionnel)</span>
+              </label>
+              {bannerUrl ? (
+                <div className="space-y-2">
+                  <div
+                    role="img"
+                    aria-label="Aperçu de la bannière"
+                    className="h-24 w-full rounded-xl border border-gray-200 bg-cover bg-center"
+                    style={{ backgroundImage: `url(${bannerUrl})` }}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => bannerInputRef.current?.click()}
+                      disabled={bannerUploading}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    >
+                      {bannerUploading ? 'Envoi…' : "Changer l'image"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBannerUrl(null)}
+                      disabled={bannerUploading}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                    >
+                      Retirer
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => bannerInputRef.current?.click()}
+                  disabled={bannerUploading}
+                  className="w-full h-20 rounded-xl border-2 border-dashed border-gray-200 text-sm text-gray-500 hover:border-brand-500/50 hover:text-brand-600 transition-colors disabled:opacity-50"
+                >
+                  {bannerUploading ? 'Envoi en cours…' : 'Choisir une image — 1200×300px conseillé'}
+                </button>
+              )}
+              <input
+                ref={bannerInputRef}
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp"
+                className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleBannerFile(f) }}
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Sans image, votre boutique affiche un fond vert Hanut par défaut.
+              </p>
+            </div>
+
+            {brandingMsg && (
+              <div className={`rounded-lg px-4 py-3 text-sm ${
+                brandingMsg.type === 'success'
+                  ? 'bg-green-50 border border-green-200 text-green-700'
+                  : 'bg-red-50 border border-red-200 text-red-700'
+              }`}>
+                {brandingMsg.text}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              {orderLinkFull && (
+                <a
+                  href={orderLinkFull}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-secondary"
+                >
+                  Voir ma boutique
+                </a>
+              )}
+              <button type="submit" disabled={isPending || bannerUploading} className="btn-primary">
+                {isPending ? 'Sauvegarde...' : 'Enregistrer'}
+              </button>
+            </div>
+          </form>
 
           <form onSubmit={handleSlugSave} className="card p-5 space-y-4">
             <h2 className="font-semibold text-gray-900">

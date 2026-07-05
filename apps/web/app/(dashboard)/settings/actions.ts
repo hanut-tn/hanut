@@ -31,6 +31,43 @@ export async function updateProfile(input: ProfileInput) {
   revalidatePath('/dashboard')
 }
 
+export type ShopBrandingInput = {
+  shopName: string
+  shopDescription: string
+  bannerUrl: string | null
+}
+
+export async function updateShopBranding(input: ShopBrandingInput) {
+  const context = await getUserContext()
+  if (!context) throw new Error('Non autorisé')
+  if (!context.isSeller) throw new Error('Réservé au propriétaire')
+  const activeCheck = requireActive(context)
+  if (activeCheck) throw new Error(activeCheck.error)
+
+  const shopName = input.shopName.trim()
+  const shopDescription = input.shopDescription.trim()
+  const bannerUrl = input.bannerUrl?.trim() || null
+
+  if (shopName.length > 100) throw new Error('Le nom de la boutique est trop long (100 caractères max).')
+  if (shopDescription.length > 300) throw new Error('La description est trop longue (300 caractères max).')
+  if (bannerUrl && (bannerUrl.length > 2048 || !/^https?:\/\//.test(bannerUrl))) {
+    throw new Error('URL de bannière invalide.')
+  }
+
+  const serviceClient = createServiceClient()
+  const { error } = await serviceClient
+    .from('sellers')
+    .update({
+      shop_name: shopName || null,
+      shop_description: shopDescription || null,
+      banner_url: bannerUrl,
+    })
+    .eq('id', context.sellerId)
+
+  if (error) throw new Error(error.message)
+  revalidatePath('/settings')
+}
+
 export async function updateSlug(slug: string) {
   const context = await getUserContext()
   if (!context) throw new Error('Non autorisé')

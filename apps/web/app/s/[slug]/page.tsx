@@ -14,13 +14,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const supabase = createServiceClient()
     const { data: seller } = await supabase
       .from('sellers')
-      .select('name')
+      .select('name, shop_name, shop_description')
       .eq('slug', slug)
       .single()
     if (seller) {
+      const displayName = seller.shop_name || seller.name
       return {
-        title: `${seller.name} — Boutique en ligne`,
-        description: `Commandez chez ${seller.name}, paiement à la livraison partout en Tunisie.`,
+        title: `${displayName} — Boutique en ligne`,
+        description: seller.shop_description
+          || `Commandez chez ${displayName}, paiement à la livraison partout en Tunisie.`,
       }
     }
   } catch {
@@ -87,7 +89,7 @@ export default async function StorefrontPage({ params }: Props) {
 
   const { data: seller } = await supabase
     .from('sellers')
-    .select('id, name, slug')
+    .select('id, name, slug, shop_name, shop_description, banner_url')
     .eq('slug', slug)
     .single()
 
@@ -104,7 +106,9 @@ export default async function StorefrontPage({ params }: Props) {
   return (
     <StorefrontShell
       sellerSlug={slug}
-      sellerName={seller.name}
+      sellerName={seller.shop_name || seller.name}
+      shopDescription={seller.shop_description ?? null}
+      bannerUrl={seller.banner_url ?? null}
       products={storefrontProducts}
     />
   )

@@ -27,7 +27,7 @@ export default function ProductGrid({ products, t, onSelect, onQuickAdd }: Props
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 px-3 py-4 sm:grid-cols-3 sm:gap-4 sm:px-4 lg:grid-cols-4 lg:gap-5">
       {[...inStock, ...outOfStock].map(product => (
         <ProductCard
           key={product.id}

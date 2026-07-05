@@ -10,6 +10,7 @@ export interface StorefrontDict extends OrderFormDict {
   shop: {
     emptyTitle: string
     emptyDesc: string
+    deliveryBadge: string
     outOfStock: string
     lowStock: (qty: number) => string
     fromPrice: (price: number) => string
@@ -55,8 +56,9 @@ export interface StorefrontDict extends OrderFormDict {
 const fr: StorefrontDict = {
   ...orderFormTranslations.fr,
   shop: {
-    emptyTitle: 'Boutique temporairement indisponible',
-    emptyDesc: 'Le vendeur prépare son catalogue. Revenez bientôt !',
+    emptyTitle: 'Boutique en préparation',
+    emptyDesc: 'Revenez bientôt !',
+    deliveryBadge: 'Tunisie · Paiement à la livraison',
     outOfStock: 'Rupture de stock',
     lowStock: qty => `Plus que ${qty}`,
     fromPrice: price => `À partir de ${price} DT`,
@@ -102,8 +104,9 @@ const fr: StorefrontDict = {
 const ar: StorefrontDict = {
   ...orderFormTranslations.ar,
   shop: {
-    emptyTitle: 'المتجر غير متوفر مؤقتًا',
-    emptyDesc: 'البائع يحضّر منتجاته. عد قريبًا!',
+    emptyTitle: 'المتجر قيد التحضير',
+    emptyDesc: 'عد قريبًا!',
+    deliveryBadge: 'تونس · الدفع عند الاستلام',
     outOfStock: 'نفدت الكمية',
     lowStock: qty => `بقي ${qty} فقط`,
     fromPrice: price => `ابتداءً من ${price} د.ت`,

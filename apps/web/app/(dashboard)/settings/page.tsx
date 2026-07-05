@@ -10,7 +10,7 @@ import { redirect } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext, getMonthlyOrderCount } from '@/lib/get-context'
 import SettingsClient from '@/components/settings/SettingsClient'
-import { updateProfile, updateSlug, checkSlugAvailability } from './actions'
+import { updateProfile, updateSlug, updateShopBranding, checkSlugAvailability } from './actions'
 
 type Props = {
   searchParams: Promise<{ tab?: string }>
@@ -30,7 +30,7 @@ export default async function SettingsPage({ searchParams }: Props) {
 
   const { data: seller } = await serviceClient
     .from('sellers')
-    .select('name, email, phone, plan, subscription_end, created_at, slug')
+    .select('name, email, phone, plan, subscription_end, created_at, slug, shop_name, shop_description, banner_url')
     .eq('id', context.sellerId)
     .single()
 
@@ -52,6 +52,9 @@ export default async function SettingsPage({ searchParams }: Props) {
         subscription_end: seller?.subscription_end ?? null,
         created_at: seller?.created_at ?? null,
         slug: seller?.slug ?? null,
+        shop_name: seller?.shop_name ?? null,
+        shop_description: seller?.shop_description ?? null,
+        banner_url: seller?.banner_url ?? null,
       }}
       stats={{
         products: productCount ?? 0,
@@ -64,6 +67,7 @@ export default async function SettingsPage({ searchParams }: Props) {
       initialTab={tab === 'abonnement' ? 'plan' : tab === 'lien' ? 'link' : tab}
       updateProfile={updateProfile}
       updateSlug={updateSlug}
+      updateShopBranding={updateShopBranding}
       checkSlugAvailability={checkSlugAvailability}
     />
   )

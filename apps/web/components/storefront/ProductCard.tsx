@@ -33,13 +33,13 @@ export default function ProductCard({ product, t, onSelect, onQuickAdd }: Props)
   }
 
   return (
-    <div className={`bg-white border border-[#E7E5E4] rounded-xl overflow-hidden flex flex-col transition-shadow hover:shadow-md ${isOut ? 'opacity-60' : ''}`}>
-      {/* Image */}
+    <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow">
+      {/* Image ratio 4:3 */}
       <button
         type="button"
         onClick={handleAdd}
         disabled={isOut}
-        className="relative block aspect-square bg-[#F0FDF4] w-full"
+        className="relative block aspect-[4/3] bg-gray-50 w-full"
         aria-label={product.name}
       >
         {product.image_url ? (
@@ -48,16 +48,18 @@ export default function ProductCard({ product, t, onSelect, onQuickAdd }: Props)
             alt={product.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className="object-cover"
+            className={`object-cover ${isOut ? 'opacity-60' : ''}`}
           />
         ) : (
-          <span className="absolute inset-0 flex items-center justify-center text-[#78716C]">
-            <ImageOff className="w-8 h-8 opacity-30" />
+          <span className="absolute inset-0 flex items-center justify-center text-gray-400">
+            <ImageOff className="w-8 h-8 opacity-40" />
           </span>
         )}
         {isOut && (
-          <span className="absolute top-2 start-2 text-xs px-2 py-0.5 rounded-full font-medium bg-red-600 text-white">
-            {t.shop.outOfStock}
+          <span className="absolute inset-0 bg-white/60 flex items-center justify-center">
+            <span className="text-xs px-3 py-1 rounded-full font-semibold bg-red-600 text-white shadow-sm">
+              {t.shop.outOfStock}
+            </span>
           </span>
         )}
         {isLow && (
@@ -68,14 +70,14 @@ export default function ProductCard({ product, t, onSelect, onQuickAdd }: Props)
       </button>
 
       {/* Body */}
-      <div className="p-3 flex flex-col gap-2 flex-1">
+      <div className="px-3 pb-3 pt-2 flex flex-col gap-2 flex-1">
         <div className="flex-1">
-          <p className="text-sm font-semibold text-[#1C1917] line-clamp-2">{product.name}</p>
+          <p className="text-sm font-semibold text-gray-900 line-clamp-2">{product.name}</p>
           <p className="text-base font-bold text-brand-600 mt-0.5">
             {hasPriceRange ? t.shop.fromPrice(product.minPrice) : `${product.minPrice} DT`}
           </p>
           {product.hasVariants && (
-            <span className="inline-block mt-1 text-[10px] border border-[#E7E5E4] rounded px-1.5 py-0.5 text-[#78716C]">
+            <span className="inline-block mt-1 text-[10px] bg-brand-50 text-brand-700 border border-brand-100 rounded px-1.5 py-0.5">
               {t.shop.variantsCount(product.variants.length)}
             </span>
           )}
@@ -85,9 +87,9 @@ export default function ProductCard({ product, t, onSelect, onQuickAdd }: Props)
           type="button"
           onClick={handleAdd}
           disabled={isOut}
-          className={`w-full min-h-[40px] touch-manipulation flex items-center justify-center gap-1.5 rounded-lg text-sm font-semibold transition-all duration-150 ease-out ${
+          className={`w-full min-h-[40px] touch-manipulation flex items-center justify-center gap-1.5 rounded-xl text-sm font-semibold transition-all duration-150 ease-out ${
             isOut
-              ? 'bg-[#F5F5F4] text-[#A8A29E] cursor-not-allowed'
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
               : justAdded
                 ? 'bg-[#0B5E46] text-white'
                 : 'bg-[#16A34A] text-white hover:bg-[#15803D] active:scale-[0.97]'
