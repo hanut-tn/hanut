@@ -2,16 +2,25 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Upload, Plus, Trash2 } from 'lucide-react'
+import { X, Upload, Plus, Trash2, Info, Boxes, Settings2 } from 'lucide-react'
 import type { Product, ProductVariant } from '@hanut/types'
 import type { ProductInput } from '@/app/(dashboard)/catalog/actions'
 import { uploadProductImage } from '@/app/(dashboard)/catalog/actions'
+import { sumVariantStock } from '@/lib/variants'
 
 type Props = {
   product: Product | null
   onClose: () => void
   onSave: (input: ProductInput) => Promise<{ error?: string }>
 }
+
+type Tab = 'infos' | 'stock' | 'avance'
+
+const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
+  { id: 'infos',  label: 'Infos',             icon: Info },
+  { id: 'stock',  label: 'Stock & Variantes', icon: Boxes },
+  { id: 'avance', label: 'Avancé',            icon: Settings2 },
+]
 
 const EMPTY: ProductInput = {
   name: '',
@@ -40,6 +49,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
         }
       : { ...EMPTY }
   )
+  const [tab, setTab] = useState<Tab>('infos')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(product?.image_url ?? null)
   const [imageError, setImageError] = useState<string | null>(null)
@@ -120,12 +130,27 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
     set('variants', form.variants.filter((_, idx) => idx !== i))
   }
 
+  const hasVariants = form.variants.length > 0
+  const derivedStock = sumVariantStock(form.variants)
+
   const margin = form.cost && form.price > 0
     ? Math.round(((form.price - form.cost) / form.price) * 100)
     : null
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    // Validation manuelle : les champs requis peuvent être dans un onglet masqué,
+    // le `required` natif bloquerait la soumission sans feedback visible.
+    if (!form.name.trim()) {
+      setTab('infos')
+      setError('Le nom du produit est obligatoire.')
+      return
+    }
+    if (form.price < 0) {
+      setTab('infos')
+      setError('Le prix doit être positif ou nul.')
+      return
+    }
     setSaving(true)
     setError(null)
     try {
@@ -148,126 +173,326 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
   return createPortal(
     <div className="fixed inset-0 z-[100] overflow-hidden overscroll-contain bg-white sm:bg-black/40 sm:p-4">
       <div className="fixed inset-0 z-[101] flex h-[100dvh] w-full flex-col bg-white shadow-xl sm:relative sm:inset-auto sm:z-auto sm:mx-auto sm:my-8 sm:h-auto sm:max-h-[calc(100dvh-4rem)] sm:max-w-2xl sm:rounded-xl sm:border sm:border-[#E7E5E4]">
-        <div className="shrink-0 flex items-center justify-between border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
-          <h2 className="font-semibold text-[#1C1917]">
-            {product ? 'Modifier le produit' : 'Nouveau produit'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-[#78716C] hover:text-[#1C1917] w-10 h-10 touch-manipulation flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] transition-colors"
-            aria-label="Fermer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+        {/* Header + onglets */}
+        <div className="shrink-0 border-b border-[#E7E5E4] bg-white">
+          <div className="flex items-center justify-between px-4 pt-4 pb-3 sm:px-6">
+            <h2 className="font-semibold text-[#1C1917]">
+              {product ? 'Modifier le produit' : 'Nouveau produit'}
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-[#78716C] hover:text-[#1C1917] w-10 h-10 touch-manipulation flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] transition-colors"
+              aria-label="Fermer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex gap-1 px-4 sm:px-6" role="tablist">
+            {TABS.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={tab === id}
+                onClick={() => setTab(id)}
+                className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors touch-manipulation ${
+                  tab === id
+                    ? 'border-[#16A34A] text-[#0B5E46]'
+                    : 'border-transparent text-[#78716C] hover:text-[#1C1917]'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span className="whitespace-nowrap">{label}</span>
+                {id === 'stock' && hasVariants && (
+                  <span className="text-[10px] font-bold bg-[#F0FDF4] text-[#16A34A] border border-[#BBF7D0] rounded-full px-1.5 py-0.5 leading-none">
+                    {form.variants.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+        <form onSubmit={handleSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain p-4 sm:p-6 [-webkit-overflow-scrolling:touch]">
-            {/* Two-column: image left, fields right */}
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              {/* Image upload */}
-              <div>
-                <label className="block text-sm font-medium text-[#1C1917] mb-2">
-                  Photo du produit
-                </label>
-                <div
-                  className={`relative border-2 border-dashed rounded-xl overflow-hidden transition-colors cursor-pointer ${
-                    isDragOver ? 'border-[#16A34A] bg-green-50' : 'border-[#E7E5E4] hover:border-[#16A34A]/50'
-                  }`}
-                  style={{ minHeight: 200 }}
-                  onDragOver={e => { e.preventDefault(); setIsDragOver(true) }}
-                  onDragLeave={() => setIsDragOver(false)}
-                  onDrop={handleDrop}
-                  onClick={() => !imagePreview && fileInputRef.current?.click()}
-                >
-                  {imagePreview ? (
-                    <div className="relative">
-                      <div
-                        aria-label="Aperçu du produit"
-                        role="img"
-                        className="w-full bg-cover bg-center"
-                        style={{ height: 200, backgroundImage: `url(${imagePreview})` }}
-                      />
+
+            {/* ── Onglet Infos ── */}
+            {tab === 'infos' && (
+              <>
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  {/* Image */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#1C1917] mb-2">
+                      Photo du produit
+                    </label>
+                    <div
+                      className={`relative border-2 border-dashed rounded-xl overflow-hidden transition-colors cursor-pointer ${
+                        isDragOver ? 'border-[#16A34A] bg-green-50' : 'border-[#E7E5E4] hover:border-[#16A34A]/50'
+                      }`}
+                      style={{ minHeight: 200 }}
+                      onDragOver={e => { e.preventDefault(); setIsDragOver(true) }}
+                      onDragLeave={() => setIsDragOver(false)}
+                      onDrop={handleDrop}
+                      onClick={() => !imagePreview && fileInputRef.current?.click()}
+                    >
+                      {imagePreview ? (
+                        <div className="relative">
+                          <div
+                            aria-label="Aperçu du produit"
+                            role="img"
+                            className="w-full bg-cover bg-center"
+                            style={{ height: 200, backgroundImage: `url(${imagePreview})` }}
+                          />
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); removeImage() }}
+                            className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1.5 hover:bg-black/80 transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center gap-2 text-center px-4" style={{ height: 200 }}>
+                          <Upload className="w-7 h-7 text-[#78716C]" />
+                          <p className="text-sm text-[#78716C]">Glissez une photo ici</p>
+                          <p className="text-xs text-[#78716C]">
+                            ou{' '}
+                            <span className="text-[#16A34A] font-medium underline">parcourir</span>
+                          </p>
+                          <p className="text-xs text-[#A8A29E]">JPG, PNG, WebP, HEIC — max 5 Mo</p>
+                        </div>
+                      )}
+                    </div>
+                    {imagePreview && (
                       <button
                         type="button"
-                        onClick={e => { e.stopPropagation(); removeImage() }}
-                        className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1.5 hover:bg-black/80 transition-colors"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="mt-2 text-xs text-[#16A34A] hover:text-[#15803D] font-medium"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        Changer la photo
                       </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center gap-2 text-center px-4" style={{ height: 200 }}>
-                      <Upload className="w-7 h-7 text-[#78716C]" />
-                      <p className="text-sm text-[#78716C]">Glissez une photo ici</p>
-                      <p className="text-xs text-[#78716C]">
-                        ou{' '}
-                        <span className="text-[#16A34A] font-medium underline">parcourir</span>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp,.heic,.heif"
+                      className="hidden"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handleImageFile(f) }}
+                    />
+                    {imageError && (
+                      <p className="mt-2 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-red-700">
+                        {imageError}
                       </p>
-                      <p className="text-xs text-[#A8A29E]">JPG, PNG, WebP, HEIC — max 5 Mo</p>
-                    </div>
-                  )}
-                </div>
-                {imagePreview && (
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="mt-2 text-xs text-[#16A34A] hover:text-[#15803D] font-medium"
-                  >
-                    Changer la photo
-                  </button>
-                )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".jpg,.jpeg,.png,.webp,.heic,.heif"
-                  className="hidden"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) handleImageFile(f) }}
-                />
-                {imageError && (
-                  <p className="mt-2 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-red-700">
-                    {imageError}
-                  </p>
-                )}
-              </div>
+                    )}
+                  </div>
 
-              {/* Main fields */}
-              <div className="space-y-4">
+                  {/* Nom + prix */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[#1C1917] mb-1">
+                        Nom du produit <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        className="input"
+                        value={form.name}
+                        onChange={e => set('name', e.target.value)}
+                        placeholder="Ex: T-shirt oversize"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-[#1C1917] mb-1">
+                        Prix de vente (DT) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        className="input"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={form.price || ''}
+                        onChange={e => set('price', parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
+                      />
+                      {hasVariants && (
+                        <p className="mt-1 text-xs text-[#78716C]">
+                          Prix de base — chaque variante peut définir son propre prix dans l&apos;onglet Stock & Variantes.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-[#1C1917] mb-1">
-                    Nom du produit <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    className="input"
-                    value={form.name}
-                    onChange={e => set('name', e.target.value)}
-                    placeholder="Ex: T-shirt oversize"
-                    required
+                  <label className="block text-sm font-medium text-[#1C1917] mb-1">Description</label>
+                  <textarea
+                    className="input resize-none"
+                    rows={3}
+                    value={form.description ?? ''}
+                    onChange={e => set('description', e.target.value)}
+                    placeholder="Description du produit..."
                   />
                 </div>
+              </>
+            )}
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {/* ── Onglet Stock & Variantes ── */}
+            {tab === 'stock' && (
+              <>
+                {!hasVariants ? (
                   <div>
                     <label className="block text-sm font-medium text-[#1C1917] mb-1">
-                      Prix de vente (DT) <span className="text-red-500">*</span>
+                      Stock <span className="text-red-500">*</span>
                     </label>
                     <input
-                    className="input"
+                      className="input sm:max-w-[200px]"
                       type="number"
                       min="0"
-                      step="0.01"
-                      value={form.price || ''}
-                      onChange={e => set('price', parseFloat(e.target.value) || 0)}
-                      placeholder="0.00"
-                      required
+                      value={form.stock || ''}
+                      onChange={e => set('stock', parseInt(e.target.value) || 0)}
+                      placeholder="0"
                     />
+                    <p className="mt-1 text-xs text-[#78716C]">
+                      Ajoutez des variantes ci-dessous pour gérer le stock par taille/couleur.
+                    </p>
                   </div>
+                ) : (
+                  <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-lg px-3 py-2 text-sm text-[#0B5E46] flex items-center justify-between">
+                    <span>Stock total (somme des variantes)</span>
+                    <span className="font-bold tabular-nums">{derivedStock}</span>
+                  </div>
+                )}
+
+                {/* Variantes */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-[#1C1917]">Variantes</label>
+                    <button
+                      type="button"
+                      onClick={addVariant}
+                      className="min-h-[44px] touch-manipulation text-xs text-[#16A34A] hover:text-[#15803D] font-medium flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Ajouter une variante
+                    </button>
+                  </div>
+                  {form.variants.length > 0 && (
+                    <div className="space-y-2">
+                      {/* En-tête desktop uniquement */}
+                      <div className="hidden sm:grid grid-cols-[1fr_1fr_70px_95px_44px] gap-2 px-1">
+                        <span className="text-xs text-[#78716C]">Taille</span>
+                        <span className="text-xs text-[#78716C]">Couleur</span>
+                        <span className="text-xs text-[#78716C]">Qté</span>
+                        <span className="text-xs text-[#78716C]">Prix (DT)</span>
+                        <span />
+                      </div>
+                      {form.variants.map((v, i) => (
+                        <div key={i}>
+                          {/* Mobile : carte empilée */}
+                          <div className="sm:hidden rounded-xl border border-[#E7E5E4] p-3 space-y-2">
+                            <div className="grid grid-cols-[1fr_44px] gap-2 items-center">
+                              <input
+                                className="input"
+                                value={v.size ?? ''}
+                                onChange={e => updateVariant(i, 'size', e.target.value)}
+                                placeholder="Taille (M, L, XL…)"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeVariant(i)}
+                                className="flex min-h-[44px] touch-manipulation items-center justify-center text-[#78716C] hover:text-red-500 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-[1fr_80px] gap-2">
+                              <input
+                                className="input"
+                                value={v.color ?? ''}
+                                onChange={e => updateVariant(i, 'color', e.target.value)}
+                                placeholder="Couleur (Noir, Blanc…)"
+                              />
+                              <input
+                                className="input"
+                                type="number"
+                                min="0"
+                                value={v.qty}
+                                onChange={e => updateVariant(i, 'qty', parseInt(e.target.value) || 0)}
+                              />
+                            </div>
+                            <input
+                              className="input"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={v.price ?? ''}
+                              onChange={e => updateVariant(i, 'price', e.target.value ? parseFloat(e.target.value) : undefined)}
+                              placeholder={`Prix (DT) — vide = ${form.price || 0} DT`}
+                            />
+                          </div>
+                          {/* Desktop : ligne grille */}
+                          <div className="hidden sm:grid grid-cols-[1fr_1fr_70px_95px_44px] gap-2 items-center">
+                            <input
+                              className="input"
+                              value={v.size ?? ''}
+                              onChange={e => updateVariant(i, 'size', e.target.value)}
+                              placeholder="M, L, XL…"
+                            />
+                            <input
+                              className="input"
+                              value={v.color ?? ''}
+                              onChange={e => updateVariant(i, 'color', e.target.value)}
+                              placeholder="Noir, Blanc…"
+                            />
+                            <input
+                              className="input"
+                              type="number"
+                              min="0"
+                              value={v.qty}
+                              onChange={e => updateVariant(i, 'qty', parseInt(e.target.value) || 0)}
+                            />
+                            <input
+                              className="input"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={v.price ?? ''}
+                              onChange={e => updateVariant(i, 'price', e.target.value ? parseFloat(e.target.value) : undefined)}
+                              placeholder={form.price ? `${form.price}` : '0.00'}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeVariant(i)}
+                              className="flex min-h-[44px] touch-manipulation items-center justify-center text-[#78716C] hover:text-red-500 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      <p className="text-xs text-[#78716C]">
+                        Prix par variante : laissez vide pour utiliser le prix du produit ({form.price || 0} DT).
+                      </p>
+                    </div>
+                  )}
+                  {form.variants.length === 0 && (
+                    <p className="text-sm text-[#A8A29E] border border-dashed border-[#E7E5E4] rounded-xl px-4 py-6 text-center">
+                      Aucune variante. Le stock est géré au niveau du produit.
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* ── Onglet Avancé ── */}
+            {tab === 'avance' && (
+              <>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium text-[#1C1917] mb-1">
                       Prix d&apos;achat (DT)
                     </label>
                     <input
-                    className="input"
+                      className="input"
                       type="number"
                       min="0"
                       step="0.01"
@@ -275,7 +500,25 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                       onChange={e => set('cost', e.target.value ? parseFloat(e.target.value) : null)}
                       placeholder="Ex: 25 DT"
                     />
-                    <p className="mt-1 text-xs text-[#78716C]">Le prix auquel vous achetez ce produit. Utilisé pour calculer votre marge.</p>
+                    <p className="mt-1 text-xs text-[#78716C]">
+                      Le prix auquel vous achetez ce produit. Utilisé pour calculer votre marge.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1C1917] mb-1">
+                      Alerte stock bas
+                    </label>
+                    <input
+                      className="input"
+                      type="number"
+                      min="0"
+                      value={form.low_stock_alert || ''}
+                      onChange={e => set('low_stock_alert', parseInt(e.target.value) || 0)}
+                      placeholder="3"
+                    />
+                    <p className="mt-1 text-xs text-[#78716C]">
+                      Vous serez alerté quand le stock passe sous ce seuil.
+                    </p>
                   </div>
                 </div>
 
@@ -288,164 +531,8 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                     </span>
                   </div>
                 )}
-
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <label className="block text-sm font-medium text-[#1C1917] mb-1">
-                      Stock <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                    className="input"
-                      type="number"
-                      min="0"
-                      value={form.stock || ''}
-                      onChange={e => set('stock', parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#1C1917] mb-1">
-                      Alerte stock bas
-                    </label>
-                    <input
-                    className="input"
-                      type="number"
-                      min="0"
-                      value={form.low_stock_alert || ''}
-                      onChange={e => set('low_stock_alert', parseInt(e.target.value) || 0)}
-                      placeholder="3"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div>
-              <label className="block text-sm font-medium text-[#1C1917] mb-1">Description</label>
-              <textarea
-                className="input resize-none"
-                rows={3}
-                value={form.description ?? ''}
-                onChange={e => set('description', e.target.value)}
-                placeholder="Description du produit..."
-              />
-            </div>
-
-            {/* Variants */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-[#1C1917]">Variantes</label>
-                <button
-                  type="button"
-                  onClick={addVariant}
-                  className="min-h-[44px] touch-manipulation text-xs text-[#16A34A] hover:text-[#15803D] font-medium flex items-center gap-1"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Ajouter une variante
-                </button>
-              </div>
-              {form.variants.length > 0 && (
-                <div className="space-y-2">
-                  {/* En-tête desktop uniquement */}
-                  <div className="hidden sm:grid grid-cols-[1fr_1fr_70px_95px_44px] gap-2 px-1">
-                    <span className="text-xs text-[#78716C]">Taille</span>
-                    <span className="text-xs text-[#78716C]">Couleur</span>
-                    <span className="text-xs text-[#78716C]">Qté</span>
-                    <span className="text-xs text-[#78716C]">Prix (DT)</span>
-                    <span />
-                  </div>
-                  {form.variants.map((v, i) => (
-                    <div key={i}>
-                      {/* Mobile : carte empilée */}
-                      <div className="sm:hidden rounded-xl border border-[#E7E5E4] p-3 space-y-2">
-                        <div className="grid grid-cols-[1fr_44px] gap-2 items-center">
-                          <input
-                            className="input"
-                            value={v.size ?? ''}
-                            onChange={e => updateVariant(i, 'size', e.target.value)}
-                            placeholder="Taille (M, L, XL…)"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeVariant(i)}
-                            className="flex min-h-[44px] touch-manipulation items-center justify-center text-[#78716C] hover:text-red-500 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                        <div className="grid grid-cols-[1fr_80px] gap-2">
-                          <input
-                            className="input"
-                            value={v.color ?? ''}
-                            onChange={e => updateVariant(i, 'color', e.target.value)}
-                            placeholder="Couleur (Noir, Blanc…)"
-                          />
-                          <input
-                            className="input"
-                            type="number"
-                            min="0"
-                            value={v.qty}
-                            onChange={e => updateVariant(i, 'qty', parseInt(e.target.value) || 0)}
-                          />
-                        </div>
-                        <input
-                          className="input"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={v.price ?? ''}
-                          onChange={e => updateVariant(i, 'price', e.target.value ? parseFloat(e.target.value) : undefined)}
-                          placeholder={`Prix (DT) — vide = ${form.price || 0} DT`}
-                        />
-                      </div>
-                      {/* Desktop : ligne grille */}
-                      <div className="hidden sm:grid grid-cols-[1fr_1fr_70px_95px_44px] gap-2 items-center">
-                        <input
-                          className="input"
-                          value={v.size ?? ''}
-                          onChange={e => updateVariant(i, 'size', e.target.value)}
-                          placeholder="M, L, XL…"
-                        />
-                        <input
-                          className="input"
-                          value={v.color ?? ''}
-                          onChange={e => updateVariant(i, 'color', e.target.value)}
-                          placeholder="Noir, Blanc…"
-                        />
-                        <input
-                          className="input"
-                          type="number"
-                          min="0"
-                          value={v.qty}
-                          onChange={e => updateVariant(i, 'qty', parseInt(e.target.value) || 0)}
-                        />
-                        <input
-                          className="input"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={v.price ?? ''}
-                          onChange={e => updateVariant(i, 'price', e.target.value ? parseFloat(e.target.value) : undefined)}
-                          placeholder={form.price ? `${form.price}` : '0.00'}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeVariant(i)}
-                          className="flex min-h-[44px] touch-manipulation items-center justify-center text-[#78716C] hover:text-red-500 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97]"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  <p className="text-xs text-[#78716C]">
-                    Prix par variante : laissez vide pour utiliser le prix du produit ({form.price || 0} DT).
-                  </p>
-                </div>
-              )}
-            </div>
+              </>
+            )}
           </div>
 
           {error && (

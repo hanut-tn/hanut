@@ -9,7 +9,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getUserContext } from '@/lib/get-context'
 import { redirect } from 'next/navigation'
 import CatalogClient from '@/components/catalog/CatalogClient'
-import { upsertProduct, deleteProduct } from './actions'
+import { upsertProduct, deleteProduct, adjustStock } from './actions'
 import type { Product } from '@hanut/types'
 
 export default async function CatalogPage() {
@@ -32,6 +32,7 @@ export default async function CatalogPage() {
       products={(products ?? []) as Product[]}
       upsertProduct={upsertProduct}
       deleteProduct={deleteProduct}
+      adjustStock={adjustStock}
     />
   )
 }
