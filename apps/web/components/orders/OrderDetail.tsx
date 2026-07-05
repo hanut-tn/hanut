@@ -399,8 +399,8 @@ export default function OrderDetail({
                 </div>
                 <div className="text-right shrink-0">
                   <p className="font-bold text-[#1C1917]">{order.cod_amount} DT</p>
-                  {order.quantity > 1 && product && (
-                    <p className="text-xs text-[#78716C]">{product.price} DT / unité</p>
+                  {order.quantity > 1 && (
+                    <p className="text-xs text-[#78716C]">{(order.cod_amount / order.quantity).toFixed(2)} DT / unité</p>
                   )}
                 </div>
               </div>

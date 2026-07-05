@@ -13,6 +13,7 @@ const ProductVariantSchema = z.object({
   size: z.string().max(50, 'Taille trop longue.').optional(),
   color: z.string().max(50, 'Couleur trop longue.').optional(),
   qty: z.number().int('Quantité invalide.').min(0, 'La quantité ne peut pas être négative.'),
+  price: z.number().min(0, 'Le prix de la variante doit être positif ou nul.').max(100000, 'Le prix de la variante semble incorrect.').optional().nullable(),
 })
 
 const ProductSchema = z.object({

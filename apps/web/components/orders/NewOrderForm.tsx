@@ -7,7 +7,7 @@ import { Check, ChevronRight, Package, User, ClipboardList, Plus, Trash2 } from 
 import type { Product } from '@hanut/types'
 import type { CreateOrderInput } from '@/app/(dashboard)/orders/actions'
 import { TUNISIAN_GOVERNORATES, isValidTunisianPhone } from '@/lib/constants'
-import { getVariantLabel, hasVariantStock } from '@/lib/variants'
+import { getVariantLabel, getVariantPrice, hasVariantStock } from '@/lib/variants'
 
 type CustomerSuggestion = {
   id: string
@@ -542,7 +542,7 @@ export default function NewOrderForm({ products, createOrder, initialCustomer }:
                               key={i}
                               type="button"
                               disabled={out}
-                              onClick={() => updateCartItem(index, { variant: label, unit_price: product.price })}
+                              onClick={() => updateCartItem(index, { variant: label, unit_price: getVariantPrice(product.variants, label, product.price) })}
                               className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
                                 out
                                   ? 'border-[#E7E5E4] text-[#A8A29E] opacity-50 line-through cursor-not-allowed'

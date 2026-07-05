@@ -8,7 +8,7 @@ import {
   Home, Landmark, Hash, MessageSquare, Wallet, ShoppingBag, CheckCircle2,
 } from 'lucide-react'
 import { TUNISIAN_GOVERNORATES, isValidTunisianPhone, formatTunisianPhone } from '@/lib/constants'
-import { getVariantLabel } from '@/lib/variants'
+import { getVariantLabel, getVariantPrice } from '@/lib/variants'
 import { TurnstileWidget, isTurnstileEnabled } from '@/components/ui/TurnstileWidget'
 import { useLang } from '@/lib/i18n/use-lang'
 import { orderFormTranslations } from '@/lib/i18n/order-form'
@@ -799,7 +799,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
                 )}
                 <div>
                   <p className="text-sm font-semibold text-[#1C1917]">{selectedProduct.name}</p>
-                  <p className="text-sm font-bold text-[#16A34A]">{selectedProduct.price} DT</p>
+                  <p className="text-sm font-bold text-[#16A34A]">{getVariantPrice(selectedProduct.variants, variant || null, selectedProduct.price)} DT</p>
                   {!hasVariants && (
                     <p className="text-xs text-[#78716C]">
                       {t.order.stockAvailable(selectedProduct.stock)}
@@ -837,6 +837,9 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
                           {label}
                         </p>
                         <p className="text-xs text-gray-400">
+                          {v.price != null && !isOut && (
+                            <span className="font-semibold text-[#16A34A]">{v.price} DT · </span>
+                          )}
                           {isOut ? t.order.variantExhausted : t.order.variantDispo(v.qty)}
                         </p>
                       </div>
@@ -872,7 +875,11 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
                     {t.order.totalCod}
                   </span>
                   <span className="text-lg font-extrabold text-[#0B5E46]">
-                    {(selectedProduct.price * multiVariantQtyTotal).toFixed(0)} DT
+                    {selectedProduct.variants.reduce((sum, v, i) => {
+                      const qty = variantQtys[getVariantLabel(v, i)] ?? 0
+                      const unit = v.price != null && v.price >= 0 ? v.price : selectedProduct.price
+                      return sum + unit * qty
+                    }, 0).toFixed(0)} DT
                   </span>
                 </div>
               )}
@@ -906,6 +913,9 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
                       }`}
                     >
                       {label}
+                      {!isOut && v.price != null && (
+                        <span className="ml-1 text-xs font-semibold">— {v.price} DT</span>
+                      )}
                       {isOut ? (
                         <span className="ml-1 text-xs">{t.order.variantExhaustedInline}</span>
                       ) : (
@@ -955,7 +965,7 @@ export default function OrderForm({ sellerSlug, sellerName, products: initialPro
                 {t.order.totalCod}
               </span>
               <span className="text-lg font-extrabold text-[#0B5E46]">
-                {(selectedProduct.price * quantity).toFixed(0)} DT
+                {(getVariantPrice(selectedProduct.variants, variant || null, selectedProduct.price) * quantity).toFixed(0)} DT
               </span>
             </div>
           )}

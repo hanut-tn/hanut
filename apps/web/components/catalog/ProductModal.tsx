@@ -112,7 +112,7 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
     set('variants', [...form.variants, { size: '', color: '', qty: 1 }])
   }
 
-  function updateVariant(i: number, field: keyof ProductVariant, value: string | number) {
+  function updateVariant(i: number, field: keyof ProductVariant, value: string | number | undefined) {
     set('variants', form.variants.map((v, idx) => idx === i ? { ...v, [field]: value } : v))
   }
 
@@ -349,10 +349,11 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
               {form.variants.length > 0 && (
                 <div className="space-y-2">
                   {/* En-tête desktop uniquement */}
-                  <div className="hidden sm:grid grid-cols-[1fr_1fr_80px_44px] gap-2 px-1">
+                  <div className="hidden sm:grid grid-cols-[1fr_1fr_70px_95px_44px] gap-2 px-1">
                     <span className="text-xs text-[#78716C]">Taille</span>
                     <span className="text-xs text-[#78716C]">Couleur</span>
                     <span className="text-xs text-[#78716C]">Qté</span>
+                    <span className="text-xs text-[#78716C]">Prix (DT)</span>
                     <span />
                   </div>
                   {form.variants.map((v, i) => (
@@ -389,9 +390,18 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                             onChange={e => updateVariant(i, 'qty', parseInt(e.target.value) || 0)}
                           />
                         </div>
+                        <input
+                          className="input"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={v.price ?? ''}
+                          onChange={e => updateVariant(i, 'price', e.target.value ? parseFloat(e.target.value) : undefined)}
+                          placeholder={`Prix (DT) — vide = ${form.price || 0} DT`}
+                        />
                       </div>
                       {/* Desktop : ligne grille */}
-                      <div className="hidden sm:grid grid-cols-[1fr_1fr_80px_44px] gap-2 items-center">
+                      <div className="hidden sm:grid grid-cols-[1fr_1fr_70px_95px_44px] gap-2 items-center">
                         <input
                           className="input"
                           value={v.size ?? ''}
@@ -411,6 +421,15 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                           value={v.qty}
                           onChange={e => updateVariant(i, 'qty', parseInt(e.target.value) || 0)}
                         />
+                        <input
+                          className="input"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={v.price ?? ''}
+                          onChange={e => updateVariant(i, 'price', e.target.value ? parseFloat(e.target.value) : undefined)}
+                          placeholder={form.price ? `${form.price}` : '0.00'}
+                        />
                         <button
                           type="button"
                           onClick={() => removeVariant(i)}
@@ -421,6 +440,9 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                       </div>
                     </div>
                   ))}
+                  <p className="text-xs text-[#78716C]">
+                    Prix par variante : laissez vide pour utiliser le prix du produit ({form.price || 0} DT).
+                  </p>
                 </div>
               )}
             </div>

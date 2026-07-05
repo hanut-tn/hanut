@@ -7,6 +7,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { verifyTurnstileToken } from '@/lib/turnstile'
 import { formatTunisianPhone, isValidTunisianPhone } from '@/lib/constants'
+import { getVariantPrice, type VariantLike } from '@/lib/variants'
 import { getAppUrl, sendSellerNewOrderEmail } from '@/lib/email'
 import {
   hashOrderOtp,
@@ -286,25 +287,29 @@ async function notifySellerNewOrder(opts: NotifyOpts): Promise<void> {
   let lines: SellerOrderLine[] = []
   if (opts.items && opts.items.length > 0) {
     const ids = [...new Set(opts.items.map(i => i.product_id))]
-    const { data: products } = await supabase.from('products').select('id, name, price').in('id', ids)
+    const { data: products } = await supabase.from('products').select('id, name, price, variants').in('id', ids)
     const map = new Map((products ?? []).map(p => [p.id, p]))
     lines = opts.items.map(item => {
       const p = map.get(item.product_id)
       const label = p ? (item.variant ? `${p.name} — ${item.variant}` : p.name) : 'Produit'
+      const unitPrice = p
+        ? getVariantPrice((p.variants ?? []) as VariantLike[], item.variant ?? null, p.price)
+        : null
       return {
         label,
         quantity: item.quantity,
-        total: p ? `${(p.price * item.quantity).toFixed(2)} DT` : undefined,
+        total: unitPrice != null ? `${(unitPrice * item.quantity).toFixed(2)} DT` : undefined,
       }
     })
   } else if (opts.productId) {
-    const { data: p } = await supabase.from('products').select('name, price').eq('id', opts.productId).single()
+    const { data: p } = await supabase.from('products').select('name, price, variants').eq('id', opts.productId).single()
     if (p) {
       const label = opts.variant ? `${p.name} — ${opts.variant}` : p.name
+      const unitPrice = getVariantPrice((p.variants ?? []) as VariantLike[], opts.variant ?? null, p.price)
       lines = [{
         label,
         quantity: opts.quantity,
-        total: `${(p.price * opts.quantity).toFixed(2)} DT`,
+        total: `${(unitPrice * opts.quantity).toFixed(2)} DT`,
       }]
     }
   }

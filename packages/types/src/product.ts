@@ -2,6 +2,8 @@ export interface ProductVariant {
   size?: string
   color?: string
   qty: number
+  /** Prix optionnel — si absent, products.price est utilisé. */
+  price?: number | null
 }
 
 export interface Product {
