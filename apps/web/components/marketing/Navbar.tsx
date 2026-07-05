@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const NAV_LINKS = [
-  { label: 'Fonctionnalités', href: '/features' },
+  { label: 'Fonctionnalités', href: '/#features' },
   { label: 'Roadmap', href: '/roadmap' },
   { label: 'Tarifs', href: '/pricing' },
   { label: 'Transporteurs', href: '/carriers' },
@@ -59,7 +59,7 @@ export default function Navbar() {
             href="/register"
             className="inline-flex items-center min-h-[44px] text-white text-sm font-semibold px-4 rounded-lg bg-brand-600 transition-all duration-150 ease-out hover:bg-brand-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-brand-600/40 active:scale-[0.97]"
           >
-            Essayer Pro 14 jours
+            Commencer
           </Link>
           <button
             className="lg:hidden ml-1 w-11 h-11 flex items-center justify-center rounded-lg hover:bg-neutral-100 transition-colors"
