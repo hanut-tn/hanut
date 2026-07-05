@@ -67,7 +67,7 @@ function OrdersMockup() {
 
 function LinkMockup() {
   return (
-    <MockupShell url="hanut.tn/order/ma-boutique">
+    <MockupShell url="hanut.tn/s/ma-boutique">
       <div className="p-5 space-y-4 bg-white">
         <div className="text-center pb-3 border-b border-gray-100">
           <Image src="/logo-icone.svg" alt="Hanut" width={48} height={58} className="mx-auto mb-2.5" unoptimized />
@@ -286,7 +286,7 @@ const SECTIONS = [
   {
     tag: 'Lien de commande',
     title: 'Votre formulaire de commande personnel',
-    desc: 'Un lien unique hanut.tn/order/votre-boutique à partager dans votre bio Instagram, statut WhatsApp, description TikTok. Le client remplit, la commande arrive directement dans Hanut.',
+    desc: 'Un lien unique hanut.tn/s/votre-boutique à partager dans votre bio Instagram, statut WhatsApp, description TikTok. Le client remplit, la commande arrive directement dans Hanut.',
     points: [
       'Page mobile-first optimisée pour la conversion',
       'Catalogue en temps réel',

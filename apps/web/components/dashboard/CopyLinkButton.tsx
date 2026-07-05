@@ -15,7 +15,7 @@ export default function CopyLinkButton({ slug }: Props) {
       router.push('/settings?tab=link')
       return
     }
-    navigator.clipboard?.writeText(`${window.location.origin}/order/${slug}`).catch(() => {})
+    navigator.clipboard?.writeText(`${window.location.origin}/s/${slug}`).catch(() => {})
     fetch('/api/onboarding', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },

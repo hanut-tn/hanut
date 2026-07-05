@@ -168,7 +168,7 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
     .toUpperCase()
 
   const planCfg = PLAN_CONFIG[seller.plan]
-  const orderLinkFull = seller.slug ? `${BASE_URL}/order/${seller.slug}` : null
+  const orderLinkFull = seller.slug ? `${BASE_URL}/s/${seller.slug}` : null
   const orderLink = orderLinkFull ? orderLinkFull.replace(/^https?:\/\//, '') : null
   const pwStrength = getPasswordStrength(newPassword)
   const pendingEmailDisplay = emailSentTo ?? pendingEmail
@@ -584,7 +584,7 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
               </label>
               <div className="flex items-center gap-0">
                 <span className="px-3 py-2.5 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg text-sm text-gray-500 shrink-0 font-mono">
-                  hanut.tn/order/
+                  hanut.tn/s/
                 </span>
                 <div className="relative flex-1">
                   <input

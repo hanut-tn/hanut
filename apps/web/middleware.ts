@@ -20,7 +20,7 @@ const PUBLIC_PATHS = [
   '/mobile',
   '/roadmap',
   '/contact',
-  '/order',
+  '/s',
   '/track',
   '/billing',
   '/api/auth/register',

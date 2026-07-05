@@ -60,4 +60,13 @@
   .font-arabic {
     font-family: var(--font-noto-arabic), sans-serif;
   }
+
+  .animate-slide-up {
+    animation: hanut-slide-up 200ms ease-out;
+  }
+}
+
+@keyframes hanut-slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }

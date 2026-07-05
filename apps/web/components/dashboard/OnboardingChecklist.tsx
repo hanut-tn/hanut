@@ -86,7 +86,7 @@ export default function OnboardingChecklist({ productAdded, slugCreated, linkCop
       router.push('/settings?tab=link')
       return
     }
-    navigator.clipboard?.writeText(`${window.location.origin}/order/${slug}`).catch(() => {})
+    navigator.clipboard?.writeText(`${window.location.origin}/s/${slug}`).catch(() => {})
     fetch('/api/onboarding', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -159,7 +159,7 @@ export default function OnboardingChecklist({ productAdded, slugCreated, linkCop
     {
       key: 'link',
       done: linkCopied,
-      title: 'Copiez votre lien de commande',
+      title: 'Copiez le lien de votre boutique',
       desc: 'Partagez-le sur Instagram, WhatsApp ou TikTok',
       cta: 'Copier mon lien',
       action: handleCopyLink,

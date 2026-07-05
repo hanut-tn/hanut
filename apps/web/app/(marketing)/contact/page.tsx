@@ -15,7 +15,7 @@ const FAQ = [
   },
   {
     q: 'Comment partager mon lien de commande ?',
-    a: "Dans Paramètres → Lien commande, personnalisez votre slug (hanut.tn/order/votre-boutique) et copiez le lien pour le mettre dans votre bio Instagram ou statut WhatsApp.",
+    a: "Dans Paramètres → Lien commande, personnalisez votre slug (hanut.tn/s/votre-boutique) et copiez le lien pour le mettre dans votre bio Instagram ou statut WhatsApp.",
   },
   {
     q: 'Hanut fonctionne-t-il sans site web ?',

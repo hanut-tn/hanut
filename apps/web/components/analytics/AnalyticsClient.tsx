@@ -367,7 +367,7 @@ export default function AnalyticsClient({ initialData, plan, loadData, slug }: P
               <button
                 type="button"
                 onClick={() => {
-                  const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/order/${slug}`
+                  const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/s/${slug}`
                   navigator.clipboard?.writeText(url).catch(() => {})
                 }}
                 className="inline-flex items-center gap-2 bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"

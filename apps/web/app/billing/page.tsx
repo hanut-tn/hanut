@@ -25,7 +25,7 @@ function whatsappUrl(plan: 'starter' | 'pro') {
 const STARTER_FEATURES = [
   '100 commandes / mois',
   'Catalogue produits illimité',
-  'Lien public /order/[slug]',
+  'Lien boutique public /s/[slug]',
   'Suivi commande client /track',
   'Gestion stock en temps réel',
   'Fiche client',
