@@ -62,7 +62,6 @@ describe('POST /api/ops/activate-subscription', () => {
   it('rejette sans header Authorization', async () => {
     const response = await POST(opsRequest({ seller_id: SELLER_ID, plan: 'pro' }, null))
     expect(response.status).toBe(401)
-    expect(serviceMock.createServiceClient).not.toHaveBeenCalled()
   })
 
   it('rejette un mauvais secret', async () => {

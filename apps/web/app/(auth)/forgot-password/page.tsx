@@ -3,23 +3,34 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { CheckCircle2 } from 'lucide-react'
+import { TurnstileWidget, isTurnstileEnabled } from '@/components/ui/TurnstileWidget'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+
+    if (isTurnstileEnabled() && !turnstileToken) {
+      setError('Vérification anti-spam échouée. Réessayez.')
+      return
+    }
+
     setLoading(true)
     const response = await fetch('/api/auth/forgot-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.trim() }),
+      body: JSON.stringify({ email: email.trim(), turnstile_token: turnstileToken }),
     }).catch(() => null)
     setLoading(false)
+    setTurnstileToken('')
+    setTurnstileResetKey(key => key + 1)
     if (!response) {
       setError('Erreur réseau. Vérifiez votre connexion.')
       return
@@ -77,7 +88,15 @@ export default function ForgotPasswordPage() {
           </div>
         )}
 
-        <button type="submit" disabled={loading} className="btn-primary w-full">
+        {isTurnstileEnabled() && (
+          <TurnstileWidget onVerify={setTurnstileToken} resetKey={turnstileResetKey} />
+        )}
+
+        <button
+          type="submit"
+          disabled={loading || (isTurnstileEnabled() && !turnstileToken)}
+          className="btn-primary w-full"
+        >
           {loading ? 'Envoi...' : 'Envoyer le lien'}
         </button>
       </form>

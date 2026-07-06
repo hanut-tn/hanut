@@ -39,21 +39,29 @@ export async function PATCH(req: NextRequest) {
 
   const supabase = await createServerClient()
 
-  // RLS garantit que seules les livraisons du vendeur connecté sont retournées
+  // RLS garantit déjà que seules les livraisons du vendeur connecté sont
+  // retournées (via orders.seller_id, deliveries n'a pas de seller_id propre) ;
+  // on revérifie explicitement ci-dessous en défense en profondeur.
   type DeliveryRow = {
     id: string
     delivery_type: 'self' | 'carrier'
     cod_collected: boolean
     cod_reversed: boolean
-    order: { cod_amount: number } | { cod_amount: number }[] | null
+    order: { cod_amount: number; seller_id: string } | { cod_amount: number; seller_id: string }[] | null
   }
-  const { data: deliveries, error: fetchError } = await supabase
+  const { data: rawDeliveries, error: fetchError } = await supabase
     .from('deliveries')
-    .select('id, delivery_type, cod_collected, cod_reversed, order:orders(cod_amount)')
+    .select('id, delivery_type, cod_collected, cod_reversed, order:orders(cod_amount, seller_id)')
     .in('id', ids) as unknown as { data: DeliveryRow[] | null; error: unknown }
 
   if (fetchError) return NextResponse.json({ error: 'Erreur base de données' }, { status: 500 })
-  if (!deliveries || deliveries.length === 0) {
+
+  const deliveries = (rawDeliveries ?? []).filter(d => {
+    const order = Array.isArray(d.order) ? d.order[0] : d.order
+    return order?.seller_id === context.sellerId
+  })
+
+  if (deliveries.length === 0) {
     return NextResponse.json({ error: 'Aucune livraison trouvée' }, { status: 404 })
   }
 

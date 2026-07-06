@@ -28,7 +28,7 @@ const PLANS: {
     features: [
       '100 commandes / mois',
       'Catalogue produits illimité',
-      'Lien de commande public /order',
+      'Lien de commande public /s',
       'Suivi commande client /track',
       'Gestion stock en temps réel',
       'Fiche client',

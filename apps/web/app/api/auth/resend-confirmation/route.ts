@@ -6,15 +6,47 @@ import { buildAuthCallbackUrl, buildAuthEmailActionUrl } from '@/lib/auth-redire
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { createServiceClient } from '@/lib/supabase/service'
 import { sendSignupConfirmationEmail } from '@/lib/email'
+import { verifyTurnstileToken } from '@/lib/turnstile'
 
 const ResendConfirmationSchema = z.object({
   email: z.string().trim().email('Email invalide').max(254, 'Adresse email trop longue.'),
+  turnstile_token: z.string(),
 })
+
+function getRequiredTurnstileToken(body: unknown): string | null {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return null
+  const token = (body as { turnstile_token?: unknown }).turnstile_token
+  return typeof token === 'string' && token.trim() ? token : null
+}
+
+// Ciblage via l'API REST admin (paramètre `filter`, non exposé par le SDK
+// listUsers) : gain en pratique quand GoTrue le supporte, sans coût sinon
+// puisqu'on retombe toujours sur le scan paginé.
+async function findAuthUserByEmailFast(email: string): Promise<User | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return null
+  try {
+    const response = await fetch(`${url}/auth/v1/admin/users?filter=${encodeURIComponent(email)}`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5_000),
+    })
+    if (!response.ok) return null
+    const data = await response.json().catch(() => null) as { users?: User[] } | null
+    return data?.users?.find(user => user.email?.toLowerCase() === email) ?? null
+  } catch {
+    return null
+  }
+}
 
 async function findAuthUserByEmail(
   admin: ReturnType<typeof createServiceClient>['auth']['admin'],
   email: string,
 ): Promise<User | null> {
+  const fastMatch = await findAuthUserByEmailFast(email)
+  if (fastMatch) return fastMatch
+
   for (let page = 1; page <= 5; page++) {
     const { data, error } = await admin.listUsers({ page, perPage: 1000 })
     if (error) throw error
@@ -36,6 +68,16 @@ export async function POST(request: NextRequest) {
   }
 
   const rawBody = await request.json().catch(() => null)
+  const turnstileToken = getRequiredTurnstileToken(rawBody)
+  if (!turnstileToken) {
+    return NextResponse.json({ error: 'Vérification de sécurité requise' }, { status: 400 })
+  }
+
+  const turnstileOk = await verifyTurnstileToken(turnstileToken, ip)
+  if (!turnstileOk) {
+    return NextResponse.json({ error: 'Vérification anti-spam échouée. Réessayez.' }, { status: 403 })
+  }
+
   const parsed = ResendConfirmationSchema.safeParse(rawBody)
   if (!parsed.success) {
     return NextResponse.json(

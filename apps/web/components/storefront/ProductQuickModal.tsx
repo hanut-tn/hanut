@@ -13,11 +13,12 @@ type Props = {
   product: StorefrontProduct
   cart: CartItem[]
   t: StorefrontDict
+  isRtl: boolean
   onClose: () => void
   onAdd: (item: Omit<CartItem, 'key'>) => void
 }
 
-export default function ProductQuickModal({ product, cart, t, onClose, onAdd }: Props) {
+export default function ProductQuickModal({ product, cart, t, isRtl, onClose, onAdd }: Props) {
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
   const [quantity, setQuantity] = useState(1)
 
@@ -85,7 +86,7 @@ export default function ProductQuickModal({ product, cart, t, onClose, onAdd }: 
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[100]">
+    <div className="fixed inset-0 z-[100]" dir={isRtl ? 'rtl' : 'ltr'}>
       <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
       <div className="absolute inset-x-0 bottom-0 max-h-[90dvh] flex flex-col rounded-t-2xl bg-white shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:border sm:border-[#E7E5E4]">
         {/* Header */}

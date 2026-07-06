@@ -1,5 +1,16 @@
 User-agent: *
 Allow: /
 Disallow: /api/
-Disallow: /dashboard/
+Disallow: /dashboard
+Disallow: /orders
+Disallow: /catalog
+Disallow: /customers
+Disallow: /deliveries
+Disallow: /settings
+Disallow: /analytics
+Disallow: /team
+Disallow: /billing
+Disallow: /onboarding
+Disallow: /admin
+
 Sitemap: https://www.hanut.tn/sitemap.xml

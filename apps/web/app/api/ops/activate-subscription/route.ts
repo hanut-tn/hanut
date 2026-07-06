@@ -1,12 +1,26 @@
+import { timingSafeEqual } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import * as Sentry from '@sentry/nextjs'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { createServiceClient } from '@/lib/supabase/service'
 
 const OPS_SECRET = process.env.OPS_WEBHOOK_SECRET
 
+function isAuthorized(authHeader: string | null): boolean {
+  if (!OPS_SECRET) return false
+  const expected = Buffer.from(`Bearer ${OPS_SECRET}`)
+  const received = Buffer.from(authHeader ?? '')
+  return expected.length === received.length && timingSafeEqual(expected, received)
+}
+
 export async function POST(req: NextRequest) {
-  const auth = req.headers.get('authorization') ?? ''
-  if (!OPS_SECRET || auth !== `Bearer ${OPS_SECRET}`) {
+  const ip = getClientIp(req.headers)
+  const { allowed } = await checkRateLimit(ip, 'ops_activate_subscription', 5, 10).catch(() => ({ allowed: true }))
+  if (!allowed) {
+    return NextResponse.json({ error: 'Trop de tentatives. Réessayez plus tard.' }, { status: 429 })
+  }
+
+  if (!isAuthorized(req.headers.get('authorization'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

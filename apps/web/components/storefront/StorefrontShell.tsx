@@ -1,6 +1,7 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ShoppingCart } from 'lucide-react'
@@ -30,6 +31,7 @@ type Props = {
 
 export default function StorefrontShell({ sellerSlug, sellerName, shopDescription, bannerUrl, products }: Props) {
   const { t, isRtl, toggleLang } = useLang(storefrontTranslations)
+  const router = useRouter()
 
   const [cart, setCart] = useState<CartItem[]>([])
   const [step, setStep] = useState<Step>('catalog')
@@ -48,6 +50,51 @@ export default function StorefrontShell({ sellerSlug, sellerName, shopDescriptio
     setToast(msg)
     toastRef.current = setTimeout(() => setToast(null), 2000)
   }
+
+  // Persistance panier/checkout : si le client rafraîchit pendant l'OTP, on
+  // restaure son panier et ses infos plutôt que de le renvoyer au catalogue.
+  const sessionKey = `hanut_checkout_${sellerSlug}`
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem(sessionKey)
+    if (!saved) return
+    try {
+      const { cart: savedCart, step: savedStep, checkoutData: savedData, savedAt } = JSON.parse(saved) as {
+        cart?: CartItem[]
+        step?: Step
+        checkoutData?: CheckoutData | null
+        savedAt?: number
+      }
+      if (!savedAt || Date.now() - savedAt > 10 * 60 * 1000) {
+        sessionStorage.removeItem(sessionKey)
+        return
+      }
+      if (savedCart && savedCart.length > 0) setCart(savedCart)
+      if (savedData) setCheckoutData(savedData)
+      if (savedStep === 'otp' && savedData) {
+        setStep('otp')
+        showToast(t.checkoutExtra.sessionRestored)
+      }
+    } catch {
+      sessionStorage.removeItem(sessionKey)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (step === 'checkout' || step === 'otp') {
+      sessionStorage.setItem(sessionKey, JSON.stringify({
+        cart,
+        step,
+        checkoutData,
+        savedAt: Date.now(),
+      }))
+    }
+    if (step === 'confirmation') {
+      sessionStorage.removeItem(sessionKey)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart, step, checkoutData])
 
   function addToCart(item: Omit<CartItem, 'key'>) {
     const result = addItemToCart(cart, item)
@@ -100,6 +147,35 @@ export default function StorefrontShell({ sellerSlug, sellerName, shopDescriptio
     setCheckoutData(null)
     setStep('catalog')
   }
+
+  // 409 verify-otp = stock épuisé pendant la saisie : on rafraîchit le
+  // catalogue serveur et on purge les lignes devenues indisponibles dès que
+  // les produits à jour arrivent (cf. effet ci-dessous, déclenché par le
+  // changement de référence de `products`).
+  const stockConflictRef = useRef(false)
+
+  function handleStockConflict() {
+    setStep('catalog')
+    setIsCartOpen(true)
+    stockConflictRef.current = true
+    router.refresh()
+  }
+
+  useEffect(() => {
+    if (!stockConflictRef.current) return
+    stockConflictRef.current = false
+    setCart(prevCart => prevCart.filter(item => {
+      const product = products.find(p => p.id === item.productId)
+      if (!product) return false
+      if (product.hasVariants) {
+        const variant = product.variants.find(v => v.label === item.variantLabel)
+        return Boolean(variant && variant.qty > 0)
+      }
+      return product.stock > 0
+    }))
+    showToast(t.otpExtra.cartUpdatedAfterStock)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products])
 
   const showCartUi = step === 'catalog'
 
@@ -192,7 +268,7 @@ export default function StorefrontShell({ sellerSlug, sellerName, shopDescriptio
             checkoutData={checkoutData}
             t={t}
             onBack={() => setStep('checkout')}
-            onBackToShop={() => { setStep('catalog'); setIsCartOpen(true) }}
+            onStockConflict={handleStockConflict}
             onSuccess={handleOrderSuccess}
           />
         )}
@@ -237,6 +313,7 @@ export default function StorefrontShell({ sellerSlug, sellerName, shopDescriptio
           product={selectedProduct}
           cart={cart}
           t={t}
+          isRtl={isRtl}
           onClose={() => setSelectedProduct(null)}
           onAdd={item => {
             const ok = addToCart(item)

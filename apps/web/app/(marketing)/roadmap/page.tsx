@@ -22,7 +22,7 @@ const DONE: RoadmapItem[] = [
     desc: 'Produits avec variantes (taille, couleur), stock décrémenté automatiquement à chaque commande, historique des mouvements.',
   },
   {
-    title: 'Lien de commande public /order',
+    title: 'Lien de commande public /s',
     desc: 'Formulaire mobile-first partageable sur Instagram, WhatsApp, TikTok. Commandes reçues directement dans Hanut.',
   },
   {

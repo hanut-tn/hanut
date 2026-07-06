@@ -5,10 +5,18 @@ import { buildAuthCallbackUrl, buildAuthEmailActionUrl } from '@/lib/auth-redire
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { createServiceClient } from '@/lib/supabase/service'
 import { sendPasswordResetEmail } from '@/lib/email'
+import { verifyTurnstileToken } from '@/lib/turnstile'
 
 const ForgotPasswordSchema = z.object({
   email: z.string().trim().email('Email invalide').max(254, 'Adresse email trop longue.'),
+  turnstile_token: z.string(),
 })
+
+function getRequiredTurnstileToken(body: unknown): string | null {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return null
+  const token = (body as { turnstile_token?: unknown }).turnstile_token
+  return typeof token === 'string' && token.trim() ? token : null
+}
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request.headers)
@@ -21,6 +29,16 @@ export async function POST(request: NextRequest) {
   }
 
   const rawBody = await request.json().catch(() => null)
+  const turnstileToken = getRequiredTurnstileToken(rawBody)
+  if (!turnstileToken) {
+    return NextResponse.json({ error: 'Vérification de sécurité requise' }, { status: 400 })
+  }
+
+  const turnstileOk = await verifyTurnstileToken(turnstileToken, ip)
+  if (!turnstileOk) {
+    return NextResponse.json({ error: 'Vérification anti-spam échouée. Réessayez.' }, { status: 403 })
+  }
+
   const parsed = ForgotPasswordSchema.safeParse(rawBody)
   if (!parsed.success) {
     return NextResponse.json(

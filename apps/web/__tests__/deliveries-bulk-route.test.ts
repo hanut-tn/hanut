@@ -36,7 +36,7 @@ type DeliveryRow = {
   delivery_type: 'self' | 'carrier'
   cod_collected: boolean
   cod_reversed: boolean
-  order: { cod_amount: number }
+  order: { cod_amount: number; seller_id: string }
 }
 
 function request(body: unknown) {
@@ -87,14 +87,14 @@ describe('PATCH /api/deliveries/bulk', () => {
         delivery_type: 'self',
         cod_collected: false,
         cod_reversed: false,
-        order: { cod_amount: 80 },
+        order: { cod_amount: 80, seller_id: 'seller-1' },
       },
       {
         id: 'carrier-1',
         delivery_type: 'carrier',
         cod_collected: false,
         cod_reversed: false,
-        order: { cod_amount: 90 },
+        order: { cod_amount: 90, seller_id: 'seller-1' },
       },
     ])
 
@@ -123,7 +123,7 @@ describe('PATCH /api/deliveries/bulk', () => {
         delivery_type: 'self',
         cod_collected: true,
         cod_reversed: false,
-        order: { cod_amount: 80 },
+        order: { cod_amount: 80, seller_id: 'seller-1' },
       },
     ])
 
@@ -136,6 +136,28 @@ describe('PATCH /api/deliveries/bulk', () => {
     expect(response.status).toBe(400)
     expect(json.updated).toBe(0)
     expect(json.message).toContain('en personne')
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('filters out deliveries belonging to another seller even if the query returns them', async () => {
+    const { rpc } = mockDeliveries([
+      {
+        id: 'foreign-1',
+        delivery_type: 'carrier',
+        cod_collected: false,
+        cod_reversed: false,
+        order: { cod_amount: 80, seller_id: 'other-seller' },
+      },
+    ])
+
+    const response = await PATCH(request({
+      ids: ['foreign-1'],
+      action: 'cod_collected',
+    }))
+    const json = await response.json()
+
+    expect(response.status).toBe(404)
+    expect(json.error).toBe('Aucune livraison trouvée')
     expect(rpc).not.toHaveBeenCalled()
   })
 

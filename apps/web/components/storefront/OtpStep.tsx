@@ -12,16 +12,15 @@ type Props = {
   checkoutData: CheckoutData
   t: StorefrontDict
   onBack: () => void
-  onBackToShop: () => void
+  onStockConflict: () => void
   onSuccess: (result: { orderId: string; trackingToken: string }) => void
 }
 
 export default function OtpStep({
-  sellerSlug, cart, checkoutData, t, onBack, onBackToShop, onSuccess,
+  sellerSlug, cart, checkoutData, t, onBack, onStockConflict, onSuccess,
 }: Props) {
   const [otpDigits, setOtpDigits] = useState(['', '', '', ''])
   const [otpError, setOtpError] = useState<string | null>(null)
-  const [isStockError, setIsStockError] = useState(false)
   const [loading, setLoading] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(60)
   const [turnstileToken, setTurnstileToken] = useState('')
@@ -56,7 +55,6 @@ export default function OtpStep({
     }
     submittingRef.current = true
     setOtpError(null)
-    setIsStockError(false)
     setLoading(true)
     try {
       const res = await fetch('/api/orders/verify-otp', {
@@ -81,16 +79,15 @@ export default function OtpStep({
       setTurnstileToken('')
       setTurnstileResetKey(k => k + 1)
       if (!res.ok) {
-        const msg: string = data.error ?? t.otp.otpInvalid
-        // 409 = stock épuisé pendant la commande : retour boutique nécessaire.
+        // 409 = stock épuisé pendant la commande : retour automatique à la
+        // boutique avec panier et catalogue rafraîchis.
         if (res.status === 409) {
-          setIsStockError(true)
-          setOtpError(msg)
-        } else {
-          setOtpError(msg)
-          setOtpDigits(['', '', '', ''])
-          setTimeout(() => otpRef0.current?.focus(), 100)
+          onStockConflict()
+          return
         }
+        setOtpError(data.error ?? t.otp.otpInvalid)
+        setOtpDigits(['', '', '', ''])
+        setTimeout(() => otpRef0.current?.focus(), 100)
         return
       }
       onSuccess({
@@ -126,7 +123,6 @@ export default function OtpStep({
       if (res.ok) {
         setOtpDigits(['', '', '', ''])
         setOtpError(null)
-        setIsStockError(false)
         setResendCooldown(60)
         setTimeout(() => otpRef0.current?.focus(), 100)
       } else {
@@ -212,18 +208,7 @@ export default function OtpStep({
         </div>
 
         {otpError && (
-          <div role="alert" className="text-sm text-center text-red-600 space-y-2">
-            <p>{isStockError ? t.otpExtra.stockGone : otpError}</p>
-            {isStockError && (
-              <button
-                type="button"
-                onClick={onBackToShop}
-                className="text-sm font-semibold text-[#16A34A] hover:underline"
-              >
-                {t.otpExtra.backToShop.replace('← ', '').replace(' ←', '')}
-              </button>
-            )}
-          </div>
+          <p role="alert" className="text-sm text-center text-red-600">{otpError}</p>
         )}
 
         {isTurnstileEnabled() && (

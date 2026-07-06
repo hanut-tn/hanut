@@ -19,8 +19,8 @@ export const metadata: Metadata = {
   // redirection que les crawlers de preview de lien (WhatsApp, etc.) ne
   // suivent pas toujours de façon fiable pour récupérer og-image.png.
   metadataBase: new URL('https://www.hanut.tn'),
-  title: 'Hanut — Gestion commandes WhatsApp',
-  description: 'Gérez vos commandes WhatsApp, votre stock et vos livraisons depuis un seul tableau de bord.',
+  title: 'Hanut — Votre boutique en ligne, sans site web',
+  description: 'Créez votre boutique en ligne en 5 minutes. Partagez un lien, vos clients commandent directement. Gestion des commandes, stock et livraisons COD en Tunisie.',
   authors: [{ name: 'Hanut', url: 'https://www.hanut.tn' }],
   openGraph: {
     images: [{ url: '/og-image.png', width: 1200, height: 628, alt: 'Hanut — Gérez vos commandes WhatsApp et Instagram' }],

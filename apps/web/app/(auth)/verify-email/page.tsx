@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CheckCircle, Mail } from 'lucide-react'
 import { HANUT_CONTACT } from '@/lib/constants'
+import { TurnstileWidget, isTurnstileEnabled } from '@/components/ui/TurnstileWidget'
 
 function VerifyEmailContent() {
   const router = useRouter()
@@ -18,6 +19,8 @@ function VerifyEmailContent() {
   const [cooldown, setCooldown] = useState(0)
   const [retrying, setRetrying] = useState(false)
   const [retryError, setRetryError] = useState<string | null>(null)
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0)
 
   const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER
   const whatsappBase = whatsappNumber ? `https://wa.me/${whatsappNumber}` : 'https://wa.me/21654727060'
@@ -52,15 +55,21 @@ function VerifyEmailContent() {
 
   async function handleResend() {
     if (!email || cooldown > 0) return
+    if (isTurnstileEnabled() && !turnstileToken) {
+      setError('Vérification anti-spam échouée. Réessayez.')
+      return
+    }
     setError(null)
     setResent(false)
     setLoading(true)
     const response = await fetch('/api/auth/resend-confirmation', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, turnstile_token: turnstileToken }),
     }).catch(() => null)
     setLoading(false)
+    setTurnstileToken('')
+    setTurnstileResetKey(key => key + 1)
     if (!response) {
       setError('Erreur réseau. Vérifiez votre connexion.')
     } else if (!response.ok) {
@@ -149,9 +158,12 @@ function VerifyEmailContent() {
             {resent && cooldown === 0 && (
               <p className="text-sm text-[#16A34A] font-medium">Email renvoyé ✓</p>
             )}
+            {isTurnstileEnabled() && cooldown === 0 && (
+              <TurnstileWidget onVerify={setTurnstileToken} resetKey={turnstileResetKey} />
+            )}
             <button
               onClick={handleResend}
-              disabled={loading || !email || cooldown > 0}
+              disabled={loading || !email || cooldown > 0 || (isTurnstileEnabled() && !turnstileToken)}
               className="btn-secondary text-sm w-full disabled:opacity-50"
             >
               {loading

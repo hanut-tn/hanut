@@ -42,10 +42,10 @@ export interface StorefrontDict extends OrderFormDict {
     backToShop: string
     recapTitle: string
     editCart: string
+    sessionRestored: string
   }
   otpExtra: {
-    backToShop: string
-    stockGone: string
+    cartUpdatedAfterStock: string
   }
   confirmExtra: {
     contactSoon: string
@@ -90,10 +90,10 @@ const fr: StorefrontDict = {
     backToShop: '← Retour à la boutique',
     recapTitle: 'Récapitulatif',
     editCart: 'Modifier le panier',
+    sessionRestored: 'Votre session a été restaurée. Le code envoyé est toujours valide.',
   },
   otpExtra: {
-    backToShop: '← Retour à la boutique',
-    stockGone: "Le stock d'un article de votre panier vient d'être épuisé. Ajustez votre panier et réessayez.",
+    cartUpdatedAfterStock: "Un produit de votre panier n'est plus disponible. Votre panier a été mis à jour.",
   },
   confirmExtra: {
     contactSoon: 'Vous serez contacté sous 24h pour confirmer la livraison.',
@@ -138,10 +138,10 @@ const ar: StorefrontDict = {
     backToShop: 'العودة إلى المتجر ←',
     recapTitle: 'ملخص الطلب',
     editCart: 'تعديل السلة',
+    sessionRestored: 'تمت استعادة جلستك. الرمز المرسل لا يزال صالحًا.',
   },
   otpExtra: {
-    backToShop: 'العودة إلى المتجر ←',
-    stockGone: 'نفدت كمية أحد منتجات سلتك للتو. عدّل سلتك وأعد المحاولة.',
+    cartUpdatedAfterStock: 'أحد منتجات سلتك لم يعد متوفرًا. تم تحديث سلتك.',
   },
   confirmExtra: {
     contactSoon: 'سيتم الاتصال بك خلال 24 ساعة لتأكيد التوصيل.',
