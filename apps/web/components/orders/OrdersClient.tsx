@@ -324,15 +324,32 @@ export default function OrdersClient({
 
   // Applique une mise à jour de statut dans tous les stores locaux + counts
   function applyOptimisticStatus(orderId: string, newStatus: OrderStatus, oldStatus?: OrderStatus) {
-    // Trouver le statut actuel si non fourni
-    const resolvedOld = oldStatus ?? findLocalOrder(orderId)?.status
+    // Trouver la commande et son statut actuel si non fourni, avant toute mutation.
+    const localOrder = findLocalOrder(orderId)
+    const resolvedOld = oldStatus ?? localOrder?.status
+    const updatedOrder = localOrder ? { ...localOrder, status: newStatus } : null
 
     const patch = (list: Order[]) => list.map(o => o.id === orderId ? { ...o, status: newStatus } : o)
     setAllOrders(patch)
     setStatusOrders(prev => {
       const next: typeof prev = {}
       for (const k of Object.keys(prev) as OrderStatus[]) {
-        next[k] = prev[k] ? patch(prev[k]!) : prev[k]
+        const bucket = prev[k]
+        if (!bucket) { next[k] = bucket; continue }
+        if (k === newStatus) {
+          // La commande appartient maintenant à ce seau : la patcher si déjà
+          // présente, sinon l'y insérer (cas d'un rollback après échec —
+          // elle avait été retirée du seau de son ancien statut ci-dessous).
+          const exists = bucket.some(o => o.id === orderId)
+          next[k] = exists ? patch(bucket) : (updatedOrder ? [updatedOrder, ...bucket] : bucket)
+        } else {
+          // Chaque seau ne représente qu'un seul statut (chargé via l'onglet
+          // correspondant) et n'est jamais re-filtré comme searchResults/
+          // dateOrders. Sans ce retrait, une commande confirmée depuis
+          // l'onglet "En attente" y restait affichée avec le même bouton,
+          // donnant l'impression qu'il fallait cliquer deux fois.
+          next[k] = bucket.filter(o => o.id !== orderId)
+        }
       }
       return next
     })

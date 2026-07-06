@@ -67,18 +67,28 @@ function CheckIconWhite() {
 export default async function BillingPage() {
   const context = await getUserContext()
   if (!context) redirect('/login')
-  if (!context.demoExpired) redirect('/dashboard')
+
+  // Cette page reste accessible avant l'expiration : la bannière
+  // "Ton accès Pro expire dans N jours" y renvoie pour permettre de
+  // choisir un plan par anticipation, pas seulement après coupure.
+  const heading = !context.demoExpired
+    ? 'Choisis ton plan avant la fin de ton accès'
+    : context.subscriptionStatus === 'active'
+      ? 'Ton abonnement a expiré'
+      : 'Ta période d\'essai est terminée'
+
+  const subheading = !context.demoExpired && context.daysLeft !== null
+    ? `Il te reste ${context.daysLeft} jour${context.daysLeft > 1 ? 's' : ''} — active un plan dès maintenant pour ne pas interrompre ton activité.`
+    : 'Choisis le plan qui correspond à ton activité pour continuer à utiliser Hanut.'
 
   return (
     <div>
       <div className="text-center mb-8">
         <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1C1917] mb-2">
-          {context.subscriptionStatus === 'active'
-            ? 'Ton abonnement a expiré'
-            : 'Ta période d\'essai est terminée'}
+          {heading}
         </h2>
         <p className="text-gray-500">
-          Choisis le plan qui correspond à ton activité pour continuer à utiliser Hanut.
+          {subheading}
         </p>
       </div>
 
