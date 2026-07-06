@@ -57,7 +57,7 @@ export default function Navbar() {
           </Link>
           <Link
             href="/register"
-            className="inline-flex items-center min-h-[44px] text-white text-sm font-semibold px-4 rounded-lg bg-brand-600 transition-all duration-150 ease-out hover:bg-brand-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-brand-600/40 active:scale-[0.97]"
+            className="hidden sm:inline-flex items-center min-h-[44px] text-white text-sm font-semibold px-4 rounded-lg bg-brand-600 transition-all duration-150 ease-out hover:bg-brand-700 hover:scale-[1.03] hover:ring-2 hover:ring-offset-1 hover:ring-brand-600/40 active:scale-[0.97]"
           >
             Commencer
           </Link>
