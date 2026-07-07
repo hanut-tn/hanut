@@ -11,7 +11,7 @@ import {
   addItemToCart, cartTotals, type CartItem, type StorefrontProduct,
 } from '@/lib/storefront/cart'
 import ProductGrid from './ProductGrid'
-import StorefrontBanner from './StorefrontBanner'
+import StorefrontHeader from './StorefrontHeader'
 import ProductQuickModal from './ProductQuickModal'
 import CartBar from './CartBar'
 import CartDrawer from './CartDrawer'
@@ -25,11 +25,11 @@ type Props = {
   sellerSlug: string
   sellerName: string
   shopDescription: string | null
-  bannerUrl: string | null
+  logoUrl: string | null
   products: StorefrontProduct[]
 }
 
-export default function StorefrontShell({ sellerSlug, sellerName, shopDescription, bannerUrl, products }: Props) {
+export default function StorefrontShell({ sellerSlug, sellerName, shopDescription, logoUrl, products }: Props) {
   const { t, isRtl, toggleLang } = useLang(storefrontTranslations)
   const router = useRouter()
 
@@ -214,12 +214,12 @@ export default function StorefrontShell({ sellerSlug, sellerName, shopDescriptio
         </div>
       </header>
 
-      {/* Bannière boutique */}
+      {/* En-tête boutique */}
       {step === 'catalog' && (
-        <StorefrontBanner
+        <StorefrontHeader
           shopName={sellerName}
           shopDescription={shopDescription}
-          bannerUrl={bannerUrl}
+          logoUrl={logoUrl}
           t={t}
         />
       )}

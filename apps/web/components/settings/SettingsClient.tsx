@@ -91,7 +91,7 @@ type Seller = {
   slug: string | null
   shop_name: string | null
   shop_description: string | null
-  banner_url: string | null
+  logo_url: string | null
 }
 
 type Props = {
@@ -135,10 +135,10 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
   // Boutique publique (branding)
   const [shopName, setShopName] = useState(seller.shop_name ?? '')
   const [shopDescription, setShopDescription] = useState(seller.shop_description ?? '')
-  const [bannerUrl, setBannerUrl] = useState<string | null>(seller.banner_url)
-  const [bannerUploading, setBannerUploading] = useState(false)
+  const [logoUrl, setLogoUrl] = useState<string | null>(seller.logo_url)
+  const [logoUploading, setLogoUploading] = useState(false)
   const [brandingMsg, setBrandingMsg] = useState<Msg | null>(null)
-  const bannerInputRef = useRef<HTMLInputElement>(null)
+  const logoInputRef = useRef<HTMLInputElement>(null)
 
   // Email change
   const [newEmail, setNewEmail] = useState(seller.email)
@@ -325,24 +325,24 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
     }
   }
 
-  async function handleBannerFile(file: File) {
+  async function handleLogoFile(file: File) {
     setBrandingMsg(null)
     if (file.size > 5 * 1024 * 1024) {
       setBrandingMsg({ type: 'error', text: "L'image ne doit pas dépasser 5 Mo." })
       return
     }
-    setBannerUploading(true)
+    setLogoUploading(true)
     try {
       const fd = new FormData()
       fd.append('file', file)
       const { url, error } = await uploadProductImage(fd)
       if (error || !url) throw new Error(error ?? "Échec de l'upload")
-      setBannerUrl(url)
+      setLogoUrl(url)
     } catch (err) {
       setBrandingMsg({ type: 'error', text: err instanceof Error ? err.message : 'Erreur inconnue' })
     } finally {
-      setBannerUploading(false)
-      if (bannerInputRef.current) bannerInputRef.current.value = ''
+      setLogoUploading(false)
+      if (logoInputRef.current) logoInputRef.current.value = ''
     }
   }
 
@@ -351,7 +351,7 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
     setBrandingMsg(null)
     startTransition(async () => {
       try {
-        await updateShopBranding({ shopName, shopDescription, bannerUrl })
+        await updateShopBranding({ shopName, shopDescription, logoUrl })
         setBrandingMsg({ type: 'success', text: 'Boutique mise à jour avec succès.' })
       } catch (err) {
         setBrandingMsg({ type: 'error', text: err instanceof Error ? err.message : 'Erreur inconnue' })
@@ -662,29 +662,29 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Image bannière <span className="text-gray-400 font-normal">(optionnel)</span>
+                Logo de la boutique <span className="text-gray-400 font-normal">(optionnel)</span>
               </label>
-              {bannerUrl ? (
-                <div className="space-y-2">
+              {logoUrl ? (
+                <div className="flex items-center gap-3">
                   <div
                     role="img"
-                    aria-label="Aperçu de la bannière"
-                    className="h-24 w-full rounded-xl border border-gray-200 bg-cover bg-center"
-                    style={{ backgroundImage: `url(${bannerUrl})` }}
+                    aria-label="Aperçu du logo"
+                    className="h-16 w-16 shrink-0 rounded-full border border-gray-200 bg-cover bg-center"
+                    style={{ backgroundImage: `url(${logoUrl})` }}
                   />
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={() => bannerInputRef.current?.click()}
-                      disabled={bannerUploading}
+                      onClick={() => logoInputRef.current?.click()}
+                      disabled={logoUploading}
                       className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
                     >
-                      {bannerUploading ? 'Envoi…' : "Changer l'image"}
+                      {logoUploading ? 'Envoi…' : 'Changer le logo'}
                     </button>
                     <button
                       type="button"
-                      onClick={() => setBannerUrl(null)}
-                      disabled={bannerUploading}
+                      onClick={() => setLogoUrl(null)}
+                      disabled={logoUploading}
                       className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
                     >
                       Retirer
@@ -694,22 +694,22 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
               ) : (
                 <button
                   type="button"
-                  onClick={() => bannerInputRef.current?.click()}
-                  disabled={bannerUploading}
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={logoUploading}
                   className="w-full h-20 rounded-xl border-2 border-dashed border-gray-200 text-sm text-gray-500 hover:border-brand-500/50 hover:text-brand-600 transition-colors disabled:opacity-50"
                 >
-                  {bannerUploading ? 'Envoi en cours…' : 'Choisir une image — 1200×300px conseillé'}
+                  {logoUploading ? 'Envoi en cours…' : 'Choisir un logo — carré, 400×400px conseillé'}
                 </button>
               )}
               <input
-                ref={bannerInputRef}
+                ref={logoInputRef}
                 type="file"
                 accept=".jpg,.jpeg,.png,.webp"
                 className="hidden"
-                onChange={e => { const f = e.target.files?.[0]; if (f) handleBannerFile(f) }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleLogoFile(f) }}
               />
               <p className="text-xs text-gray-400 mt-1">
-                Sans image, votre boutique affiche un fond vert Hanut par défaut.
+                Sans logo, un avatar avec l&apos;initiale du nom de votre boutique est affiché.
               </p>
             </div>
 
@@ -734,7 +734,7 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
                   Voir ma boutique
                 </a>
               )}
-              <button type="submit" disabled={isPending || bannerUploading} className="btn-primary">
+              <button type="submit" disabled={isPending || logoUploading} className="btn-primary">
                 {isPending ? 'Sauvegarde...' : 'Enregistrer'}
               </button>
             </div>

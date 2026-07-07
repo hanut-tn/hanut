@@ -30,7 +30,7 @@ export default async function SettingsPage({ searchParams }: Props) {
 
   const { data: seller } = await serviceClient
     .from('sellers')
-    .select('name, email, phone, plan, subscription_end, created_at, slug, shop_name, shop_description, banner_url')
+    .select('name, email, phone, plan, subscription_end, created_at, slug, shop_name, shop_description, logo_url')
     .eq('id', context.sellerId)
     .single()
 
@@ -54,7 +54,7 @@ export default async function SettingsPage({ searchParams }: Props) {
         slug: seller?.slug ?? null,
         shop_name: seller?.shop_name ?? null,
         shop_description: seller?.shop_description ?? null,
-        banner_url: seller?.banner_url ?? null,
+        logo_url: seller?.logo_url ?? null,
       }}
       stats={{
         products: productCount ?? 0,

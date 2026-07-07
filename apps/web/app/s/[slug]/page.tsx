@@ -89,7 +89,7 @@ export default async function StorefrontPage({ params }: Props) {
 
   const { data: seller } = await supabase
     .from('sellers')
-    .select('id, name, slug, shop_name, shop_description, banner_url')
+    .select('id, name, slug, shop_name, shop_description, logo_url')
     .eq('slug', slug)
     .single()
 
@@ -108,7 +108,7 @@ export default async function StorefrontPage({ params }: Props) {
       sellerSlug={slug}
       sellerName={seller.shop_name || seller.name}
       shopDescription={seller.shop_description ?? null}
-      bannerUrl={seller.banner_url ?? null}
+      logoUrl={seller.logo_url ?? null}
       products={storefrontProducts}
     />
   )

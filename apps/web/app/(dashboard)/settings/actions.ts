@@ -34,7 +34,7 @@ export async function updateProfile(input: ProfileInput) {
 export type ShopBrandingInput = {
   shopName: string
   shopDescription: string
-  bannerUrl: string | null
+  logoUrl: string | null
 }
 
 export async function updateShopBranding(input: ShopBrandingInput) {
@@ -46,12 +46,15 @@ export async function updateShopBranding(input: ShopBrandingInput) {
 
   const shopName = input.shopName.trim()
   const shopDescription = input.shopDescription.trim()
-  const bannerUrl = input.bannerUrl?.trim() || null
+  const logoUrl = input.logoUrl?.trim() || null
 
   if (shopName.length > 100) throw new Error('Le nom de la boutique est trop long (100 caractères max).')
   if (shopDescription.length > 300) throw new Error('La description est trop longue (300 caractères max).')
-  if (bannerUrl && (bannerUrl.length > 2048 || !/^https?:\/\//.test(bannerUrl))) {
-    throw new Error('URL de bannière invalide.')
+  // Doit provenir du stockage Supabase du projet : toute autre origine est
+  // bloquée silencieusement par la CSP (img-src), le logo resterait cassé.
+  const storagePrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/`
+  if (logoUrl && (logoUrl.length > 2048 || !logoUrl.startsWith(storagePrefix))) {
+    throw new Error('URL de logo invalide.')
   }
 
   const serviceClient = createServiceClient()
@@ -60,7 +63,7 @@ export async function updateShopBranding(input: ShopBrandingInput) {
     .update({
       shop_name: shopName || null,
       shop_description: shopDescription || null,
-      banner_url: bannerUrl,
+      logo_url: logoUrl,
     })
     .eq('id', context.sellerId)
 
