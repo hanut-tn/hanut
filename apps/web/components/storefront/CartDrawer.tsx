@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { X, ImageOff, Minus, Plus, Trash2, ShoppingCart } from 'lucide-react'
 import type { CartItem } from '@/lib/storefront/cart'
 import type { StorefrontDict } from '@/lib/i18n/storefront'
+import { useFocusTrap } from '@/lib/use-focus-trap'
 
 type Props = {
   items: CartItem[]
@@ -21,6 +22,9 @@ type Props = {
 export default function CartDrawer({
   items, totals, t, isRtl, onClose, onUpdateQuantity, onRemove, onCheckout,
 }: Props) {
+  const panelRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(panelRef)
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
@@ -39,10 +43,16 @@ export default function CartDrawer({
     <div className="fixed inset-0 z-[100]" dir={isRtl ? 'rtl' : 'ltr'}>
       <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
       {/* Bottom sheet mobile / panneau latéral desktop */}
-      <div className={`absolute inset-x-0 bottom-0 max-h-[85dvh] flex flex-col rounded-t-2xl bg-white shadow-2xl sm:inset-y-0 sm:bottom-auto sm:max-h-none sm:h-full sm:w-full sm:max-w-md sm:rounded-none ${isRtl ? 'sm:left-0 sm:right-auto' : 'sm:right-0 sm:left-auto'} ${isRtl ? 'font-arabic' : ''}`}>
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cart-drawer-title"
+        className={`absolute inset-x-0 bottom-0 max-h-[85dvh] flex flex-col rounded-t-2xl bg-white shadow-2xl sm:inset-y-0 sm:bottom-auto sm:max-h-none sm:h-full sm:w-full sm:max-w-md sm:rounded-none ${isRtl ? 'sm:left-0 sm:right-auto' : 'sm:right-0 sm:left-auto'} ${isRtl ? 'font-arabic' : ''}`}
+      >
         {/* Header */}
         <div className="shrink-0 flex items-center justify-between border-b border-[#E7E5E4] px-4 py-3.5 sm:px-5">
-          <h2 className="font-semibold text-[#1C1917]">
+          <h2 id="cart-drawer-title" className="font-semibold text-[#1C1917]">
             {t.cart.title} {items.length > 0 && <span className="text-[#78716C] font-normal">({totals.totalItems})</span>}
           </h2>
           <button
@@ -98,7 +108,7 @@ export default function CartDrawer({
                           disabled={item.quantity <= 1}
                           onClick={() => onUpdateQuantity(item.key, item.quantity - 1)}
                           className="w-8 h-8 touch-manipulation rounded-md border border-[#D6D3D1] flex items-center justify-center text-[#44403C] hover:border-[#16A34A] hover:text-[#16A34A] transition-colors disabled:opacity-40"
-                          aria-label="−"
+                          aria-label={`${t.quick.decreaseQty} — ${item.productName}`}
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
@@ -108,7 +118,7 @@ export default function CartDrawer({
                           disabled={item.quantity >= cap}
                           onClick={() => onUpdateQuantity(item.key, item.quantity + 1)}
                           className="w-8 h-8 touch-manipulation rounded-md border border-[#D6D3D1] flex items-center justify-center text-[#44403C] hover:border-[#16A34A] hover:text-[#16A34A] transition-colors disabled:opacity-40"
-                          aria-label="+"
+                          aria-label={`${t.quick.increaseQty} — ${item.productName}`}
                         >
                           <Plus className="w-3.5 h-3.5" />
                         </button>

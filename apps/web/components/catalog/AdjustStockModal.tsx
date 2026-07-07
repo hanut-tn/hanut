@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { X, PackagePlus, Settings, AlertTriangle, RotateCcw, ArrowRight } from 'lucide-react'
 import type { Product, ProductVariant } from '@hanut/types'
 import type { StockAdjustmentInput } from '@/app/(dashboard)/catalog/actions'
 import { getVariantLabel } from '@/lib/variants'
+import { useFocusTrap } from '@/lib/use-focus-trap'
 
 type AdjustType = 'restock' | 'correction' | 'loss' | 'return'
 
@@ -30,6 +31,8 @@ export default function AdjustStockModal({ product, adjustStock, onClose, onSucc
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const panelRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(panelRef)
 
   const hasVariants = product.variants.length > 0
 
@@ -136,11 +139,17 @@ export default function AdjustStockModal({ product, adjustStock, onClose, onSucc
 
   return createPortal(
     <div className="fixed inset-0 z-[100] overflow-hidden overscroll-contain bg-white sm:flex sm:items-center sm:justify-center sm:bg-black/40 sm:p-4">
-      <div className="fixed inset-0 z-[101] flex h-[100dvh] w-full flex-col bg-white shadow-xl sm:relative sm:inset-auto sm:z-auto sm:h-auto sm:max-h-[calc(100dvh-4rem)] sm:max-w-lg sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="adjust-stock-title"
+        className="fixed inset-0 z-[101] flex h-[100dvh] w-full flex-col bg-white shadow-xl sm:relative sm:inset-auto sm:z-auto sm:h-auto sm:max-h-[calc(100dvh-4rem)] sm:max-w-lg sm:rounded-xl sm:border sm:border-[#E7E5E4]"
+      >
         {/* Header */}
         <div className="shrink-0 flex items-center justify-between border-b border-[#E7E5E4] bg-white px-4 py-4 sm:px-6">
           <div className="min-w-0">
-            <h2 className="font-semibold text-[#1C1917]">Ajuster le stock</h2>
+            <h2 id="adjust-stock-title" className="font-semibold text-[#1C1917]">Ajuster le stock</h2>
             <p className="text-sm text-[#78716C] truncate">
               {product.name}
               {hasVariants && ` — ${product.variants.length} variante${product.variants.length > 1 ? 's' : ''}`}

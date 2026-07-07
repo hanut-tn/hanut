@@ -35,7 +35,7 @@ export default function OrderConfirmation({ result, sellerName, t, onNewOrder }:
       </div>
 
       <div className="bg-[#F5F5F4] rounded-xl px-6 py-4 border-2 border-dashed border-[#D6D3D1]">
-        <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">{t.success.orderNumberLabel}</p>
+        <p className="text-xs text-[#78716C] uppercase tracking-widest mb-1">{t.success.orderNumberLabel}</p>
         <p className="text-xl font-bold text-[#0B5E46] tracking-wider font-mono">#{result.orderId}</p>
       </div>
 

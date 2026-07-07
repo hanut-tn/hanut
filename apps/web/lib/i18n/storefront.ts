@@ -24,6 +24,8 @@ export interface StorefrontDict extends OrderFormDict {
     available: (qty: number) => string
     inCart: (qty: number) => string
     addToCart: (total: number) => string
+    decreaseQty: string
+    increaseQty: string
   }
   cart: {
     title: string
@@ -72,6 +74,8 @@ const fr: StorefrontDict = {
     available: qty => `${qty} dispo`,
     inCart: qty => `${qty} déjà dans le panier`,
     addToCart: total => `Ajouter au panier — ${total} DT`,
+    decreaseQty: 'Diminuer la quantité',
+    increaseQty: 'Augmenter la quantité',
   },
   cart: {
     title: 'Votre panier',
@@ -120,6 +124,8 @@ const ar: StorefrontDict = {
     available: qty => `${qty} متوفر`,
     inCart: qty => `${qty} في السلة`,
     addToCart: total => `أضف إلى السلة — ${total} د.ت`,
+    decreaseQty: 'إنقاص الكمية',
+    increaseQty: 'زيادة الكمية',
   },
   cart: {
     title: 'سلتك',

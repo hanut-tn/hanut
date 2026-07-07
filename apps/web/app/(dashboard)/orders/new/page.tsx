@@ -22,7 +22,8 @@ export default async function NewOrderPage({ searchParams }: Props) {
       .from('products')
       .select('id, name, price, stock, variants, image_url')
       .eq('seller_id', context.sellerId)
-      .order('name'),
+      .order('name')
+      .limit(200),
     customer_id
       ? supabase
           .from('customers')

@@ -7,7 +7,6 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { verifyTurnstileToken } from '@/lib/turnstile'
 import { formatTunisianPhone, isValidTunisianPhone } from '@/lib/constants'
-import { getVariantPrice, type VariantLike } from '@/lib/variants'
 import { getAppUrl, sendSellerNewOrderEmail } from '@/lib/email'
 import {
   hashOrderOtp,
@@ -231,10 +230,6 @@ async function postHandler(request: NextRequest) {
       orderId,
       customerName: parsed.data.customer_name,
       customerPhone: phone,
-      productId: parsed.data.product_id,
-      variant: parsed.data.variant,
-      quantity: parsed.data.quantity ?? 1,
-      items: parsed.data.items,
     }).catch(err => {
       Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
         tags: { module: 'verify-otp', action: 'notify_seller' },
@@ -256,10 +251,6 @@ type NotifyOpts = {
   orderId: string
   customerName: string
   customerPhone: string
-  productId?: string | null
-  variant?: string | null
-  quantity: number
-  items?: Array<{ product_id: string; variant?: string; quantity: number }> | null
 }
 
 type SellerOrderLine = {
@@ -284,35 +275,25 @@ async function notifySellerNewOrder(opts: NotifyOpts): Promise<void> {
 
   const orderUrl = `${getAppUrl()}/orders/${opts.orderId}`
 
-  let lines: SellerOrderLine[] = []
-  if (opts.items && opts.items.length > 0) {
-    const ids = [...new Set(opts.items.map(i => i.product_id))]
-    const { data: products } = await supabase.from('products').select('id, name, price, variants').in('id', ids)
-    const map = new Map((products ?? []).map(p => [p.id, p]))
-    lines = opts.items.map(item => {
-      const p = map.get(item.product_id)
-      const label = p ? (item.variant ? `${p.name} — ${item.variant}` : p.name) : 'Produit'
-      const unitPrice = p
-        ? getVariantPrice((p.variants ?? []) as VariantLike[], item.variant ?? null, p.price)
-        : null
-      return {
-        label,
-        quantity: item.quantity,
-        total: unitPrice != null ? `${(unitPrice * item.quantity).toFixed(2)} DT` : undefined,
-      }
-    })
-  } else if (opts.productId) {
-    const { data: p } = await supabase.from('products').select('name, price, variants').eq('id', opts.productId).single()
-    if (p) {
-      const label = opts.variant ? `${p.name} — ${opts.variant}` : p.name
-      const unitPrice = getVariantPrice((p.variants ?? []) as VariantLike[], opts.variant ?? null, p.price)
-      lines = [{
-        label,
-        quantity: opts.quantity,
-        total: `${(unitPrice * opts.quantity).toFixed(2)} DT`,
-      }]
+  // Lit order_items.unit_price — le prix effectivement facturé et persisté à
+  // la création de la commande — plutôt que de recalculer depuis products,
+  // qui peut avoir changé entre-temps (prix produit ou variante modifié).
+  const { data: orderItems } = await supabase
+    .from('order_items')
+    .select('variant, quantity, unit_price, product:products(name)')
+    .eq('order_id', opts.orderId)
+    .order('created_at')
+
+  const lines: SellerOrderLine[] = (orderItems ?? []).map(item => {
+    const product = Array.isArray(item.product) ? item.product[0] : item.product
+    const productName = product?.name ?? 'Produit'
+    const label = item.variant ? `${productName} — ${item.variant}` : productName
+    return {
+      label,
+      quantity: item.quantity,
+      total: `${(item.unit_price * item.quantity).toFixed(2)} DT`,
     }
-  }
+  })
 
   await sendSellerNewOrderEmail({
     to: seller.email,

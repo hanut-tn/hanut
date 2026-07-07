@@ -12,10 +12,6 @@ Sentry.init({
 
   enableLogs: true,
   integrations: [
-    Sentry.replayIntegration({
-      maskAllInputs: true,
-      blockAllMedia: false,
-    }),
     Sentry.consoleLoggingIntegration({ levels: ['log', 'warn', 'error'] }),
   ],
 
@@ -36,3 +32,14 @@ Sentry.init({
     return event
   },
 })
+
+// Chargé depuis le CDN Sentry après l'init plutôt que bundlé : Replay pesait
+// à lui seul une bonne partie des ~131 kB du chunk JS partagé par toutes les
+// pages, y compris la boutique publique mobile.
+if (process.env.NODE_ENV === 'production') {
+  Sentry.lazyLoadIntegration('replayIntegration')
+    .then(replayIntegration => {
+      Sentry.addIntegration(replayIntegration({ maskAllInputs: true, blockAllMedia: false }))
+    })
+    .catch(() => {})
+}

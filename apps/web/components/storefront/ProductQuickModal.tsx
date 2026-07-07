@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { X, ImageOff, Minus, Plus } from 'lucide-react'
@@ -8,6 +8,7 @@ import {
   buildCartKey, type CartItem, type StorefrontProduct,
 } from '@/lib/storefront/cart'
 import type { StorefrontDict } from '@/lib/i18n/storefront'
+import { useFocusTrap } from '@/lib/use-focus-trap'
 
 type Props = {
   product: StorefrontProduct
@@ -21,6 +22,8 @@ type Props = {
 export default function ProductQuickModal({ product, cart, t, isRtl, onClose, onAdd }: Props) {
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
   const [quantity, setQuantity] = useState(1)
+  const panelRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(panelRef)
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -88,10 +91,16 @@ export default function ProductQuickModal({ product, cart, t, isRtl, onClose, on
   return createPortal(
     <div className="fixed inset-0 z-[100]" dir={isRtl ? 'rtl' : 'ltr'}>
       <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
-      <div className="absolute inset-x-0 bottom-0 max-h-[90dvh] flex flex-col rounded-t-2xl bg-white shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:border sm:border-[#E7E5E4]">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="quick-modal-title"
+        className="absolute inset-x-0 bottom-0 max-h-[90dvh] flex flex-col rounded-t-2xl bg-white shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:border sm:border-[#E7E5E4]"
+      >
         {/* Header */}
         <div className="shrink-0 flex items-center justify-between border-b border-[#E7E5E4] px-4 py-3.5 sm:px-5">
-          <h2 className="font-semibold text-[#1C1917] truncate pe-3">{product.name}</h2>
+          <h2 id="quick-modal-title" className="font-semibold text-[#1C1917] truncate pe-3">{product.name}</h2>
           <button
             onClick={onClose}
             className="text-[#78716C] hover:text-[#1C1917] w-9 h-9 touch-manipulation flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] transition-colors shrink-0"
@@ -162,7 +171,7 @@ export default function ProductQuickModal({ product, cart, t, isRtl, onClose, on
                 disabled={quantity <= 1}
                 onClick={() => setQuantity(q => Math.max(1, q - 1))}
                 className="w-11 h-11 touch-manipulation rounded-lg border border-[#16A34A] flex items-center justify-center text-[#16A34A] hover:bg-green-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                aria-label="−"
+                aria-label={t.quick.decreaseQty}
               >
                 <Minus className="w-4 h-4" />
               </button>
@@ -172,7 +181,7 @@ export default function ProductQuickModal({ product, cart, t, isRtl, onClose, on
                 disabled={quantity >= remaining}
                 onClick={() => setQuantity(q => Math.min(remaining, q + 1))}
                 className="w-11 h-11 touch-manipulation rounded-lg border border-[#16A34A] flex items-center justify-center text-[#16A34A] hover:bg-green-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                aria-label="+"
+                aria-label={t.quick.increaseQty}
               >
                 <Plus className="w-4 h-4" />
               </button>

@@ -72,6 +72,19 @@ function mockAdminContext(plan: 'starter' | 'pro' | 'business' = 'pro') {
   })
 }
 
+function mockOperatorContext() {
+  contextMock.getUserContext.mockResolvedValue({
+    userId: 'user-1',
+    sellerId: 'seller-1',
+    role: 'operator',
+    isSeller: true,
+    plan: 'pro',
+    demoExpiresAt: null,
+    demoExpired: false,
+    daysLeft: null,
+  })
+}
+
 function makeOrderQuery(status: string) {
   return {
     select: vi.fn().mockReturnThis(),
@@ -259,6 +272,15 @@ describe('cancelPendingOrder', () => {
       })
     )
   })
+
+  it('rejette un operator (réservé aux admins, cohérent avec getAvailableTransitions)', async () => {
+    mockOperatorContext()
+    const rpc = vi.fn().mockResolvedValue({ error: null })
+    serverMock.createServerClient.mockResolvedValue({ from: vi.fn(), rpc })
+
+    await expect(cancelPendingOrder('order-pending')).rejects.toThrow('réservée aux admins')
+    expect(rpc).not.toHaveBeenCalled()
+  })
 })
 
 describe('cancelOrder', () => {
@@ -290,6 +312,17 @@ describe('cancelOrder', () => {
         description: expect.stringContaining('Annulée'),
       })
     )
+  })
+
+  it('rejette un operator (réservé aux admins, cohérent avec getAvailableTransitions)', async () => {
+    mockOperatorContext()
+    const rpc = vi.fn().mockResolvedValue({ error: null })
+    serverMock.createServerClient.mockResolvedValue({ from: vi.fn(), rpc })
+
+    const result = await cancelOrder('order-confirmed')
+
+    expect(result.error).toContain('réservée aux admins')
+    expect(rpc).not.toHaveBeenCalled()
   })
 })
 

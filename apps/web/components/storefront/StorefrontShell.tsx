@@ -8,7 +8,7 @@ import { ShoppingCart } from 'lucide-react'
 import { useLang } from '@/lib/i18n/use-lang'
 import { storefrontTranslations } from '@/lib/i18n/storefront'
 import {
-  addItemToCart, cartTotals, type CartItem, type StorefrontProduct,
+  addItemToCart, cartTotals, reconcileCartWithProducts, type CartItem, type StorefrontProduct,
 } from '@/lib/storefront/cart'
 import ProductGrid from './ProductGrid'
 import StorefrontHeader from './StorefrontHeader'
@@ -164,15 +164,7 @@ export default function StorefrontShell({ sellerSlug, sellerName, shopDescriptio
   useEffect(() => {
     if (!stockConflictRef.current) return
     stockConflictRef.current = false
-    setCart(prevCart => prevCart.filter(item => {
-      const product = products.find(p => p.id === item.productId)
-      if (!product) return false
-      if (product.hasVariants) {
-        const variant = product.variants.find(v => v.label === item.variantLabel)
-        return Boolean(variant && variant.qty > 0)
-      }
-      return product.stock > 0
-    }))
+    setCart(prevCart => reconcileCartWithProducts(prevCart, products))
     showToast(t.otpExtra.cartUpdatedAfterStock)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products])
@@ -332,11 +324,11 @@ export default function StorefrontShell({ sellerSlug, sellerName, shopDescriptio
       {/* Footer */}
       <footer className="py-6 text-center border-t border-gray-100 bg-white">
         <div className="flex items-center justify-center gap-4">
-          <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+          <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-[#78716C] hover:text-gray-600 transition-colors">
             <Image src="/icon-16.png" alt="" width={16} height={16} unoptimized style={{ borderRadius: '3px' }} />
             Propulsé par Hanut
           </Link>
-          <Link href="/privacy" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+          <Link href="/privacy" className="text-xs text-[#78716C] hover:text-gray-600 transition-colors">
             Confidentialité
           </Link>
         </div>

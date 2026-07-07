@@ -322,17 +322,20 @@ describe('public order OTP routes', () => {
         error: null,
       }),
     }
-    const productQuery = {
+    const orderItemsQuery = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: { name: 'T-shirt', price: 50 }, error: null }),
+      order: vi.fn().mockResolvedValue({
+        data: [{ variant: null, quantity: 1, unit_price: 50, product: { name: 'T-shirt' } }],
+        error: null,
+      }),
     }
     serviceMock.createServiceClient
       .mockReturnValueOnce({ rpc })
       .mockReturnValue({
         from: (table: string) => {
           if (table === 'sellers') return sellerQuery
-          if (table === 'products') return productQuery
+          if (table === 'order_items') return orderItemsQuery
           throw new Error(`Unexpected table in notify: ${table}`)
         },
       })
@@ -379,17 +382,17 @@ describe('public order OTP routes', () => {
         error: null,
       }),
     }
-    const productQuery = {
+    const orderItemsQuery = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
     }
     serviceMock.createServiceClient
       .mockReturnValueOnce({ rpc })
       .mockReturnValue({
         from: (table: string) => {
           if (table === 'sellers') return sellerQuery
-          if (table === 'products') return productQuery
+          if (table === 'order_items') return orderItemsQuery
           throw new Error(`Unexpected table in notify: ${table}`)
         },
       })

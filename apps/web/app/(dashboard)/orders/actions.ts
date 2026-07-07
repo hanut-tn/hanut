@@ -186,7 +186,9 @@ export async function confirmPendingOrder(id: string) {
 export async function cancelPendingOrder(id: string) {
   const context = await getUserContext()
   if (!context) throw new Error('Non autorisé')
-  if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
+  // getAvailableTransitions() cache déjà l'annulation aux opérateurs côté UI ;
+  // ce garde-fou serveur aligne la règle pour un appel direct de l'action.
+  if (context.role !== 'admin') throw new Error('Action réservée aux admins')
   const activeCheck = requireActive(context)
   if (activeCheck) throw new Error(activeCheck.error)
 
@@ -220,7 +222,9 @@ export async function cancelPendingOrder(id: string) {
 export async function cancelOrder(id: string): Promise<OrderMutationResult> {
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
-  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  // getAvailableTransitions() cache déjà l'annulation aux opérateurs côté UI ;
+  // ce garde-fou serveur aligne la règle pour un appel direct de l'action.
+  if (context.role !== 'admin') return { error: 'Action réservée aux admins' }
   const activeCheck = requireActive(context)
   if (activeCheck) return activeCheck
 

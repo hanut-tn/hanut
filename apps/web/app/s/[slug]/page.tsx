@@ -100,6 +100,7 @@ export default async function StorefrontPage({ params }: Props) {
     .select('id, name, description, price, stock, variants, image_url, low_stock_alert')
     .eq('seller_id', seller.id)
     .order('name')
+    .limit(200)
 
   const storefrontProducts = ((products ?? []) as DbProduct[]).map(toStorefrontProduct)
 

@@ -90,6 +90,7 @@ describe('Supabase migrations', () => {
   const cancelledStatusRepairMigration = migration('20260714_repair_cancelled_order_status.sql')
   const customerAddressHistoryMigration = migration('20260715_add_customer_address_history.sql')
   const structuredAddressMigration = migration('20260716_add_structured_addresses.sql')
+  const anonymizeOrderActivityLogsMigration = migration('20260747_anonymize_order_activity_logs.sql')
   const jwtHookNullFix = migration('20260720_fix_jwt_hook_null_claims.sql')
   const subscriptionStatusMigration = migration('20260721_add_subscription_status.sql')
   const activatePaidSubscriptionMigration = migration('20260722_activate_paid_subscription.sql')
@@ -890,6 +891,18 @@ describe('Supabase migrations', () => {
     expect(structuredAddressMigration).toMatch(
       /UPDATE customers[\s\S]+delivery_notes\s*=\s*NULL/i
     )
+  })
+
+  // P1 — anonymize_customer v3 (20260731) ne nettoyait que les activity_logs
+  // entity_type='customer' ; les logs de commande (entity_type='order')
+  // gardaient le nom du client en clair dans la description.
+  it('anonymize_customer also scrubs order-entity activity_logs for the anonymized customer', () => {
+    expect(anonymizeOrderActivityLogsMigration).toMatch(/CREATE OR REPLACE FUNCTION anonymize_customer/i)
+    expect(anonymizeOrderActivityLogsMigration).toMatch(
+      /UPDATE activity_logs[\s\S]+entity_type = 'order'[\s\S]+SELECT id::TEXT FROM orders/i
+    )
+    expect(anonymizeOrderActivityLogsMigration).toMatch(/REVOKE ALL ON FUNCTION anonymize_customer\(UUID, UUID\) FROM PUBLIC/i)
+    expect(anonymizeOrderActivityLogsMigration).toMatch(/GRANT EXECUTE ON FUNCTION anonymize_customer\(UUID, UUID\) TO authenticated, service_role/i)
   })
 
   // P2 — get_product_stats lit depuis order_items (pas depuis orders.product_id)

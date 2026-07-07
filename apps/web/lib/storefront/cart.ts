@@ -95,3 +95,25 @@ export function addItemToCart(items: CartItem[], newItem: Omit<CartItem, 'key'>)
     items: [...items, { ...newItem, key, quantity: Math.min(newItem.quantity, cap) }],
   }
 }
+
+/**
+ * Recale le panier sur un catalogue à jour (après un 409 stock pendant
+ * l'OTP) : rebornne quantity/maxQty sur le stock frais et retire les lignes
+ * devenues indisponibles. Un simple filtre ne suffit pas — une ligne dont le
+ * stock a diminué sans tomber à zéro doit aussi voir sa quantité rebornée,
+ * sinon un nouveau 409 survient en boucle tant que le client ne réduit pas
+ * manuellement.
+ */
+export function reconcileCartWithProducts(items: CartItem[], products: StorefrontProduct[]): CartItem[] {
+  return items.reduce<CartItem[]>((next, item) => {
+    const product = products.find(p => p.id === item.productId)
+    const freshMaxQty = product
+      ? (product.hasVariants
+        ? (product.variants.find(v => v.label === item.variantLabel)?.qty ?? 0)
+        : product.stock)
+      : 0
+    if (freshMaxQty <= 0) return next
+    next.push({ ...item, maxQty: freshMaxQty, quantity: Math.min(item.quantity, freshMaxQty) })
+    return next
+  }, [])
+}

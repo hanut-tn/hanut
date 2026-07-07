@@ -166,7 +166,7 @@ export default function CheckoutForm({
         <div>
           <label htmlFor="sf-phone" className={labelClass}>
             {t.customer.phoneLabel}
-            <span className="text-gray-400 font-normal ms-1">{t.customer.phoneDigitsHint}</span>
+            <span className="text-[#78716C] font-normal ms-1">{t.customer.phoneDigitsHint}</span>
           </label>
           <div className="flex gap-2">
             <span className="flex items-center gap-1.5 px-3 bg-[#F5F5F4] border border-gray-200 rounded-xl text-base font-medium text-gray-500 shrink-0">
@@ -208,7 +208,7 @@ export default function CheckoutForm({
               inputMode="email"
             />
           </div>
-          <p className="text-xs text-gray-400 mt-1">{t.customer.emailHelper}</p>
+          <p className="text-xs text-[#78716C] mt-1">{t.customer.emailHelper}</p>
         </div>
 
         <div>
@@ -262,7 +262,7 @@ export default function CheckoutForm({
         <div>
           <label htmlFor="sf-landmark" className={labelClass}>
             {t.customer.landmarkLabel}
-            <span className="text-gray-400 font-normal ms-1">{t.common.optional}</span>
+            <span className="text-[#78716C] font-normal ms-1">{t.common.optional}</span>
           </label>
           <div className="relative">
             <Landmark className={iconClass} />
@@ -279,7 +279,7 @@ export default function CheckoutForm({
         <div>
           <label htmlFor="sf-notes" className={labelClass}>
             {t.notes.label}
-            <span className="text-gray-400 font-normal ms-1">{t.common.optional}</span>
+            <span className="text-[#78716C] font-normal ms-1">{t.common.optional}</span>
           </label>
           <div className="relative">
             <MessageSquare className="absolute start-3.5 top-3.5 w-4 h-4 text-gray-400 pointer-events-none" />

@@ -228,7 +228,7 @@ export default function OtpStep({
 
         <div className="text-center">
           {resendCooldown > 0 ? (
-            <p className="text-sm text-gray-400">{t.otp.resendIn(resendCooldown)}</p>
+            <p className="text-sm text-[#78716C]">{t.otp.resendIn(resendCooldown)}</p>
           ) : (
             <button
               type="button"
@@ -245,7 +245,7 @@ export default function OtpStep({
       <button
         type="button"
         onClick={onBack}
-        className="w-full text-sm text-gray-400 hover:text-gray-600 text-center py-2 touch-manipulation transition-colors"
+        className="w-full text-sm text-[#78716C] hover:text-gray-600 text-center py-2 touch-manipulation transition-colors"
       >
         {t.otp.backToEdit}
       </button>
