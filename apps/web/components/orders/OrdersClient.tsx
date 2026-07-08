@@ -92,9 +92,9 @@ type Props = {
   initialTotal: number
   tabCounts: Record<string, number>
   trashOrders: TrashOrder[]
-  updateStatus: (id: string, status: OrderStatus) => Promise<void>
+  updateStatus: (id: string, status: OrderStatus) => Promise<void | { error?: string }>
   deleteOrder: (id: string) => Promise<{ error?: string }>
-  confirmOrder: (id: string) => Promise<void>
+  confirmOrder: (id: string) => Promise<void | { error?: string }>
   cancelOrder: (id: string) => Promise<void | { error?: string }>
   restoreOrder: (id: string) => Promise<{ error?: string }>
   permanentlyDeleteOrder: (id: string) => Promise<{ error?: string }>
@@ -569,11 +569,22 @@ export default function OrdersClient({
     setUpdatingId(orderId)
     startTransition(async () => {
       try {
-        await updateStatus(orderId, status)
+        const result = await updateStatus(orderId, status)
+        if (result && 'error' in result && result.error) {
+          // Le serveur a explicitement rejeté la mise à jour (rôle, transition
+          // invalide, etc.) : ici on est sûr qu'elle n'a pas eu lieu, donc on
+          // annule l'affichage optimiste.
+          if (oldStatus) applyOptimisticStatus(orderId, oldStatus, status)
+          showToast(result.error)
+          return
+        }
         if (STATUS_TOAST[status]) showToast(STATUS_TOAST[status]!)
       } catch {
-        if (oldStatus) applyOptimisticStatus(orderId, oldStatus, status)
-        showToast('Erreur. Veuillez réessayer.')
+        // Une exception ici ne prouve pas que la mise à jour a échoué (le
+        // rendu automatique déclenché après l'action peut lever une erreur
+        // même quand l'écriture a déjà réussi) : on ne défait pas l'affichage
+        // optimiste, on prévient juste que quelque chose s'est mal passé.
+        showToast('Un problème est survenu. Rechargez la page pour vérifier le statut.')
       } finally {
         setUpdatingId(null)
       }
@@ -585,11 +596,15 @@ export default function OrdersClient({
     setUpdatingId(orderId)
     startTransition(async () => {
       try {
-        await confirmOrder(orderId)
+        const result = await confirmOrder(orderId)
+        if (result && 'error' in result && result.error) {
+          applyOptimisticStatus(orderId, 'pending', 'new')
+          showToast(result.error)
+          return
+        }
         showToast('✓ Commande confirmée')
       } catch {
-        applyOptimisticStatus(orderId, 'pending', 'new')
-        showToast('Erreur. Veuillez réessayer.')
+        showToast('Un problème est survenu. Rechargez la page pour vérifier le statut.')
       } finally {
         setUpdatingId(null)
       }

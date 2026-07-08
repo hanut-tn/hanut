@@ -92,8 +92,8 @@ type Props = {
   trackingToken?: string | null
   linkedCustomer: { id: string; name: string } | null
   hasExistingCustomer: boolean
-  updateStatus: (id: string, status: OrderStatus) => Promise<void>
-  confirmOrder: (id: string) => Promise<void>
+  updateStatus: (id: string, status: OrderStatus) => Promise<void | { error?: string }>
+  confirmOrder: (id: string) => Promise<void | { error?: string }>
   cancelOrder: (id: string) => Promise<void | { error?: string }>
   deleteOrder?: (id: string) => Promise<{ error?: string }>
   createDeliveryFromOrder?: (orderId: string, deliveryType: 'self' | 'carrier', carrier: string | undefined, tracking: string | undefined, fee: number, vendorNote?: string) => Promise<{ error?: string }>

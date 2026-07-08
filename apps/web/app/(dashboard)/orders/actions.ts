@@ -122,14 +122,14 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderMutatio
   return {}
 }
 
-export async function updateOrderStatus(id: string, status: OrderStatus) {
+export async function updateOrderStatus(id: string, status: OrderStatus): Promise<OrderMutationResult> {
   const context = await getUserContext()
-  if (!context) throw new Error('Non autorisé')
-  if (context.role === 'readonly') throw new Error('Action réservée aux admins et opérateurs')
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
   const activeCheck = requireActive(context)
-  if (activeCheck) throw new Error(activeCheck.error)
+  if (activeCheck) return activeCheck
   if (status === 'cancelled') {
-    throw new Error('Utilisez l’action d’annulation pour restaurer le stock correctement.')
+    return { error: 'Utilisez l’action d’annulation pour restaurer le stock correctement.' }
   }
 
   const supabase = await createServerClient()
@@ -143,12 +143,12 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
     .single()
 
   if (currentOrderError || !currentOrder) {
-    if (currentOrderError?.code === 'PGRST116') throw new Error('Commande introuvable.')
-    throw new Error(currentOrderError?.message ?? 'Commande introuvable.')
+    if (currentOrderError?.code === 'PGRST116') return { error: 'Commande introuvable.' }
+    return { error: currentOrderError?.message ?? 'Commande introuvable.' }
   }
 
   if (!isValidTransition(currentOrder.status, status)) {
-    throw new Error('Cette transition de statut n\'est pas autorisée.')
+    return { error: 'Cette transition de statut n\'est pas autorisée.' }
   }
 
   const { error } = await supabase.rpc('update_order_status', {
@@ -158,13 +158,13 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
     p_changed_by: context.userId,
   })
   if (error) {
-    if (error.message.includes('ORDER_NOT_FOUND')) throw new Error('Commande introuvable.')
-    if (error.message.includes('INVALID_TRANSITION')) throw new Error('Cette transition de statut n\'est pas autorisée.')
+    if (error.message.includes('ORDER_NOT_FOUND')) return { error: 'Commande introuvable.' }
+    if (error.message.includes('INVALID_TRANSITION')) return { error: 'Cette transition de statut n\'est pas autorisée.' }
     Sentry.captureException(new Error(error.message), {
       tags: { module: 'orders', action: 'update_status' },
       extra: { sellerId: context.sellerId, orderId: id, status },
     })
-    throw new Error(error.message)
+    return { error: error.message }
   }
 
 
@@ -181,9 +181,10 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
   revalidatePath('/orders')
   revalidatePath('/dashboard')
   revalidateTag(`dashboard-${context.sellerId}`)
+  return {}
 }
 
-export async function confirmPendingOrder(id: string) {
+export async function confirmPendingOrder(id: string): Promise<OrderMutationResult> {
   return updateOrderStatus(id, 'new')
 }
 

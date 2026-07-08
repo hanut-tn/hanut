@@ -123,8 +123,8 @@ describe('updateOrderStatus', () => {
       rpc,
     })
 
-    await expect(updateOrderStatus('order-1', 'delivered'))
-      .rejects.toThrow('Cette transition de statut n\'est pas autorisée.')
+    const result = await updateOrderStatus('order-1', 'delivered')
+    expect(result.error).toBe('Cette transition de statut n\'est pas autorisée.')
     expect(rpc).not.toHaveBeenCalled()
   })
 
