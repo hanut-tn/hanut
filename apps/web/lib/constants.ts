@@ -46,7 +46,7 @@ export const ORDER_STATUSES = ['pending', 'new', 'confirmed', 'shipped', 'delive
 export const ORDER_STATUS_CONFIG: Record<OrderStatus, OrderStatusConfig> = {
   pending:   { label: 'En attente', bg: 'bg-amber-50',  text: 'text-amber-700',  border: 'border-amber-200',  dot: 'bg-amber-500'  },
   new:       { label: 'Nouvelle',   bg: 'bg-blue-50',   text: 'text-blue-700',   border: 'border-blue-200',   dot: 'bg-blue-500'   },
-  confirmed: { label: 'Confirmée',  bg: 'bg-sky-50',    text: 'text-sky-700',    border: 'border-sky-200',    dot: 'bg-sky-500'    },
+  confirmed: { label: 'Confirmée',  bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200', dot: 'bg-indigo-500' },
   shipped:   { label: 'Expédiée',   bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
   delivered: { label: 'Livrée',     bg: 'bg-green-50',  text: 'text-green-700',  border: 'border-green-200',  dot: 'bg-green-500'  },
   returned:  { label: 'Retournée',  bg: 'bg-red-50',    text: 'text-red-700',    border: 'border-red-200',    dot: 'bg-red-500'    },
