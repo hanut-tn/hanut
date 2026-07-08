@@ -423,7 +423,7 @@ export default function OrderDetail({
                     disabled={isPending}
                     className="w-full btn-primary text-sm disabled:opacity-50"
                   >
-                    {isPending ? 'Traitement...' : 'Confirmer la commande'}
+                    {isPending ? 'Traitement...' : 'Valider la commande'}
                   </button>
                   <button
                     onClick={() => handleAction(() => cancelOrder(order.id))}

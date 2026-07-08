@@ -554,7 +554,7 @@ export default function OrdersClient({
   }
 
   const STATUS_TOAST: Partial<Record<OrderStatus, string>> = {
-    new:       '✓ Commande confirmée',
+    new:       '✓ Commande validée',
     confirmed: '✓ Commande confirmée',
     shipped:   '✓ Commande expédiée',
     delivered: '✓ Commande livrée',
@@ -602,7 +602,7 @@ export default function OrdersClient({
           showToast(result.error)
           return
         }
-        showToast('✓ Commande confirmée')
+        showToast('✓ Commande validée')
       } catch {
         showToast('Un problème est survenu. Rechargez la page pour vérifier le statut.')
       } finally {
@@ -1139,7 +1139,7 @@ export default function OrdersClient({
                     disabled={isPending || isUpdatingThis}
                     className="flex-1 min-h-[44px] rounded-lg bg-[#16A34A] text-white text-sm font-medium flex items-center justify-center disabled:opacity-50"
                   >
-                    {isUpdatingThis ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Confirmer'}
+                    {isUpdatingThis ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : (isPendingOrder ? 'Valider' : 'Confirmer')}
                   </button>
                 ) : isConfirmed ? (
                   <button
@@ -1302,7 +1302,7 @@ export default function OrdersClient({
                                 disabled={isPending || updatingId === order.id}
                                 className="text-xs font-medium border border-[#16A34A] text-[#16A34A] hover:bg-[#F0FDF4] disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap min-w-[72px] flex items-center justify-center gap-1.5"
                               >
-                                {updatingId === order.id ? <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" /> : 'Confirmer'}
+                                {updatingId === order.id ? <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" /> : (isPendingOrder ? 'Valider' : 'Confirmer')}
                               </button>
                             )}
                             {(isPendingOrder || isNew || isConfirmed) && (
