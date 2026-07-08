@@ -160,6 +160,10 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
   if (error) {
     if (error.message.includes('ORDER_NOT_FOUND')) throw new Error('Commande introuvable.')
     if (error.message.includes('INVALID_TRANSITION')) throw new Error('Cette transition de statut n\'est pas autorisée.')
+    Sentry.captureException(new Error(error.message), {
+      tags: { module: 'orders', action: 'update_status' },
+      extra: { sellerId: context.sellerId, orderId: id, status },
+    })
     throw new Error(error.message)
   }
 
