@@ -100,9 +100,9 @@ type Props = {
   appUrl: string
   initialTab?: string
   monthlyOrderCount?: number | null
-  updateProfile: (input: ProfileInput) => Promise<void>
-  updateSlug: (slug: string) => Promise<void>
-  updateShopBranding: (input: ShopBrandingInput) => Promise<void>
+  updateProfile: (input: ProfileInput) => Promise<{ error?: string }>
+  updateSlug: (slug: string) => Promise<{ error?: string }>
+  updateShopBranding: (input: ShopBrandingInput) => Promise<{ error?: string }>
   checkSlugAvailability: (slug: string) => Promise<boolean>
 }
 
@@ -202,7 +202,11 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
     setProfileMsg(null)
     startTransition(async () => {
       try {
-        await updateProfile({ name: name.trim(), phone: phone.trim() })
+        const result = await updateProfile({ name: name.trim(), phone: phone.trim() })
+        if (result?.error) {
+          setProfileMsg({ type: 'error', text: result.error })
+          return
+        }
         setProfileMsg({ type: 'success', text: 'Profil mis à jour avec succès.' })
       } catch (err) {
         setProfileMsg({ type: 'error', text: err instanceof Error ? err.message : 'Erreur inconnue' })
@@ -351,7 +355,11 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
     setBrandingMsg(null)
     startTransition(async () => {
       try {
-        await updateShopBranding({ shopName, shopDescription, logoUrl })
+        const result = await updateShopBranding({ shopName, shopDescription, logoUrl })
+        if (result?.error) {
+          setBrandingMsg({ type: 'error', text: result.error })
+          return
+        }
         setBrandingMsg({ type: 'success', text: 'Boutique mise à jour avec succès.' })
       } catch (err) {
         setBrandingMsg({ type: 'error', text: err instanceof Error ? err.message : 'Erreur inconnue' })
@@ -364,7 +372,11 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
     setSlugMsg(null)
     startTransition(async () => {
       try {
-        await updateSlug(newSlug)
+        const result = await updateSlug(newSlug)
+        if (result?.error) {
+          setSlugMsg({ type: 'error', text: result.error })
+          return
+        }
         setSlugMsg({ type: 'success', text: 'Lien mis à jour avec succès.' })
         setSlugAvailable(null)
         // Un slug par défaut est déjà généré à l'inscription — cette étape

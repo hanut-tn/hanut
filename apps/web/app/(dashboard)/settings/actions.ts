@@ -5,17 +5,19 @@ import { getUserContext } from '@/lib/get-context'
 import { revalidatePath } from 'next/cache'
 import { requireActive } from '@/lib/assert-active'
 
+export type ActionResult = { error?: string }
+
 export type ProfileInput = {
   name: string
   phone: string
 }
 
-export async function updateProfile(input: ProfileInput) {
+export async function updateProfile(input: ProfileInput): Promise<ActionResult> {
   const context = await getUserContext()
-  if (!context) throw new Error('Non autorisé')
-  if (!context.isSeller) throw new Error('Réservé au propriétaire')
+  if (!context) return { error: 'Non autorisé' }
+  if (!context.isSeller) return { error: 'Réservé au propriétaire' }
   const activeCheck = requireActive(context)
-  if (activeCheck) throw new Error(activeCheck.error)
+  if (activeCheck) return activeCheck
 
   const serviceClient = createServiceClient()
   const { error } = await serviceClient
@@ -26,9 +28,10 @@ export async function updateProfile(input: ProfileInput) {
     })
     .eq('id', context.sellerId)
 
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath('/settings')
   revalidatePath('/dashboard')
+  return {}
 }
 
 export type ShopBrandingInput = {
@@ -37,24 +40,24 @@ export type ShopBrandingInput = {
   logoUrl: string | null
 }
 
-export async function updateShopBranding(input: ShopBrandingInput) {
+export async function updateShopBranding(input: ShopBrandingInput): Promise<ActionResult> {
   const context = await getUserContext()
-  if (!context) throw new Error('Non autorisé')
-  if (!context.isSeller) throw new Error('Réservé au propriétaire')
+  if (!context) return { error: 'Non autorisé' }
+  if (!context.isSeller) return { error: 'Réservé au propriétaire' }
   const activeCheck = requireActive(context)
-  if (activeCheck) throw new Error(activeCheck.error)
+  if (activeCheck) return activeCheck
 
   const shopName = input.shopName.trim()
   const shopDescription = input.shopDescription.trim()
   const logoUrl = input.logoUrl?.trim() || null
 
-  if (shopName.length > 100) throw new Error('Le nom de la boutique est trop long (100 caractères max).')
-  if (shopDescription.length > 300) throw new Error('La description est trop longue (300 caractères max).')
+  if (shopName.length > 100) return { error: 'Le nom de la boutique est trop long (100 caractères max).' }
+  if (shopDescription.length > 300) return { error: 'La description est trop longue (300 caractères max).' }
   // Doit provenir du stockage Supabase du projet : toute autre origine est
   // bloquée silencieusement par la CSP (img-src), le logo resterait cassé.
   const storagePrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/`
   if (logoUrl && (logoUrl.length > 2048 || !logoUrl.startsWith(storagePrefix))) {
-    throw new Error('URL de logo invalide.')
+    return { error: `URL de logo invalide (${logoUrl.slice(0, 60)}).` }
   }
 
   const serviceClient = createServiceClient()
@@ -67,16 +70,17 @@ export async function updateShopBranding(input: ShopBrandingInput) {
     })
     .eq('id', context.sellerId)
 
-  if (error) throw new Error(error.message)
+  if (error) return { error: error.message }
   revalidatePath('/settings')
+  return {}
 }
 
-export async function updateSlug(slug: string) {
+export async function updateSlug(slug: string): Promise<ActionResult> {
   const context = await getUserContext()
-  if (!context) throw new Error('Non autorisé')
-  if (!context.isSeller) throw new Error('Réservé au propriétaire')
+  if (!context) return { error: 'Non autorisé' }
+  if (!context.isSeller) return { error: 'Réservé au propriétaire' }
   const activeCheck = requireActive(context)
-  if (activeCheck) throw new Error(activeCheck.error)
+  if (activeCheck) return activeCheck
 
   const cleaned = slug
     .toLowerCase()
@@ -85,8 +89,8 @@ export async function updateSlug(slug: string) {
     .replace(/[^a-z0-9-]+/g, '-')
     .replace(/^-+|-+$/g, '')
 
-  if (!cleaned || cleaned.length < 3) throw new Error('Le slug doit contenir au moins 3 caractères.')
-  if (cleaned.length > 50) throw new Error('Le slug est trop long (50 caractères max).')
+  if (!cleaned || cleaned.length < 3) return { error: 'Le slug doit contenir au moins 3 caractères.' }
+  if (cleaned.length > 50) return { error: 'Le slug est trop long (50 caractères max).' }
 
   const serviceClient = createServiceClient()
   const { error } = await serviceClient
@@ -95,11 +99,12 @@ export async function updateSlug(slug: string) {
     .eq('id', context.sellerId)
 
   if (error) {
-    if (error.code === '23505') throw new Error('Ce slug est déjà pris. Essayez-en un autre.')
-    throw new Error(error.message)
+    if (error.code === '23505') return { error: 'Ce slug est déjà pris. Essayez-en un autre.' }
+    return { error: error.message }
   }
 
   revalidatePath('/settings')
+  return {}
 }
 
 export async function checkSlugAvailability(slug: string): Promise<boolean> {
