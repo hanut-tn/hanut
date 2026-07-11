@@ -31,6 +31,7 @@ function renderShell(products: StorefrontProduct[] = []) {
       shopDescription={null}
       logoUrl={null}
       products={products}
+      categories={[]}
     />
   )
 }

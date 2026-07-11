@@ -124,27 +124,27 @@ export default function StickyPhoneShowcase() {
   const ActiveIcon = activeStep.icon
 
   return (
-    <section id="features" className="bg-[#FAFAF9] px-4 py-16 sm:px-6 sm:py-32">
+    <section id="features" className="bg-[#FAFAF9] px-4 py-14 sm:px-6 sm:py-32">
       <PhoneShowcaseStyles />
       <div className="mx-auto max-w-6xl">
-        <div className="mb-14 grid grid-cols-1 items-end gap-8 lg:grid-cols-[1fr_0.8fr]">
+        <div className="mb-10 text-center lg:mb-14 lg:grid lg:grid-cols-[1fr_0.8fr] lg:items-end lg:gap-8 lg:text-left">
           <div>
             <span className="mb-5 inline-flex items-center gap-2 rounded-lg border border-brand-100 bg-white px-3 py-2 text-sm font-bold text-brand-700 shadow-sm">
               <ShoppingBag className="h-4 w-4" aria-hidden="true" />
               Expérience Hanut
             </span>
-            <h2 className="max-w-3xl text-3xl font-extrabold leading-tight text-[#1C1917] sm:text-4xl lg:text-5xl">
+            <h2 className="mx-auto max-w-[22rem] text-[2rem] font-extrabold leading-tight text-[#1C1917] sm:max-w-3xl sm:text-4xl lg:mx-0 lg:text-5xl">
               Un seul flux, de votre produit à la livraison.
             </h2>
           </div>
-          <p className="text-lg leading-relaxed text-neutral-500">
+          <p className="mx-auto mt-4 max-w-[22rem] text-base leading-relaxed text-neutral-500 sm:text-lg lg:mx-0 lg:mt-0">
             Le téléphone reste le fil conducteur: à chaque étape, l’écran montre exactement
             ce que Hanut apporte au vendeur et au client.
           </p>
         </div>
 
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_25rem] lg:gap-16">
-          <div className="space-y-6 lg:space-y-0">
+          <div className="space-y-4 lg:space-y-0">
             {STEPS.map((step) => {
               const Icon = step.icon
               const isActive = active === step.id
@@ -156,7 +156,7 @@ export default function StickyPhoneShowcase() {
                     stepRefs.current[step.id] = el
                   }}
                   data-step={step.id}
-                  className="flex min-h-[auto] flex-col justify-center border-t border-neutral-200 py-10 last:border-b lg:min-h-[68vh] lg:py-16"
+                  className="flex min-h-[auto] flex-col justify-center border-t border-neutral-200 py-5 last:border-b lg:min-h-[68vh] lg:py-16"
                 >
                   <button
                     type="button"
@@ -166,7 +166,7 @@ export default function StickyPhoneShowcase() {
                     }}
                     className={`group w-full rounded-[1.25rem] border bg-white p-5 text-left shadow-sm transition-all duration-200 sm:rounded-[1.5rem] sm:p-6 ${
                       isActive
-                        ? 'border-brand-200 shadow-xl shadow-neutral-900/5'
+                        ? 'border-brand-200 shadow-lg shadow-neutral-900/5 sm:shadow-xl'
                         : 'border-neutral-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-lg hover:shadow-neutral-900/5'
                     }`}
                   >
@@ -188,7 +188,7 @@ export default function StickyPhoneShowcase() {
                     <p className="mt-4 max-w-xl text-base leading-relaxed text-neutral-500">
                       {step.description}
                     </p>
-                    <div className="mt-6 flex flex-wrap gap-2">
+                    <div className="mt-5 flex flex-wrap gap-2 sm:mt-6">
                       {step.bullets.map((bullet) => (
                         <span key={bullet} className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm font-semibold text-neutral-700">
                           <Check className="h-3.5 w-3.5 text-brand-600" aria-hidden />
@@ -197,7 +197,6 @@ export default function StickyPhoneShowcase() {
                       ))}
                     </div>
                   </button>
-
                 </article>
               )
             })}

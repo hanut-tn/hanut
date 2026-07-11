@@ -2,10 +2,10 @@
 
 import { useState, useTransition, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mail, AlertTriangle, MessageCircle, Clock, Info, Check, X as XIcon, LifeBuoy } from 'lucide-react'
+import Link from 'next/link'
+import { Mail, AlertTriangle, MessageCircle, Clock, Info, Check, X as XIcon, LifeBuoy, Store } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import type { ProfileInput, ShopBrandingInput } from '@/app/(dashboard)/settings/actions'
-import { uploadProductImage } from '@/app/(dashboard)/catalog/actions'
+import type { ProfileInput } from '@/app/(dashboard)/settings/actions'
 import { HANUT_CONTACT } from '@/lib/constants'
 
 const PLAN_CONFIG = {
@@ -89,9 +89,6 @@ type Seller = {
   subscription_end: string | null
   created_at: string | null
   slug: string | null
-  shop_name: string | null
-  shop_description: string | null
-  logo_url: string | null
 }
 
 type Props = {
@@ -102,7 +99,6 @@ type Props = {
   monthlyOrderCount?: number | null
   updateProfile: (input: ProfileInput) => Promise<{ error?: string }>
   updateSlug: (slug: string) => Promise<{ error?: string }>
-  updateShopBranding: (input: ShopBrandingInput) => Promise<{ error?: string }>
   checkSlugAvailability: (slug: string) => Promise<boolean>
 }
 
@@ -120,7 +116,7 @@ function getPasswordStrength(pw: string): { level: 'weak' | 'medium' | 'strong';
   return { level: 'weak', label: 'Faible', color: 'bg-red-400' }
 }
 
-export default function SettingsClient({ seller, stats, appUrl, initialTab, monthlyOrderCount, updateProfile, updateSlug, updateShopBranding, checkSlugAvailability }: Props) {
+export default function SettingsClient({ seller, stats, appUrl, initialTab, monthlyOrderCount, updateProfile, updateSlug, checkSlugAvailability }: Props) {
   const BASE_URL = appUrl.replace(/\/$/, '')
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
@@ -131,14 +127,6 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
   const [name, setName] = useState(seller.name)
   const [phone, setPhone] = useState(seller.phone)
   const [profileMsg, setProfileMsg] = useState<Msg | null>(null)
-
-  // Boutique publique (branding)
-  const [shopName, setShopName] = useState(seller.shop_name ?? '')
-  const [shopDescription, setShopDescription] = useState(seller.shop_description ?? '')
-  const [logoUrl, setLogoUrl] = useState<string | null>(seller.logo_url)
-  const [logoUploading, setLogoUploading] = useState(false)
-  const [brandingMsg, setBrandingMsg] = useState<Msg | null>(null)
-  const logoInputRef = useRef<HTMLInputElement>(null)
 
   // Email change
   const [newEmail, setNewEmail] = useState(seller.email)
@@ -327,44 +315,6 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
         setSlugChecking(false)
       }, 500)
     }
-  }
-
-  async function handleLogoFile(file: File) {
-    setBrandingMsg(null)
-    if (file.size > 5 * 1024 * 1024) {
-      setBrandingMsg({ type: 'error', text: "L'image ne doit pas dépasser 5 Mo." })
-      return
-    }
-    setLogoUploading(true)
-    try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const { url, error } = await uploadProductImage(fd)
-      if (error || !url) throw new Error(error ?? "Échec de l'upload")
-      setLogoUrl(url)
-    } catch (err) {
-      setBrandingMsg({ type: 'error', text: err instanceof Error ? err.message : 'Erreur inconnue' })
-    } finally {
-      setLogoUploading(false)
-      if (logoInputRef.current) logoInputRef.current.value = ''
-    }
-  }
-
-  function handleBrandingSave(e: React.FormEvent) {
-    e.preventDefault()
-    setBrandingMsg(null)
-    startTransition(async () => {
-      try {
-        const result = await updateShopBranding({ shopName, shopDescription, logoUrl })
-        if (result?.error) {
-          setBrandingMsg({ type: 'error', text: result.error })
-          return
-        }
-        setBrandingMsg({ type: 'success', text: 'Boutique mise à jour avec succès.' })
-      } catch (err) {
-        setBrandingMsg({ type: 'error', text: err instanceof Error ? err.message : 'Erreur inconnue' })
-      }
-    })
   }
 
   function handleSlugSave(e: React.FormEvent) {
@@ -632,125 +582,20 @@ export default function SettingsClient({ seller, stats, appUrl, initialTab, mont
             )}
           </div>
 
-          <form onSubmit={handleBrandingSave} className="card p-5 space-y-4">
-            <div>
-              <h2 className="font-semibold text-gray-900 mb-0.5">Votre boutique publique</h2>
+          <div className="card p-5 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center shrink-0">
+              <Store className="w-5 h-5 text-brand-600" aria-hidden="true" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-gray-900">Nom, description, logo, couleurs et thème</p>
               <p className="text-sm text-gray-500">
-                Personnalisez ce que vos clients voient en haut de votre boutique.
+                Pour personnaliser l&apos;apparence de votre boutique →{' '}
+                <Link href="/boutique" className="text-brand-600 font-medium hover:underline">
+                  Ma Boutique →
+                </Link>
               </p>
             </div>
-
-            <div>
-              <label htmlFor="shop-name" className="block text-sm font-medium text-gray-700 mb-1">
-                Nom de la boutique
-              </label>
-              <input
-                id="shop-name"
-                className="input"
-                value={shopName}
-                onChange={e => setShopName(e.target.value)}
-                placeholder={seller.name || 'Ma boutique'}
-                maxLength={100}
-              />
-              <p className="text-xs text-gray-400 mt-1">
-                Laissez vide pour afficher le nom de votre compte ({seller.name}).
-              </p>
-            </div>
-
-            <div>
-              <label htmlFor="shop-description" className="block text-sm font-medium text-gray-700 mb-1">
-                Description <span className="text-gray-400 font-normal">(optionnel)</span>
-              </label>
-              <textarea
-                id="shop-description"
-                className="input resize-none"
-                rows={2}
-                value={shopDescription}
-                onChange={e => setShopDescription(e.target.value)}
-                placeholder="Ex: Parfums et cosmétiques — livraison partout en Tunisie"
-                maxLength={300}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Logo de la boutique <span className="text-gray-400 font-normal">(optionnel)</span>
-              </label>
-              {logoUrl ? (
-                <div className="flex items-center gap-3">
-                  <div
-                    role="img"
-                    aria-label="Aperçu du logo"
-                    className="h-16 w-16 shrink-0 rounded-full border border-gray-200 bg-cover bg-center"
-                    style={{ backgroundImage: `url(${logoUrl})` }}
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => logoInputRef.current?.click()}
-                      disabled={logoUploading}
-                      className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                    >
-                      {logoUploading ? 'Envoi…' : 'Changer le logo'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLogoUrl(null)}
-                      disabled={logoUploading}
-                      className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
-                    >
-                      Retirer
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => logoInputRef.current?.click()}
-                  disabled={logoUploading}
-                  className="w-full h-20 rounded-xl border-2 border-dashed border-gray-200 text-sm text-gray-500 hover:border-brand-500/50 hover:text-brand-600 transition-colors disabled:opacity-50"
-                >
-                  {logoUploading ? 'Envoi en cours…' : 'Choisir un logo — carré, 400×400px conseillé'}
-                </button>
-              )}
-              <input
-                ref={logoInputRef}
-                type="file"
-                accept=".jpg,.jpeg,.png,.webp"
-                className="hidden"
-                onChange={e => { const f = e.target.files?.[0]; if (f) handleLogoFile(f) }}
-              />
-              <p className="text-xs text-gray-400 mt-1">
-                Sans logo, un avatar avec l&apos;initiale du nom de votre boutique est affiché.
-              </p>
-            </div>
-
-            {brandingMsg && (
-              <div className={`rounded-lg px-4 py-3 text-sm ${
-                brandingMsg.type === 'success'
-                  ? 'bg-green-50 border border-green-200 text-green-700'
-                  : 'bg-red-50 border border-red-200 text-red-700'
-              }`}>
-                {brandingMsg.text}
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2">
-              {orderLinkFull && (
-                <a
-                  href={orderLinkFull}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-secondary"
-                >
-                  Voir ma boutique
-                </a>
-              )}
-              <button type="submit" disabled={isPending || logoUploading} className="btn-primary">
-                {isPending ? 'Sauvegarde...' : 'Enregistrer'}
-              </button>
-            </div>
-          </form>
+          </div>
 
           <form onSubmit={handleSlugSave} className="card p-5 space-y-4">
             <h2 className="font-semibold text-gray-900">

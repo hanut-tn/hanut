@@ -15,15 +15,37 @@ type Props = {
   cart: CartItem[]
   t: StorefrontDict
   isRtl: boolean
+  portalContainer?: HTMLElement | null
   onClose: () => void
   onAdd: (item: Omit<CartItem, 'key'>) => void
 }
 
-export default function ProductQuickModal({ product, cart, t, isRtl, onClose, onAdd }: Props) {
+export default function ProductQuickModal({ product, cart, t, isRtl, portalContainer, onClose, onAdd }: Props) {
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
   const [quantity, setQuantity] = useState(1)
+  const [activeImage, setActiveImage] = useState(0)
   const panelRef = useRef<HTMLDivElement>(null)
+  const touchStartX = useRef<number | null>(null)
   useFocusTrap(panelRef)
+
+  const images = [product.image_url, ...product.images_gallery].filter((u): u is string => !!u)
+
+  function goToImage(i: number) {
+    setActiveImage(Math.max(0, Math.min(i, images.length - 1)))
+  }
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    if (touchStartX.current == null) return
+    const delta = e.changedTouches[0].clientX - touchStartX.current
+    if (Math.abs(delta) > 40) {
+      goToImage(delta < 0 ? activeImage + 1 : activeImage - 1)
+    }
+    touchStartX.current = null
+  }
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -112,21 +134,53 @@ export default function ProductQuickModal({ product, cart, t, isRtl, onClose, on
 
         {/* Body */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4">
-          {/* Produit */}
-          <div className="flex gap-3">
-            <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-[#F0FDF4] shrink-0 flex items-center justify-center">
-              {product.image_url ? (
-                <Image src={product.image_url} alt={product.name} fill sizes="80px" className="object-cover" />
+          {/* Galerie */}
+          <div>
+            <div
+              className="relative aspect-square rounded-xl overflow-hidden bg-[#F0FDF4]"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
+              {images.length > 0 ? (
+                <Image
+                  key={activeImage}
+                  src={images[activeImage]}
+                  alt={product.name}
+                  fill
+                  sizes="(max-width: 640px) 100vw, 448px"
+                  className="object-cover animate-fade-in"
+                />
               ) : (
-                <ImageOff className="w-6 h-6 text-[#78716C] opacity-40" />
+                <span className="absolute inset-0 flex items-center justify-center text-[#78716C]">
+                  <ImageOff className="w-8 h-8 opacity-40" />
+                </span>
               )}
             </div>
-            <div className="min-w-0">
-              <p className="text-lg font-bold text-brand-600">{effectivePrice} DT</p>
-              {product.description && (
-                <p className="text-xs text-[#78716C] line-clamp-3 mt-0.5">{product.description}</p>
-              )}
-            </div>
+            {images.length > 1 && (
+              <div className="mt-2 flex gap-2 overflow-x-auto">
+                {images.map((src, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => goToImage(i)}
+                    style={i === activeImage ? { borderColor: 'var(--primary)' } : undefined}
+                    className={`relative w-14 h-14 shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${
+                      i === activeImage ? '' : 'border-transparent opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <Image src={src} alt="" fill sizes="56px" className="object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Prix + description */}
+          <div className="min-w-0">
+            <p className="text-lg font-bold" style={{ color: 'var(--primary)' }}>{effectivePrice} DT</p>
+            {product.description && (
+              <p className="text-xs text-[#78716C] line-clamp-3 mt-0.5">{product.description}</p>
+            )}
           </div>
 
           {/* Variantes */}
@@ -143,12 +197,15 @@ export default function ProductQuickModal({ product, cart, t, isRtl, onClose, on
                       type="button"
                       disabled={isOut}
                       onClick={() => setSelectedLabel(v.label)}
+                      style={isOut ? undefined : isSelected
+                        ? { borderColor: 'var(--primary)', backgroundColor: 'color-mix(in srgb, var(--primary) 12%, white)', color: 'var(--primary-dark)' }
+                        : undefined}
                       className={`min-h-[44px] touch-manipulation rounded-lg px-3 py-2 text-sm transition-colors ${
                         isOut
                           ? 'border border-[#E7E5E4] opacity-40 cursor-not-allowed line-through'
                           : isSelected
-                            ? 'border-2 border-[#16A34A] bg-[#F0FDF4] text-[#166534] font-medium'
-                            : 'border border-[#D6D3D1] text-[#44403C] hover:border-[#16A34A]'
+                            ? 'border-2 font-medium'
+                            : 'border border-[#D6D3D1] text-[#44403C] hover:border-[var(--primary)]'
                       }`}
                     >
                       {v.label}
@@ -170,7 +227,8 @@ export default function ProductQuickModal({ product, cart, t, isRtl, onClose, on
                 type="button"
                 disabled={quantity <= 1}
                 onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                className="w-11 h-11 touch-manipulation rounded-lg border border-[#16A34A] flex items-center justify-center text-[#16A34A] hover:bg-green-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}
+                className="w-11 h-11 touch-manipulation rounded-lg border flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
                 aria-label={t.quick.decreaseQty}
               >
                 <Minus className="w-4 h-4" />
@@ -180,7 +238,8 @@ export default function ProductQuickModal({ product, cart, t, isRtl, onClose, on
                 type="button"
                 disabled={quantity >= remaining}
                 onClick={() => setQuantity(q => Math.min(remaining, q + 1))}
-                className="w-11 h-11 touch-manipulation rounded-lg border border-[#16A34A] flex items-center justify-center text-[#16A34A] hover:bg-green-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}
+                className="w-11 h-11 touch-manipulation rounded-lg border flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
                 aria-label={t.quick.increaseQty}
               >
                 <Plus className="w-4 h-4" />
@@ -203,13 +262,14 @@ export default function ProductQuickModal({ product, cart, t, isRtl, onClose, on
             type="button"
             disabled={!canAdd}
             onClick={handleAdd}
-            className="h-12 w-full touch-manipulation bg-[#16A34A] text-white font-bold rounded-lg text-base transition-all duration-150 ease-out hover:bg-[#15803D] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            style={canAdd ? { backgroundColor: 'var(--primary)' } : undefined}
+            className="h-12 w-full touch-manipulation text-white font-bold rounded-lg text-base transition-all duration-150 ease-out active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             {t.quick.addToCart(total)}
           </button>
         </div>
       </div>
     </div>,
-    document.body
+    portalContainer ?? document.body
   )
 }

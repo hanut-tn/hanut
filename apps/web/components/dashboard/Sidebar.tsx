@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, ShoppingBag, Users, Package, Truck, BarChart2, Settings, Users2 } from 'lucide-react'
+import { LayoutDashboard, ShoppingBag, Users, Package, Store, Truck, BarChart2, Settings, Users2 } from 'lucide-react'
 import type { UserRole } from '@/lib/get-context'
 import { usePendingOrdersCount } from './usePendingOrdersCount'
 import { usePendingCodCount } from './usePendingCodCount'
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: '/orders',     label: 'Commandes',   icon: ShoppingBag,     roles: ['admin', 'operator', 'readonly'] as UserRole[] },
   { href: '/customers',  label: 'Clients',     icon: Users,           roles: ['admin', 'operator', 'readonly'] as UserRole[] },
   { href: '/catalog',    label: 'Catalogue',   icon: Package,         roles: ['admin', 'operator'] as UserRole[] },
+  { href: '/boutique',   label: 'Boutique',    icon: Store,           roles: ['admin', 'operator'] as UserRole[] },
   { href: '/deliveries', label: 'Livraisons',  icon: Truck,           roles: ['admin', 'operator'] as UserRole[] },
   { href: '/analytics',  label: 'Analytiques', icon: BarChart2,       roles: ['admin', 'readonly'] as UserRole[] },
   { href: '/settings',   label: 'Paramètres',  icon: Settings,        roles: ['admin'] as UserRole[] },

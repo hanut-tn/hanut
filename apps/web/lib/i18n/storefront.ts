@@ -17,6 +17,13 @@ export interface StorefrontDict extends OrderFormDict {
     variantsCount: (count: number) => string
     add: string
     added: string
+    categoryAll: string
+  }
+  search: {
+    placeholder: string
+    noResultsTitle: string
+    noResultsFor: (query: string) => string
+    resetButton: string
   }
   quick: {
     chooseVariant: string
@@ -52,6 +59,7 @@ export interface StorefrontDict extends OrderFormDict {
   confirmExtra: {
     contactSoon: string
     itemsTotal: string
+    shareWhatsApp: string
   }
 }
 
@@ -67,6 +75,13 @@ const fr: StorefrontDict = {
     variantsCount: count => `${count} variante${count > 1 ? 's' : ''}`,
     add: 'Ajouter',
     added: '✓ Ajouté',
+    categoryAll: 'Tous',
+  },
+  search: {
+    placeholder: 'Rechercher un produit...',
+    noResultsTitle: 'Aucun produit trouvé',
+    noResultsFor: query => `pour "${query}"`,
+    resetButton: 'Voir tous les produits',
   },
   quick: {
     chooseVariant: 'Choisissez une variante',
@@ -102,6 +117,7 @@ const fr: StorefrontDict = {
   confirmExtra: {
     contactSoon: 'Vous serez contacté sous 24h pour confirmer la livraison.',
     itemsTotal: 'Total',
+    shareWhatsApp: 'Partager sur WhatsApp',
   },
 }
 
@@ -117,6 +133,13 @@ const ar: StorefrontDict = {
     variantsCount: count => `${count} أنواع`,
     add: 'أضف',
     added: '✓ تمت الإضافة',
+    categoryAll: 'الكل',
+  },
+  search: {
+    placeholder: 'ابحث عن منتج...',
+    noResultsTitle: 'لم يتم العثور على أي منتج',
+    noResultsFor: query => `لـ "${query}"`,
+    resetButton: 'عرض جميع المنتجات',
   },
   quick: {
     chooseVariant: 'اختر نوعًا',
@@ -152,6 +175,7 @@ const ar: StorefrontDict = {
   confirmExtra: {
     contactSoon: 'سيتم الاتصال بك خلال 24 ساعة لتأكيد التوصيل.',
     itemsTotal: 'المجموع',
+    shareWhatsApp: 'مشاركة عبر واتساب',
   },
 }
 

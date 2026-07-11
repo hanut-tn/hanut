@@ -27,6 +27,8 @@ export interface StorefrontProduct {
   minPrice: number
   /** Prix effectif maximum — si > minPrice, afficher « À partir de ». */
   maxPrice: number
+  categoryIds: string[]
+  images_gallery: string[]
 }
 
 export interface CartItem {

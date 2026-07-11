@@ -198,10 +198,11 @@ export default function OtpStep({
               onKeyDown={e => handleKeyDown(i, e)}
               autoComplete={i === 0 ? 'one-time-code' : 'off'}
               aria-label={t.otp.digitAriaLabel(i + 1)}
-              className={`w-14 h-14 text-center text-2xl font-bold border-2 rounded-xl outline-none focus:ring-2 focus:ring-green-100 transition caret-transparent ${
-                otpDigits[i]
-                  ? 'border-[#16A34A] bg-[#F0FDF4] text-[#0B5E46]'
-                  : 'border-[#E7E5E4] focus:border-[#16A34A]'
+              style={otpDigits[i]
+                ? { borderColor: 'var(--primary)', backgroundColor: 'color-mix(in srgb, var(--primary) 10%, white)', color: 'var(--primary-dark)' }
+                : undefined}
+              className={`w-14 h-14 text-center text-2xl font-bold border-2 rounded-xl outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition caret-transparent ${
+                otpDigits[i] ? '' : 'border-[#E7E5E4] focus:border-[var(--primary)]'
               }`}
             />
           ))}
@@ -221,7 +222,8 @@ export default function OtpStep({
           type="button"
           onClick={() => handleVerify(otpDigits.join(''))}
           disabled={loading || otpDigits.some(d => !d) || (isTurnstileEnabled() && !turnstileToken)}
-          className="h-12 w-full touch-manipulation bg-[#16A34A] text-white font-bold rounded-lg text-base transition-all duration-150 ease-out hover:bg-[#15803D] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ backgroundColor: 'var(--primary)' }}
+          className="h-12 w-full touch-manipulation text-white font-bold rounded-lg text-base transition-all duration-150 ease-out active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? t.otp.verifying : t.otp.validateCode}
         </button>
@@ -234,7 +236,8 @@ export default function OtpStep({
               type="button"
               onClick={handleResend}
               disabled={loading || (isTurnstileEnabled() && !turnstileToken)}
-              className="text-sm text-[#16A34A] font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ color: 'var(--primary)' }}
+              className="text-sm font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {t.otp.resendCode}
             </button>

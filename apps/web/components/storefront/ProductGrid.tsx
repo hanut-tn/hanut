@@ -3,16 +3,25 @@
 import { Store } from 'lucide-react'
 import type { StorefrontProduct } from '@/lib/storefront/cart'
 import type { StorefrontDict } from '@/lib/i18n/storefront'
+import type { StorefrontLayout } from '@hanut/types'
 import ProductCard from './ProductCard'
 
 type Props = {
   products: StorefrontProduct[]
   t: StorefrontDict
+  layout?: StorefrontLayout
+  cardRadius?: string
   onSelect: (product: StorefrontProduct) => void
   onQuickAdd: (product: StorefrontProduct) => void
 }
 
-export default function ProductGrid({ products, t, onSelect, onQuickAdd }: Props) {
+const LAYOUT_CLASS: Record<StorefrontLayout, string> = {
+  'grid-2': 'grid grid-cols-2 gap-3 px-3 py-4 sm:gap-4 sm:px-4',
+  'grid-3': 'grid grid-cols-2 gap-3 px-3 py-4 sm:grid-cols-3 sm:gap-4 sm:px-4 lg:grid-cols-4 lg:gap-5',
+  list: 'flex flex-col gap-3 px-3 py-4 sm:px-4',
+}
+
+export default function ProductGrid({ products, t, layout = 'grid-3', cardRadius, onSelect, onQuickAdd }: Props) {
   const inStock = products.filter(p => p.stock > 0)
   const outOfStock = products.filter(p => p.stock === 0)
 
@@ -27,12 +36,13 @@ export default function ProductGrid({ products, t, onSelect, onQuickAdd }: Props
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 px-3 py-4 sm:grid-cols-3 sm:gap-4 sm:px-4 lg:grid-cols-4 lg:gap-5">
+    <div className={LAYOUT_CLASS[layout]}>
       {[...inStock, ...outOfStock].map(product => (
         <ProductCard
           key={product.id}
           product={product}
           t={t}
+          cardRadius={cardRadius}
           onSelect={onSelect}
           onQuickAdd={onQuickAdd}
         />

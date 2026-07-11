@@ -13,6 +13,7 @@ type Props = {
   totals: { totalItems: number; totalPrice: number }
   t: StorefrontDict
   isRtl: boolean
+  portalContainer?: HTMLElement | null
   onClose: () => void
   onUpdateQuantity: (key: string, quantity: number) => void
   onRemove: (key: string) => void
@@ -20,7 +21,7 @@ type Props = {
 }
 
 export default function CartDrawer({
-  items, totals, t, isRtl, onClose, onUpdateQuantity, onRemove, onCheckout,
+  items, totals, t, isRtl, portalContainer, onClose, onUpdateQuantity, onRemove, onCheckout,
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null)
   useFocusTrap(panelRef)
@@ -73,7 +74,8 @@ export default function CartDrawer({
               <button
                 type="button"
                 onClick={onClose}
-                className="mt-4 text-sm font-medium text-[#16A34A] hover:underline"
+                style={{ color: 'var(--primary)' }}
+                className="mt-4 text-sm font-medium hover:underline"
               >
                 {t.cart.continueShopping}
               </button>
@@ -96,7 +98,7 @@ export default function CartDrawer({
                       {item.variantLabel && (
                         <p className="text-xs text-[#78716C]">{item.variantLabel}</p>
                       )}
-                      <p className="text-sm font-bold text-brand-600 mt-0.5">
+                      <p className="text-sm font-bold mt-0.5" style={{ color: 'var(--primary)' }}>
                         {item.productPrice * item.quantity} DT
                         {item.quantity > 1 && (
                           <span className="text-xs font-normal text-[#78716C]"> ({item.productPrice} DT × {item.quantity})</span>
@@ -107,7 +109,7 @@ export default function CartDrawer({
                           type="button"
                           disabled={item.quantity <= 1}
                           onClick={() => onUpdateQuantity(item.key, item.quantity - 1)}
-                          className="w-8 h-8 touch-manipulation rounded-md border border-[#D6D3D1] flex items-center justify-center text-[#44403C] hover:border-[#16A34A] hover:text-[#16A34A] transition-colors disabled:opacity-40"
+                          className="w-8 h-8 touch-manipulation rounded-md border border-[#D6D3D1] flex items-center justify-center text-[#44403C] transition-colors disabled:opacity-40 hover:border-[var(--primary)] hover:text-[var(--primary)]"
                           aria-label={`${t.quick.decreaseQty} — ${item.productName}`}
                         >
                           <Minus className="w-3.5 h-3.5" />
@@ -117,7 +119,7 @@ export default function CartDrawer({
                           type="button"
                           disabled={item.quantity >= cap}
                           onClick={() => onUpdateQuantity(item.key, item.quantity + 1)}
-                          className="w-8 h-8 touch-manipulation rounded-md border border-[#D6D3D1] flex items-center justify-center text-[#44403C] hover:border-[#16A34A] hover:text-[#16A34A] transition-colors disabled:opacity-40"
+                          className="w-8 h-8 touch-manipulation rounded-md border border-[#D6D3D1] flex items-center justify-center text-[#44403C] transition-colors disabled:opacity-40 hover:border-[var(--primary)] hover:text-[var(--primary)]"
                           aria-label={`${t.quick.increaseQty} — ${item.productName}`}
                         >
                           <Plus className="w-3.5 h-3.5" />
@@ -146,12 +148,13 @@ export default function CartDrawer({
             <p className="text-xs text-[#78716C]">{t.cart.codNote}</p>
             <div className="flex items-center justify-between">
               <span className="text-sm text-[#78716C]">{t.cart.total}</span>
-              <span className="text-xl font-extrabold text-[#0B5E46]">{totals.totalPrice} DT</span>
+              <span className="text-xl font-extrabold" style={{ color: 'var(--primary-dark)' }}>{totals.totalPrice} DT</span>
             </div>
             <button
               type="button"
               onClick={onCheckout}
-              className="h-12 w-full touch-manipulation bg-[#16A34A] text-white font-bold rounded-lg text-base transition-all duration-150 ease-out hover:bg-[#15803D] active:scale-[0.98]"
+              style={{ backgroundColor: 'var(--primary)' }}
+              className="h-12 w-full touch-manipulation text-white font-bold rounded-lg text-base transition-all duration-150 ease-out active:scale-[0.98]"
             >
               {t.cart.checkout}
             </button>
@@ -159,6 +162,6 @@ export default function CartDrawer({
         )}
       </div>
     </div>,
-    document.body
+    portalContainer ?? document.body
   )
 }

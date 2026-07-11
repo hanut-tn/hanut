@@ -8,6 +8,7 @@ import { logActivity } from '@/lib/activity'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { getVariantLabel, sumVariantStock } from '@/lib/variants'
 import { requireActive } from '@/lib/assert-active'
+import type { Category } from '@hanut/types'
 
 const ProductVariantSchema = z.object({
   size: z.string().max(50, 'Taille trop longue.').optional(),
@@ -25,6 +26,8 @@ const ProductSchema = z.object({
   description: z.string().max(2000, 'La description ne doit pas dépasser 2000 caractères').optional().nullable(),
   variants: z.array(ProductVariantSchema),
   image_url: z.string().url('URL de l’image invalide').max(2048).optional().nullable(),
+  images_gallery: z.array(z.string().url('URL de galerie invalide').max(2048)).max(5, 'Maximum 5 photos supplémentaires.').optional(),
+  categoryIds: z.array(z.string().uuid()).optional(),
 })
 
 const UpdateProductSchema = ProductSchema.extend({
@@ -63,6 +66,7 @@ export async function upsertProduct(input: ProductInput): Promise<{ error?: stri
     low_stock_alert: product.low_stock_alert,
     variants: product.variants,
     image_url: product.image_url ?? null,
+    images_gallery: product.images_gallery ?? [],
     description: product.description ?? null,
   }
 
@@ -88,6 +92,16 @@ export async function upsertProduct(input: ProductInput): Promise<{ error?: stri
       p_changed_by_name: context.userName,
     })
     if (error) return { error: error.message }
+
+    // images_gallery n'est pas géré par la RPC update_product (non modifiée
+    // volontairement) — mise à jour séparée, même pattern que categoryIds.
+    if (product.images_gallery !== undefined) {
+      const { error: galleryError } = await supabase.from('products')
+        .update({ images_gallery: product.images_gallery })
+        .eq('id', validatedProductId)
+        .eq('seller_id', context.sellerId)
+      if (galleryError) return { error: galleryError.message }
+    }
   } else {
     const { data, error } = await supabase.from('products')
       .insert({ ...payload, seller_id: context.sellerId })
@@ -95,6 +109,11 @@ export async function upsertProduct(input: ProductInput): Promise<{ error?: stri
       .single()
     if (error) return { error: error.message }
     productId = data.id
+  }
+
+  if (productId && product.categoryIds !== undefined) {
+    const categoriesResult = await updateProductCategories(productId, product.categoryIds)
+    if (categoriesResult.error) return categoriesResult
   }
 
   await logActivity({
@@ -388,5 +407,133 @@ export async function adjustStock(id: string, input: StockAdjustmentInput): Prom
   revalidatePath('/catalog')
   revalidatePath(`/catalog/${id}`)
   revalidateTag(`dashboard-${context.sellerId}`)
+  return {}
+}
+
+// ============================================================
+// Catégories produits
+// ============================================================
+
+const MAX_CATEGORIES = 20
+
+export async function getCategories(): Promise<Category[]> {
+  const context = await getUserContext()
+  if (!context) return []
+
+  const supabase = await createServerClient()
+  const { data } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('seller_id', context.sellerId)
+    .order('position', { ascending: true })
+
+  return (data ?? []) as Category[]
+}
+
+export async function createCategory(name: string): Promise<{ category?: Category; error?: string }> {
+  const context = await getUserContext()
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
+
+  const cleaned = name.trim()
+  if (!cleaned) return { error: 'Le nom de la catégorie est obligatoire.' }
+  if (cleaned.length > 50) return { error: 'Le nom de la catégorie ne doit pas dépasser 50 caractères.' }
+
+  const supabase = await createServerClient()
+
+  const { count } = await supabase
+    .from('categories')
+    .select('id', { count: 'exact', head: true })
+    .eq('seller_id', context.sellerId)
+  if ((count ?? 0) >= MAX_CATEGORIES) {
+    return { error: `Maximum ${MAX_CATEGORIES} catégories par boutique.` }
+  }
+
+  const { data, error } = await supabase
+    .from('categories')
+    .insert({ seller_id: context.sellerId, name: cleaned, position: count ?? 0 })
+    .select('*')
+    .single()
+
+  if (error) {
+    if (error.code === '23505') return { error: 'Cette catégorie existe déjà.' }
+    return { error: error.message }
+  }
+
+  revalidatePath('/catalog')
+  return { category: data as Category }
+}
+
+export async function updateCategory(id: string, name: string): Promise<{ error?: string }> {
+  const context = await getUserContext()
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
+
+  const cleaned = name.trim()
+  if (!cleaned) return { error: 'Le nom de la catégorie est obligatoire.' }
+  if (cleaned.length > 50) return { error: 'Le nom de la catégorie ne doit pas dépasser 50 caractères.' }
+
+  const supabase = await createServerClient()
+  const { error } = await supabase
+    .from('categories')
+    .update({ name: cleaned })
+    .eq('id', id)
+    .eq('seller_id', context.sellerId)
+
+  if (error) {
+    if (error.code === '23505') return { error: 'Cette catégorie existe déjà.' }
+    return { error: error.message }
+  }
+
+  revalidatePath('/catalog')
+  return {}
+}
+
+export async function deleteCategory(id: string): Promise<{ error?: string }> {
+  const context = await getUserContext()
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
+
+  const supabase = await createServerClient()
+  const { error } = await supabase
+    .from('categories')
+    .delete()
+    .eq('id', id)
+    .eq('seller_id', context.sellerId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/catalog')
+  return {}
+}
+
+export async function updateProductCategories(productId: string, categoryIds: string[]): Promise<{ error?: string }> {
+  const context = await getUserContext()
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
+
+  const supabase = await createServerClient()
+
+  const { error: deleteError } = await supabase
+    .from('product_categories')
+    .delete()
+    .eq('product_id', productId)
+  if (deleteError) return { error: deleteError.message }
+
+  if (categoryIds.length > 0) {
+    const { error: insertError } = await supabase
+      .from('product_categories')
+      .insert(categoryIds.map(categoryId => ({ product_id: productId, category_id: categoryId })))
+    if (insertError) return { error: insertError.message }
+  }
+
   return {}
 }

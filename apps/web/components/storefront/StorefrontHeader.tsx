@@ -25,7 +25,8 @@ function Avatar({ shopName, logoUrl, size }: { shopName: string; logoUrl: string
   const initial = shopName.trim().charAt(0).toUpperCase() || '?'
   return (
     <div
-      className={`rounded-full bg-white text-brand-600 font-bold flex items-center justify-center shrink-0 shadow-md ${sizeClasses}`}
+      style={{ color: 'var(--primary)' }}
+      className={`rounded-full bg-white font-bold flex items-center justify-center shrink-0 shadow-md ${sizeClasses}`}
     >
       {initial}
     </div>
@@ -34,13 +35,13 @@ function Avatar({ shopName, logoUrl, size }: { shopName: string; logoUrl: string
 
 export default function StorefrontHeader({ shopName, shopDescription, logoUrl, t }: Props) {
   return (
-    <div className="bg-gradient-to-r from-brand-600 to-brand-700">
+    <div style={{ background: 'linear-gradient(to right, var(--primary), var(--primary-dark))' }}>
       <div className="max-w-5xl mx-auto py-8 px-6 flex items-center gap-4">
         <Avatar shopName={shopName} logoUrl={logoUrl} size="lg" />
         <div className="min-w-0">
           <h1 className="text-2xl font-bold text-white truncate">{shopName}</h1>
           {shopDescription && (
-            <p className="text-brand-100 text-sm mt-1">{shopDescription}</p>
+            <p className="text-white/85 text-sm mt-1">{shopDescription}</p>
           )}
           <span className="inline-flex items-center gap-1.5 mt-2 bg-white/20 text-white text-xs px-3 py-1 rounded-full">
             <MapPin className="w-3 h-3" />

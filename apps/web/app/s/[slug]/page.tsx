@@ -4,6 +4,7 @@ import { AlertTriangle } from 'lucide-react'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getVariantLabel } from '@/lib/variants'
 import type { StorefrontProduct } from '@/lib/storefront/cart'
+import { DEFAULT_STOREFRONT_CONFIG, type Category, type StorefrontConfig } from '@hanut/types'
 import StorefrontShell from '@/components/storefront/StorefrontShell'
 
 type Props = { params: Promise<{ slug: string }> }
@@ -39,8 +40,10 @@ type DbProduct = {
   price: number
   stock: number
   image_url: string | null
+  images_gallery: string[] | null
   low_stock_alert: number
   variants: DbVariant[]
+  product_categories: { category_id: string }[] | null
 }
 
 function toStorefrontProduct(p: DbProduct): StorefrontProduct {
@@ -68,6 +71,8 @@ function toStorefrontProduct(p: DbProduct): StorefrontProduct {
     hasVariants,
     minPrice: Math.min(...candidates),
     maxPrice: Math.max(...candidates),
+    categoryIds: (p.product_categories ?? []).map(pc => pc.category_id),
+    images_gallery: p.images_gallery ?? [],
   }
 }
 
@@ -89,18 +94,30 @@ export default async function StorefrontPage({ params }: Props) {
 
   const { data: seller } = await supabase
     .from('sellers')
-    .select('id, name, slug, shop_name, shop_description, logo_url')
+    .select('id, name, slug, shop_name, shop_description, logo_url, storefront_config')
     .eq('slug', slug)
     .single()
 
   if (!seller) notFound()
 
-  const { data: products } = await supabase
-    .from('products')
-    .select('id, name, description, price, stock, variants, image_url, low_stock_alert')
-    .eq('seller_id', seller.id)
-    .order('name')
-    .limit(200)
+  const config: StorefrontConfig = {
+    ...DEFAULT_STOREFRONT_CONFIG,
+    ...(seller.storefront_config as Partial<StorefrontConfig> | null ?? {}),
+  }
+
+  const [{ data: products }, { data: categories }] = await Promise.all([
+    supabase
+      .from('products')
+      .select('id, name, description, price, stock, variants, image_url, images_gallery, low_stock_alert, product_categories(category_id)')
+      .eq('seller_id', seller.id)
+      .order('name')
+      .limit(200),
+    supabase
+      .from('categories')
+      .select('id, seller_id, name, position, created_at')
+      .eq('seller_id', seller.id)
+      .order('position'),
+  ])
 
   const storefrontProducts = ((products ?? []) as DbProduct[]).map(toStorefrontProduct)
 
@@ -111,6 +128,8 @@ export default async function StorefrontPage({ params }: Props) {
       shopDescription={seller.shop_description ?? null}
       logoUrl={seller.logo_url ?? null}
       products={storefrontProducts}
+      categories={(categories ?? []) as Category[]}
+      config={config}
     />
   )
 }

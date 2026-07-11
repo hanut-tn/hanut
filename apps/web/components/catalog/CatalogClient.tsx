@@ -8,13 +8,14 @@ import Image from 'next/image'
 import {
   Search, LayoutGrid, List, Plus, Package, SearchX, ImageOff, Pencil,
   Trash2, ChevronDown, ChevronUp, AlertTriangle, PackageX, CheckCircle2,
-  MoreHorizontal, SlidersHorizontal, FileText, Eye,
+  MoreHorizontal, SlidersHorizontal, FileText, Eye, Tag,
 } from 'lucide-react'
-import type { Product, ProductVariant } from '@hanut/types'
+import type { Product, ProductVariant, ProductWithCategories, Category } from '@hanut/types'
 import type { ProductInput, StockAdjustmentInput } from '@/app/(dashboard)/catalog/actions'
 import { getVariantLabel } from '@/lib/variants'
 import ProductModal from './ProductModal'
 import AdjustStockModal from './AdjustStockModal'
+import CategoriesModal from './CategoriesModal'
 
 type ViewMode = 'grid' | 'list' | 'restock'
 type SortMode =
@@ -30,11 +31,15 @@ const BLUR_DATA_URL =
   'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AJQAB/9k='
 
 type Props = {
-  products: Product[]
+  products: ProductWithCategories[]
+  categories: Category[]
   role: string
   upsertProduct: (input: ProductInput) => Promise<{ error?: string }>
   deleteProduct: (id: string) => Promise<{ error?: string }>
   adjustStock: (id: string, input: StockAdjustmentInput) => Promise<{ error?: string }>
+  createCategory: (name: string) => Promise<{ category?: Category; error?: string }>
+  updateCategory: (id: string, name: string) => Promise<{ error?: string }>
+  deleteCategory: (id: string) => Promise<{ error?: string }>
 }
 
 // ── Statut stock (sémantique seuil, pas pourcentage) ─────────────────────────
@@ -69,6 +74,20 @@ function StockBar({ product }: { product: Product }) {
         className={`h-1.5 rounded-full transition-all ${STATUS_BAR[stockStatus(product)]}`}
         style={{ width: `${pct}%` }}
       />
+    </div>
+  )
+}
+
+// ── Badges catégories ──────────────────────────────────────────────────────────
+function CategoryBadges({ categories }: { categories: Category[] }) {
+  if (categories.length === 0) return null
+  return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      {categories.map(c => (
+        <span key={c.id} className="text-[10px] leading-4 rounded-full bg-[#F0FDF4] text-[#166534] px-2 py-0.5">
+          {c.name}
+        </span>
+      ))}
     </div>
   )
 }
@@ -232,9 +251,9 @@ function ProductActionsMenu({
 function ProductCard({
   product, canWrite, onEdit, onAdjust, onDelete,
 }: {
-  product: Product
+  product: ProductWithCategories
   canWrite: boolean
-  onEdit: (p: Product) => void
+  onEdit: (p: ProductWithCategories) => void
   onAdjust: (p: Product) => void
   onDelete: (p: Product) => void
 }) {
@@ -284,6 +303,7 @@ function ProductCard({
               Achat : {product.cost} DT{margin !== null && <> · Marge : {margin}%</>}
             </p>
           )}
+          <CategoryBadges categories={product.categories} />
         </div>
 
         {/* Stock */}
@@ -323,9 +343,9 @@ function ProductCard({
 function ProductListMobileCard({
   product, canWrite, onEdit, onAdjust, onDelete,
 }: {
-  product: Product
+  product: ProductWithCategories
   canWrite: boolean
-  onEdit: (p: Product) => void
+  onEdit: (p: ProductWithCategories) => void
   onAdjust: (p: Product) => void
   onDelete: (p: Product) => void
 }) {
@@ -361,6 +381,7 @@ function ProductListMobileCard({
           </div>
           <p className="text-sm font-bold text-brand-600">{product.price} DT</p>
           <VariantChips variants={product.variants} />
+          <CategoryBadges categories={product.categories} />
           <div className="mt-1.5 flex items-center gap-2">
             <div className="h-1.5 flex-1 rounded-full bg-[#E7E5E4]">
               <div
@@ -435,18 +456,24 @@ function SortableTh({
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-export default function CatalogClient({ products, role, upsertProduct, deleteProduct, adjustStock }: Props) {
+export default function CatalogClient({
+  products, categories, role, upsertProduct, deleteProduct, adjustStock, createCategory, updateCategory, deleteCategory,
+}: Props) {
   const [view, setViewState] = useState<ViewMode>('grid')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [sort, setSort] = useState<SortMode>('newest')
   const [stockFilter, setStockFilter] = useState<StockFilter>('all')
-  const [modal, setModal] = useState<null | 'new' | Product>(null)
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [allCategories, setAllCategories] = useState<Category[]>(categories)
+  const [showCategoriesModal, setShowCategoriesModal] = useState(false)
+  const [modal, setModal] = useState<null | 'new' | ProductWithCategories>(null)
   const [adjustProduct, setAdjustProduct] = useState<Product | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<Product | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const canWrite = role !== 'readonly'
+  useEffect(() => setAllCategories(categories), [categories])
   useShortcut('p', () => setModal('new'), canWrite && modal === null)
 
   // Vue par défaut : liste sur mobile, choix persisté sinon.
@@ -472,7 +499,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
 
   // État local pour les mises à jour optimistes (suppression, ajustement stock),
   // resynchronisé quand le serveur renvoie des données fraîches.
-  const [allProducts, setAllProducts] = useState<Product[]>(products)
+  const [allProducts, setAllProducts] = useState<ProductWithCategories[]>(products)
   useEffect(() => setAllProducts(products), [products])
 
   const outOfStockCount = allProducts.filter(p => p.stock === 0).length
@@ -510,6 +537,10 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
     else if (stockFilter === 'low_stock') result = result.filter(p => p.stock <= p.low_stock_alert && p.stock > 0)
     else if (stockFilter === 'out_of_stock') result = result.filter(p => p.stock === 0)
 
+    if (categoryFilter !== 'all') {
+      result = result.filter(p => p.categories.some(c => c.id === categoryFilter))
+    }
+
     switch (sort) {
       case 'newest':     result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); break
       case 'name_asc':   result.sort((a, b) => a.name.localeCompare(b.name, 'fr')); break
@@ -520,7 +551,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
       case 'stock_desc': result.sort((a, b) => b.stock - a.stock); break
     }
     return result
-  }, [allProducts, debouncedSearch, sort, stockFilter])
+  }, [allProducts, debouncedSearch, sort, stockFilter, categoryFilter])
 
   function handleDelete(id: string) {
     const prev = allProducts
@@ -559,10 +590,19 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
           </p>
         </div>
         {canWrite && (
-          <button onClick={() => setModal('new')} title="Raccourci : P" className="btn-primary flex w-full items-center justify-center gap-2 text-sm sm:w-auto sm:self-auto">
-            <Plus className="w-4 h-4" />
-            Nouveau produit
-          </button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => setShowCategoriesModal(true)}
+              className="btn-secondary flex flex-1 items-center justify-center gap-2 text-sm sm:flex-none"
+            >
+              <Tag className="w-4 h-4" />
+              Catégories
+            </button>
+            <button onClick={() => setModal('new')} title="Raccourci : P" className="btn-primary flex flex-1 items-center justify-center gap-2 text-sm sm:flex-none">
+              <Plus className="w-4 h-4" />
+              Nouveau produit
+            </button>
+          </div>
         )}
       </div>
 
@@ -657,6 +697,18 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
           </select>
           <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
         </div>
+
+        {allCategories.length > 0 && (
+          <div className="relative w-full sm:w-auto">
+            <select className={selectClass} value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} aria-label="Filtrer par catégorie">
+              <option value="all">Toutes catégories</option>
+              {allCategories.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
+          </div>
+        )}
       </div>
 
       {/* Vue À RÉAPPROVISIONNER */}
@@ -846,6 +898,7 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
                       <td className="px-4 py-3">
                         <p className="font-medium text-[#1C1917]">{p.name}</p>
                         <VariantChips variants={p.variants} />
+                        <CategoryBadges categories={p.categories} />
                       </td>
                       <td className="px-4 py-3 font-semibold text-[#1C1917] whitespace-nowrap">{p.price} DT</td>
                       <td className="px-4 py-3 text-[#78716C]">
@@ -951,6 +1004,9 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
       {canWrite && modal !== null && (
         <ProductModal
           product={modal === 'new' ? null : modal}
+          allCategories={allCategories}
+          productCategoryIds={modal === 'new' ? [] : modal.categories.map(c => c.id)}
+          onManageCategories={() => setShowCategoriesModal(true)}
           onClose={() => setModal(null)}
           onSave={async input => {
             const result = await upsertProduct(input)
@@ -958,6 +1014,18 @@ export default function CatalogClient({ products, role, upsertProduct, deletePro
             setModal(null)
             return {}
           }}
+        />
+      )}
+
+      {/* Modal catégories */}
+      {canWrite && showCategoriesModal && (
+        <CategoriesModal
+          categories={allCategories}
+          onClose={() => setShowCategoriesModal(false)}
+          createCategory={createCategory}
+          updateCategory={updateCategory}
+          deleteCategory={deleteCategory}
+          onChange={setAllCategories}
         />
       )}
 

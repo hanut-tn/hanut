@@ -4,14 +4,17 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ShoppingCart } from 'lucide-react'
+import { ShoppingCart, Search } from 'lucide-react'
 import { useLang } from '@/lib/i18n/use-lang'
 import { storefrontTranslations } from '@/lib/i18n/storefront'
+import { STOREFRONT_THEMES, DEFAULT_STOREFRONT_CONFIG, type Category, type StorefrontConfig } from '@hanut/types'
+import { adjustColor } from '@/lib/storefront/colors'
 import {
   addItemToCart, cartTotals, reconcileCartWithProducts, type CartItem, type StorefrontProduct,
 } from '@/lib/storefront/cart'
 import ProductGrid from './ProductGrid'
 import StorefrontHeader from './StorefrontHeader'
+import StorefrontSearchBar from './StorefrontSearchBar'
 import ProductQuickModal from './ProductQuickModal'
 import CartBar from './CartBar'
 import CartDrawer from './CartDrawer'
@@ -27,20 +30,45 @@ type Props = {
   shopDescription: string | null
   logoUrl: string | null
   products: StorefrontProduct[]
+  categories: Category[]
+  config?: StorefrontConfig
+  /** Masque la navbar Hanut — utilisé pour l'aperçu en direct intégré au dashboard. */
+  hideTopBar?: boolean
 }
 
-export default function StorefrontShell({ sellerSlug, sellerName, shopDescription, logoUrl, products }: Props) {
-  const { t, isRtl, toggleLang } = useLang(storefrontTranslations)
+export default function StorefrontShell({
+  sellerSlug, sellerName, shopDescription, logoUrl, products, categories,
+  config = DEFAULT_STOREFRONT_CONFIG, hideTopBar = false,
+}: Props) {
+  const { t, lang, isRtl, toggleLang } = useLang(storefrontTranslations)
   const router = useRouter()
+  const shellRef = useRef<HTMLDivElement>(null)
+  const theme = STOREFRONT_THEMES[config.theme] ?? STOREFRONT_THEMES.moderne
 
   const [cart, setCart] = useState<CartItem[]>([])
   const [step, setStep] = useState<Step>('catalog')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState('')
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<StorefrontProduct | null>(null)
   const [checkoutData, setCheckoutData] = useState<CheckoutData | null>(null)
   const [orderResult, setOrderResult] = useState<OrderResult | null>(null)
 
   const totals = cartTotals(cart)
+
+  // Chips catégories : uniquement celles ayant au moins un produit en stock.
+  const availableCategories = categories.filter(c =>
+    products.some(p => p.stock > 0 && p.categoryIds.includes(c.id))
+  )
+  const normalizedQuery = searchQuery.trim().toLowerCase()
+  const filteredProducts = products.filter(p => {
+    const matchesCategory = categoryFilter === 'all' || p.categoryIds.includes(categoryFilter)
+    const matchesSearch = !normalizedQuery
+      || p.name.toLowerCase().includes(normalizedQuery)
+      || (p.description?.toLowerCase().includes(normalizedQuery) ?? false)
+    return matchesCategory && matchesSearch
+  })
+  const hasNoResults = filteredProducts.filter(p => p.stock > 0).length === 0 && (normalizedQuery !== '' || categoryFilter !== 'all')
 
   // Toast
   const [toast, setToast] = useState<string | null>(null)
@@ -172,39 +200,49 @@ export default function StorefrontShell({ sellerSlug, sellerName, shopDescriptio
   const showCartUi = step === 'catalog'
 
   return (
-    <div dir={isRtl ? 'rtl' : 'ltr'} className={`min-h-screen bg-gray-50 ${isRtl ? 'font-arabic' : ''}`}>
+    <div
+      ref={shellRef}
+      dir={isRtl ? 'rtl' : 'ltr'}
+      style={{
+        '--primary': config.primary_color,
+        '--primary-dark': adjustColor(config.primary_color, -15),
+      } as React.CSSProperties}
+      className={`min-h-screen ${theme.pageBg} ${theme.fontClass} ${isRtl ? 'font-arabic' : ''}`}
+    >
       {/* Navbar Hanut sticky */}
-      <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-30">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
-          <Link href="/" className="flex items-center shrink-0" aria-label="Hanut">
-            <Image src="/logo-horizontal.svg" alt="Hanut" width={84} height={27} unoptimized />
-          </Link>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={toggleLang}
-              className="text-xs font-medium text-gray-500 border border-gray-200 rounded-full px-2.5 py-1 min-h-[32px] touch-manipulation transition-colors hover:bg-gray-50 hover:text-[#1C1917]"
-            >
-              {t.common.langToggle}
-            </button>
-            {showCartUi && (
+      {!hideTopBar && (
+        <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-30">
+          <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+            <Link href="/" className="flex items-center shrink-0" aria-label="Hanut">
+              <Image src="/logo-horizontal.svg" alt="Hanut" width={84} height={27} unoptimized />
+            </Link>
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
-                onClick={() => setIsCartOpen(true)}
-                aria-label={t.cart.title}
-                className="relative min-h-[38px] min-w-[38px] touch-manipulation flex items-center justify-center rounded-lg border border-gray-200 text-[#1C1917] hover:bg-gray-50 transition-colors"
+                onClick={toggleLang}
+                className="text-xs font-medium text-gray-500 border border-gray-200 rounded-full px-2.5 py-1 min-h-[32px] touch-manipulation transition-colors hover:bg-gray-50 hover:text-[#1C1917]"
               >
-                <ShoppingCart className="w-4 h-4" />
-                {totals.totalItems > 0 && (
-                  <span className="absolute -top-1.5 -end-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#16A34A] text-white text-[10px] font-bold flex items-center justify-center">
-                    {totals.totalItems}
-                  </span>
-                )}
+                {t.common.langToggle}
               </button>
-            )}
+              {showCartUi && (
+                <button
+                  type="button"
+                  onClick={() => setIsCartOpen(true)}
+                  aria-label={t.cart.title}
+                  className="relative min-h-[38px] min-w-[38px] touch-manipulation flex items-center justify-center rounded-lg border border-gray-200 text-[#1C1917] hover:bg-gray-50 transition-colors"
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  {totals.totalItems > 0 && (
+                    <span className="absolute -top-1.5 -end-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--primary)] text-white text-[10px] font-bold flex items-center justify-center">
+                      {totals.totalItems}
+                    </span>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* En-tête boutique */}
       {step === 'catalog' && (
@@ -216,12 +254,66 @@ export default function StorefrontShell({ sellerSlug, sellerName, shopDescriptio
         />
       )}
 
+      {/* Recherche */}
+      {step === 'catalog' && products.length > 0 && (
+        <div className="max-w-5xl mx-auto px-4 pt-3">
+          <StorefrontSearchBar value={searchQuery} onChange={setSearchQuery} t={t} />
+        </div>
+      )}
+
+      {/* Barre de filtres catégories */}
+      {step === 'catalog' && availableCategories.length > 0 && (
+        <div className={`sticky z-20 ${hideTopBar ? 'top-0' : 'top-14'} bg-gray-50/95 backdrop-blur border-b border-gray-100`}>
+          <div className="max-w-5xl mx-auto flex gap-2 overflow-x-auto px-4 py-2.5 scrollbar-none">
+            <button
+              type="button"
+              onClick={() => setCategoryFilter('all')}
+              className={`shrink-0 min-h-[32px] touch-manipulation rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                categoryFilter === 'all' ? 'bg-[var(--primary)] text-white' : 'bg-white text-[#78716C] border border-gray-200'
+              }`}
+            >
+              {t.shop.categoryAll}
+            </button>
+            {availableCategories.map(c => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setCategoryFilter(c.id)}
+                className={`shrink-0 min-h-[32px] touch-manipulation rounded-full px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors ${
+                  categoryFilter === c.id ? 'bg-[var(--primary)] text-white' : 'bg-white text-[#78716C] border border-gray-200'
+                }`}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Contenu */}
       <main className={`max-w-5xl mx-auto ${showCartUi && cart.length > 0 ? 'pb-28' : 'pb-10'}`}>
-        {step === 'catalog' && (
+        {step === 'catalog' && hasNoResults ? (
+          <div className="px-4 py-16 text-center">
+            <Search className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-30" />
+            <p className="font-semibold text-[#1C1917]">{t.search.noResultsTitle}</p>
+            {normalizedQuery && (
+              <p className="text-sm text-[#78716C] mt-1">{t.search.noResultsFor(searchQuery.trim())}</p>
+            )}
+            <button
+              type="button"
+              onClick={() => { setSearchQuery(''); setCategoryFilter('all') }}
+              className="mt-4 text-sm font-medium hover:underline"
+              style={{ color: 'var(--primary)' }}
+            >
+              {t.search.resetButton}
+            </button>
+          </div>
+        ) : step === 'catalog' && (
           <ProductGrid
-            products={products}
+            products={filteredProducts}
             t={t}
+            layout={config.layout}
+            cardRadius={theme.cardRadius}
             onSelect={setSelectedProduct}
             onQuickAdd={product =>
               addToCart({
@@ -269,6 +361,7 @@ export default function StorefrontShell({ sellerSlug, sellerName, shopDescriptio
           <OrderConfirmation
             result={orderResult}
             sellerName={sellerName}
+            lang={lang}
             t={t}
             onNewOrder={resetForNewOrder}
           />
@@ -292,6 +385,7 @@ export default function StorefrontShell({ sellerSlug, sellerName, shopDescriptio
           totals={totals}
           t={t}
           isRtl={isRtl}
+          portalContainer={shellRef.current}
           onClose={() => setIsCartOpen(false)}
           onUpdateQuantity={updateQuantity}
           onRemove={removeItem}
@@ -306,6 +400,7 @@ export default function StorefrontShell({ sellerSlug, sellerName, shopDescriptio
           cart={cart}
           t={t}
           isRtl={isRtl}
+          portalContainer={shellRef.current}
           onClose={() => setSelectedProduct(null)}
           onAdd={item => {
             const ok = addToCart(item)

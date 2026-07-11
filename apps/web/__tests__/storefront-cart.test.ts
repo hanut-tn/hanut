@@ -38,6 +38,8 @@ function makeProduct(overrides: Partial<StorefrontProduct> = {}): StorefrontProd
     hasVariants: false,
     minPrice: 50,
     maxPrice: 50,
+    categoryIds: [],
+    images_gallery: [],
     ...overrides,
   }
 }

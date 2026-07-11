@@ -447,7 +447,7 @@ function Hero() {
             au même endroit.
           </p>
 
-          <div className="mx-auto mb-8 grid w-full max-w-[21rem] grid-cols-1 gap-3 sm:mb-10 sm:max-w-xl sm:grid-cols-3 lg:mx-0">
+          <div className="mx-auto mb-8 hidden w-full max-w-[21rem] grid-cols-1 gap-3 sm:mb-10 sm:grid sm:max-w-xl sm:grid-cols-3 lg:mx-0">
             {[
               { icon: Link2, label: 'Un lien à partager' },
               { icon: ShoppingCart, label: 'Commandes directes' },
@@ -462,6 +462,8 @@ function Hero() {
               </div>
             ))}
           </div>
+
+          <MobileHeroPreview />
 
           <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4 lg:justify-start">
             <Link
@@ -505,26 +507,77 @@ function Hero() {
   )
 }
 
+function MobileHeroPreview() {
+  return (
+    <div className="mx-auto mb-8 max-w-[21rem] sm:hidden" aria-hidden="true">
+      <div className="overflow-hidden rounded-[1.35rem] border border-brand-100 bg-white shadow-[0_20px_55px_rgba(15,23,42,0.10)]">
+        <div className="flex items-center justify-between border-b border-neutral-100 bg-brand-50/70 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-sm font-black text-white">S</span>
+            <div className="text-left">
+              <p className="text-sm font-black text-[#1C1917]">Boutique Sarra</p>
+              <p className="text-[11px] font-semibold text-neutral-500">Lien public actif</p>
+            </div>
+          </div>
+          <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-black text-brand-700 shadow-sm">LIVE</span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 p-3">
+          {[
+            ['Robe été', '85 DT', 'bg-rose-50 text-rose-400'],
+            ['Hijab satin', '35 DT', 'bg-brand-50 text-brand-500'],
+          ].map(([name, price, cls]) => (
+            <div key={name} className="rounded-xl border border-neutral-100 bg-white p-2 text-left shadow-sm">
+              <div className={`mb-2 flex h-16 items-center justify-center rounded-lg ${cls}`}>
+                <ShoppingBag className="h-6 w-6" />
+              </div>
+              <p className="truncate text-xs font-black text-[#1C1917]">{name}</p>
+              <p className="text-xs font-black text-brand-700">{price}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mx-3 mb-3 rounded-xl bg-brand-600 px-4 py-3 text-white shadow-lg shadow-brand-600/15">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-black">2 articles · 120 DT</span>
+            <ShoppingCart className="h-4 w-4" />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 border-t border-neutral-100 px-4 py-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
+            <Check className="h-4 w-4" strokeWidth={3} />
+          </span>
+          <div className="text-left">
+            <p className="text-sm font-black text-[#1C1917]">Commande reçue</p>
+            <p className="text-[11px] font-semibold text-neutral-500">Client, adresse et articles prêts.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Carrier Band ─────────────────────────────────────────────────────────────
 
 function CarrierBand() {
   return (
     <div className="border-y border-neutral-100 bg-white px-4 py-6 sm:px-6">
       <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-5 lg:grid-cols-[1fr_1.6fr]">
-        <div className="flex items-center justify-center gap-3 text-center lg:justify-start lg:text-left">
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
+        <div className="flex items-center justify-center gap-3 rounded-2xl bg-[#FAFAF9] p-3 text-left sm:bg-transparent sm:p-0 lg:justify-start">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
             <Truck className="h-5 w-5" aria-hidden="true" />
           </span>
           <div>
             <p className="text-sm font-extrabold text-[#1C1917]">Livraison COD prête pour la Tunisie</p>
-            <p className="text-sm text-neutral-500">Transporteurs, suivi et montants à collecter au même endroit.</p>
+            <p className="text-sm leading-snug text-neutral-500">Transporteurs, suivi et montants à collecter au même endroit.</p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-center gap-2.5 lg:justify-end">
+        <div className="-mx-4 flex items-center gap-2.5 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0 sm:pb-0 lg:justify-end">
           {CARRIERS.map((c, i) => (
             <span
               key={c}
-              className={`rounded-lg border px-4 py-2 text-sm font-bold ${
+              className={`shrink-0 rounded-lg border px-4 py-2 text-sm font-bold ${
                 i === 0
                   ? 'border-brand-200 bg-brand-50 text-brand-700'
                   : 'border-neutral-200 bg-neutral-50 text-neutral-700'

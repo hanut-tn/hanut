@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   MoreHorizontal,
   Package,
+  Store,
   Settings,
   ShoppingBag,
   Truck,
@@ -32,6 +33,7 @@ const PRIMARY_ITEMS: NavItem[] = [
 ]
 
 const MORE_ITEMS: NavItem[] = [
+  { href: '/boutique',   label: 'Boutique',    icon: Store,     roles: ['admin', 'operator'] },
   { href: '/deliveries', label: 'Livraisons',  icon: Truck,    roles: ['admin', 'operator'] },
   { href: '/analytics',  label: 'Analytiques', icon: BarChart2, roles: ['admin', 'readonly'] },
   { href: '/settings',   label: 'Paramètres',  icon: Settings,  roles: ['admin'] },

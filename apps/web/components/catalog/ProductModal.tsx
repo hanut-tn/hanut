@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Upload, Plus, Trash2, Info, Boxes, Settings2 } from 'lucide-react'
-import type { Product, ProductVariant } from '@hanut/types'
+import { X, Upload, Plus, Trash2, Info, Boxes, Settings2, Tag } from 'lucide-react'
+import type { Product, ProductVariant, Category } from '@hanut/types'
 import type { ProductInput } from '@/app/(dashboard)/catalog/actions'
 import { uploadProductImage } from '@/app/(dashboard)/catalog/actions'
 import { sumVariantStock } from '@/lib/variants'
@@ -12,6 +12,11 @@ type Props = {
   product: Product | null
   onClose: () => void
   onSave: (input: ProductInput) => Promise<{ error?: string }>
+  /** Catégories du vendeur — si omis, l'éditeur de catégories n'est pas affiché. */
+  allCategories?: Category[]
+  /** Catégories actuelles du produit édité. */
+  productCategoryIds?: string[]
+  onManageCategories?: () => void
 }
 
 type Tab = 'infos' | 'stock' | 'avance'
@@ -33,7 +38,11 @@ const EMPTY: ProductInput = {
   description: '',
 }
 
-export default function ProductModal({ product, onClose, onSave }: Props) {
+type GalleryItem = { url: string; file: File | null }
+
+const MAX_GALLERY_IMAGES = 5
+
+export default function ProductModal({ product, onClose, onSave, allCategories, productCategoryIds, onManageCategories }: Props) {
   const [form, setForm] = useState<ProductInput>(
     product
       ? {
@@ -46,8 +55,9 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
           variants: product.variants,
           image_url: product.image_url ?? null,
           description: product.description ?? '',
+          categoryIds: allCategories ? (productCategoryIds ?? []) : undefined,
         }
-      : { ...EMPTY }
+      : { ...EMPTY, categoryIds: allCategories ? [] : undefined }
   )
   const [tab, setTab] = useState<Tab>('infos')
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -57,6 +67,12 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [gallery, setGallery] = useState<GalleryItem[]>(
+    (product?.images_gallery ?? []).map(url => ({ url, file: null }))
+  )
+  const [galleryError, setGalleryError] = useState<string | null>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
 
   // Fermer avec Escape (sauf pendant l'enregistrement)
   useEffect(() => {
@@ -118,6 +134,29 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
     set('image_url', null)
   }
 
+  function handleGalleryFile(file: File) {
+    setGalleryError(null)
+    if (gallery.length >= MAX_GALLERY_IMAGES) return
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setGalleryError('Format non autorisé. Utilisez JPG, PNG, WebP ou HEIC uniquement.')
+      return
+    }
+    const ext = '.' + (file.name.split('.').pop()?.toLowerCase() ?? '')
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      setGalleryError('Extension non autorisée. Utilisez .jpg, .png, .webp, .heic ou .heif uniquement.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setGalleryError('Image trop lourde. Maximum 5 Mo.')
+      return
+    }
+    setGallery(g => [...g, { url: URL.createObjectURL(file), file }])
+  }
+
+  function removeGalleryImage(i: number) {
+    setGallery(g => g.filter((_, idx) => idx !== i))
+  }
+
   function addVariant() {
     set('variants', [...form.variants, { size: '', color: '', qty: 1 }])
   }
@@ -162,6 +201,19 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
         if (uploadError) throw new Error(uploadError)
         finalForm.image_url = url ?? null
       }
+      const finalGallery: string[] = []
+      for (const item of gallery) {
+        if (item.file) {
+          const fd = new FormData()
+          fd.append('file', item.file)
+          const { url, error: uploadError } = await uploadProductImage(fd)
+          if (uploadError) throw new Error(uploadError)
+          if (url) finalGallery.push(url)
+        } else {
+          finalGallery.push(item.url)
+        }
+      }
+      finalForm.images_gallery = finalGallery
       const result = await onSave(finalForm)
       if (result?.error) throw new Error(result.error)
     } catch (err: unknown) {
@@ -322,6 +374,49 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                   </div>
                 </div>
 
+                {/* Photos supplémentaires */}
+                <div>
+                  <label className="block text-sm font-medium text-[#1C1917] mb-2">
+                    Photos supplémentaires <span className="text-gray-400 font-normal">(max {MAX_GALLERY_IMAGES})</span>
+                  </label>
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                    {gallery.map((item, i) => (
+                      <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-[#E7E5E4] bg-cover bg-center" style={{ backgroundImage: `url(${item.url})` }}>
+                        <button
+                          type="button"
+                          onClick={() => removeGalleryImage(i)}
+                          className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 hover:bg-black/80 transition-colors"
+                          aria-label="Retirer cette photo"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                    {gallery.length < MAX_GALLERY_IMAGES && (
+                      <button
+                        type="button"
+                        onClick={() => galleryInputRef.current?.click()}
+                        className="aspect-square rounded-lg border-2 border-dashed border-[#E7E5E4] hover:border-[#16A34A]/50 flex items-center justify-center text-[#78716C] hover:text-[#16A34A] transition-colors"
+                        aria-label="Ajouter une photo"
+                      >
+                        <Plus className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    ref={galleryInputRef}
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.webp,.heic,.heif"
+                    className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) handleGalleryFile(f); e.target.value = '' }}
+                  />
+                  {galleryError && (
+                    <p className="mt-2 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-red-700">
+                      {galleryError}
+                    </p>
+                  )}
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-[#1C1917] mb-1">Description</label>
                   <textarea
@@ -332,6 +427,58 @@ export default function ProductModal({ product, onClose, onSave }: Props) {
                     placeholder="Description du produit..."
                   />
                 </div>
+
+                {allCategories && (
+                  <div>
+                    <label className="block text-sm font-medium text-[#1C1917] mb-1">
+                      Catégories <span className="text-gray-400 font-normal">(optionnel)</span>
+                    </label>
+                    {allCategories.length === 0 ? (
+                      <p className="text-sm text-[#78716C] border border-dashed border-[#E7E5E4] rounded-xl px-4 py-3">
+                        Aucune catégorie créée.{' '}
+                        {onManageCategories && (
+                          <button
+                            type="button"
+                            onClick={onManageCategories}
+                            className="text-[#16A34A] hover:text-[#15803D] font-medium underline"
+                          >
+                            Gérer les catégories
+                          </button>
+                        )}
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {allCategories.map(category => {
+                          const checked = (form.categoryIds ?? []).includes(category.id)
+                          return (
+                            <label
+                              key={category.id}
+                              className={`flex items-center gap-1.5 min-h-[36px] touch-manipulation cursor-pointer rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                                checked
+                                  ? 'border-[#16A34A] bg-[#F0FDF4] text-[#166534]'
+                                  : 'border-[#E7E5E4] text-[#78716C] hover:border-[#16A34A]/50'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                className="sr-only"
+                                checked={checked}
+                                onChange={() => {
+                                  const current = form.categoryIds ?? []
+                                  set('categoryIds', checked
+                                    ? current.filter(id => id !== category.id)
+                                    : [...current, category.id])
+                                }}
+                              />
+                              <Tag className="w-3 h-3" />
+                              {category.name}
+                            </label>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             )}
 

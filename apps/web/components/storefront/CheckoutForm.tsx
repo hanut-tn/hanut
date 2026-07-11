@@ -101,7 +101,7 @@ export default function CheckoutForm({
   }
 
   const inputClass =
-    'w-full border border-gray-200 rounded-xl ps-11 pe-4 py-3 text-base outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-green-100 transition'
+    'w-full border border-gray-200 rounded-xl ps-11 pe-4 py-3 text-base outline-none focus:ring-2 transition focus:border-[var(--primary)] focus:ring-[var(--primary)]/20'
   const labelClass = 'block text-sm font-medium text-gray-700 mb-1.5'
   const iconClass = 'absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none'
 
@@ -120,7 +120,7 @@ export default function CheckoutForm({
       <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
         <div className="flex items-center justify-between mb-2">
           <p className="text-sm font-bold text-[#1C1917]">{t.checkoutExtra.recapTitle}</p>
-          <button type="button" onClick={onEditCart} className="text-xs font-medium text-[#16A34A] hover:underline">
+          <button type="button" onClick={onEditCart} style={{ color: 'var(--primary)' }} className="text-xs font-medium hover:underline">
             {t.checkoutExtra.editCart}
           </button>
         </div>
@@ -140,7 +140,7 @@ export default function CheckoutForm({
         </ul>
         <div className="mt-2.5 pt-2.5 border-t border-[#E7E5E4] flex justify-between items-center">
           <span className="text-sm text-[#78716C]">{t.cart.total}</span>
-          <span className="text-lg font-extrabold text-[#0B5E46]">{totalPrice} DT</span>
+          <span className="text-lg font-extrabold" style={{ color: 'var(--primary-dark)' }}>{totalPrice} DT</span>
         </div>
       </div>
 
@@ -175,7 +175,7 @@ export default function CheckoutForm({
             </span>
             <input
               id="sf-phone"
-              className={`min-w-0 flex-1 border rounded-xl px-4 py-3 text-base outline-none focus:ring-2 transition ${phoneError ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-gray-200 focus:border-[#16A34A] focus:ring-green-100'}`}
+              className={`min-w-0 flex-1 border rounded-xl px-4 py-3 text-base outline-none focus:ring-2 transition ${phoneError ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-gray-200 focus:border-[var(--primary)] focus:ring-[var(--primary)]/20'}`}
               type="tel"
               value={phone}
               onChange={e => handlePhoneChange(e.target.value)}
@@ -309,7 +309,8 @@ export default function CheckoutForm({
         <button
           type="submit"
           disabled={loading || (isTurnstileEnabled() && !turnstileToken)}
-          className="h-12 w-full touch-manipulation bg-[#16A34A] text-white font-bold rounded-lg text-base transition-all duration-150 ease-out hover:bg-[#15803D] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ backgroundColor: 'var(--primary)' }}
+          className="h-12 w-full touch-manipulation text-white font-bold rounded-lg text-base transition-all duration-150 ease-out active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? t.submit.sendingCode : t.submit.orderButton}
         </button>

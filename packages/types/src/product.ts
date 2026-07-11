@@ -16,8 +16,21 @@ export interface Product {
   low_stock_alert: number
   variants: ProductVariant[]
   image_url?: string | null
+  images_gallery: string[]
   description?: string | null
   created_at: string
+}
+
+export interface Category {
+  id: string
+  seller_id: string
+  name: string
+  position: number
+  created_at: string
+}
+
+export interface ProductWithCategories extends Product {
+  categories: Category[]
 }
 
 export interface CreateProductInput {

@@ -64,9 +64,18 @@
   .animate-slide-up {
     animation: hanut-slide-up 200ms ease-out;
   }
+
+  .animate-fade-in {
+    animation: hanut-fade-in 200ms ease-out;
+  }
 }
 
 @keyframes hanut-slide-up {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
+}
+
+@keyframes hanut-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
