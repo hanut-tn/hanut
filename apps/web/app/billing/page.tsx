@@ -153,6 +153,13 @@ export default async function BillingPage() {
         </div>
       </div>
 
+      <p className="text-center text-sm text-gray-400 mt-6">
+        Vous avez déjà un plan actif ?{' '}
+        <Link href="/orders" className="text-brand-600 hover:underline">
+          Retourner au dashboard
+        </Link>
+      </p>
+
       <p className="text-center text-xs text-gray-400 mt-6">
         {context.subscriptionStatus === 'active' ? 'Renouvellement sous 24h' : 'Activation sous 24h'} · Paiement par virement ou en main propre ·{' '}
         <Link href="/login" className="underline hover:text-gray-600">

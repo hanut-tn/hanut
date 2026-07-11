@@ -249,6 +249,33 @@ describe('middleware auth boundaries', () => {
     expect(fromSpy).not.toHaveBeenCalled()
   })
 
+  it('re-verifies against the DB when the JWT claim says expired, and lets the seller through if the DB shows an active subscription', async () => {
+    // Le claim JWT n'est régénéré qu'au rafraîchissement de session : un
+    // vendeur dont l'abonnement vient d'être activé peut porter un vieux
+    // token affichant encore un subscription_end expiré. Le middleware doit
+    // revérifier en base avant de bloquer, pas bloquer sur la foi du claim.
+    const expiredInClaim = new Date(Date.now() - 86_400_000).toISOString()
+    const activeInDb = new Date(Date.now() + 86_400_000).toISOString()
+    const header  = btoa(JSON.stringify({ alg: 'HS256' }))
+    const payload = btoa(JSON.stringify({ sub: 'seller-1', subscription_end: expiredInClaim }))
+    const staleJwt = `${header}.${payload}.fake-sig`
+
+    const fromSpy = vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: activeInDb }))
+
+    supabaseSsrMock.createServerClient.mockReturnValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1', email_confirmed_at: '2026-01-01T00:00:00.000Z' } } }),
+        getSession: vi.fn().mockResolvedValue({ data: { session: { access_token: staleJwt } } }),
+      },
+      from: fromSpy,
+    })
+
+    const response = await middleware(requestFor('/dashboard'))
+
+    expect(fromSpy).toHaveBeenCalledWith('sellers')
+    expect(response.headers.get('location')).toBeNull()
+  })
+
   it('falls back to sellers DB query when JWT claims are absent (hook not active)', async () => {
     const future = new Date(Date.now() + 86_400_000).toISOString()
     const header  = btoa(JSON.stringify({ alg: 'HS256' }))

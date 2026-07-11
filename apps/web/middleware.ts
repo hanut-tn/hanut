@@ -194,36 +194,47 @@ export async function middleware(req: NextRequest) {
       }
     }
 
+    const userId = user.id
+
+    async function fetchSubscriptionEndFromDb(): Promise<string | null> {
+      const { data: seller } = await supabase
+        .from('sellers')
+        .select('subscription_end')
+        .eq('id', userId)
+        .maybeSingle()
+
+      if (seller) return seller.subscription_end ?? null
+
+      const { data: membership } = await supabase
+        .from('team_members')
+        .select('seller_id')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .maybeSingle()
+
+      if (!membership?.seller_id) return null
+
+      const { data: ownerSeller } = await supabase
+        .from('sellers')
+        .select('subscription_end')
+        .eq('id', membership.seller_id)
+        .maybeSingle()
+
+      return ownerSeller?.subscription_end ?? null
+    }
+
     let subscriptionEnd: string | null = subscriptionEndFromClaim
 
     if (!hasSubscriptionClaim) {
       // Pas de claim → anciens JWTs sans hook. Fallback DB.
-      const { data: seller } = await supabase
-        .from('sellers')
-        .select('subscription_end')
-        .eq('id', user.id)
-        .maybeSingle()
-
-      subscriptionEnd = seller?.subscription_end ?? null
-
-      if (!seller) {
-        const { data: membership } = await supabase
-          .from('team_members')
-          .select('seller_id')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .maybeSingle()
-
-        if (membership?.seller_id) {
-          const { data: ownerSeller } = await supabase
-            .from('sellers')
-            .select('subscription_end')
-            .eq('id', membership.seller_id)
-            .maybeSingle()
-
-          subscriptionEnd = ownerSeller?.subscription_end ?? null
-        }
-      }
+      subscriptionEnd = await fetchSubscriptionEndFromDb()
+    } else if (subscriptionEnd && new Date(subscriptionEnd) < new Date()) {
+      // Le claim indique un abonnement expiré, mais le JWT n'est régénéré
+      // qu'au rafraîchissement de session (jusqu'à 1h) : un vendeur dont
+      // l'abonnement vient d'être activé resterait bloqué ici sur la base
+      // d'un claim périmé. On revérifie en base avant de bloquer — un accès
+      // refusé à tort coûte bien plus cher qu'une requête DB en plus.
+      subscriptionEnd = await fetchSubscriptionEndFromDb()
     }
 
     if (subscriptionEnd && new Date(subscriptionEnd) < new Date()) {
