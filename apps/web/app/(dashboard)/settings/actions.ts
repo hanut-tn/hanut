@@ -62,7 +62,9 @@ export async function updateShopBranding(input: ShopBrandingInput): Promise<Acti
   const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').replace(/\/+$/, '')
   const storagePrefix = `${supabaseUrl}/storage/v1/object/public/`
   if (logoUrl && (logoUrl.length > 2048 || !logoUrl.startsWith(storagePrefix))) {
-    return { error: `URL de logo invalide (${logoUrl.slice(0, 60)}).` }
+    // Diagnostic temporaire : montre l'URL reçue ET le préfixe attendu en
+    // entier pour repérer précisément où la comparaison diverge.
+    return { error: `URL de logo invalide. Reçu="${logoUrl}" Attendu="${storagePrefix}"` }
   }
 
   const serviceClient = createServiceClient()
