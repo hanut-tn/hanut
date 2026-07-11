@@ -55,7 +55,12 @@ export async function updateShopBranding(input: ShopBrandingInput): Promise<Acti
   if (shopDescription.length > 300) return { error: 'La description est trop longue (300 caractères max).' }
   // Doit provenir du stockage Supabase du projet : toute autre origine est
   // bloquée silencieusement par la CSP (img-src), le logo resterait cassé.
-  const storagePrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/`
+  // On retire un éventuel slash final de la variable d'env avant de
+  // concaténer : sinon un "/" de trop dans NEXT_PUBLIC_SUPABASE_URL donne un
+  // double slash qui ne matche plus l'URL réelle (simple slash, normalisée
+  // en interne par le SDK Supabase Storage).
+  const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').replace(/\/+$/, '')
+  const storagePrefix = `${supabaseUrl}/storage/v1/object/public/`
   if (logoUrl && (logoUrl.length > 2048 || !logoUrl.startsWith(storagePrefix))) {
     return { error: `URL de logo invalide (${logoUrl.slice(0, 60)}).` }
   }
