@@ -1,15 +1,23 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Save, Pencil, X, Smartphone, Monitor, ExternalLink } from 'lucide-react'
-import { DEFAULT_STOREFRONT_CONFIG, type Category, type StorefrontConfig, type StorefrontColors, type StorefrontTypography, type StorefrontCards, type StorefrontLayout } from '@hanut/types'
+import { ArrowLeft, Save, Pencil, MousePointerClick, X, Smartphone, Monitor, ExternalLink } from 'lucide-react'
+import {
+  DEFAULT_STOREFRONT_CONFIG,
+  type Category, type StorefrontConfig, type StorefrontColors, type StorefrontTypography,
+  type StorefrontCards, type StorefrontButton, type StorefrontLayout, type EditTarget, type PopoverPosition,
+} from '@hanut/types'
 import type { ShopBrandingInput } from '@/app/(dashboard)/settings/actions'
 import { uploadProductImage } from '@/app/(dashboard)/catalog/actions'
 import { mergeStorefrontConfig, type StorefrontConfigPatch } from '@/lib/storefront/config'
 import type { StorefrontProduct } from '@/lib/storefront/cart'
 import StorefrontShell from '@/components/storefront/StorefrontShell'
 import EditorPanel from './EditorPanel'
+import HeaderPanel from './panels/HeaderPanel'
+import CardPanel from './panels/CardPanel'
+import ButtonPanel from './panels/ButtonPanel'
+import BackgroundPanel from './panels/BackgroundPanel'
 
 type Seller = {
   name: string
@@ -49,7 +57,35 @@ export default function BoutiqueEditor({
   const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('mobile')
   const [isEditorOpen, setIsEditorOpen] = useState(true)
 
+  // Éditeur visuel WYSIWYG : clic sur un élément de l'aperçu → panneau contextuel.
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editTarget, setEditTarget] = useState<EditTarget>(null)
+  const [popoverPosition, setPopoverPosition] = useState<PopoverPosition | null>(null)
+
   const previewUrl = seller.slug ? `${appUrl.replace(/\/$/, '')}/s/${seller.slug}` : null
+
+  function handleEditTargetChange(target: EditTarget, position?: PopoverPosition) {
+    setEditTarget(target)
+    if (position) setPopoverPosition(position)
+  }
+
+  function toggleEditMode() {
+    setIsEditMode(prev => {
+      if (!prev) setIsEditorOpen(false) // évite le cumul avec le panneau "Personnaliser"
+      return !prev
+    })
+    setEditTarget(null)
+  }
+
+  // Escape ferme le panneau contextuel actif.
+  useEffect(() => {
+    if (!editTarget) return
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setEditTarget(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [editTarget])
 
   function patchColors(patch: Partial<StorefrontColors>) {
     setConfig(c => mergeStorefrontConfig(c, { colors: patch }))
@@ -59,6 +95,9 @@ export default function BoutiqueEditor({
   }
   function patchCards(patch: Partial<StorefrontCards>) {
     setConfig(c => mergeStorefrontConfig(c, { cards: patch }))
+  }
+  function patchButton(patch: Partial<StorefrontButton>) {
+    setConfig(c => mergeStorefrontConfig(c, { button: patch }))
   }
   function setLayout(layout: StorefrontLayout) {
     setConfig(c => mergeStorefrontConfig(c, { layout }))
@@ -132,8 +171,10 @@ export default function BoutiqueEditor({
       config={config}
       hideTopBar
       previewMode
+      editMode={isEditMode}
+      onEditTargetChange={handleEditTargetChange}
     />
-  ), [seller.slug, seller.name, shopName, shopDescription, logoUrl, bannerUrl, previewProducts, previewCategories, config])
+  ), [seller.slug, seller.name, shopName, shopDescription, logoUrl, bannerUrl, previewProducts, previewCategories, config, isEditMode])
 
   const editorPanel = (
     <EditorPanel
@@ -280,6 +321,19 @@ export default function BoutiqueEditor({
 
         {/* Toolbar aperçu — bas droite */}
         <div className="absolute bottom-6 right-6 z-30 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleEditMode}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg border text-sm font-medium transition-all ${
+              isEditMode
+                ? 'bg-blue-500 text-white border-blue-500'
+                : 'bg-white text-gray-700 border-gray-100 hover:bg-gray-50'
+            }`}
+          >
+            {isEditMode ? <X className="w-4 h-4" /> : <MousePointerClick className="w-4 h-4" />}
+            {isEditMode ? "Quitter l'édition" : 'Modifier'}
+          </button>
+
           <div className="bg-white rounded-xl shadow-lg border border-gray-100 flex overflow-hidden">
             <button
               type="button"
@@ -310,6 +364,63 @@ export default function BoutiqueEditor({
             </a>
           )}
         </div>
+
+        {/* Clic en dehors → ferme le panneau contextuel actif */}
+        {isEditMode && editTarget && (
+          <div className="fixed inset-0 z-40" onClick={() => setEditTarget(null)} />
+        )}
+
+        {isEditMode && editTarget?.type === 'header' && (
+          <HeaderPanel
+            shopName={shopName}
+            shopDescription={shopDescription}
+            logoUrl={logoUrl}
+            logoUploading={logoUploading}
+            bannerUrl={bannerUrl}
+            bannerUploading={bannerUploading}
+            accountName={seller.name}
+            onShopNameChange={setShopName}
+            onShopDescriptionChange={setShopDescription}
+            onLogoFile={handleLogoFile}
+            onLogoRemove={() => setLogoUrl(null)}
+            onBannerFile={handleBannerFile}
+            onBannerRemove={() => setBannerUrl(null)}
+            headerColor={config.colors.primary}
+            onHeaderColorChange={hex => patchColors({ primary: hex })}
+            onClose={() => setEditTarget(null)}
+          />
+        )}
+
+        {isEditMode && editTarget?.type === 'card' && popoverPosition && (
+          <CardPanel
+            cards={config.cards}
+            cardBg={config.colors.cardBg}
+            onCardsChange={patchCards}
+            onCardBgChange={hex => patchColors({ cardBg: hex })}
+            position={popoverPosition}
+            onClose={() => setEditTarget(null)}
+          />
+        )}
+
+        {isEditMode && editTarget?.type === 'button' && popoverPosition && (
+          <ButtonPanel
+            primaryColor={config.colors.primary}
+            onPrimaryColorChange={hex => patchColors({ primary: hex })}
+            button={config.button}
+            onButtonChange={patchButton}
+            position={popoverPosition}
+            onClose={() => setEditTarget(null)}
+          />
+        )}
+
+        {isEditMode && editTarget?.type === 'background' && popoverPosition && (
+          <BackgroundPanel
+            pageBg={config.colors.pageBg}
+            onChange={hex => patchColors({ pageBg: hex })}
+            position={popoverPosition}
+            onClose={() => setEditTarget(null)}
+          />
+        )}
       </div>
     </div>
   )

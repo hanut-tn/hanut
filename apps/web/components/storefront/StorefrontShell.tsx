@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { ShoppingCart, Search } from 'lucide-react'
 import { useLang } from '@/lib/i18n/use-lang'
 import { storefrontTranslations } from '@/lib/i18n/storefront'
-import { DEFAULT_STOREFRONT_CONFIG, type Category, type StorefrontConfig } from '@hanut/types'
+import { DEFAULT_STOREFRONT_CONFIG, type Category, type StorefrontConfig, type EditTarget, type PopoverPosition } from '@hanut/types'
 import { buildCssVariables, loadGoogleFont } from '@/lib/storefront/config'
 import {
   addItemToCart, cartTotals, reconcileCartWithProducts, type CartItem, type StorefrontProduct,
@@ -37,11 +37,15 @@ type Props = {
   hideTopBar?: boolean
   /** Aperçu dashboard : apparence 100% fidèle, mais bloque le passage à un vrai checkout (OTP/commande réels). */
   previewMode?: boolean
+  /** Éditeur visuel WYSIWYG : clic sur un élément → ouvre son panneau de modification au lieu de son action normale. */
+  editMode?: boolean
+  onEditTargetChange?: (target: EditTarget, position?: PopoverPosition) => void
 }
 
 export default function StorefrontShell({
   sellerSlug, sellerName, shopDescription, logoUrl, bannerUrl = null, products, categories,
   config = DEFAULT_STOREFRONT_CONFIG, hideTopBar = false, previewMode = false,
+  editMode = false, onEditTargetChange,
 }: Props) {
   const { t, lang, isRtl, toggleLang } = useLang(storefrontTranslations)
   const router = useRouter()
@@ -214,13 +218,34 @@ export default function StorefrontShell({
     setStep('checkout')
   }
 
+  // Catch-all "fond" : ignore les clics qui tombent sur un contrôle
+  // interactif (recherche, chips catégorie, panier...) ou sur un élément
+  // déjà pris en charge par un handler dédié (carte/bouton, via [data-edit]).
+  // Le header et le bouton "Ajouter" font stopPropagation() eux-mêmes avant
+  // que ce handler ne s'exécute — cette exclusion est une sécurité
+  // supplémentaire, pas le mécanisme principal d'évitement du conflit.
+  function handleBackgroundClick(e: React.MouseEvent) {
+    if (!editMode) return
+    const target = e.target as HTMLElement
+    if (target.closest('button, a, input, select, textarea, [data-edit]')) return
+    onEditTargetChange?.({ type: 'background' }, { top: e.clientY, left: e.clientX })
+  }
+
   return (
     <div
       ref={shellRef}
       dir={isRtl ? 'rtl' : 'ltr'}
       style={buildCssVariables(config)}
-      className={`min-h-screen ${isRtl ? 'font-arabic' : ''}`}
+      onClick={editMode ? handleBackgroundClick : undefined}
+      className={`min-h-screen ${isRtl ? 'font-arabic' : ''} ${editMode ? 'cursor-default' : ''}`}
     >
+      {/* Bandeau mode édition */}
+      {editMode && (
+        <div className="sticky top-0 z-40 bg-blue-500 text-white text-xs text-center py-1.5 font-medium">
+          ✏️ Mode édition — cliquez sur un élément pour le modifier
+        </div>
+      )}
+
       {/* Navbar Hanut sticky */}
       {!hideTopBar && (
         <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-30">
@@ -259,13 +284,22 @@ export default function StorefrontShell({
 
       {/* En-tête boutique */}
       {step === 'catalog' && (
-        <StorefrontHeader
-          shopName={sellerName}
-          shopDescription={shopDescription}
-          logoUrl={logoUrl}
-          bannerUrl={bannerUrl}
-          t={t}
-        />
+        <div
+          onClick={editMode ? (e) => {
+            e.stopPropagation()
+            const rect = e.currentTarget.getBoundingClientRect()
+            onEditTargetChange?.({ type: 'header' }, { top: rect.top, left: rect.left })
+          } : undefined}
+          className={editMode ? 'cursor-pointer ring-2 ring-transparent hover:ring-blue-400 hover:ring-offset-2 transition-all rounded-sm' : undefined}
+        >
+          <StorefrontHeader
+            shopName={sellerName}
+            shopDescription={shopDescription}
+            logoUrl={logoUrl}
+            bannerUrl={bannerUrl}
+            t={t}
+          />
+        </div>
       )}
 
       {/* Recherche */}
@@ -329,23 +363,36 @@ export default function StorefrontShell({
             </button>
           </div>
         ) : step === 'catalog' && (
-          <ProductGrid
-            products={filteredProducts}
-            t={t}
-            layout={config.layout}
-            onSelect={setSelectedProduct}
-            onQuickAdd={product =>
-              addToCart({
-                productId: product.id,
-                productName: product.name,
-                productImage: product.image_url,
-                productPrice: product.price,
-                variantLabel: null,
-                quantity: 1,
-                maxQty: product.stock,
-              })
-            }
-          />
+          <div
+            onClick={editMode ? (e) => {
+              const card = (e.target as HTMLElement).closest('[data-edit="card"]')
+              if (!card) return
+              e.stopPropagation()
+              const rect = card.getBoundingClientRect()
+              onEditTargetChange?.({ type: 'card' }, { top: rect.top, left: rect.right + 8 })
+            } : undefined}
+          >
+            <ProductGrid
+              products={filteredProducts}
+              t={t}
+              layout={config.layout}
+              editMode={editMode}
+              buttonText={config.button.text}
+              onSelect={setSelectedProduct}
+              onQuickAdd={product =>
+                addToCart({
+                  productId: product.id,
+                  productName: product.name,
+                  productImage: product.image_url,
+                  productPrice: product.price,
+                  variantLabel: null,
+                  quantity: 1,
+                  maxQty: product.stock,
+                })
+              }
+              onEditTargetChange={onEditTargetChange}
+            />
+          </div>
         )}
 
         {step === 'checkout' && (

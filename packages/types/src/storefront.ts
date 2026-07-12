@@ -33,11 +33,32 @@ export interface StorefrontCards {
   imageRatio: StorefrontImageRatio
 }
 
+export interface StorefrontButton {
+  text: string
+  radius: StorefrontCardRadius
+}
+
 export interface StorefrontConfig {
   colors: StorefrontColors
   typography: StorefrontTypography
   cards: StorefrontCards
+  button: StorefrontButton
   layout: StorefrontLayout
+}
+
+// Cible cliquable dans l'éditeur visuel WYSIWYG (/boutique, mode édition).
+export type EditTarget =
+  | { type: 'header' }
+  | { type: 'card' }
+  | { type: 'button' }
+  | { type: 'background' }
+  | null
+
+// Coordonnées viewport (issues de getBoundingClientRect / clientX-Y) pour
+// positionner un panneau flottant en `position: fixed`.
+export interface PopoverPosition {
+  top: number
+  left: number
 }
 
 export const DEFAULT_STOREFRONT_CONFIG: StorefrontConfig = {
@@ -56,6 +77,10 @@ export const DEFAULT_STOREFRONT_CONFIG: StorefrontConfig = {
     radius: 'rounded',
     shadow: 'sm',
     imageRatio: 'square',
+  },
+  button: {
+    text: 'Ajouter',
+    radius: 'rounded',
   },
   layout: 'grid-3',
 }

@@ -5,15 +5,20 @@ import Image from 'next/image'
 import { ImageOff, Plus, Check } from 'lucide-react'
 import type { StorefrontProduct } from '@/lib/storefront/cart'
 import type { StorefrontDict } from '@/lib/i18n/storefront'
+import type { EditTarget, PopoverPosition } from '@hanut/types'
 
 type Props = {
   product: StorefrontProduct
   t: StorefrontDict
+  editMode?: boolean
   onSelect: (product: StorefrontProduct) => void
   onQuickAdd: (product: StorefrontProduct) => void
+  onEditTargetChange?: (target: EditTarget, position?: PopoverPosition) => void
+  /** Texte custom du bouton "Ajouter" (config.button.text) — retombe sur la traduction si vide. */
+  buttonText?: string
 }
 
-export default function ProductCard({ product, t, onSelect, onQuickAdd }: Props) {
+export default function ProductCard({ product, t, editMode = false, onSelect, onQuickAdd, onEditTargetChange, buttonText }: Props) {
   const isOut = product.stock === 0
   const isLow = !isOut && product.stock <= product.low_stock_alert
   const hasPriceRange = product.maxPrice > product.minPrice
@@ -40,18 +45,19 @@ export default function ProductCard({ product, t, onSelect, onQuickAdd }: Props)
 
   return (
     <div
+      data-edit="card"
       style={{
         backgroundColor: 'var(--card-bg, #fff)',
         borderRadius: 'var(--card-radius, 1rem)',
         boxShadow: 'var(--card-shadow, 0 1px 3px 0 rgb(0 0 0 / 0.1))',
       }}
-      className="border border-black/5 overflow-hidden flex flex-col"
+      className={`border border-black/5 overflow-hidden flex flex-col ${editMode ? 'cursor-pointer' : ''}`}
     >
       {/* Image — ratio configurable par le vendeur (carré/portrait/large) */}
       <button
         type="button"
-        onClick={handleAdd}
-        disabled={isOut}
+        onClick={editMode ? undefined : handleAdd}
+        disabled={editMode ? false : isOut}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
         style={{ aspectRatio: 'var(--image-aspect, 1 / 1)' }}
@@ -128,21 +134,27 @@ export default function ProductCard({ product, t, onSelect, onQuickAdd }: Props)
 
         <button
           type="button"
-          onClick={handleAdd}
-          disabled={isOut}
+          data-edit="button"
+          onClick={editMode ? (e) => {
+            e.stopPropagation()
+            const rect = e.currentTarget.getBoundingClientRect()
+            onEditTargetChange?.({ type: 'button' }, { top: rect.top - 80, left: rect.left })
+          } : handleAdd}
+          disabled={editMode ? false : isOut}
           style={{
             fontSize: 'calc(0.875rem * var(--font-size-scale, 1))',
-            ...(isOut ? {} : { backgroundColor: justAdded ? 'var(--primary-dark)' : 'var(--primary)' }),
+            borderRadius: 'var(--button-radius, 0.75rem)',
+            ...(isOut && !editMode ? {} : { backgroundColor: justAdded ? 'var(--primary-dark)' : 'var(--primary)' }),
           }}
-          className={`w-full min-h-[40px] touch-manipulation flex items-center justify-center gap-1.5 rounded-xl font-semibold transition-all duration-150 ease-out ${
-            isOut
+          className={`w-full min-h-[40px] touch-manipulation flex items-center justify-center gap-1.5 font-semibold transition-all duration-150 ease-out ${
+            isOut && !editMode
               ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
               : 'text-white active:scale-[0.97]'
           }`}
         >
-          {isOut ? (
+          {isOut && !editMode ? (
             t.shop.outOfStock
-          ) : justAdded ? (
+          ) : justAdded && !editMode ? (
             <>
               <Check className="w-4 h-4" />
               {t.shop.added}
@@ -150,7 +162,7 @@ export default function ProductCard({ product, t, onSelect, onQuickAdd }: Props)
           ) : (
             <>
               <Plus className="w-4 h-4" />
-              {t.shop.add}
+              {buttonText || t.shop.add}
             </>
           )}
         </button>

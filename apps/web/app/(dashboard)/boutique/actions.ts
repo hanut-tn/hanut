@@ -30,6 +30,10 @@ const ConfigSchema = z.object({
     shadow: z.enum(['none', 'sm', 'md']),
     imageRatio: z.enum(['square', 'portrait', 'landscape']),
   }).partial().optional(),
+  button: z.object({
+    text: z.string().trim().min(1).max(30),
+    radius: z.enum(['none', 'rounded', 'full']),
+  }).partial().optional(),
   layout: z.enum(['grid-2', 'grid-3', 'list']).optional(),
 })
 

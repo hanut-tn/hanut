@@ -3,15 +3,18 @@
 import { Store } from 'lucide-react'
 import type { StorefrontProduct } from '@/lib/storefront/cart'
 import type { StorefrontDict } from '@/lib/i18n/storefront'
-import type { StorefrontLayout } from '@hanut/types'
+import type { StorefrontLayout, EditTarget, PopoverPosition } from '@hanut/types'
 import ProductCard from './ProductCard'
 
 type Props = {
   products: StorefrontProduct[]
   t: StorefrontDict
   layout?: StorefrontLayout
+  editMode?: boolean
+  buttonText?: string
   onSelect: (product: StorefrontProduct) => void
   onQuickAdd: (product: StorefrontProduct) => void
+  onEditTargetChange?: (target: EditTarget, position?: PopoverPosition) => void
 }
 
 const LAYOUT_CLASS: Record<StorefrontLayout, string> = {
@@ -20,7 +23,7 @@ const LAYOUT_CLASS: Record<StorefrontLayout, string> = {
   list: 'flex flex-col gap-3 px-3 py-4 sm:px-4',
 }
 
-export default function ProductGrid({ products, t, layout = 'grid-3', onSelect, onQuickAdd }: Props) {
+export default function ProductGrid({ products, t, layout = 'grid-3', editMode = false, buttonText, onSelect, onQuickAdd, onEditTargetChange }: Props) {
   const inStock = products.filter(p => p.stock > 0)
   const outOfStock = products.filter(p => p.stock === 0)
 
@@ -45,8 +48,11 @@ export default function ProductGrid({ products, t, layout = 'grid-3', onSelect, 
           key={product.id}
           product={product}
           t={t}
+          editMode={editMode}
+          buttonText={buttonText}
           onSelect={onSelect}
           onQuickAdd={onQuickAdd}
+          onEditTargetChange={onEditTargetChange}
         />
       ))}
     </div>

@@ -3,7 +3,7 @@
 // `className` — voir la note dans packages/types/src/storefront.ts.
 
 import type { CSSProperties } from 'react'
-import type { StorefrontConfig, StorefrontColors, StorefrontTypography, StorefrontCards } from '@hanut/types'
+import type { StorefrontConfig, StorefrontColors, StorefrontTypography, StorefrontCards, StorefrontButton } from '@hanut/types'
 import {
   STOREFRONT_FONTS, FONT_SIZE_SCALE, CARD_RADIUS_VALUES, CARD_SHADOW_VALUES, IMAGE_RATIO_VALUES,
 } from '@hanut/types'
@@ -16,6 +16,7 @@ export type StorefrontConfigPatch = {
   colors?: Partial<StorefrontColors>
   typography?: Partial<StorefrontTypography>
   cards?: Partial<StorefrontCards>
+  button?: Partial<StorefrontButton>
   layout?: StorefrontConfig['layout']
 }
 
@@ -25,6 +26,7 @@ export function buildCssVariables(config: StorefrontConfig): CSSProperties {
   const cardRadius = CARD_RADIUS_VALUES[config.cards.radius].css
   const cardShadow = CARD_SHADOW_VALUES[config.cards.shadow].css
   const imageAspect = IMAGE_RATIO_VALUES[config.cards.imageRatio].css
+  const buttonRadius = CARD_RADIUS_VALUES[config.button.radius].css
 
   return {
     '--primary': config.colors.primary,
@@ -37,6 +39,7 @@ export function buildCssVariables(config: StorefrontConfig): CSSProperties {
     '--card-radius': cardRadius,
     '--card-shadow': cardShadow,
     '--image-aspect': imageAspect,
+    '--button-radius': buttonRadius,
     '--font-family': font.family,
     '--font-size-scale': fontSize.scale,
     backgroundColor: config.colors.pageBg,
@@ -58,6 +61,7 @@ export function mergeStorefrontConfig(
       colors: { ...acc.colors, ...patch.colors },
       typography: { ...acc.typography, ...patch.typography },
       cards: { ...acc.cards, ...patch.cards },
+      button: { ...acc.button, ...patch.button },
       layout: patch.layout ?? acc.layout,
     }
   }, base)
