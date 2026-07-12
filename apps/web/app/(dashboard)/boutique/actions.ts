@@ -9,10 +9,27 @@ import {
   DEFAULT_STOREFRONT_CONFIG, type StorefrontConfig,
 } from '@hanut/types'
 import { isValidHexColor } from '@/lib/storefront/colors'
+import { mergeStorefrontConfig, type StorefrontConfigPatch } from '@/lib/storefront/config'
+
+const HexColor = z.string().refine(isValidHexColor, 'Couleur invalide.')
 
 const ConfigSchema = z.object({
-  theme: z.enum(['moderne', 'elegant', 'bold', 'sombre', 'nature', 'pastel']).optional(),
-  primary_color: z.string().refine(isValidHexColor, 'Couleur invalide.').optional(),
+  colors: z.object({
+    primary: HexColor,
+    pageBg: HexColor,
+    cardBg: HexColor,
+    textPrimary: HexColor,
+    textSecondary: HexColor,
+  }).partial().optional(),
+  typography: z.object({
+    font: z.enum(['inter', 'poppins', 'playfair', 'montserrat', 'cairo', 'tajawal', 'raleway', 'nunito']),
+    size: z.enum(['small', 'normal', 'large']),
+  }).partial().optional(),
+  cards: z.object({
+    radius: z.enum(['none', 'rounded', 'full']),
+    shadow: z.enum(['none', 'sm', 'md']),
+    imageRatio: z.enum(['square', 'portrait', 'landscape']),
+  }).partial().optional(),
   layout: z.enum(['grid-2', 'grid-3', 'list']).optional(),
 })
 
@@ -27,13 +44,10 @@ export async function getStorefrontConfig(): Promise<StorefrontConfig> {
     .eq('id', context.sellerId)
     .single()
 
-  return {
-    ...DEFAULT_STOREFRONT_CONFIG,
-    ...(data?.storefront_config as Partial<StorefrontConfig> | null ?? {}),
-  }
+  return mergeStorefrontConfig(DEFAULT_STOREFRONT_CONFIG, data?.storefront_config as StorefrontConfigPatch | null)
 }
 
-export async function updateStorefrontConfig(config: Partial<StorefrontConfig>): Promise<{ error?: string }> {
+export async function updateStorefrontConfig(config: StorefrontConfigPatch): Promise<{ error?: string }> {
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
@@ -51,11 +65,11 @@ export async function updateStorefrontConfig(config: Partial<StorefrontConfig>):
     .eq('id', context.sellerId)
     .single()
 
-  const nextConfig: StorefrontConfig = {
-    ...DEFAULT_STOREFRONT_CONFIG,
-    ...(existing?.storefront_config as Partial<StorefrontConfig> | null ?? {}),
-    ...parsed.data,
-  }
+  const nextConfig: StorefrontConfig = mergeStorefrontConfig(
+    DEFAULT_STOREFRONT_CONFIG,
+    existing?.storefront_config as StorefrontConfigPatch | null,
+    parsed.data
+  )
 
   const { error } = await supabase
     .from('sellers')

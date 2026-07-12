@@ -40,17 +40,22 @@ export default function ProductCard({ product, t, onSelect, onQuickAdd }: Props)
 
   return (
     <div
-      style={{ borderRadius: 'var(--card-radius, 1rem)' }}
-      className="bg-white border border-gray-100 overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow"
+      style={{
+        backgroundColor: 'var(--card-bg, #fff)',
+        borderRadius: 'var(--card-radius, 1rem)',
+        boxShadow: 'var(--card-shadow, 0 1px 3px 0 rgb(0 0 0 / 0.1))',
+      }}
+      className="border border-black/5 overflow-hidden flex flex-col"
     >
-      {/* Image ratio 4:3 */}
+      {/* Image — ratio configurable par le vendeur (carré/portrait/large) */}
       <button
         type="button"
         onClick={handleAdd}
         disabled={isOut}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
-        className="relative block aspect-[4/3] bg-gray-50 w-full"
+        style={{ aspectRatio: 'var(--image-aspect, 1 / 1)' }}
+        className="relative block bg-gray-50 w-full"
         aria-label={product.name}
       >
         {displaySrc ? (
@@ -96,8 +101,16 @@ export default function ProductCard({ product, t, onSelect, onQuickAdd }: Props)
       {/* Body */}
       <div className="px-3 pb-3 pt-2 flex flex-col gap-2 flex-1">
         <div className="flex-1">
-          <p className="text-sm font-semibold text-gray-900 line-clamp-2">{product.name}</p>
-          <p className="text-base font-bold mt-0.5" style={{ color: 'var(--primary)' }}>
+          <p
+            style={{ color: 'var(--text-primary, #111827)', fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
+            className="font-semibold line-clamp-2"
+          >
+            {product.name}
+          </p>
+          <p
+            style={{ color: 'var(--primary)', fontSize: 'calc(1rem * var(--font-size-scale, 1))' }}
+            className="font-bold mt-0.5"
+          >
             {hasPriceRange ? t.shop.fromPrice(product.minPrice) : `${product.minPrice} DT`}
           </p>
           {product.hasVariants && (

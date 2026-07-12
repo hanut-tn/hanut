@@ -7,8 +7,8 @@ import Link from 'next/link'
 import { ShoppingCart, Search } from 'lucide-react'
 import { useLang } from '@/lib/i18n/use-lang'
 import { storefrontTranslations } from '@/lib/i18n/storefront'
-import { STOREFRONT_THEMES, DEFAULT_STOREFRONT_CONFIG, type Category, type StorefrontConfig } from '@hanut/types'
-import { adjustColor } from '@/lib/storefront/colors'
+import { DEFAULT_STOREFRONT_CONFIG, type Category, type StorefrontConfig } from '@hanut/types'
+import { buildCssVariables, loadGoogleFont } from '@/lib/storefront/config'
 import {
   addItemToCart, cartTotals, reconcileCartWithProducts, type CartItem, type StorefrontProduct,
 } from '@/lib/storefront/cart'
@@ -34,16 +34,21 @@ type Props = {
   config?: StorefrontConfig
   /** Masque la navbar Hanut — utilisé pour l'aperçu en direct intégré au dashboard. */
   hideTopBar?: boolean
+  /** Aperçu dashboard : apparence 100% fidèle, mais bloque le passage à un vrai checkout (OTP/commande réels). */
+  previewMode?: boolean
 }
 
 export default function StorefrontShell({
   sellerSlug, sellerName, shopDescription, logoUrl, products, categories,
-  config = DEFAULT_STOREFRONT_CONFIG, hideTopBar = false,
+  config = DEFAULT_STOREFRONT_CONFIG, hideTopBar = false, previewMode = false,
 }: Props) {
   const { t, lang, isRtl, toggleLang } = useLang(storefrontTranslations)
   const router = useRouter()
   const shellRef = useRef<HTMLDivElement>(null)
-  const theme = STOREFRONT_THEMES[config.theme] ?? STOREFRONT_THEMES.moderne
+
+  useEffect(() => {
+    loadGoogleFont(config.typography.font)
+  }, [config.typography.font])
 
   const [cart, setCart] = useState<CartItem[]>([])
   const [step, setStep] = useState<Step>('catalog')
@@ -199,18 +204,20 @@ export default function StorefrontShell({
 
   const showCartUi = step === 'catalog'
 
+  function goToCheckout() {
+    if (previewMode) {
+      showToast(t.shop.previewCheckoutDisabled)
+      return
+    }
+    setIsCartOpen(false)
+    setStep('checkout')
+  }
+
   return (
     <div
       ref={shellRef}
       dir={isRtl ? 'rtl' : 'ltr'}
-      style={{
-        '--primary': config.primary_color,
-        '--primary-dark': adjustColor(config.primary_color, -15),
-        '--card-radius': theme.cardRadius,
-        backgroundColor: theme.pageBg,
-        fontFamily: theme.fontFamily,
-        fontWeight: theme.fontWeight,
-      } as React.CSSProperties}
+      style={buildCssVariables(config)}
       className={`min-h-screen ${isRtl ? 'font-arabic' : ''}`}
     >
       {/* Navbar Hanut sticky */}
@@ -377,7 +384,7 @@ export default function StorefrontShell({
           totals={totals}
           t={t}
           onOpenCart={() => setIsCartOpen(true)}
-          onCheckout={() => { setIsCartOpen(false); setStep('checkout') }}
+          onCheckout={goToCheckout}
         />
       )}
 
@@ -392,7 +399,7 @@ export default function StorefrontShell({
           onClose={() => setIsCartOpen(false)}
           onUpdateQuantity={updateQuantity}
           onRemove={removeItem}
-          onCheckout={() => { setIsCartOpen(false); setStep('checkout') }}
+          onCheckout={goToCheckout}
         />
       )}
 

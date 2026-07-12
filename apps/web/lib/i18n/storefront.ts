@@ -18,6 +18,7 @@ export interface StorefrontDict extends OrderFormDict {
     add: string
     added: string
     categoryAll: string
+    previewCheckoutDisabled: string
   }
   search: {
     placeholder: string
@@ -76,6 +77,7 @@ const fr: StorefrontDict = {
     add: 'Ajouter',
     added: '✓ Ajouté',
     categoryAll: 'Tous',
+    previewCheckoutDisabled: 'Aperçu — le passage de commande réel est désactivé ici.',
   },
   search: {
     placeholder: 'Rechercher un produit...',
@@ -134,6 +136,7 @@ const ar: StorefrontDict = {
     add: 'أضف',
     added: '✓ تمت الإضافة',
     categoryAll: 'الكل',
+    previewCheckoutDisabled: 'معاينة — إتمام الطلب الحقيقي معطل هنا.',
   },
   search: {
     placeholder: 'ابحث عن منتج...',

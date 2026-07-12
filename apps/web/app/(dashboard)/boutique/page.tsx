@@ -12,7 +12,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
 import { updateShopBranding } from '@/app/(dashboard)/settings/actions'
 import { getStorefrontConfig, updateStorefrontConfig } from './actions'
-import BoutiqueClient from '@/components/boutique/BoutiqueClient'
+import BoutiqueEditor from '@/components/boutique/BoutiqueEditor'
 import type { Category } from '@hanut/types'
 import type { StorefrontProduct } from '@/lib/storefront/cart'
 
@@ -87,7 +87,7 @@ export default async function BoutiquePage() {
   ])
 
   return (
-    <BoutiqueClient
+    <BoutiqueEditor
       seller={{
         name: seller?.name ?? '',
         slug: seller?.slug ?? null,
