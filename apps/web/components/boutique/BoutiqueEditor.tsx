@@ -1,7 +1,8 @@
 'use client'
 
 import { useMemo, useState, useTransition } from 'react'
-import { Store, Pencil, Smartphone } from 'lucide-react'
+import Link from 'next/link'
+import { ArrowLeft, Save, Pencil, X, Smartphone, Monitor, ExternalLink } from 'lucide-react'
 import { DEFAULT_STOREFRONT_CONFIG, type Category, type StorefrontConfig, type StorefrontColors, type StorefrontTypography, type StorefrontCards, type StorefrontLayout } from '@hanut/types'
 import type { ShopBrandingInput } from '@/app/(dashboard)/settings/actions'
 import { uploadProductImage } from '@/app/(dashboard)/catalog/actions'
@@ -9,7 +10,6 @@ import { mergeStorefrontConfig, type StorefrontConfigPatch } from '@/lib/storefr
 import type { StorefrontProduct } from '@/lib/storefront/cart'
 import StorefrontShell from '@/components/storefront/StorefrontShell'
 import EditorPanel from './EditorPanel'
-import PreviewToolbar from './PreviewToolbar'
 
 type Seller = {
   name: string
@@ -30,7 +30,6 @@ type Props = {
   updateStorefrontConfig: (config: StorefrontConfigPatch) => Promise<{ error?: string }>
 }
 
-type MobileTab = 'edit' | 'preview'
 type Msg = { type: 'success' | 'error'; text: string }
 
 export default function BoutiqueEditor({
@@ -48,7 +47,7 @@ export default function BoutiqueEditor({
 
   const [msg, setMsg] = useState<Msg | null>(null)
   const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('mobile')
-  const [mobileTab, setMobileTab] = useState<MobileTab>('edit')
+  const [isEditorOpen, setIsEditorOpen] = useState(true)
 
   const previewUrl = seller.slug ? `${appUrl.replace(/\/$/, '')}/s/${seller.slug}` : null
 
@@ -136,103 +135,179 @@ export default function BoutiqueEditor({
     />
   ), [seller.slug, seller.name, shopName, shopDescription, logoUrl, bannerUrl, previewProducts, previewCategories, config])
 
+  const editorPanel = (
+    <EditorPanel
+      shopName={shopName}
+      shopDescription={shopDescription}
+      logoUrl={logoUrl}
+      logoUploading={logoUploading}
+      bannerUrl={bannerUrl}
+      bannerUploading={bannerUploading}
+      accountName={seller.name}
+      onShopNameChange={setShopName}
+      onShopDescriptionChange={setShopDescription}
+      onLogoFile={handleLogoFile}
+      onLogoRemove={() => setLogoUrl(null)}
+      onBannerFile={handleBannerFile}
+      onBannerRemove={() => setBannerUrl(null)}
+      colors={config.colors}
+      onColorsChange={patchColors}
+      typography={config.typography}
+      onTypographyChange={patchTypography}
+      cards={config.cards}
+      onCardsChange={patchCards}
+      layout={config.layout}
+      onLayoutChange={setLayout}
+    />
+  )
+
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Store className="w-6 h-6 text-brand-600" />
-          Ma boutique
-        </h1>
-        <p className="text-sm text-[#78716C] mt-0.5">Personnalisez l&apos;apparence de votre boutique publique — les changements s&apos;affichent en direct.</p>
+    // Compense le padding du <main> du layout dashboard pour occuper toute la
+    // largeur/hauteur disponible — l'éditeur est un outil plein écran, pas
+    // une carte dans le flux normal du dashboard.
+    <div className="-m-4 sm:-m-6 -mb-[calc(4rem+env(safe-area-inset-bottom)+1rem)] md:-mb-6 flex flex-col h-[calc(100dvh-3.5rem)]">
+      {/* Navbar fixe de l'éditeur */}
+      <div className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 sm:px-6 shrink-0 z-10">
+        <Link href="/catalog" className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
+          <ArrowLeft className="w-4 h-4" />
+          Boutique
+        </Link>
+        <span className="font-semibold text-gray-900 hidden sm:block">Ma boutique</span>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isPending || logoUploading || bannerUploading}
+          className="btn-primary text-sm px-4 py-2 inline-flex items-center gap-1.5"
+        >
+          <Save className="w-3.5 h-3.5" />
+          {isPending ? 'Enregistrement...' : 'Enregistrer'}
+        </button>
       </div>
 
-      {/* Onglets Modifier / Aperçu — mobile uniquement */}
-      <div className="flex md:hidden gap-0 border-b border-[#E7E5E4]">
-        {([
-          { key: 'edit' as MobileTab, label: 'Modifier', icon: Pencil },
-          { key: 'preview' as MobileTab, label: 'Aperçu', icon: Smartphone },
-        ]).map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            onClick={() => setMobileTab(key)}
-            className={`flex items-center gap-1.5 px-4 py-3 min-h-[44px] text-sm font-medium transition-colors ${
-              mobileTab === key
-                ? 'text-[#166534] border-b-2 border-[#16A34A] -mb-px'
-                : 'text-[#78716C] hover:text-[#1C1917]'
-            }`}
+      {msg && (
+        <div
+          className={`shrink-0 px-4 py-2 text-sm text-center ${
+            msg.type === 'success'
+              ? 'bg-green-50 text-green-700 border-b border-green-200'
+              : 'bg-red-50 text-red-700 border-b border-red-200'
+          }`}
+        >
+          {msg.text}
+        </div>
+      )}
+      {!seller.slug && (
+        <p className="shrink-0 text-xs text-center text-amber-700 bg-amber-50 border-b border-amber-100 px-4 py-2">
+          Créez d&apos;abord votre lien de boutique dans Paramètres pour activer l&apos;aperçu complet.
+        </p>
+      )}
+
+      {/* Zone aperçu plein écran + overlay éditeur */}
+      <div className="relative flex-1 overflow-hidden bg-[#F5F5F4]">
+        {/* Aperçu — pleine page */}
+        <div className="absolute inset-0 overflow-auto">
+          <div
+            style={{ width: viewMode === 'mobile' ? '390px' : '100%' }}
+            className="mx-auto min-h-full bg-white shadow-sm transition-all duration-300"
           >
-            <Icon className="w-4 h-4" />
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <div className="rounded-2xl border border-[#E7E5E4] bg-white overflow-hidden flex flex-col md:flex-row h-[75vh] min-h-[560px]">
-        {/* Panneau éditeur */}
-        <div className={`w-full md:w-80 shrink-0 md:border-r border-[#E7E5E4] flex-col min-h-0 ${mobileTab === 'edit' ? 'flex' : 'hidden md:flex'}`}>
-          <div className="flex-1 overflow-y-auto">
-            <EditorPanel
-              shopName={shopName}
-              shopDescription={shopDescription}
-              logoUrl={logoUrl}
-              logoUploading={logoUploading}
-              bannerUrl={bannerUrl}
-              bannerUploading={bannerUploading}
-              accountName={seller.name}
-              onShopNameChange={setShopName}
-              onShopDescriptionChange={setShopDescription}
-              onLogoFile={handleLogoFile}
-              onLogoRemove={() => setLogoUrl(null)}
-              onBannerFile={handleBannerFile}
-              onBannerRemove={() => setBannerUrl(null)}
-              colors={config.colors}
-              onColorsChange={patchColors}
-              typography={config.typography}
-              onTypographyChange={patchTypography}
-              cards={config.cards}
-              onCardsChange={patchCards}
-              layout={config.layout}
-              onLayoutChange={setLayout}
-            />
-          </div>
-          <div className="shrink-0 border-t border-[#E7E5E4] p-4 space-y-3">
-            {msg && (
-              <div className={`rounded-lg px-3 py-2 text-xs ${
-                msg.type === 'success'
-                  ? 'bg-green-50 border border-green-200 text-green-700'
-                  : 'bg-red-50 border border-red-200 text-red-700'
-              }`}>
-                {msg.text}
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={isPending || logoUploading || bannerUploading}
-              className="btn-primary w-full"
-            >
-              {isPending ? 'Enregistrement...' : 'Enregistrer les modifications'}
-            </button>
+            {previewShell}
           </div>
         </div>
 
-        {/* Aperçu live */}
-        <div className={`flex-1 flex-col min-w-0 min-h-0 bg-[#F5F5F4] ${mobileTab === 'preview' ? 'flex' : 'hidden md:flex'}`}>
-          <PreviewToolbar viewMode={viewMode} onViewModeChange={setViewMode} previewUrl={previewUrl} />
-          <div className="flex-1 overflow-auto flex items-start justify-center p-4 sm:p-8">
-            <div
-              style={{ width: viewMode === 'mobile' ? 390 : '100%', maxWidth: viewMode === 'mobile' ? 390 : 900 }}
-              className="bg-white rounded-2xl shadow-lg overflow-hidden border border-[#E7E5E4] transition-all duration-300 h-full"
+        {/* Overlay éditeur flottant — desktop */}
+        <div
+          className={`hidden md:flex absolute bottom-6 left-6 z-30 w-72 max-h-[75vh] bg-white rounded-2xl shadow-2xl border border-gray-100 flex-col overflow-hidden transition-all duration-300 ${
+            isEditorOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+          }`}
+        >
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
+            <span className="font-semibold text-sm text-gray-900">Personnaliser</span>
+            <button
+              type="button"
+              onClick={() => setIsEditorOpen(false)}
+              aria-label="Fermer l'éditeur"
+              className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <div className="w-full h-full overflow-y-auto">
-                {previewShell}
-              </div>
-            </div>
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          {!seller.slug && (
-            <p className="shrink-0 text-xs text-center text-amber-600 px-4 pb-3">
-              Créez d&apos;abord votre lien de boutique dans Paramètres pour activer l&apos;aperçu complet.
-            </p>
+          <div className="overflow-y-auto flex-1">
+            {editorPanel}
+          </div>
+        </div>
+
+        {/* Bouton ouvrir l'éditeur — desktop */}
+        {!isEditorOpen && (
+          <button
+            type="button"
+            onClick={() => setIsEditorOpen(true)}
+            className="hidden md:inline-flex absolute bottom-6 left-6 z-30 items-center gap-2 bg-white text-gray-900 px-4 py-3 rounded-2xl shadow-2xl border border-gray-100 font-medium text-sm hover:shadow-xl transition-shadow"
+          >
+            <Pencil className="w-4 h-4" />
+            Personnaliser
+          </button>
+        )}
+
+        {/* Bottom sheet éditeur — mobile */}
+        <div
+          className={`md:hidden fixed inset-x-0 bottom-0 z-30 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] flex flex-col transition-transform duration-300 ${
+            isEditorOpen ? 'translate-y-0' : 'translate-y-full'
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => setIsEditorOpen(false)}
+            aria-label="Fermer l'éditeur"
+            className="flex justify-center pt-3 pb-2 shrink-0"
+          >
+            <div className="w-10 h-1 bg-gray-300 rounded-full" />
+          </button>
+          <div className="overflow-y-auto flex-1">
+            {editorPanel}
+          </div>
+        </div>
+
+        {/* Bouton ouvrir l'éditeur — mobile (FAB) */}
+        {!isEditorOpen && (
+          <button
+            type="button"
+            onClick={() => setIsEditorOpen(true)}
+            className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-30 inline-flex items-center gap-2 bg-white text-gray-900 px-4 py-3 rounded-2xl shadow-2xl border border-gray-100 font-medium text-sm"
+          >
+            <Pencil className="w-4 h-4" />
+            Personnaliser
+          </button>
+        )}
+
+        {/* Toolbar aperçu — bas droite */}
+        <div className="absolute bottom-6 right-6 z-30 flex items-center gap-2">
+          <div className="bg-white rounded-xl shadow-lg border border-gray-100 flex overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setViewMode('mobile')}
+              aria-label="Aperçu mobile"
+              className={`px-3 py-2.5 transition-colors ${viewMode === 'mobile' ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:bg-gray-50'}`}
+            >
+              <Smartphone className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('desktop')}
+              aria-label="Aperçu desktop"
+              className={`px-3 py-2.5 transition-colors ${viewMode === 'desktop' ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:bg-gray-50'}`}
+            >
+              <Monitor className="w-4 h-4" />
+            </button>
+          </div>
+          {previewUrl && (
+            <a
+              href={previewUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Ouvrir la boutique dans un nouvel onglet"
+              className="bg-white rounded-xl shadow-lg border border-gray-100 px-3 py-2.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </a>
           )}
         </div>
       </div>
