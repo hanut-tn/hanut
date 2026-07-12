@@ -231,6 +231,33 @@ export default function StorefrontShell({
     onEditTargetChange?.({ type: 'background' }, { top: e.clientY, left: e.clientX })
   }
 
+  // Un seul rendu de chip, réutilisé pour la liste verticale (desktop, à
+  // gauche des produits) et la barre horizontale (mobile) — même logique de
+  // clic/édition, seule la classe de mise en forme diffère selon l'usage.
+  function renderCategoryChip(id: string, label: string, layoutClassName: string) {
+    const isActive = categoryFilter === id
+    return (
+      <button
+        key={id}
+        type="button"
+        data-edit="chips"
+        onClick={editMode ? (e) => {
+          e.stopPropagation()
+          const rect = e.currentTarget.getBoundingClientRect()
+          onEditTargetChange?.({ type: 'chips' }, { top: rect.bottom + 8, left: rect.left })
+        } : () => setCategoryFilter(id)}
+        style={{
+          fontSize: 'calc(0.875rem * var(--font-size-scale, 1))',
+          backgroundColor: isActive ? 'var(--chips-active-bg, var(--primary))' : 'var(--chips-bg, #fff)',
+          color: isActive ? 'var(--chips-active-text, #fff)' : 'var(--chips-text, #78716C)',
+        }}
+        className={`min-h-[32px] touch-manipulation rounded-full px-3.5 py-1.5 font-medium border border-transparent transition-colors flex items-center ${layoutClassName}`}
+      >
+        {label}
+      </button>
+    )
+  }
+
   return (
     <div
       ref={shellRef}
@@ -315,111 +342,90 @@ export default function StorefrontShell({
         </div>
       )}
 
-      {/* Barre de filtres catégories */}
+      {/* Barre de filtres catégories — horizontale, mobile uniquement (voir colonne de gauche en sm+) */}
       {step === 'catalog' && availableCategories.length > 0 && (
-        <div className={`sticky z-20 ${hideTopBar ? 'top-0' : 'top-14'} bg-gray-50/95 backdrop-blur border-b border-gray-100`}>
+        <div className={`sm:hidden sticky z-20 ${hideTopBar ? 'top-0' : 'top-14'} bg-gray-50/95 backdrop-blur border-b border-gray-100`}>
           <div className="max-w-5xl mx-auto flex gap-2 overflow-x-auto px-4 py-2.5 scrollbar-none">
-            <button
-              type="button"
-              data-edit="chips"
-              onClick={editMode ? (e) => {
-                e.stopPropagation()
-                const rect = e.currentTarget.getBoundingClientRect()
-                onEditTargetChange?.({ type: 'chips' }, { top: rect.bottom + 8, left: rect.left })
-              } : () => setCategoryFilter('all')}
-              style={{
-                fontSize: 'calc(0.875rem * var(--font-size-scale, 1))',
-                backgroundColor: categoryFilter === 'all' ? 'var(--chips-active-bg, var(--primary))' : 'var(--chips-bg, #fff)',
-                color: categoryFilter === 'all' ? 'var(--chips-active-text, #fff)' : 'var(--chips-text, #78716C)',
-              }}
-              className="shrink-0 min-h-[32px] touch-manipulation rounded-full px-3.5 py-1.5 font-medium border border-transparent transition-colors"
-            >
-              {t.shop.categoryAll}
-            </button>
-            {availableCategories.map(c => (
-              <button
-                key={c.id}
-                type="button"
-                data-edit="chips"
-                onClick={editMode ? (e) => {
-                  e.stopPropagation()
-                  const rect = e.currentTarget.getBoundingClientRect()
-                  onEditTargetChange?.({ type: 'chips' }, { top: rect.bottom + 8, left: rect.left })
-                } : () => setCategoryFilter(c.id)}
-                style={{
-                  fontSize: 'calc(0.875rem * var(--font-size-scale, 1))',
-                  backgroundColor: categoryFilter === c.id ? 'var(--chips-active-bg, var(--primary))' : 'var(--chips-bg, #fff)',
-                  color: categoryFilter === c.id ? 'var(--chips-active-text, #fff)' : 'var(--chips-text, #78716C)',
-                }}
-                className="shrink-0 min-h-[32px] touch-manipulation rounded-full px-3.5 py-1.5 font-medium whitespace-nowrap border border-transparent transition-colors"
-              >
-                {c.name}
-              </button>
-            ))}
+            {renderCategoryChip('all', t.shop.categoryAll, 'shrink-0 whitespace-nowrap')}
+            {availableCategories.map(c => renderCategoryChip(c.id, c.name, 'shrink-0 whitespace-nowrap'))}
           </div>
         </div>
       )}
 
       {/* Contenu */}
       <main className={`max-w-5xl mx-auto ${showCartUi && cart.length > 0 ? 'pb-28' : 'pb-10'}`}>
-        {step === 'catalog' && hasNoResults ? (
-          <div className="px-4 py-16 text-center">
-            <Search className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-30" />
-            <p style={{ fontSize: 'calc(1rem * var(--font-size-scale, 1))' }} className="font-semibold text-[#1C1917]">
-              {t.search.noResultsTitle}
-            </p>
-            {normalizedQuery && (
-              <p style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }} className="text-[#78716C] mt-1">
-                {t.search.noResultsFor(searchQuery.trim())}
-              </p>
+        {step === 'catalog' ? (
+          <div className="sm:flex sm:items-start sm:gap-6 sm:px-4 sm:pt-4">
+            {/* Catégories — colonne à gauche des produits, sm+ uniquement */}
+            {availableCategories.length > 0 && (
+              <aside className={`hidden sm:flex sm:flex-col sm:gap-1 w-44 shrink-0 sticky ${hideTopBar ? 'top-4' : 'top-[4.5rem]'}`}>
+                {renderCategoryChip('all', t.shop.categoryAll, 'w-full justify-start')}
+                {availableCategories.map(c => renderCategoryChip(c.id, c.name, 'w-full justify-start'))}
+              </aside>
             )}
-            <button
-              type="button"
-              onClick={() => { setSearchQuery(''); setCategoryFilter('all') }}
-              className="mt-4 font-medium hover:underline"
-              style={{ color: 'var(--primary)', fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
-            >
-              {t.search.resetButton}
-            </button>
+
+            <div className="min-w-0 flex-1">
+              {hasNoResults ? (
+                <div className="px-4 py-16 text-center">
+                  <Search className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-30" />
+                  <p style={{ fontSize: 'calc(1rem * var(--font-size-scale, 1))' }} className="font-semibold text-[#1C1917]">
+                    {t.search.noResultsTitle}
+                  </p>
+                  {normalizedQuery && (
+                    <p style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }} className="text-[#78716C] mt-1">
+                      {t.search.noResultsFor(searchQuery.trim())}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setSearchQuery(''); setCategoryFilter('all') }}
+                    className="mt-4 font-medium hover:underline"
+                    style={{ color: 'var(--primary)', fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
+                  >
+                    {t.search.resetButton}
+                  </button>
+                </div>
+              ) : (
+                <div
+                  data-edit="layout"
+                  onClick={editMode ? (e) => {
+                    e.stopPropagation()
+                    const card = (e.target as HTMLElement).closest('[data-edit="card"]')
+                    if (card) {
+                      const rect = card.getBoundingClientRect()
+                      onEditTargetChange?.({ type: 'card' }, { top: rect.top, left: rect.right + 8 })
+                      return
+                    }
+                    // Clic dans la grille mais hors d'une carte (gouttière) → réglage de la disposition.
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    onEditTargetChange?.({ type: 'layout' }, { top: rect.top, left: rect.left })
+                  } : undefined}
+                >
+                  <ProductGrid
+                    products={filteredProducts}
+                    t={t}
+                    layout={config.layout}
+                    editMode={editMode}
+                    buttonText={config.button.text}
+                    onSelect={setSelectedProduct}
+                    onQuickAdd={product =>
+                      addToCart({
+                        productId: product.id,
+                        productName: product.name,
+                        productImage: product.image_url,
+                        productPrice: product.price,
+                        variantLabel: null,
+                        quantity: 1,
+                        maxQty: product.stock,
+                      })
+                    }
+                    onEditTargetChange={onEditTargetChange}
+                  />
+                </div>
+              )}
+            </div>
           </div>
-        ) : step === 'catalog' && (
-          <div
-            data-edit="layout"
-            onClick={editMode ? (e) => {
-              e.stopPropagation()
-              const card = (e.target as HTMLElement).closest('[data-edit="card"]')
-              if (card) {
-                const rect = card.getBoundingClientRect()
-                onEditTargetChange?.({ type: 'card' }, { top: rect.top, left: rect.right + 8 })
-                return
-              }
-              // Clic dans la grille mais hors d'une carte (gouttière) → réglage de la disposition.
-              const rect = e.currentTarget.getBoundingClientRect()
-              onEditTargetChange?.({ type: 'layout' }, { top: rect.top, left: rect.left })
-            } : undefined}
-          >
-            <ProductGrid
-              products={filteredProducts}
-              t={t}
-              layout={config.layout}
-              editMode={editMode}
-              buttonText={config.button.text}
-              onSelect={setSelectedProduct}
-              onQuickAdd={product =>
-                addToCart({
-                  productId: product.id,
-                  productName: product.name,
-                  productImage: product.image_url,
-                  productPrice: product.price,
-                  variantLabel: null,
-                  quantity: 1,
-                  maxQty: product.stock,
-                })
-              }
-              onEditTargetChange={onEditTargetChange}
-            />
-          </div>
-        )}
+        ) : null}
 
         {step === 'checkout' && (
           <CheckoutForm
