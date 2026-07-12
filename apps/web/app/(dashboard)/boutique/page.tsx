@@ -69,7 +69,7 @@ export default async function BoutiquePage() {
   const [{ data: seller }, config, { data: products }, { data: categories }] = await Promise.all([
     serviceClient
       .from('sellers')
-      .select('name, slug, shop_name, shop_description, logo_url')
+      .select('name, slug, shop_name, shop_description, logo_url, banner_url')
       .eq('id', context.sellerId)
       .single(),
     getStorefrontConfig(),
@@ -94,6 +94,7 @@ export default async function BoutiquePage() {
         shopName: seller?.shop_name ?? null,
         shopDescription: seller?.shop_description ?? null,
         logoUrl: seller?.logo_url ?? null,
+        bannerUrl: seller?.banner_url ?? null,
       }}
       initialConfig={config}
       appUrl={appUrl}

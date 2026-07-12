@@ -16,11 +16,15 @@ type Props = {
   shopDescription: string
   logoUrl: string | null
   logoUploading: boolean
+  bannerUrl: string | null
+  bannerUploading: boolean
   accountName: string
   onShopNameChange: (value: string) => void
   onShopDescriptionChange: (value: string) => void
   onLogoFile: (file: File) => void
   onLogoRemove: () => void
+  onBannerFile: (file: File) => void
+  onBannerRemove: () => void
 
   colors: StorefrontColors
   onColorsChange: (patch: Partial<StorefrontColors>) => void
@@ -72,11 +76,15 @@ export default function EditorPanel(props: Props) {
                     shopDescription={props.shopDescription}
                     logoUrl={props.logoUrl}
                     logoUploading={props.logoUploading}
+                    bannerUrl={props.bannerUrl}
+                    bannerUploading={props.bannerUploading}
                     accountName={props.accountName}
                     onShopNameChange={props.onShopNameChange}
                     onShopDescriptionChange={props.onShopDescriptionChange}
                     onLogoFile={props.onLogoFile}
                     onLogoRemove={props.onLogoRemove}
+                    onBannerFile={props.onBannerFile}
+                    onBannerRemove={props.onBannerRemove}
                   />
                 )}
                 {id === 'colors' && (

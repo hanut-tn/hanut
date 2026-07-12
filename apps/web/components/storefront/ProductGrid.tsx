@@ -28,8 +28,12 @@ export default function ProductGrid({ products, t, layout = 'grid-3', onSelect, 
     return (
       <div className="px-4 py-20 text-center">
         <Store className="w-12 h-12 mx-auto mb-4 text-[#78716C] opacity-30" />
-        <p className="font-semibold text-[#1C1917] text-lg">{t.shop.emptyTitle}</p>
-        <p className="text-sm text-[#78716C] mt-1">{t.shop.emptyDesc}</p>
+        <p style={{ fontSize: 'calc(1.125rem * var(--font-size-scale, 1))' }} className="font-semibold text-[#1C1917]">
+          {t.shop.emptyTitle}
+        </p>
+        <p style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }} className="text-[#78716C] mt-1">
+          {t.shop.emptyDesc}
+        </p>
       </div>
     )
   }

@@ -178,9 +178,18 @@ export default function OtpStep({
   return (
     <div className="px-4 py-6 max-w-md mx-auto space-y-4">
       <div className="text-center">
-        <h2 className="text-xl font-bold text-[#1C1917]">{t.otp.title}</h2>
-        <p className="text-sm text-gray-500 mt-1.5">{t.otp.sentTo}</p>
-        <p className="text-sm font-semibold text-[#1C1917] mt-0.5 break-all">{checkoutData.email}</p>
+        <h2 style={{ fontSize: 'calc(1.25rem * var(--font-size-scale, 1))' }} className="font-bold text-[#1C1917]">
+          {t.otp.title}
+        </h2>
+        <p style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }} className="text-gray-500 mt-1.5">
+          {t.otp.sentTo}
+        </p>
+        <p
+          style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
+          className="font-semibold text-[#1C1917] mt-0.5 break-all"
+        >
+          {checkoutData.email}
+        </p>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm space-y-5">
@@ -198,10 +207,13 @@ export default function OtpStep({
               onKeyDown={e => handleKeyDown(i, e)}
               autoComplete={i === 0 ? 'one-time-code' : 'off'}
               aria-label={t.otp.digitAriaLabel(i + 1)}
-              style={otpDigits[i]
-                ? { borderColor: 'var(--primary)', backgroundColor: 'color-mix(in srgb, var(--primary) 10%, white)', color: 'var(--primary-dark)' }
-                : undefined}
-              className={`w-14 h-14 text-center text-2xl font-bold border-2 rounded-xl outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition caret-transparent ${
+              style={{
+                fontSize: 'calc(1.5rem * var(--font-size-scale, 1))',
+                ...(otpDigits[i]
+                  ? { borderColor: 'var(--primary)', backgroundColor: 'color-mix(in srgb, var(--primary) 10%, white)', color: 'var(--primary-dark)' }
+                  : {}),
+              }}
+              className={`w-14 h-14 text-center font-bold border-2 rounded-xl outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition caret-transparent ${
                 otpDigits[i] ? '' : 'border-[#E7E5E4] focus:border-[var(--primary)]'
               }`}
             />
@@ -209,7 +221,9 @@ export default function OtpStep({
         </div>
 
         {otpError && (
-          <p role="alert" className="text-sm text-center text-red-600">{otpError}</p>
+          <p role="alert" style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }} className="text-center text-red-600">
+            {otpError}
+          </p>
         )}
 
         {isTurnstileEnabled() && (
@@ -222,22 +236,24 @@ export default function OtpStep({
           type="button"
           onClick={() => handleVerify(otpDigits.join(''))}
           disabled={loading || otpDigits.some(d => !d) || (isTurnstileEnabled() && !turnstileToken)}
-          style={{ backgroundColor: 'var(--primary)' }}
-          className="h-12 w-full touch-manipulation text-white font-bold rounded-lg text-base transition-all duration-150 ease-out active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ backgroundColor: 'var(--primary)', fontSize: 'calc(1rem * var(--font-size-scale, 1))' }}
+          className="h-12 w-full touch-manipulation text-white font-bold rounded-lg transition-all duration-150 ease-out active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? t.otp.verifying : t.otp.validateCode}
         </button>
 
         <div className="text-center">
           {resendCooldown > 0 ? (
-            <p className="text-sm text-[#78716C]">{t.otp.resendIn(resendCooldown)}</p>
+            <p style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }} className="text-[#78716C]">
+              {t.otp.resendIn(resendCooldown)}
+            </p>
           ) : (
             <button
               type="button"
               onClick={handleResend}
               disabled={loading || (isTurnstileEnabled() && !turnstileToken)}
-              style={{ color: 'var(--primary)' }}
-              className="text-sm font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ color: 'var(--primary)', fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
+              className="font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {t.otp.resendCode}
             </button>
@@ -248,7 +264,8 @@ export default function OtpStep({
       <button
         type="button"
         onClick={onBack}
-        className="w-full text-sm text-[#78716C] hover:text-gray-600 text-center py-2 touch-manipulation transition-colors"
+        style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
+        className="w-full text-[#78716C] hover:text-gray-600 text-center py-2 touch-manipulation transition-colors"
       >
         {t.otp.backToEdit}
       </button>

@@ -45,20 +45,29 @@ export default function OrderConfirmation({ result, sellerName, lang, t, onNewOr
       </div>
 
       <div>
-        <h2 className="text-2xl font-extrabold text-[#1C1917]">{t.success.title}</h2>
+        <h2 style={{ fontSize: 'calc(1.5rem * var(--font-size-scale, 1))' }} className="font-extrabold text-[#1C1917]">
+          {t.success.title}
+        </h2>
         <p className="text-gray-500 mt-2 max-w-sm">{t.success.description(sellerName)}</p>
       </div>
 
       <div className="bg-[#F5F5F4] rounded-xl px-6 py-4 border-2 border-dashed border-[#D6D3D1]">
-        <p className="text-xs text-[#78716C] uppercase tracking-widest mb-1">{t.success.orderNumberLabel}</p>
-        <p className="text-xl font-bold tracking-wider font-mono" style={{ color: 'var(--primary-dark)' }}>#{result.orderId}</p>
+        <p style={{ fontSize: 'calc(0.75rem * var(--font-size-scale, 1))' }} className="text-[#78716C] uppercase tracking-widest mb-1">
+          {t.success.orderNumberLabel}
+        </p>
+        <p
+          style={{ color: 'var(--primary-dark)', fontSize: 'calc(1.25rem * var(--font-size-scale, 1))' }}
+          className="font-bold tracking-wider font-mono"
+        >
+          #{result.orderId}
+        </p>
       </div>
 
       {/* Récap articles */}
       <div className="w-full bg-white border border-[#E7E5E4] rounded-2xl p-4 shadow-sm text-start">
         <ul className="space-y-1.5">
           {result.lines.map((line, i) => (
-            <li key={i} className="flex justify-between gap-3 text-sm">
+            <li key={i} style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }} className="flex justify-between gap-3">
               <span className="text-[#44403C] truncate">
                 {line.name}
                 {line.variant && <span className="text-[#78716C]"> · {line.variant}</span>}
@@ -69,18 +78,27 @@ export default function OrderConfirmation({ result, sellerName, lang, t, onNewOr
           ))}
         </ul>
         <div className="mt-2.5 pt-2.5 border-t border-[#E7E5E4] flex justify-between items-center">
-          <span className="text-sm text-[#78716C]">{t.confirmExtra.itemsTotal}</span>
-          <span className="text-lg font-extrabold" style={{ color: 'var(--primary-dark)' }}>{result.total} DT</span>
+          <span style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }} className="text-[#78716C]">
+            {t.confirmExtra.itemsTotal}
+          </span>
+          <span
+            style={{ color: 'var(--primary-dark)', fontSize: 'calc(1.125rem * var(--font-size-scale, 1))' }}
+            className="font-extrabold"
+          >
+            {result.total} DT
+          </span>
         </div>
       </div>
 
-      <p className="text-sm text-[#78716C]">{t.confirmExtra.contactSoon}</p>
+      <p style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }} className="text-[#78716C]">
+        {t.confirmExtra.contactSoon}
+      </p>
 
       <button
         type="button"
         onClick={handleShareWhatsApp}
-        style={{ backgroundColor: '#25D366' }}
-        className="flex items-center justify-center gap-2 min-h-[48px] w-full text-white font-semibold rounded-lg text-sm transition-all duration-150 ease-out hover:brightness-95 active:scale-[0.98] touch-manipulation"
+        style={{ backgroundColor: '#25D366', fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
+        className="flex items-center justify-center gap-2 min-h-[48px] w-full text-white font-semibold rounded-lg transition-all duration-150 ease-out hover:brightness-95 active:scale-[0.98] touch-manipulation"
       >
         <MessageCircle className="w-4 h-4" />
         {t.confirmExtra.shareWhatsApp}
@@ -88,8 +106,8 @@ export default function OrderConfirmation({ result, sellerName, lang, t, onNewOr
 
       <a
         href={`/track/${result.trackingToken}`}
-        style={{ backgroundColor: 'var(--primary)' }}
-        className="flex items-center justify-center gap-2 min-h-[48px] w-full text-white font-semibold rounded-lg text-sm transition-all duration-150 ease-out active:scale-[0.98] touch-manipulation"
+        style={{ backgroundColor: 'var(--primary)', fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
+        className="flex items-center justify-center gap-2 min-h-[48px] w-full text-white font-semibold rounded-lg transition-all duration-150 ease-out active:scale-[0.98] touch-manipulation"
       >
         <ExternalLink className="w-4 h-4" />
         {t.success.viewOrderStatus}
@@ -98,8 +116,8 @@ export default function OrderConfirmation({ result, sellerName, lang, t, onNewOr
       <button
         type="button"
         onClick={onNewOrder}
-        style={{ color: 'var(--primary)' }}
-        className="min-h-[44px] touch-manipulation text-sm font-medium hover:underline transition-colors"
+        style={{ color: 'var(--primary)', fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
+        className="min-h-[44px] touch-manipulation font-medium hover:underline transition-colors"
       >
         {t.success.placeAnotherOrder}
       </button>

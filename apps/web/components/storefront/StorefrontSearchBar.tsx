@@ -28,8 +28,11 @@ export default function StorefrontSearchBar({ value, onChange, t }: Props) {
         onChange={e => setDraft(e.target.value)}
         placeholder={t.search.placeholder}
         aria-label={t.search.placeholder}
-        className="w-full min-h-[44px] touch-manipulation rounded-xl border border-gray-200 bg-white ps-11 pe-4 py-2.5 text-sm outline-none transition focus:ring-2"
-        style={{ '--tw-ring-color': 'color-mix(in srgb, var(--primary) 20%, transparent)' } as React.CSSProperties}
+        className="w-full min-h-[44px] touch-manipulation rounded-xl border border-gray-200 bg-white ps-11 pe-4 py-2.5 outline-none transition focus:ring-2"
+        style={{
+          '--tw-ring-color': 'color-mix(in srgb, var(--primary) 20%, transparent)',
+          fontSize: 'calc(0.875rem * var(--font-size-scale, 1))',
+        } as React.CSSProperties}
       />
     </div>
   )

@@ -7,18 +7,23 @@ type Props = {
   shopDescription: string
   logoUrl: string | null
   logoUploading: boolean
+  bannerUrl: string | null
+  bannerUploading: boolean
   accountName: string
   onShopNameChange: (value: string) => void
   onShopDescriptionChange: (value: string) => void
   onLogoFile: (file: File) => void
   onLogoRemove: () => void
+  onBannerFile: (file: File) => void
+  onBannerRemove: () => void
 }
 
 export default function IdentitySection({
-  shopName, shopDescription, logoUrl, logoUploading, accountName,
-  onShopNameChange, onShopDescriptionChange, onLogoFile, onLogoRemove,
+  shopName, shopDescription, logoUrl, logoUploading, bannerUrl, bannerUploading, accountName,
+  onShopNameChange, onShopDescriptionChange, onLogoFile, onLogoRemove, onBannerFile, onBannerRemove,
 }: Props) {
   const logoInputRef = useRef<HTMLInputElement>(null)
+  const bannerInputRef = useRef<HTMLInputElement>(null)
 
   return (
     <div className="space-y-4">
@@ -56,7 +61,7 @@ export default function IdentitySection({
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Logo <span className="text-gray-400 font-normal">(optionnel)</span>
+          Logo de la boutique <span className="text-gray-400 font-normal">(optionnel)</span>
         </label>
         {logoUrl ? (
           <div className="flex items-center gap-3">
@@ -101,6 +106,59 @@ export default function IdentitySection({
           accept=".jpg,.jpeg,.png,.webp"
           className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) onLogoFile(f) }}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Bannière <span className="text-gray-400 font-normal">(optionnel)</span>
+        </label>
+        {bannerUrl ? (
+          <div className="space-y-2">
+            <div
+              role="img"
+              aria-label="Aperçu de la bannière"
+              className="h-24 w-full rounded-lg border border-gray-200 bg-cover bg-center"
+              style={{ backgroundImage: `url(${bannerUrl})` }}
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => bannerInputRef.current?.click()}
+                disabled={bannerUploading}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                {bannerUploading ? 'Envoi…' : 'Changer la bannière'}
+              </button>
+              <button
+                type="button"
+                onClick={onBannerRemove}
+                disabled={bannerUploading}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+              >
+                Retirer
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => bannerInputRef.current?.click()}
+            disabled={bannerUploading}
+            className="w-full h-20 rounded-xl border-2 border-dashed border-gray-200 text-sm text-gray-500 hover:border-brand-500/50 hover:text-brand-600 transition-colors disabled:opacity-50"
+          >
+            {bannerUploading ? 'Envoi en cours…' : 'Choisir une bannière — 1200×400px conseillé'}
+          </button>
+        )}
+        <p className="text-xs text-gray-400 mt-1">
+          Laissez vide pour un header avec la couleur principale.
+        </p>
+        <input
+          ref={bannerInputRef}
+          type="file"
+          accept=".jpg,.jpeg,.png,.webp"
+          className="hidden"
+          onChange={e => { const f = e.target.files?.[0]; if (f) onBannerFile(f) }}
         />
       </div>
     </div>

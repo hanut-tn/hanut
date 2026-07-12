@@ -20,6 +20,13 @@ type Props = {
   onAdd: (item: Omit<CartItem, 'key'>) => void
 }
 
+// Bordures/séparateurs dérivés du texte du thème (color-mix) — restent
+// visibles sur `--card-bg` clair comme sombre. Valeur figée dans le code
+// (pas d'interpolation) — safe pour le scanner Tailwind.
+const THEME_BORDER = 'border-[color:color-mix(in_srgb,var(--text-primary)_15%,transparent)]'
+const THEME_BORDER_SOFT = 'border-[color:color-mix(in_srgb,var(--text-primary)_20%,transparent)]'
+const THEME_HOVER_BG = 'hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]'
+
 export default function ProductQuickModal({ product, cart, t, isRtl, portalContainer, onClose, onAdd }: Props) {
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
   const [quantity, setQuantity] = useState(1)
@@ -118,14 +125,15 @@ export default function ProductQuickModal({ product, cart, t, isRtl, portalConta
         role="dialog"
         aria-modal="true"
         aria-labelledby="quick-modal-title"
-        className="absolute inset-x-0 bottom-0 max-h-[90dvh] flex flex-col rounded-t-2xl bg-white shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:border sm:border-[#E7E5E4]"
+        style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)' }}
+        className={`absolute inset-x-0 bottom-0 max-h-[90dvh] flex flex-col rounded-t-2xl shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:border ${THEME_BORDER}`}
       >
         {/* Header */}
-        <div className="shrink-0 flex items-center justify-between border-b border-[#E7E5E4] px-4 py-3.5 sm:px-5">
-          <h2 id="quick-modal-title" className="font-semibold text-[#1C1917] truncate pe-3">{product.name}</h2>
+        <div className={`shrink-0 flex items-center justify-between border-b ${THEME_BORDER} px-4 py-3.5 sm:px-5`}>
+          <h2 id="quick-modal-title" className="font-semibold truncate pe-3">{product.name}</h2>
           <button
             onClick={onClose}
-            className="text-[#78716C] hover:text-[#1C1917] w-9 h-9 touch-manipulation flex items-center justify-center rounded-lg hover:bg-[#F5F5F4] transition-colors shrink-0"
+            className={`text-[var(--text-secondary)] hover:text-[var(--text-primary)] w-9 h-9 touch-manipulation flex items-center justify-center rounded-lg ${THEME_HOVER_BG} transition-colors shrink-0`}
             aria-label="Fermer"
           >
             <X className="w-5 h-5" />
@@ -177,16 +185,25 @@ export default function ProductQuickModal({ product, cart, t, isRtl, portalConta
 
           {/* Prix + description */}
           <div className="min-w-0">
-            <p className="text-lg font-bold" style={{ color: 'var(--primary)' }}>{effectivePrice} DT</p>
+            <p style={{ color: 'var(--primary)', fontSize: 'calc(1.125rem * var(--font-size-scale, 1))' }} className="font-bold">
+              {effectivePrice} DT
+            </p>
             {product.description && (
-              <p className="text-xs text-[#78716C] line-clamp-3 mt-0.5">{product.description}</p>
+              <p
+                style={{ fontSize: 'calc(0.75rem * var(--font-size-scale, 1))' }}
+                className="text-[var(--text-secondary)] line-clamp-3 mt-0.5"
+              >
+                {product.description}
+              </p>
             )}
           </div>
 
           {/* Variantes */}
           {product.hasVariants && (
             <div>
-              <p className="text-sm font-medium text-[#1C1917] mb-2">{t.quick.chooseVariant}</p>
+              <p style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }} className="font-medium mb-2">
+                {t.quick.chooseVariant}
+              </p>
               <div className="flex flex-wrap gap-2">
                 {product.variants.map(v => {
                   const isOut = v.qty === 0
@@ -197,20 +214,25 @@ export default function ProductQuickModal({ product, cart, t, isRtl, portalConta
                       type="button"
                       disabled={isOut}
                       onClick={() => setSelectedLabel(v.label)}
-                      style={isOut ? undefined : isSelected
-                        ? { borderColor: 'var(--primary)', backgroundColor: 'color-mix(in srgb, var(--primary) 12%, white)', color: 'var(--primary-dark)' }
-                        : undefined}
-                      className={`min-h-[44px] touch-manipulation rounded-lg px-3 py-2 text-sm transition-colors ${
+                      style={{
+                        fontSize: 'calc(0.875rem * var(--font-size-scale, 1))',
+                        ...(isOut ? {} : isSelected
+                          ? { borderColor: 'var(--primary)', backgroundColor: 'color-mix(in srgb, var(--primary) 12%, white)', color: 'var(--primary-dark)' }
+                          : {}),
+                      }}
+                      className={`min-h-[44px] touch-manipulation rounded-lg px-3 py-2 transition-colors ${
                         isOut
-                          ? 'border border-[#E7E5E4] opacity-40 cursor-not-allowed line-through'
+                          ? `border ${THEME_BORDER} opacity-40 cursor-not-allowed line-through`
                           : isSelected
                             ? 'border-2 font-medium'
-                            : 'border border-[#D6D3D1] text-[#44403C] hover:border-[var(--primary)]'
+                            : `border ${THEME_BORDER_SOFT} text-[var(--text-secondary)] hover:border-[var(--primary)]`
                       }`}
                     >
                       {v.label}
                       {v.price != null && !isOut && (
-                        <span className="ms-1 text-xs font-semibold">· {v.price} DT</span>
+                        <span style={{ fontSize: 'calc(0.75rem * var(--font-size-scale, 1))' }} className="ms-1 font-semibold">
+                          · {v.price} DT
+                        </span>
                       )}
                     </button>
                   )
@@ -221,30 +243,34 @@ export default function ProductQuickModal({ product, cart, t, isRtl, portalConta
 
           {/* Quantité */}
           <div>
-            <p className="text-sm font-medium text-[#1C1917] mb-2">{t.quick.quantity}</p>
+            <p style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }} className="font-medium mb-2">
+              {t.quick.quantity}
+            </p>
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 disabled={quantity <= 1}
                 onClick={() => setQuantity(q => Math.max(1, q - 1))}
                 style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}
-                className="w-11 h-11 touch-manipulation rounded-lg border flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+                className={`w-11 h-11 touch-manipulation rounded-lg border flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${THEME_HOVER_BG}`}
                 aria-label={t.quick.decreaseQty}
               >
                 <Minus className="w-4 h-4" />
               </button>
-              <span className="text-lg font-bold text-[#1C1917] w-8 text-center tabular-nums">{quantity}</span>
+              <span style={{ fontSize: 'calc(1.125rem * var(--font-size-scale, 1))' }} className="font-bold w-8 text-center tabular-nums">
+                {quantity}
+              </span>
               <button
                 type="button"
                 disabled={quantity >= remaining}
                 onClick={() => setQuantity(q => Math.min(remaining, q + 1))}
                 style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}
-                className="w-11 h-11 touch-manipulation rounded-lg border flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+                className={`w-11 h-11 touch-manipulation rounded-lg border flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${THEME_HOVER_BG}`}
                 aria-label={t.quick.increaseQty}
               >
                 <Plus className="w-4 h-4" />
               </button>
-              <span className="text-xs text-[#78716C]">
+              <span style={{ fontSize: 'calc(0.75rem * var(--font-size-scale, 1))' }} className="text-[var(--text-secondary)]">
                 {(!product.hasVariants || selectedVariant) && (
                   <>
                     {t.quick.available(remaining)}
@@ -257,13 +283,16 @@ export default function ProductQuickModal({ product, cart, t, isRtl, portalConta
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 border-t border-[#E7E5E4] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-5 sm:pb-5">
+        <div className={`shrink-0 border-t ${THEME_BORDER} p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-5 sm:pb-5`}>
           <button
             type="button"
             disabled={!canAdd}
             onClick={handleAdd}
-            style={canAdd ? { backgroundColor: 'var(--primary)' } : undefined}
-            className="h-12 w-full touch-manipulation text-white font-bold rounded-lg text-base transition-all duration-150 ease-out active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
+            style={{
+              fontSize: 'calc(1rem * var(--font-size-scale, 1))',
+              ...(canAdd ? { backgroundColor: 'var(--primary)' } : {}),
+            }}
+            className="h-12 w-full touch-manipulation text-white font-bold rounded-lg transition-all duration-150 ease-out active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             {t.quick.addToCart(total)}
           </button>

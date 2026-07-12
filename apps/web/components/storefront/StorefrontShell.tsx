@@ -29,6 +29,7 @@ type Props = {
   sellerName: string
   shopDescription: string | null
   logoUrl: string | null
+  bannerUrl?: string | null
   products: StorefrontProduct[]
   categories: Category[]
   config?: StorefrontConfig
@@ -39,7 +40,7 @@ type Props = {
 }
 
 export default function StorefrontShell({
-  sellerSlug, sellerName, shopDescription, logoUrl, products, categories,
+  sellerSlug, sellerName, shopDescription, logoUrl, bannerUrl = null, products, categories,
   config = DEFAULT_STOREFRONT_CONFIG, hideTopBar = false, previewMode = false,
 }: Props) {
   const { t, lang, isRtl, toggleLang } = useLang(storefrontTranslations)
@@ -231,7 +232,8 @@ export default function StorefrontShell({
               <button
                 type="button"
                 onClick={toggleLang}
-                className="text-xs font-medium text-gray-500 border border-gray-200 rounded-full px-2.5 py-1 min-h-[32px] touch-manipulation transition-colors hover:bg-gray-50 hover:text-[#1C1917]"
+                style={{ fontSize: 'calc(0.75rem * var(--font-size-scale, 1))' }}
+                className="font-medium text-gray-500 border border-gray-200 rounded-full px-2.5 py-1 min-h-[32px] touch-manipulation transition-colors hover:bg-gray-50 hover:text-[#1C1917]"
               >
                 {t.common.langToggle}
               </button>
@@ -261,6 +263,7 @@ export default function StorefrontShell({
           shopName={sellerName}
           shopDescription={shopDescription}
           logoUrl={logoUrl}
+          bannerUrl={bannerUrl}
           t={t}
         />
       )}
@@ -279,7 +282,8 @@ export default function StorefrontShell({
             <button
               type="button"
               onClick={() => setCategoryFilter('all')}
-              className={`shrink-0 min-h-[32px] touch-manipulation rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+              style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
+              className={`shrink-0 min-h-[32px] touch-manipulation rounded-full px-3.5 py-1.5 font-medium transition-colors ${
                 categoryFilter === 'all' ? 'bg-[var(--primary)] text-white' : 'bg-white text-[#78716C] border border-gray-200'
               }`}
             >
@@ -290,7 +294,8 @@ export default function StorefrontShell({
                 key={c.id}
                 type="button"
                 onClick={() => setCategoryFilter(c.id)}
-                className={`shrink-0 min-h-[32px] touch-manipulation rounded-full px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors ${
+                style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
+                className={`shrink-0 min-h-[32px] touch-manipulation rounded-full px-3.5 py-1.5 font-medium whitespace-nowrap transition-colors ${
                   categoryFilter === c.id ? 'bg-[var(--primary)] text-white' : 'bg-white text-[#78716C] border border-gray-200'
                 }`}
               >
@@ -306,15 +311,19 @@ export default function StorefrontShell({
         {step === 'catalog' && hasNoResults ? (
           <div className="px-4 py-16 text-center">
             <Search className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-30" />
-            <p className="font-semibold text-[#1C1917]">{t.search.noResultsTitle}</p>
+            <p style={{ fontSize: 'calc(1rem * var(--font-size-scale, 1))' }} className="font-semibold text-[#1C1917]">
+              {t.search.noResultsTitle}
+            </p>
             {normalizedQuery && (
-              <p className="text-sm text-[#78716C] mt-1">{t.search.noResultsFor(searchQuery.trim())}</p>
+              <p style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }} className="text-[#78716C] mt-1">
+                {t.search.noResultsFor(searchQuery.trim())}
+              </p>
             )}
             <button
               type="button"
               onClick={() => { setSearchQuery(''); setCategoryFilter('all') }}
-              className="mt-4 text-sm font-medium hover:underline"
-              style={{ color: 'var(--primary)' }}
+              className="mt-4 font-medium hover:underline"
+              style={{ color: 'var(--primary)', fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
             >
               {t.search.resetButton}
             </button>
@@ -422,18 +431,31 @@ export default function StorefrontShell({
       {/* Toast */}
       {toast && (
         <div className="pointer-events-none fixed bottom-24 left-1/2 z-[60] -translate-x-1/2">
-          <div className="rounded-full bg-[#1C1917] px-4 py-2 text-sm text-white shadow-lg whitespace-nowrap">{toast}</div>
+          <div
+            style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
+            className="rounded-full bg-[#1C1917] px-4 py-2 text-white shadow-lg whitespace-nowrap"
+          >
+            {toast}
+          </div>
         </div>
       )}
 
       {/* Footer */}
       <footer className="py-6 text-center border-t border-gray-100 bg-white">
         <div className="flex items-center justify-center gap-4">
-          <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-[#78716C] hover:text-gray-600 transition-colors">
+          <Link
+            href="/"
+            style={{ fontSize: 'calc(0.75rem * var(--font-size-scale, 1))' }}
+            className="inline-flex items-center gap-1.5 text-[#78716C] hover:text-gray-600 transition-colors"
+          >
             <Image src="/icon-16.png" alt="" width={16} height={16} unoptimized style={{ borderRadius: '3px' }} />
             Propulsé par Hanut
           </Link>
-          <Link href="/privacy" className="text-xs text-[#78716C] hover:text-gray-600 transition-colors">
+          <Link
+            href="/privacy"
+            style={{ fontSize: 'calc(0.75rem * var(--font-size-scale, 1))' }}
+            className="text-[#78716C] hover:text-gray-600 transition-colors"
+          >
             Confidentialité
           </Link>
         </div>

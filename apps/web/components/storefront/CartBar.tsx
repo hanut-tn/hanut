@@ -26,15 +26,18 @@ export default function CartBar({ totals, t, onOpenCart, onCheckout }: Props) {
                 {totals.totalItems}
               </span>
             </div>
-            <span className="text-sm font-semibold text-white">
+            <span
+              style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
+              className="font-semibold text-white"
+            >
               {t.cart.itemsCount(totals.totalItems)} · {totals.totalPrice} DT
             </span>
           </button>
           <button
             type="button"
             onClick={onCheckout}
-            style={{ color: 'var(--primary)' }}
-            className="min-h-[40px] touch-manipulation flex items-center gap-2 bg-white font-semibold rounded-lg px-4 py-1.5 text-sm transition-all duration-150 ease-out hover:bg-gray-50 active:scale-[0.97]"
+            style={{ color: 'var(--primary)', fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
+            className="min-h-[40px] touch-manipulation flex items-center gap-2 bg-white font-semibold rounded-lg px-4 py-1.5 transition-all duration-150 ease-out hover:bg-gray-50 active:scale-[0.97]"
           >
             {t.cart.checkout}
             <ArrowRight className="w-4 h-4 rtl:rotate-180" />

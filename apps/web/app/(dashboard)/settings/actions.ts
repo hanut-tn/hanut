@@ -38,6 +38,7 @@ export type ShopBrandingInput = {
   shopName: string
   shopDescription: string
   logoUrl: string | null
+  bannerUrl: string | null
 }
 
 export async function updateShopBranding(input: ShopBrandingInput): Promise<ActionResult> {
@@ -50,6 +51,7 @@ export async function updateShopBranding(input: ShopBrandingInput): Promise<Acti
   const shopName = input.shopName.trim()
   const shopDescription = input.shopDescription.trim()
   const logoUrl = input.logoUrl?.trim() || null
+  const bannerUrl = input.bannerUrl?.trim() || null
 
   if (shopName.length > 100) return { error: 'Le nom de la boutique est trop long (100 caractères max).' }
   if (shopDescription.length > 300) return { error: 'La description est trop longue (300 caractères max).' }
@@ -66,6 +68,9 @@ export async function updateShopBranding(input: ShopBrandingInput): Promise<Acti
     // entier pour repérer précisément où la comparaison diverge.
     return { error: `URL de logo invalide. Reçu="${logoUrl}" Attendu="${storagePrefix}"` }
   }
+  if (bannerUrl && (bannerUrl.length > 2048 || !bannerUrl.startsWith(storagePrefix))) {
+    return { error: `URL de bannière invalide. Reçu="${bannerUrl}" Attendu="${storagePrefix}"` }
+  }
 
   const serviceClient = createServiceClient()
   const { error } = await serviceClient
@@ -74,6 +79,7 @@ export async function updateShopBranding(input: ShopBrandingInput): Promise<Acti
       shop_name: shopName || null,
       shop_description: shopDescription || null,
       logo_url: logoUrl,
+      banner_url: bannerUrl,
     })
     .eq('id', context.sellerId)
 

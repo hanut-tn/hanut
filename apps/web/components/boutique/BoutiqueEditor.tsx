@@ -17,6 +17,7 @@ type Seller = {
   shopName: string | null
   shopDescription: string | null
   logoUrl: string | null
+  bannerUrl: string | null
 }
 
 type Props = {
@@ -42,6 +43,8 @@ export default function BoutiqueEditor({
   const [shopDescription, setShopDescription] = useState(seller.shopDescription ?? '')
   const [logoUrl, setLogoUrl] = useState<string | null>(seller.logoUrl)
   const [logoUploading, setLogoUploading] = useState(false)
+  const [bannerUrl, setBannerUrl] = useState<string | null>(seller.bannerUrl)
+  const [bannerUploading, setBannerUploading] = useState(false)
 
   const [msg, setMsg] = useState<Msg | null>(null)
   const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('mobile')
@@ -82,12 +85,32 @@ export default function BoutiqueEditor({
     }
   }
 
+  async function handleBannerFile(file: File) {
+    setMsg(null)
+    if (file.size > 5 * 1024 * 1024) {
+      setMsg({ type: 'error', text: "L'image ne doit pas dépasser 5 Mo." })
+      return
+    }
+    setBannerUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const { url, error } = await uploadProductImage(fd)
+      if (error || !url) throw new Error(error ?? "Échec de l'upload")
+      setBannerUrl(url)
+    } catch (err) {
+      setMsg({ type: 'error', text: err instanceof Error ? err.message : 'Erreur inconnue' })
+    } finally {
+      setBannerUploading(false)
+    }
+  }
+
   function handleSave() {
     setMsg(null)
     startTransition(async () => {
       const [configResult, brandingResult] = await Promise.all([
         updateStorefrontConfig(config),
-        updateShopBranding({ shopName, shopDescription, logoUrl }),
+        updateShopBranding({ shopName, shopDescription, logoUrl, bannerUrl }),
       ])
       const error = configResult?.error ?? brandingResult?.error
       if (error) {
@@ -104,13 +127,14 @@ export default function BoutiqueEditor({
       sellerName={shopName || seller.name}
       shopDescription={shopDescription || null}
       logoUrl={logoUrl}
+      bannerUrl={bannerUrl}
       products={previewProducts}
       categories={previewCategories}
       config={config}
       hideTopBar
       previewMode
     />
-  ), [seller.slug, seller.name, shopName, shopDescription, logoUrl, previewProducts, previewCategories, config])
+  ), [seller.slug, seller.name, shopName, shopDescription, logoUrl, bannerUrl, previewProducts, previewCategories, config])
 
   return (
     <div className="space-y-4">
@@ -152,11 +176,15 @@ export default function BoutiqueEditor({
               shopDescription={shopDescription}
               logoUrl={logoUrl}
               logoUploading={logoUploading}
+              bannerUrl={bannerUrl}
+              bannerUploading={bannerUploading}
               accountName={seller.name}
               onShopNameChange={setShopName}
               onShopDescriptionChange={setShopDescription}
               onLogoFile={handleLogoFile}
               onLogoRemove={() => setLogoUrl(null)}
+              onBannerFile={handleBannerFile}
+              onBannerRemove={() => setBannerUrl(null)}
               colors={config.colors}
               onColorsChange={patchColors}
               typography={config.typography}
@@ -180,7 +208,7 @@ export default function BoutiqueEditor({
             <button
               type="button"
               onClick={handleSave}
-              disabled={isPending || logoUploading}
+              disabled={isPending || logoUploading || bannerUploading}
               className="btn-primary w-full"
             >
               {isPending ? 'Enregistrement...' : 'Enregistrer les modifications'}

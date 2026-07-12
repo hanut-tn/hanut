@@ -92,9 +92,9 @@ export const COLOR_PRESETS: Record<'primary' | 'pageBg' | 'cardBg' | 'text', str
 }
 
 export const FONT_SIZE_SCALE: Record<StorefrontFontSize, { scale: number; label: string }> = {
-  small:  { scale: 0.9,  label: 'Petite' },
-  normal: { scale: 1,    label: 'Normale' },
-  large:  { scale: 1.15, label: 'Grande' },
+  small:  { scale: 0.875, label: 'Petite' },
+  normal: { scale: 1,     label: 'Normale' },
+  large:  { scale: 1.125, label: 'Grande' },
 }
 
 export const CARD_RADIUS_VALUES: Record<StorefrontCardRadius, { css: string; label: string }> = {

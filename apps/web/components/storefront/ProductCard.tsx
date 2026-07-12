@@ -74,13 +74,19 @@ export default function ProductCard({ product, t, onSelect, onQuickAdd }: Props)
         )}
         {isOut && (
           <span className="absolute inset-0 bg-white/60 flex items-center justify-center">
-            <span className="text-xs px-3 py-1 rounded-full font-semibold bg-red-600 text-white shadow-sm">
+            <span
+              style={{ fontSize: 'calc(0.75rem * var(--font-size-scale, 1))' }}
+              className="px-3 py-1 rounded-full font-semibold bg-red-600 text-white shadow-sm"
+            >
               {t.shop.outOfStock}
             </span>
           </span>
         )}
         {isLow && (
-          <span className="absolute top-2 start-2 text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500 text-white">
+          <span
+            style={{ fontSize: 'calc(0.75rem * var(--font-size-scale, 1))' }}
+            className="absolute top-2 start-2 px-2 py-0.5 rounded-full font-medium bg-amber-500 text-white"
+          >
             {t.shop.lowStock(product.stock)}
           </span>
         )}
@@ -124,8 +130,11 @@ export default function ProductCard({ product, t, onSelect, onQuickAdd }: Props)
           type="button"
           onClick={handleAdd}
           disabled={isOut}
-          style={isOut ? undefined : { backgroundColor: justAdded ? 'var(--primary-dark)' : 'var(--primary)' }}
-          className={`w-full min-h-[40px] touch-manipulation flex items-center justify-center gap-1.5 rounded-xl text-sm font-semibold transition-all duration-150 ease-out ${
+          style={{
+            fontSize: 'calc(0.875rem * var(--font-size-scale, 1))',
+            ...(isOut ? {} : { backgroundColor: justAdded ? 'var(--primary-dark)' : 'var(--primary)' }),
+          }}
+          className={`w-full min-h-[40px] touch-manipulation flex items-center justify-center gap-1.5 rounded-xl font-semibold transition-all duration-150 ease-out ${
             isOut
               ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
               : 'text-white active:scale-[0.97]'
