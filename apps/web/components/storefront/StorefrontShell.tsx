@@ -237,7 +237,7 @@ export default function StorefrontShell({
       dir={isRtl ? 'rtl' : 'ltr'}
       style={buildCssVariables(config)}
       onClick={editMode ? handleBackgroundClick : undefined}
-      className={`min-h-screen ${isRtl ? 'font-arabic' : ''} ${editMode ? 'cursor-default' : ''}`}
+      className={`min-h-screen ${isRtl ? 'font-arabic' : ''} ${editMode ? 'edit-mode cursor-default' : ''}`}
     >
       {/* Bandeau mode édition */}
       {editMode && (
@@ -305,7 +305,13 @@ export default function StorefrontShell({
       {/* Recherche */}
       {step === 'catalog' && products.length > 0 && (
         <div className="max-w-5xl mx-auto px-4 pt-3">
-          <StorefrontSearchBar value={searchQuery} onChange={setSearchQuery} t={t} />
+          <StorefrontSearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            t={t}
+            editMode={editMode}
+            onEditTargetChange={onEditTargetChange}
+          />
         </div>
       )}
 
@@ -315,11 +321,18 @@ export default function StorefrontShell({
           <div className="max-w-5xl mx-auto flex gap-2 overflow-x-auto px-4 py-2.5 scrollbar-none">
             <button
               type="button"
-              onClick={() => setCategoryFilter('all')}
-              style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
-              className={`shrink-0 min-h-[32px] touch-manipulation rounded-full px-3.5 py-1.5 font-medium transition-colors ${
-                categoryFilter === 'all' ? 'bg-[var(--primary)] text-white' : 'bg-white text-[#78716C] border border-gray-200'
-              }`}
+              data-edit="chips"
+              onClick={editMode ? (e) => {
+                e.stopPropagation()
+                const rect = e.currentTarget.getBoundingClientRect()
+                onEditTargetChange?.({ type: 'chips' }, { top: rect.bottom + 8, left: rect.left })
+              } : () => setCategoryFilter('all')}
+              style={{
+                fontSize: 'calc(0.875rem * var(--font-size-scale, 1))',
+                backgroundColor: categoryFilter === 'all' ? 'var(--chips-active-bg, var(--primary))' : 'var(--chips-bg, #fff)',
+                color: categoryFilter === 'all' ? 'var(--chips-active-text, #fff)' : 'var(--chips-text, #78716C)',
+              }}
+              className="shrink-0 min-h-[32px] touch-manipulation rounded-full px-3.5 py-1.5 font-medium border border-transparent transition-colors"
             >
               {t.shop.categoryAll}
             </button>
@@ -327,11 +340,18 @@ export default function StorefrontShell({
               <button
                 key={c.id}
                 type="button"
-                onClick={() => setCategoryFilter(c.id)}
-                style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
-                className={`shrink-0 min-h-[32px] touch-manipulation rounded-full px-3.5 py-1.5 font-medium whitespace-nowrap transition-colors ${
-                  categoryFilter === c.id ? 'bg-[var(--primary)] text-white' : 'bg-white text-[#78716C] border border-gray-200'
-                }`}
+                data-edit="chips"
+                onClick={editMode ? (e) => {
+                  e.stopPropagation()
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  onEditTargetChange?.({ type: 'chips' }, { top: rect.bottom + 8, left: rect.left })
+                } : () => setCategoryFilter(c.id)}
+                style={{
+                  fontSize: 'calc(0.875rem * var(--font-size-scale, 1))',
+                  backgroundColor: categoryFilter === c.id ? 'var(--chips-active-bg, var(--primary))' : 'var(--chips-bg, #fff)',
+                  color: categoryFilter === c.id ? 'var(--chips-active-text, #fff)' : 'var(--chips-text, #78716C)',
+                }}
+                className="shrink-0 min-h-[32px] touch-manipulation rounded-full px-3.5 py-1.5 font-medium whitespace-nowrap border border-transparent transition-colors"
               >
                 {c.name}
               </button>
@@ -364,12 +384,18 @@ export default function StorefrontShell({
           </div>
         ) : step === 'catalog' && (
           <div
+            data-edit="layout"
             onClick={editMode ? (e) => {
-              const card = (e.target as HTMLElement).closest('[data-edit="card"]')
-              if (!card) return
               e.stopPropagation()
-              const rect = card.getBoundingClientRect()
-              onEditTargetChange?.({ type: 'card' }, { top: rect.top, left: rect.right + 8 })
+              const card = (e.target as HTMLElement).closest('[data-edit="card"]')
+              if (card) {
+                const rect = card.getBoundingClientRect()
+                onEditTargetChange?.({ type: 'card' }, { top: rect.top, left: rect.right + 8 })
+                return
+              }
+              // Clic dans la grille mais hors d'une carte (gouttière) → réglage de la disposition.
+              const rect = e.currentTarget.getBoundingClientRect()
+              onEditTargetChange?.({ type: 'layout' }, { top: rect.top, left: rect.left })
             } : undefined}
           >
             <ProductGrid
@@ -441,6 +467,8 @@ export default function StorefrontShell({
           t={t}
           onOpenCart={() => setIsCartOpen(true)}
           onCheckout={goToCheckout}
+          editMode={editMode}
+          onEditTargetChange={onEditTargetChange}
         />
       )}
 

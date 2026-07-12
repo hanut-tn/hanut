@@ -3,9 +3,13 @@
 // `className` — voir la note dans packages/types/src/storefront.ts.
 
 import type { CSSProperties } from 'react'
-import type { StorefrontConfig, StorefrontColors, StorefrontTypography, StorefrontCards, StorefrontButton } from '@hanut/types'
+import type {
+  StorefrontConfig, StorefrontColors, StorefrontTypography, StorefrontCards, StorefrontButton,
+  StorefrontSearch, StorefrontChips, StorefrontCartBar, StorefrontTextStyle,
+} from '@hanut/types'
 import {
   STOREFRONT_FONTS, FONT_SIZE_SCALE, CARD_RADIUS_VALUES, CARD_SHADOW_VALUES, IMAGE_RATIO_VALUES,
+  TEXT_WEIGHT_VALUES, PRODUCT_NAME_SIZE_REM, PRODUCT_PRICE_SIZE_REM,
 } from '@hanut/types'
 import { adjustColor } from './colors'
 
@@ -17,6 +21,11 @@ export type StorefrontConfigPatch = {
   typography?: Partial<StorefrontTypography>
   cards?: Partial<StorefrontCards>
   button?: Partial<StorefrontButton>
+  search?: Partial<StorefrontSearch>
+  chips?: Partial<StorefrontChips>
+  cartBar?: Partial<StorefrontCartBar>
+  productName?: Partial<StorefrontTextStyle>
+  productPrice?: Partial<StorefrontTextStyle>
   layout?: StorefrontConfig['layout']
 }
 
@@ -42,15 +51,38 @@ export function buildCssVariables(config: StorefrontConfig): CSSProperties {
     '--button-radius': buttonRadius,
     '--font-family': font.family,
     '--font-size-scale': fontSize.scale,
+
+    '--search-bg': config.search.bg,
+    '--search-border': config.search.borderColor,
+    '--search-text': config.search.textColor,
+
+    '--chips-bg': config.chips.bg,
+    '--chips-text': config.chips.textColor,
+    '--chips-active-bg': config.chips.activeBg,
+    '--chips-active-text': config.chips.activeTextColor,
+
+    '--cartbar-bg': config.cartBar.bg,
+    '--cartbar-text': config.cartBar.textColor,
+    '--cartbar-btn-bg': config.cartBar.buttonBg,
+    '--cartbar-btn-text': config.cartBar.buttonTextColor,
+
+    '--product-name-color': config.productName.color,
+    '--product-name-weight': TEXT_WEIGHT_VALUES[config.productName.weight].css,
+    '--product-name-size': `${PRODUCT_NAME_SIZE_REM[config.productName.size]}rem`,
+    '--product-price-color': config.productPrice.color,
+    '--product-price-weight': TEXT_WEIGHT_VALUES[config.productPrice.weight].css,
+    '--product-price-size': `${PRODUCT_PRICE_SIZE_REM[config.productPrice.size]}rem`,
+
     backgroundColor: config.colors.pageBg,
     fontFamily: font.family,
     color: config.colors.textPrimary,
   } as CSSProperties
 }
 
-/** Fusionne en profondeur (colors/typography/cards) plutôt qu'un spread superficiel — un
- * patch partiel (une seule couleur changée, par ex.) ne doit pas écraser le reste de l'objet
- * imbriqué. Utilisé côté serveur (actions.ts) et côté client (éditeur, état local en direct). */
+/** Fusionne en profondeur (colors/typography/cards/...) plutôt qu'un spread superficiel —
+ * un patch partiel (une seule couleur changée, par ex.) ne doit pas écraser le reste de
+ * l'objet imbriqué. Utilisé côté serveur (actions.ts) et côté client (éditeur, état local
+ * en direct). */
 export function mergeStorefrontConfig(
   base: StorefrontConfig,
   ...patches: (StorefrontConfigPatch | null | undefined)[]
@@ -62,6 +94,11 @@ export function mergeStorefrontConfig(
       typography: { ...acc.typography, ...patch.typography },
       cards: { ...acc.cards, ...patch.cards },
       button: { ...acc.button, ...patch.button },
+      search: { ...acc.search, ...patch.search },
+      chips: { ...acc.chips, ...patch.chips },
+      cartBar: { ...acc.cartBar, ...patch.cartBar },
+      productName: { ...acc.productName, ...patch.productName },
+      productPrice: { ...acc.productPrice, ...patch.productPrice },
       layout: patch.layout ?? acc.layout,
     }
   }, base)

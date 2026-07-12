@@ -6,7 +6,8 @@ import { ArrowLeft, Save, Pencil, MousePointerClick, X, Smartphone, Monitor, Ext
 import {
   DEFAULT_STOREFRONT_CONFIG,
   type Category, type StorefrontConfig, type StorefrontColors, type StorefrontTypography,
-  type StorefrontCards, type StorefrontButton, type StorefrontLayout, type EditTarget, type PopoverPosition,
+  type StorefrontCards, type StorefrontButton, type StorefrontSearch, type StorefrontChips,
+  type StorefrontCartBar, type StorefrontTextStyle, type StorefrontLayout, type EditTarget, type PopoverPosition,
 } from '@hanut/types'
 import type { ShopBrandingInput } from '@/app/(dashboard)/settings/actions'
 import { uploadProductImage } from '@/app/(dashboard)/catalog/actions'
@@ -18,6 +19,13 @@ import HeaderPanel from './panels/HeaderPanel'
 import CardPanel from './panels/CardPanel'
 import ButtonPanel from './panels/ButtonPanel'
 import BackgroundPanel from './panels/BackgroundPanel'
+import SearchPanel from './panels/SearchPanel'
+import ChipsPanel from './panels/ChipsPanel'
+import CartBarPanel from './panels/CartBarPanel'
+import ProductNamePanel from './panels/ProductNamePanel'
+import ProductPricePanel from './panels/ProductPricePanel'
+import TypographyPanel from './panels/TypographyPanel'
+import LayoutPanel from './panels/LayoutPanel'
 
 type Seller = {
   name: string
@@ -98,6 +106,21 @@ export default function BoutiqueEditor({
   }
   function patchButton(patch: Partial<StorefrontButton>) {
     setConfig(c => mergeStorefrontConfig(c, { button: patch }))
+  }
+  function patchSearch(patch: Partial<StorefrontSearch>) {
+    setConfig(c => mergeStorefrontConfig(c, { search: patch }))
+  }
+  function patchChips(patch: Partial<StorefrontChips>) {
+    setConfig(c => mergeStorefrontConfig(c, { chips: patch }))
+  }
+  function patchCartBar(patch: Partial<StorefrontCartBar>) {
+    setConfig(c => mergeStorefrontConfig(c, { cartBar: patch }))
+  }
+  function patchProductName(patch: Partial<StorefrontTextStyle>) {
+    setConfig(c => mergeStorefrontConfig(c, { productName: patch }))
+  }
+  function patchProductPrice(patch: Partial<StorefrontTextStyle>) {
+    setConfig(c => mergeStorefrontConfig(c, { productPrice: patch }))
   }
   function setLayout(layout: StorefrontLayout) {
     setConfig(c => mergeStorefrontConfig(c, { layout }))
@@ -197,6 +220,16 @@ export default function BoutiqueEditor({
       onTypographyChange={patchTypography}
       cards={config.cards}
       onCardsChange={patchCards}
+      search={config.search}
+      onSearchChange={patchSearch}
+      chips={config.chips}
+      onChipsChange={patchChips}
+      cartBar={config.cartBar}
+      onCartBarChange={patchCartBar}
+      productName={config.productName}
+      onProductNameChange={patchProductName}
+      productPrice={config.productPrice}
+      onProductPriceChange={patchProductPrice}
       layout={config.layout}
       onLayoutChange={setLayout}
     />
@@ -370,7 +403,18 @@ export default function BoutiqueEditor({
           <div className="fixed inset-0 z-40" onClick={() => setEditTarget(null)} />
         )}
 
-        {isEditMode && editTarget?.type === 'header' && (
+        {isEditMode && renderPanel()}
+      </div>
+    </div>
+  )
+
+  function renderPanel() {
+    if (!editTarget) return null
+    const onClose = () => setEditTarget(null)
+
+    switch (editTarget.type) {
+      case 'header':
+        return (
           <HeaderPanel
             shopName={shopName}
             shopDescription={shopDescription}
@@ -387,41 +431,64 @@ export default function BoutiqueEditor({
             onBannerRemove={() => setBannerUrl(null)}
             headerColor={config.colors.primary}
             onHeaderColorChange={hex => patchColors({ primary: hex })}
-            onClose={() => setEditTarget(null)}
+            onClose={onClose}
           />
-        )}
-
-        {isEditMode && editTarget?.type === 'card' && popoverPosition && (
+        )
+      case 'card':
+        if (!popoverPosition) return null
+        return (
           <CardPanel
             cards={config.cards}
             cardBg={config.colors.cardBg}
             onCardsChange={patchCards}
             onCardBgChange={hex => patchColors({ cardBg: hex })}
             position={popoverPosition}
-            onClose={() => setEditTarget(null)}
+            onClose={onClose}
           />
-        )}
-
-        {isEditMode && editTarget?.type === 'button' && popoverPosition && (
+        )
+      case 'button':
+        if (!popoverPosition) return null
+        return (
           <ButtonPanel
             primaryColor={config.colors.primary}
             onPrimaryColorChange={hex => patchColors({ primary: hex })}
             button={config.button}
             onButtonChange={patchButton}
             position={popoverPosition}
-            onClose={() => setEditTarget(null)}
+            onClose={onClose}
           />
-        )}
-
-        {isEditMode && editTarget?.type === 'background' && popoverPosition && (
+        )
+      case 'background':
+        if (!popoverPosition) return null
+        return (
           <BackgroundPanel
             pageBg={config.colors.pageBg}
             onChange={hex => patchColors({ pageBg: hex })}
             position={popoverPosition}
-            onClose={() => setEditTarget(null)}
+            onClose={onClose}
           />
-        )}
-      </div>
-    </div>
-  )
+        )
+      case 'search':
+        if (!popoverPosition) return null
+        return <SearchPanel search={config.search} onChange={patchSearch} position={popoverPosition} onClose={onClose} />
+      case 'chips':
+        if (!popoverPosition) return null
+        return <ChipsPanel chips={config.chips} onChange={patchChips} position={popoverPosition} onClose={onClose} />
+      case 'cartBar':
+        if (!popoverPosition) return null
+        return <CartBarPanel cartBar={config.cartBar} onChange={patchCartBar} position={popoverPosition} onClose={onClose} />
+      case 'productName':
+        if (!popoverPosition) return null
+        return <ProductNamePanel productName={config.productName} onChange={patchProductName} position={popoverPosition} onClose={onClose} />
+      case 'productPrice':
+        if (!popoverPosition) return null
+        return <ProductPricePanel productPrice={config.productPrice} onChange={patchProductPrice} position={popoverPosition} onClose={onClose} />
+      case 'typography':
+        return <TypographyPanel typography={config.typography} onChange={patchTypography} onClose={onClose} />
+      case 'layout':
+        return <LayoutPanel layout={config.layout} onChange={setLayout} onClose={onClose} />
+      default:
+        return null
+    }
+  }
 }

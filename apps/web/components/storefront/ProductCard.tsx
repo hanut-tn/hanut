@@ -114,14 +114,34 @@ export default function ProductCard({ product, t, editMode = false, onSelect, on
       <div className="px-3 pb-3 pt-2 flex flex-col gap-2 flex-1">
         <div className="flex-1">
           <p
-            style={{ color: 'var(--text-primary, #111827)', fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
-            className="font-semibold line-clamp-2"
+            data-edit="productName"
+            onClick={editMode ? (e) => {
+              e.stopPropagation()
+              const rect = e.currentTarget.getBoundingClientRect()
+              onEditTargetChange?.({ type: 'productName' }, { top: rect.top, left: rect.right + 8 })
+            } : undefined}
+            style={{
+              color: 'var(--product-name-color, var(--text-primary, #111827))',
+              fontWeight: 'var(--product-name-weight, 600)',
+              fontSize: 'calc(var(--product-name-size, 0.875rem) * var(--font-size-scale, 1))',
+            }}
+            className="line-clamp-2"
           >
             {product.name}
           </p>
           <p
-            style={{ color: 'var(--primary)', fontSize: 'calc(1rem * var(--font-size-scale, 1))' }}
-            className="font-bold mt-0.5"
+            data-edit="productPrice"
+            onClick={editMode ? (e) => {
+              e.stopPropagation()
+              const rect = e.currentTarget.getBoundingClientRect()
+              onEditTargetChange?.({ type: 'productPrice' }, { top: rect.top, left: rect.right + 8 })
+            } : undefined}
+            style={{
+              color: 'var(--product-price-color, var(--primary))',
+              fontWeight: 'var(--product-price-weight, 700)',
+              fontSize: 'calc(var(--product-price-size, 1rem) * var(--font-size-scale, 1))',
+            }}
+            className="mt-0.5"
           >
             {hasPriceRange ? t.shop.fromPrice(product.minPrice) : `${product.minPrice} DT`}
           </p>

@@ -34,6 +34,33 @@ const ConfigSchema = z.object({
     text: z.string().trim().min(1).max(30),
     radius: z.enum(['none', 'rounded', 'full']),
   }).partial().optional(),
+  search: z.object({
+    bg: HexColor,
+    borderColor: HexColor,
+    textColor: HexColor,
+  }).partial().optional(),
+  chips: z.object({
+    bg: HexColor,
+    textColor: HexColor,
+    activeBg: HexColor,
+    activeTextColor: HexColor,
+  }).partial().optional(),
+  cartBar: z.object({
+    bg: HexColor,
+    textColor: HexColor,
+    buttonBg: HexColor,
+    buttonTextColor: HexColor,
+  }).partial().optional(),
+  productName: z.object({
+    color: HexColor,
+    size: z.enum(['small', 'normal', 'large']),
+    weight: z.enum(['normal', 'medium', 'semibold', 'bold']),
+  }).partial().optional(),
+  productPrice: z.object({
+    color: HexColor,
+    size: z.enum(['small', 'normal', 'large']),
+    weight: z.enum(['normal', 'medium', 'semibold', 'bold']),
+  }).partial().optional(),
   layout: z.enum(['grid-2', 'grid-3', 'list']).optional(),
 })
 

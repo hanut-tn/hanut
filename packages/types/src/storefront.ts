@@ -13,6 +13,7 @@ export type StorefrontCardRadius = 'none' | 'rounded' | 'full'
 export type StorefrontCardShadow = 'none' | 'sm' | 'md'
 export type StorefrontImageRatio = 'square' | 'portrait' | 'landscape'
 export type StorefrontLayout = 'grid-2' | 'grid-3' | 'list'
+export type TextWeight = 'normal' | 'medium' | 'semibold' | 'bold'
 
 export interface StorefrontColors {
   primary: string
@@ -38,11 +39,42 @@ export interface StorefrontButton {
   radius: StorefrontCardRadius
 }
 
+export interface StorefrontSearch {
+  bg: string
+  borderColor: string
+  textColor: string
+}
+
+export interface StorefrontChips {
+  bg: string
+  textColor: string
+  activeBg: string
+  activeTextColor: string
+}
+
+export interface StorefrontCartBar {
+  bg: string
+  textColor: string
+  buttonBg: string
+  buttonTextColor: string
+}
+
+export interface StorefrontTextStyle {
+  color: string
+  size: StorefrontFontSize
+  weight: TextWeight
+}
+
 export interface StorefrontConfig {
   colors: StorefrontColors
   typography: StorefrontTypography
   cards: StorefrontCards
   button: StorefrontButton
+  search: StorefrontSearch
+  chips: StorefrontChips
+  cartBar: StorefrontCartBar
+  productName: StorefrontTextStyle
+  productPrice: StorefrontTextStyle
   layout: StorefrontLayout
 }
 
@@ -52,6 +84,13 @@ export type EditTarget =
   | { type: 'card' }
   | { type: 'button' }
   | { type: 'background' }
+  | { type: 'search' }
+  | { type: 'chips' }
+  | { type: 'cartBar' }
+  | { type: 'productName' }
+  | { type: 'productPrice' }
+  | { type: 'typography' }
+  | { type: 'layout' }
   | null
 
 // Coordonnées viewport (issues de getBoundingClientRect / clientX-Y) pour
@@ -81,6 +120,33 @@ export const DEFAULT_STOREFRONT_CONFIG: StorefrontConfig = {
   button: {
     text: 'Ajouter',
     radius: 'rounded',
+  },
+  search: {
+    bg: '#f9fafb',
+    borderColor: '#e5e7eb',
+    textColor: '#111827',
+  },
+  chips: {
+    bg: '#f3f4f6',
+    textColor: '#374151',
+    activeBg: '#16a34a',
+    activeTextColor: '#ffffff',
+  },
+  cartBar: {
+    bg: '#16a34a',
+    textColor: '#ffffff',
+    buttonBg: '#ffffff',
+    buttonTextColor: '#16a34a',
+  },
+  productName: {
+    color: '#111827',
+    size: 'normal',
+    weight: 'semibold',
+  },
+  productPrice: {
+    color: '#16a34a',
+    size: 'normal',
+    weight: 'bold',
   },
   layout: 'grid-3',
 }
@@ -144,4 +210,21 @@ export const LAYOUT_LABELS: Record<StorefrontLayout, string> = {
   'grid-2': '2 colonnes',
   'grid-3': '3 colonnes',
   list: 'Liste',
+}
+
+export const TEXT_WEIGHT_VALUES: Record<TextWeight, { css: string; label: string }> = {
+  normal:   { css: '400', label: 'Normal' },
+  medium:   { css: '500', label: 'Moyen' },
+  semibold: { css: '600', label: 'Semi-gras' },
+  bold:     { css: '700', label: 'Gras' },
+}
+
+// Taille de base (rem) par élément — combinée à `--font-size-scale` (réglage
+// global de l'éditeur) pour obtenir la taille finale. "normal" reproduit la
+// taille fixe utilisée avant l'introduction de ce réglage par élément.
+export const PRODUCT_NAME_SIZE_REM: Record<StorefrontFontSize, number> = {
+  small: 0.8125, normal: 0.875, large: 1,
+}
+export const PRODUCT_PRICE_SIZE_REM: Record<StorefrontFontSize, number> = {
+  small: 0.875, normal: 1, large: 1.125,
 }
