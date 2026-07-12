@@ -4,6 +4,7 @@ import { X } from 'lucide-react'
 import { COLOR_PRESETS, CARD_RADIUS_VALUES, type StorefrontButton, type StorefrontCardRadius } from '@hanut/types'
 import type { PopoverPosition } from '@hanut/types'
 import ColorField from '../editor/ColorField'
+import DimensionField from '../ui/DimensionField'
 
 type Props = {
   primaryColor: string
@@ -15,7 +16,7 @@ type Props = {
 }
 
 const PANEL_WIDTH = 272
-const PANEL_MAX_HEIGHT = 380
+const PANEL_MAX_HEIGHT = 520
 const RADIUS_KEYS = Object.keys(CARD_RADIUS_VALUES) as StorefrontCardRadius[]
 
 export default function ButtonPanel({ primaryColor, onPrimaryColorChange, button, onButtonChange, position, onClose }: Props) {
@@ -86,6 +87,31 @@ export default function ButtonPanel({ primaryColor, onPrimaryColorChange, button
             ))}
           </div>
         </div>
+
+        <DimensionField
+          label="Taille du texte"
+          value={button.fontSize}
+          min={10}
+          max={24}
+          inputType="number"
+          onChange={fontSize => onButtonChange({ fontSize })}
+        />
+        <DimensionField
+          label="Padding horizontal"
+          value={button.paddingX}
+          min={8}
+          max={32}
+          inputType="both"
+          onChange={paddingX => onButtonChange({ paddingX })}
+        />
+        <DimensionField
+          label="Padding vertical"
+          value={button.paddingY}
+          min={4}
+          max={20}
+          inputType="both"
+          onChange={paddingY => onButtonChange({ paddingY })}
+        />
       </div>
     </div>
   )

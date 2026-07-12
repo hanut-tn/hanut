@@ -29,10 +29,16 @@ const ConfigSchema = z.object({
     radius: z.enum(['none', 'rounded', 'full']),
     shadow: z.enum(['none', 'sm', 'md']),
     imageRatio: z.enum(['square', 'portrait', 'landscape']),
+    imageHeight: z.number().min(100).max(400),
+    gap: z.number().min(4).max(32),
+    padding: z.number().min(4).max(32),
   }).partial().optional(),
   button: z.object({
     text: z.string().trim().min(1).max(30),
     radius: z.enum(['none', 'rounded', 'full']),
+    fontSize: z.number().min(10).max(24),
+    paddingX: z.number().min(8).max(32),
+    paddingY: z.number().min(4).max(20),
   }).partial().optional(),
   search: z.object({
     bg: HexColor,
@@ -44,6 +50,9 @@ const ConfigSchema = z.object({
     textColor: HexColor,
     activeBg: HexColor,
     activeTextColor: HexColor,
+    fontSize: z.number().min(10).max(20),
+    paddingX: z.number().min(8).max(24),
+    paddingY: z.number().min(2).max(12),
   }).partial().optional(),
   cartBar: z.object({
     bg: HexColor,
@@ -53,13 +62,17 @@ const ConfigSchema = z.object({
   }).partial().optional(),
   productName: z.object({
     color: HexColor,
-    size: z.enum(['small', 'normal', 'large']),
+    size: z.number().min(10).max(32),
     weight: z.enum(['normal', 'medium', 'semibold', 'bold']),
   }).partial().optional(),
   productPrice: z.object({
     color: HexColor,
-    size: z.enum(['small', 'normal', 'large']),
+    size: z.number().min(10).max(32),
     weight: z.enum(['normal', 'medium', 'semibold', 'bold']),
+  }).partial().optional(),
+  header: z.object({
+    logoSize: z.number().min(32).max(120),
+    bannerHeight: z.number().min(100).max(400),
   }).partial().optional(),
   layout: z.enum(['grid-2', 'grid-3', 'list']).optional(),
 })

@@ -5,11 +5,11 @@
 import type { CSSProperties } from 'react'
 import type {
   StorefrontConfig, StorefrontColors, StorefrontTypography, StorefrontCards, StorefrontButton,
-  StorefrontSearch, StorefrontChips, StorefrontCartBar, StorefrontTextStyle,
+  StorefrontSearch, StorefrontChips, StorefrontCartBar, StorefrontTextStyle, StorefrontHeader,
 } from '@hanut/types'
 import {
   STOREFRONT_FONTS, FONT_SIZE_SCALE, CARD_RADIUS_VALUES, CARD_SHADOW_VALUES, IMAGE_RATIO_VALUES,
-  TEXT_WEIGHT_VALUES, PRODUCT_NAME_SIZE_REM, PRODUCT_PRICE_SIZE_REM,
+  TEXT_WEIGHT_VALUES,
 } from '@hanut/types'
 import { adjustColor } from './colors'
 
@@ -26,6 +26,7 @@ export type StorefrontConfigPatch = {
   cartBar?: Partial<StorefrontCartBar>
   productName?: Partial<StorefrontTextStyle>
   productPrice?: Partial<StorefrontTextStyle>
+  header?: Partial<StorefrontHeader>
   layout?: StorefrontConfig['layout']
 }
 
@@ -48,7 +49,13 @@ export function buildCssVariables(config: StorefrontConfig): CSSProperties {
     '--card-radius': cardRadius,
     '--card-shadow': cardShadow,
     '--image-aspect': imageAspect,
+    '--card-image-height': `${config.cards.imageHeight}px`,
+    '--card-gap': `${config.cards.gap}px`,
+    '--card-padding': `${config.cards.padding}px`,
     '--button-radius': buttonRadius,
+    '--button-font-size': `${config.button.fontSize}px`,
+    '--button-padding-x': `${config.button.paddingX}px`,
+    '--button-padding-y': `${config.button.paddingY}px`,
     '--font-family': font.family,
     '--font-size-scale': fontSize.scale,
 
@@ -60,6 +67,9 @@ export function buildCssVariables(config: StorefrontConfig): CSSProperties {
     '--chips-text': config.chips.textColor,
     '--chips-active-bg': config.chips.activeBg,
     '--chips-active-text': config.chips.activeTextColor,
+    '--chips-font-size': `${config.chips.fontSize}px`,
+    '--chips-padding-x': `${config.chips.paddingX}px`,
+    '--chips-padding-y': `${config.chips.paddingY}px`,
 
     '--cartbar-bg': config.cartBar.bg,
     '--cartbar-text': config.cartBar.textColor,
@@ -68,10 +78,13 @@ export function buildCssVariables(config: StorefrontConfig): CSSProperties {
 
     '--product-name-color': config.productName.color,
     '--product-name-weight': TEXT_WEIGHT_VALUES[config.productName.weight].css,
-    '--product-name-size': `${PRODUCT_NAME_SIZE_REM[config.productName.size]}rem`,
+    '--product-name-size': `${config.productName.size}px`,
     '--product-price-color': config.productPrice.color,
     '--product-price-weight': TEXT_WEIGHT_VALUES[config.productPrice.weight].css,
-    '--product-price-size': `${PRODUCT_PRICE_SIZE_REM[config.productPrice.size]}rem`,
+    '--product-price-size': `${config.productPrice.size}px`,
+
+    '--logo-size': `${config.header.logoSize}px`,
+    '--banner-height': `${config.header.bannerHeight}px`,
 
     backgroundColor: config.colors.pageBg,
     fontFamily: font.family,
@@ -99,6 +112,7 @@ export function mergeStorefrontConfig(
       cartBar: { ...acc.cartBar, ...patch.cartBar },
       productName: { ...acc.productName, ...patch.productName },
       productPrice: { ...acc.productPrice, ...patch.productPrice },
+      header: { ...acc.header, ...patch.header },
       layout: patch.layout ?? acc.layout,
     }
   }, base)

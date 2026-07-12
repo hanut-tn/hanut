@@ -60,7 +60,7 @@ export default function ProductCard({ product, t, editMode = false, onSelect, on
         disabled={editMode ? false : isOut}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
-        style={{ aspectRatio: 'var(--image-aspect, 1 / 1)' }}
+        style={{ height: 'var(--card-image-height, 200px)' }}
         className="relative block bg-gray-50 w-full"
         aria-label={product.name}
       >
@@ -111,7 +111,7 @@ export default function ProductCard({ product, t, editMode = false, onSelect, on
       </button>
 
       {/* Body */}
-      <div className="px-3 pb-3 pt-2 flex flex-col gap-2 flex-1">
+      <div style={{ padding: 'var(--card-padding, 12px)' }} className="flex flex-col gap-2 flex-1">
         <div className="flex-1">
           <p
             data-edit="productName"
@@ -123,7 +123,7 @@ export default function ProductCard({ product, t, editMode = false, onSelect, on
             style={{
               color: 'var(--product-name-color, var(--text-primary, #111827))',
               fontWeight: 'var(--product-name-weight, 600)',
-              fontSize: 'calc(var(--product-name-size, 0.875rem) * var(--font-size-scale, 1))',
+              fontSize: 'var(--product-name-size, 16px)',
             }}
             className="line-clamp-2"
           >
@@ -139,7 +139,7 @@ export default function ProductCard({ product, t, editMode = false, onSelect, on
             style={{
               color: 'var(--product-price-color, var(--primary))',
               fontWeight: 'var(--product-price-weight, 700)',
-              fontSize: 'calc(var(--product-price-size, 1rem) * var(--font-size-scale, 1))',
+              fontSize: 'var(--product-price-size, 16px)',
             }}
             className="mt-0.5"
           >
@@ -162,7 +162,8 @@ export default function ProductCard({ product, t, editMode = false, onSelect, on
           } : handleAdd}
           disabled={editMode ? false : isOut}
           style={{
-            fontSize: 'calc(0.875rem * var(--font-size-scale, 1))',
+            fontSize: 'var(--button-font-size, 14px)',
+            padding: 'var(--button-padding-y, 10px) var(--button-padding-x, 16px)',
             borderRadius: 'var(--button-radius, 0.75rem)',
             ...(isOut && !editMode ? {} : { backgroundColor: justAdded ? 'var(--primary-dark)' : 'var(--primary)' }),
           }}

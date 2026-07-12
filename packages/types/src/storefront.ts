@@ -32,11 +32,23 @@ export interface StorefrontCards {
   radius: StorefrontCardRadius
   shadow: StorefrontCardShadow
   imageRatio: StorefrontImageRatio
+  /** px, 100-400 — remplace le rendu par ratio : la hauteur d'image est désormais fixe. */
+  imageHeight: number
+  /** px, 4-32 */
+  gap: number
+  /** px, 4-32 */
+  padding: number
 }
 
 export interface StorefrontButton {
   text: string
   radius: StorefrontCardRadius
+  /** px, 10-24 */
+  fontSize: number
+  /** px, 8-32 */
+  paddingX: number
+  /** px, 4-20 */
+  paddingY: number
 }
 
 export interface StorefrontSearch {
@@ -50,6 +62,12 @@ export interface StorefrontChips {
   textColor: string
   activeBg: string
   activeTextColor: string
+  /** px, 10-20 */
+  fontSize: number
+  /** px, 8-24 */
+  paddingX: number
+  /** px, 2-12 */
+  paddingY: number
 }
 
 export interface StorefrontCartBar {
@@ -61,8 +79,16 @@ export interface StorefrontCartBar {
 
 export interface StorefrontTextStyle {
   color: string
-  size: StorefrontFontSize
+  /** px exact, 10-32 */
+  size: number
   weight: TextWeight
+}
+
+export interface StorefrontHeader {
+  /** px, 32-120 */
+  logoSize: number
+  /** px, 100-400 */
+  bannerHeight: number
 }
 
 export interface StorefrontConfig {
@@ -75,6 +101,7 @@ export interface StorefrontConfig {
   cartBar: StorefrontCartBar
   productName: StorefrontTextStyle
   productPrice: StorefrontTextStyle
+  header: StorefrontHeader
   layout: StorefrontLayout
 }
 
@@ -116,10 +143,16 @@ export const DEFAULT_STOREFRONT_CONFIG: StorefrontConfig = {
     radius: 'rounded',
     shadow: 'sm',
     imageRatio: 'square',
+    imageHeight: 200,
+    gap: 12,
+    padding: 12,
   },
   button: {
     text: 'Ajouter',
     radius: 'rounded',
+    fontSize: 14,
+    paddingX: 16,
+    paddingY: 10,
   },
   search: {
     bg: '#f9fafb',
@@ -131,6 +164,9 @@ export const DEFAULT_STOREFRONT_CONFIG: StorefrontConfig = {
     textColor: '#374151',
     activeBg: '#16a34a',
     activeTextColor: '#ffffff',
+    fontSize: 14,
+    paddingX: 12,
+    paddingY: 6,
   },
   cartBar: {
     bg: '#16a34a',
@@ -140,13 +176,17 @@ export const DEFAULT_STOREFRONT_CONFIG: StorefrontConfig = {
   },
   productName: {
     color: '#111827',
-    size: 'normal',
+    size: 16,
     weight: 'semibold',
   },
   productPrice: {
     color: '#16a34a',
-    size: 'normal',
+    size: 16,
     weight: 'bold',
+  },
+  header: {
+    logoSize: 48,
+    bannerHeight: 200,
   },
   layout: 'grid-3',
 }
@@ -217,14 +257,4 @@ export const TEXT_WEIGHT_VALUES: Record<TextWeight, { css: string; label: string
   medium:   { css: '500', label: 'Moyen' },
   semibold: { css: '600', label: 'Semi-gras' },
   bold:     { css: '700', label: 'Gras' },
-}
-
-// Taille de base (rem) par élément — combinée à `--font-size-scale` (réglage
-// global de l'éditeur) pour obtenir la taille finale. "normal" reproduit la
-// taille fixe utilisée avant l'introduction de ce réglage par élément.
-export const PRODUCT_NAME_SIZE_REM: Record<StorefrontFontSize, number> = {
-  small: 0.8125, normal: 0.875, large: 1,
-}
-export const PRODUCT_PRICE_SIZE_REM: Record<StorefrontFontSize, number> = {
-  small: 0.875, normal: 1, large: 1.125,
 }

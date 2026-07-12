@@ -17,10 +17,13 @@ type Props = {
   onEditTargetChange?: (target: EditTarget, position?: PopoverPosition) => void
 }
 
+// Le gap est piloté par --card-gap (configurable) via `style`, pas par les
+// classes gap-* de Tailwind — seul le nombre de colonnes reste ici, en
+// classes statiques littérales (donc scannées, sans risque de purge).
 const LAYOUT_CLASS: Record<StorefrontLayout, string> = {
-  'grid-2': 'grid grid-cols-2 gap-3 px-3 py-4 sm:gap-4 sm:px-4',
-  'grid-3': 'grid grid-cols-2 gap-3 px-3 py-4 sm:grid-cols-3 sm:gap-4 sm:px-4 lg:grid-cols-4 lg:gap-5',
-  list: 'flex flex-col gap-3 px-3 py-4 sm:px-4',
+  'grid-2': 'grid grid-cols-2 px-3 py-4 sm:px-4',
+  'grid-3': 'grid grid-cols-2 px-3 py-4 sm:grid-cols-3 sm:px-4 lg:grid-cols-4',
+  list: 'flex flex-col px-3 py-4 sm:px-4',
 }
 
 export default function ProductGrid({ products, t, layout = 'grid-3', editMode = false, buttonText, onSelect, onQuickAdd, onEditTargetChange }: Props) {
@@ -42,7 +45,7 @@ export default function ProductGrid({ products, t, layout = 'grid-3', editMode =
   }
 
   return (
-    <div className={LAYOUT_CLASS[layout]}>
+    <div style={{ gap: 'var(--card-gap, 12px)' }} className={LAYOUT_CLASS[layout]}>
       {[...inStock, ...outOfStock].map(product => (
         <ProductCard
           key={product.id}

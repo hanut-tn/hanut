@@ -4,6 +4,7 @@ import {
   CARD_RADIUS_VALUES, CARD_SHADOW_VALUES, IMAGE_RATIO_VALUES,
   type StorefrontCardRadius, type StorefrontCardShadow, type StorefrontImageRatio, type StorefrontCards,
 } from '@hanut/types'
+import DimensionField from '../ui/DimensionField'
 
 type Props = {
   cards: StorefrontCards
@@ -66,6 +67,34 @@ export default function CardsSection({ cards, onChange }: Props) {
           ))}
         </div>
       </div>
+
+      <DimensionField
+        label="Hauteur image"
+        value={cards.imageHeight}
+        min={100}
+        max={400}
+        step={10}
+        inputType="slider"
+        onChange={imageHeight => onChange({ imageHeight })}
+      />
+      <DimensionField
+        label="Espacement entre cartes"
+        value={cards.gap}
+        min={4}
+        max={32}
+        step={2}
+        inputType="slider"
+        onChange={gap => onChange({ gap })}
+      />
+      <DimensionField
+        label="Padding intérieur"
+        value={cards.padding}
+        min={4}
+        max={32}
+        step={2}
+        inputType="slider"
+        onChange={padding => onChange({ padding })}
+      />
     </div>
   )
 }

@@ -7,7 +7,8 @@ import {
   DEFAULT_STOREFRONT_CONFIG,
   type Category, type StorefrontConfig, type StorefrontColors, type StorefrontTypography,
   type StorefrontCards, type StorefrontButton, type StorefrontSearch, type StorefrontChips,
-  type StorefrontCartBar, type StorefrontTextStyle, type StorefrontLayout, type EditTarget, type PopoverPosition,
+  type StorefrontCartBar, type StorefrontTextStyle, type StorefrontHeader, type StorefrontLayout,
+  type EditTarget, type PopoverPosition,
 } from '@hanut/types'
 import type { ShopBrandingInput } from '@/app/(dashboard)/settings/actions'
 import { uploadProductImage } from '@/app/(dashboard)/catalog/actions'
@@ -121,6 +122,9 @@ export default function BoutiqueEditor({
   }
   function patchProductPrice(patch: Partial<StorefrontTextStyle>) {
     setConfig(c => mergeStorefrontConfig(c, { productPrice: patch }))
+  }
+  function patchHeader(patch: Partial<StorefrontHeader>) {
+    setConfig(c => mergeStorefrontConfig(c, { header: patch }))
   }
   function setLayout(layout: StorefrontLayout) {
     setConfig(c => mergeStorefrontConfig(c, { layout }))
@@ -431,6 +435,8 @@ export default function BoutiqueEditor({
             onBannerRemove={() => setBannerUrl(null)}
             headerColor={config.colors.primary}
             onHeaderColorChange={hex => patchColors({ primary: hex })}
+            header={config.header}
+            onHeaderDimensionsChange={patchHeader}
             onClose={onClose}
           />
         )

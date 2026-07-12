@@ -247,11 +247,12 @@ export default function StorefrontShell({
           onEditTargetChange?.({ type: 'chips' }, { top: rect.bottom + 8, left: rect.left })
         } : () => setCategoryFilter(id)}
         style={{
-          fontSize: 'calc(0.875rem * var(--font-size-scale, 1))',
+          fontSize: 'var(--chips-font-size, 14px)',
+          padding: 'var(--chips-padding-y, 6px) var(--chips-padding-x, 12px)',
           backgroundColor: isActive ? 'var(--chips-active-bg, var(--primary))' : 'var(--chips-bg, #fff)',
           color: isActive ? 'var(--chips-active-text, #fff)' : 'var(--chips-text, #78716C)',
         }}
-        className={`min-h-[32px] touch-manipulation rounded-full px-3.5 py-1.5 font-medium border border-transparent transition-colors flex items-center ${layoutClassName}`}
+        className={`min-h-[32px] touch-manipulation rounded-full font-medium border border-transparent transition-colors flex items-center ${layoutClassName}`}
       >
         {label}
       </button>

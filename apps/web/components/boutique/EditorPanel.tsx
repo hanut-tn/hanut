@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, Store, Palette, Type, LayoutTemplate, Grid3x3, Search, Tags, ShoppingCart, Baseline } from 'lucide-react'
+import { ChevronDown, Store, Palette, Type, LayoutTemplate, Grid3x3, Search, Tags, ShoppingCart, Baseline, Move } from 'lucide-react'
 import type {
   StorefrontColors, StorefrontTypography, StorefrontCards, StorefrontSearch, StorefrontChips,
   StorefrontCartBar, StorefrontTextStyle, StorefrontLayout,
@@ -15,9 +15,10 @@ import ChipsSection from './editor/ChipsSection'
 import CartBarSection from './editor/CartBarSection'
 import ProductNameSection from './editor/ProductNameSection'
 import ProductPriceSection from './editor/ProductPriceSection'
+import SpacingSection from './editor/SpacingSection'
 import LayoutSection from './editor/LayoutSection'
 
-type SectionId = 'identity' | 'colors' | 'typography' | 'cards' | 'search' | 'chips' | 'cartBar' | 'productTexts' | 'layout'
+type SectionId = 'identity' | 'colors' | 'typography' | 'cards' | 'search' | 'chips' | 'cartBar' | 'productTexts' | 'spacing' | 'layout'
 
 type Props = {
   shopName: string
@@ -70,6 +71,7 @@ const SECTIONS: { id: SectionId; label: string; icon: React.ElementType }[] = [
   { id: 'chips', label: 'Catégories', icon: Tags },
   { id: 'cartBar', label: 'Panier', icon: ShoppingCart },
   { id: 'productTexts', label: 'Textes produits', icon: Baseline },
+  { id: 'spacing', label: 'Espacements', icon: Move },
   { id: 'layout', label: 'Disposition', icon: LayoutTemplate },
 ]
 
@@ -142,6 +144,9 @@ export default function EditorPanel(props: Props) {
                       <ProductPriceSection productPrice={props.productPrice} onChange={props.onProductPriceChange} />
                     </div>
                   </div>
+                )}
+                {id === 'spacing' && (
+                  <SpacingSection cards={props.cards} onChange={props.onCardsChange} />
                 )}
                 {id === 'layout' && (
                   <LayoutSection layout={props.layout} onChange={props.onLayoutChange} />

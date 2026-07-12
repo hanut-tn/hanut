@@ -1,9 +1,10 @@
 'use client'
 
 import { X } from 'lucide-react'
-import { COLOR_PRESETS } from '@hanut/types'
+import { COLOR_PRESETS, type StorefrontHeader } from '@hanut/types'
 import ColorField from '../editor/ColorField'
 import IdentitySection from '../editor/IdentitySection'
+import DimensionField from '../ui/DimensionField'
 
 type Props = {
   shopName: string
@@ -21,6 +22,8 @@ type Props = {
   onBannerRemove: () => void
   headerColor: string
   onHeaderColorChange: (hex: string) => void
+  header: StorefrontHeader
+  onHeaderDimensionsChange: (patch: Partial<StorefrontHeader>) => void
   onClose: () => void
 }
 
@@ -28,7 +31,7 @@ type Props = {
 export default function HeaderPanel({
   shopName, shopDescription, logoUrl, logoUploading, bannerUrl, bannerUploading, accountName,
   onShopNameChange, onShopDescriptionChange, onLogoFile, onLogoRemove, onBannerFile, onBannerRemove,
-  headerColor, onHeaderColorChange, onClose,
+  headerColor, onHeaderColorChange, header, onHeaderDimensionsChange, onClose,
 }: Props) {
   return (
     <div
@@ -73,6 +76,29 @@ export default function HeaderPanel({
           />
           {bannerUrl && (
             <p className="text-xs text-gray-400 mt-1">Ignorée tant qu&apos;une bannière est définie.</p>
+          )}
+        </div>
+
+        <DimensionField
+          label="Taille du logo"
+          value={header.logoSize}
+          min={32}
+          max={120}
+          inputType="both"
+          onChange={logoSize => onHeaderDimensionsChange({ logoSize })}
+        />
+
+        <div className={!bannerUrl ? 'opacity-40 pointer-events-none' : ''}>
+          <DimensionField
+            label="Hauteur de la bannière"
+            value={header.bannerHeight}
+            min={100}
+            max={400}
+            inputType="both"
+            onChange={bannerHeight => onHeaderDimensionsChange({ bannerHeight })}
+          />
+          {!bannerUrl && (
+            <p className="text-xs text-gray-400 mt-1">Ignorée sans bannière définie.</p>
           )}
         </div>
       </div>

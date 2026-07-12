@@ -12,7 +12,7 @@ type Props = {
 }
 
 const PANEL_WIDTH = 256
-const PANEL_MAX_HEIGHT = 260
+const PANEL_MAX_HEIGHT = 340
 
 export default function ProductPricePanel({ productPrice, onChange, position, onClose }: Props) {
   const top = typeof window === 'undefined'

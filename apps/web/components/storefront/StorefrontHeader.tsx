@@ -13,13 +13,16 @@ type Props = {
 }
 
 function Avatar({ shopName, logoUrl, size }: { shopName: string; logoUrl: string | null; size: 'md' | 'lg' }) {
-  const sizeClasses = size === 'lg' ? 'w-16 h-16' : 'w-14 h-14 ring-4 ring-white'
-  const fontSize = size === 'lg' ? 'calc(1.5rem * var(--font-size-scale, 1))' : 'calc(1.25rem * var(--font-size-scale, 1))'
+  // 'lg' est la seule taille utilisée aujourd'hui (header boutique) — taille
+  // configurable via --logo-size. 'md' reste figé (aucun appelant actuel).
+  const dimensionStyle = size === 'lg' ? { width: 'var(--logo-size, 64px)', height: 'var(--logo-size, 64px)' } : undefined
+  const sizeClasses = size === 'lg' ? '' : 'w-14 h-14 ring-4 ring-white'
+  const fontSize = size === 'lg' ? 'calc(var(--logo-size, 64px) * 0.4)' : 'calc(1.25rem * var(--font-size-scale, 1))'
 
   if (logoUrl) {
     return (
-      <div className={`relative rounded-full overflow-hidden bg-white shrink-0 shadow-md ${sizeClasses}`}>
-        <Image src={logoUrl} alt="" fill sizes="64px" className="object-cover" />
+      <div style={dimensionStyle} className={`relative rounded-full overflow-hidden bg-white shrink-0 shadow-md ${sizeClasses}`}>
+        <Image src={logoUrl} alt="" fill sizes="120px" className="object-cover" />
       </div>
     )
   }
@@ -27,7 +30,7 @@ function Avatar({ shopName, logoUrl, size }: { shopName: string; logoUrl: string
   const initial = shopName.trim().charAt(0).toUpperCase() || '?'
   return (
     <div
-      style={{ color: 'var(--primary)', fontSize }}
+      style={{ color: 'var(--primary)', fontSize, ...dimensionStyle }}
       className={`rounded-full bg-white font-bold flex items-center justify-center shrink-0 shadow-md ${sizeClasses}`}
     >
       {initial}
@@ -63,7 +66,7 @@ function HeaderContent({ shopName, shopDescription, logoUrl, t, onBanner }: Prop
 export default function StorefrontHeader({ shopName, shopDescription, logoUrl, bannerUrl, t }: Props) {
   if (bannerUrl) {
     return (
-      <div className="relative w-full h-48 sm:h-64">
+      <div className="relative w-full" style={{ height: 'var(--banner-height, 200px)' }}>
         <Image src={bannerUrl} alt="" fill sizes="100vw" className="object-cover" priority />
         {/* Overlay pour garder le texte lisible quelle que soit l'image */}
         <div className="absolute inset-0 bg-black/35" />

@@ -16,7 +16,7 @@ type Props = {
 }
 
 const PANEL_WIDTH = 288
-const PANEL_MAX_HEIGHT = 420
+const PANEL_MAX_HEIGHT = 560
 
 export default function CardPanel({ cards, cardBg, onCardsChange, onCardBgChange, position, onClose }: Props) {
   const top = typeof window === 'undefined'

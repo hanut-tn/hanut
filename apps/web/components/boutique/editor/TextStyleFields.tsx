@@ -2,6 +2,7 @@
 
 import { TEXT_WEIGHT_VALUES, type StorefrontTextStyle, type TextWeight } from '@hanut/types'
 import ColorField from './ColorField'
+import DimensionField from '../ui/DimensionField'
 
 type Props = {
   value: StorefrontTextStyle
@@ -17,6 +18,14 @@ export default function TextStyleFields({ value, presets, onChange }: Props) {
   return (
     <div className="space-y-4">
       <ColorField label="Couleur" value={value.color} presets={presets} onChange={hex => onChange({ color: hex })} />
+      <DimensionField
+        label="Taille exacte"
+        value={value.size}
+        min={10}
+        max={32}
+        inputType="number"
+        onChange={size => onChange({ size })}
+      />
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1.5">Graisse</label>
         <div className="flex gap-2 flex-wrap">
