@@ -20,6 +20,14 @@ export const DEFAULT_STOREFRONT_CONFIG: StorefrontConfig = {
   layout: 'grid-3',
 }
 
+// NOTE : pageBg / cardRadius / fontFamily / fontWeight sont des valeurs CSS
+// brutes (jamais des noms de classes Tailwind). Une valeur comme "bg-[#faf8f5]"
+// ou "font-serif" construite dynamiquement depuis cet objet et interpolée dans
+// un className ne serait JAMAIS vue par le scanner statique de Tailwind au
+// build — la classe finit purgée du CSS compilé et n'a plus aucun effet, même
+// si elle apparaît bien dans le HTML rendu. Toute valeur ci-dessous doit donc
+// être appliquée via l'attribut `style` (ou une CSS variable), jamais via
+// `className={theme.xxx}`.
 export const STOREFRONT_THEMES: Record<StorefrontTheme, {
   label: string
   description: string
@@ -28,9 +36,14 @@ export const STOREFRONT_THEMES: Record<StorefrontTheme, {
   previewCard: string
   previewText: string
   previewAccent: string
+  /** Rayon des cartes produit — valeur CSS (rem), pas une classe Tailwind. */
   cardRadius: string
+  /** Fond de page — couleur hex, pas une classe Tailwind. */
   pageBg: string
-  fontClass: string
+  /** font-family CSS, pas une classe Tailwind. */
+  fontFamily: string
+  /** font-weight CSS, pas une classe Tailwind. */
+  fontWeight: string
 }> = {
   moderne: {
     label: 'Moderne',
@@ -40,9 +53,10 @@ export const STOREFRONT_THEMES: Record<StorefrontTheme, {
     previewCard: '#ffffff',
     previewText: '#111827',
     previewAccent: '#16a34a',
-    cardRadius: 'rounded-2xl',
-    pageBg: 'bg-gray-50',
-    fontClass: '',
+    cardRadius: '1rem',
+    pageBg: '#F9FAFB',
+    fontFamily: 'inherit',
+    fontWeight: 'inherit',
   },
   elegant: {
     label: 'Élégant',
@@ -52,9 +66,10 @@ export const STOREFRONT_THEMES: Record<StorefrontTheme, {
     previewCard: '#ffffff',
     previewText: '#1a1a1a',
     previewAccent: '#c9a84c',
-    cardRadius: 'rounded-lg',
-    pageBg: 'bg-[#faf8f5]',
-    fontClass: 'font-serif',
+    cardRadius: '0.5rem',
+    pageBg: '#faf8f5',
+    fontFamily: 'Georgia, "Times New Roman", serif',
+    fontWeight: 'inherit',
   },
   bold: {
     label: 'Bold',
@@ -64,9 +79,10 @@ export const STOREFRONT_THEMES: Record<StorefrontTheme, {
     previewCard: '#ffffff',
     previewText: '#111827',
     previewAccent: '#16a34a',
-    cardRadius: 'rounded-xl',
-    pageBg: 'bg-gray-50',
-    fontClass: 'font-black',
+    cardRadius: '0.75rem',
+    pageBg: '#F9FAFB',
+    fontFamily: 'inherit',
+    fontWeight: '900',
   },
   sombre: {
     label: 'Sombre',
@@ -76,9 +92,10 @@ export const STOREFRONT_THEMES: Record<StorefrontTheme, {
     previewCard: '#111827',
     previewText: '#f9fafb',
     previewAccent: '#16a34a',
-    cardRadius: 'rounded-xl',
-    pageBg: 'bg-gray-950',
-    fontClass: '',
+    cardRadius: '0.75rem',
+    pageBg: '#030712',
+    fontFamily: 'inherit',
+    fontWeight: 'inherit',
   },
   nature: {
     label: 'Nature',
@@ -88,9 +105,10 @@ export const STOREFRONT_THEMES: Record<StorefrontTheme, {
     previewCard: '#ffffff',
     previewText: '#1a2e0a',
     previewAccent: '#4a7c2f',
-    cardRadius: 'rounded-3xl',
-    pageBg: 'bg-[#f5f0e8]',
-    fontClass: '',
+    cardRadius: '1.5rem',
+    pageBg: '#f5f0e8',
+    fontFamily: 'inherit',
+    fontWeight: 'inherit',
   },
   pastel: {
     label: 'Pastel',
@@ -100,9 +118,10 @@ export const STOREFRONT_THEMES: Record<StorefrontTheme, {
     previewCard: '#ffffff',
     previewText: '#831843',
     previewAccent: '#ec4899',
-    cardRadius: 'rounded-3xl',
-    pageBg: 'bg-[#fdf4f9]',
-    fontClass: '',
+    cardRadius: '1.5rem',
+    pageBg: '#fdf4f9',
+    fontFamily: 'inherit',
+    fontWeight: 'inherit',
   },
 }
 

@@ -1,10 +1,14 @@
 import { STOREFRONT_THEMES, type StorefrontTheme } from '@hanut/types'
 
-const RADIUS_PX: Record<string, number> = {
-  'rounded-lg': 4,
-  'rounded-xl': 6,
-  'rounded-2xl': 8,
-  'rounded-3xl': 10,
+// Rayon à l'échelle réduite de la miniature (120×80) — indépendant de la
+// valeur CSS réelle (theme.cardRadius, en rem) utilisée sur les vraies cartes.
+const PREVIEW_RADIUS_PX: Record<StorefrontTheme, number> = {
+  elegant: 4,
+  bold: 6,
+  sombre: 6,
+  moderne: 8,
+  nature: 10,
+  pastel: 10,
 }
 
 type Props = {
@@ -15,7 +19,7 @@ type Props = {
 /** Miniature 120×80 : mood du thème (fond, cartes, police) + couleur d'accent en direct. */
 export default function ThemePreviewSvg({ themeKey, primaryColor }: Props) {
   const theme = STOREFRONT_THEMES[themeKey]
-  const radius = RADIUS_PX[theme.cardRadius] ?? 6
+  const radius = PREVIEW_RADIUS_PX[themeKey]
   const cardW = 24
   const cardH = 20
   const gap = 4

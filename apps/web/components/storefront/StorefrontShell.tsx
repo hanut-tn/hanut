@@ -206,8 +206,12 @@ export default function StorefrontShell({
       style={{
         '--primary': config.primary_color,
         '--primary-dark': adjustColor(config.primary_color, -15),
+        '--card-radius': theme.cardRadius,
+        backgroundColor: theme.pageBg,
+        fontFamily: theme.fontFamily,
+        fontWeight: theme.fontWeight,
       } as React.CSSProperties}
-      className={`min-h-screen ${theme.pageBg} ${theme.fontClass} ${isRtl ? 'font-arabic' : ''}`}
+      className={`min-h-screen ${isRtl ? 'font-arabic' : ''}`}
     >
       {/* Navbar Hanut sticky */}
       {!hideTopBar && (
@@ -313,7 +317,6 @@ export default function StorefrontShell({
             products={filteredProducts}
             t={t}
             layout={config.layout}
-            cardRadius={theme.cardRadius}
             onSelect={setSelectedProduct}
             onQuickAdd={product =>
               addToCart({

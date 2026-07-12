@@ -9,12 +9,11 @@ import type { StorefrontDict } from '@/lib/i18n/storefront'
 type Props = {
   product: StorefrontProduct
   t: StorefrontDict
-  cardRadius?: string
   onSelect: (product: StorefrontProduct) => void
   onQuickAdd: (product: StorefrontProduct) => void
 }
 
-export default function ProductCard({ product, t, cardRadius = 'rounded-2xl', onSelect, onQuickAdd }: Props) {
+export default function ProductCard({ product, t, onSelect, onQuickAdd }: Props) {
   const isOut = product.stock === 0
   const isLow = !isOut && product.stock <= product.low_stock_alert
   const hasPriceRange = product.maxPrice > product.minPrice
@@ -40,7 +39,10 @@ export default function ProductCard({ product, t, cardRadius = 'rounded-2xl', on
   }
 
   return (
-    <div className={`bg-white border border-gray-100 ${cardRadius} overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow`}>
+    <div
+      style={{ borderRadius: 'var(--card-radius, 1rem)' }}
+      className="bg-white border border-gray-100 overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow"
+    >
       {/* Image ratio 4:3 */}
       <button
         type="button"

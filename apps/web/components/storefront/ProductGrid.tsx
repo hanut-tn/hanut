@@ -10,7 +10,6 @@ type Props = {
   products: StorefrontProduct[]
   t: StorefrontDict
   layout?: StorefrontLayout
-  cardRadius?: string
   onSelect: (product: StorefrontProduct) => void
   onQuickAdd: (product: StorefrontProduct) => void
 }
@@ -21,7 +20,7 @@ const LAYOUT_CLASS: Record<StorefrontLayout, string> = {
   list: 'flex flex-col gap-3 px-3 py-4 sm:px-4',
 }
 
-export default function ProductGrid({ products, t, layout = 'grid-3', cardRadius, onSelect, onQuickAdd }: Props) {
+export default function ProductGrid({ products, t, layout = 'grid-3', onSelect, onQuickAdd }: Props) {
   const inStock = products.filter(p => p.stock > 0)
   const outOfStock = products.filter(p => p.stock === 0)
 
@@ -42,7 +41,6 @@ export default function ProductGrid({ products, t, layout = 'grid-3', cardRadius
           key={product.id}
           product={product}
           t={t}
-          cardRadius={cardRadius}
           onSelect={onSelect}
           onQuickAdd={onQuickAdd}
         />
