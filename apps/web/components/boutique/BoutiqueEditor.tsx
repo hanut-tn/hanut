@@ -157,6 +157,7 @@ export default function BoutiqueEditor({ seller, products, categories, initialCo
       config={config}
       hideTopBar
       previewMode
+      forceMobileLayout={viewMode === 'mobile'}
     />
   )
 

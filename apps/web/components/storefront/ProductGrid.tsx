@@ -10,6 +10,12 @@ type Props = {
   products: StorefrontProduct[]
   t: StorefrontDict
   layout?: StorefrontLayout
+  /**
+   * Aperçu dashboard uniquement : le cadre "iPhone" a une largeur fixe mais
+   * reste rendu dans le vrai viewport desktop, donc les classes `sm:`/`lg:`
+   * s'activeraient à tort. Force la variante sans breakpoints.
+   */
+  forceMobile?: boolean
   onSelect: (product: StorefrontProduct) => void
   onQuickAdd: (product: StorefrontProduct) => void
 }
@@ -20,7 +26,13 @@ const LAYOUT_CLASS: Record<StorefrontLayout, string> = {
   list: 'flex flex-col gap-3 px-3 py-4 sm:px-4 w-full',
 }
 
-export default function ProductGrid({ products, t, layout = 'grid-3', onSelect, onQuickAdd }: Props) {
+const LAYOUT_CLASS_MOBILE: Record<StorefrontLayout, string> = {
+  'grid-2': 'grid grid-cols-2 gap-3 px-3 py-4 w-full',
+  'grid-3': 'grid grid-cols-2 gap-3 px-3 py-4 w-full',
+  list: 'flex flex-col gap-3 px-3 py-4 w-full',
+}
+
+export default function ProductGrid({ products, t, layout = 'grid-3', forceMobile = false, onSelect, onQuickAdd }: Props) {
   const inStock = products.filter(p => p.stock > 0)
   const outOfStock = products.filter(p => p.stock === 0)
 
@@ -35,7 +47,7 @@ export default function ProductGrid({ products, t, layout = 'grid-3', onSelect, 
   }
 
   return (
-    <div className={LAYOUT_CLASS[layout]}>
+    <div className={forceMobile ? LAYOUT_CLASS_MOBILE[layout] : LAYOUT_CLASS[layout]}>
       {[...inStock, ...outOfStock].map(product => (
         <ProductCard
           key={product.id}

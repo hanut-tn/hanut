@@ -37,11 +37,21 @@ type Props = {
   hideTopBar?: boolean
   /** Aperçu dashboard : apparence 100% fidèle, mais bloque le passage à un vrai checkout (OTP/commande réels). */
   previewMode?: boolean
+  /**
+   * Aperçu dashboard uniquement : le cadre "iPhone" a une largeur CSS fixe
+   * (ex: 300px) mais reste rendu dans le vrai viewport du navigateur — les
+   * classes Tailwind responsives (`sm:`, `lg:`) réagissent à CE viewport,
+   * pas à la largeur du cadre, donc `sm:grid-cols-3`/`lg:grid-cols-4`
+   * s'activaient à tort sur un écran desktop large, écrasant la grille dans
+   * les 300px du téléphone. Force le nombre de colonnes "mobile" (2) sans
+   * dépendre des breakpoints quand true.
+   */
+  forceMobileLayout?: boolean
 }
 
 export default function StorefrontShell({
   sellerSlug, sellerName, shopDescription, logoUrl, bannerUrl = null, products, categories,
-  config = DEFAULT_STOREFRONT_CONFIG, hideTopBar = false, previewMode = false,
+  config = DEFAULT_STOREFRONT_CONFIG, hideTopBar = false, previewMode = false, forceMobileLayout = false,
 }: Props) {
   const { t, lang, isRtl, toggleLang } = useLang(storefrontTranslations)
   const router = useRouter()
@@ -299,7 +309,13 @@ export default function StorefrontShell({
 
       {/* Barre de filtres catégories — horizontale scrollable, toutes tailles d'écran */}
       {step === 'catalog' && availableCategories.length > 0 && (
-        <div className={`sticky z-20 ${hideTopBar ? 'top-0' : 'top-14'} bg-gray-50/95 backdrop-blur border-b border-gray-100`}>
+        <div
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--page-bg, #F9FAFB) 95%, transparent)',
+            borderBottom: '1px solid color-mix(in srgb, var(--text-primary, #111827) 8%, transparent)',
+          }}
+          className={`sticky z-20 backdrop-blur ${hideTopBar ? 'top-0' : 'top-14'}`}
+        >
           <div className="max-w-5xl mx-auto overflow-x-auto scrollbar-none">
             <div className="flex gap-2 px-4 py-2.5 w-max min-w-full">
               {renderCategoryChip('all', t.shop.categoryAll)}
@@ -333,6 +349,7 @@ export default function StorefrontShell({
               products={filteredProducts}
               t={t}
               layout={config.layout}
+              forceMobile={forceMobileLayout}
               onSelect={setSelectedProduct}
               onQuickAdd={product =>
                 addToCart({
