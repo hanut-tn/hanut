@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 const STATS = [
   { value: '7,5M', label: 'transactions e-commerce par semestre en Tunisie', source: 'BCT 2025' },
   { value: '56%', label: 'des paiements en ligne en Tunisie se font en COD', source: 'GIZ 2024' },
-  { value: '15+', label: 'livreurs locaux actifs intégrés dans Hanut', source: '' },
+  { value: '5', label: 'transporteurs COD intégrés (IntiGo, Navex, Adex, Aramex, Best Delivery)', source: '' },
   { value: '2-5h', label: 'perdues par jour sans outil adapté de gestion', source: 'Enquête vendeurs 2025' },
 ]
 
@@ -156,6 +156,9 @@ export default function AboutPage() {
                 <p className="text-lg leading-relaxed text-green-50 italic mb-6">
                   Notre vision : que dans 5 ans, chaque vendeur tunisien qui vend via Instagram ait les mêmes données qu&apos;un Amazon Seller.
                 </p>
+                <p className="text-sm font-semibold text-white leading-relaxed mb-6">
+                  Hanut c&apos;est votre boutique en ligne ET votre outil de gestion. Pas l&apos;un ou l&apos;autre. Les deux ensemble.
+                </p>
                 <div className="flex items-center gap-3">
                   <Image src="/logo-icone-blanc.svg" alt="Hanut" width={40} height={49} unoptimized />
                   <div>
@@ -165,6 +168,30 @@ export default function AboutPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Ce qu'on a construit */}
+      <section className="py-16 px-4 sm:px-6 bg-white border-y border-gray-100">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl font-extrabold text-[#1C1917] text-center mb-10">Ce qu&apos;on a construit</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[
+              'Mini boutique publique avec 4 identités visuelles',
+              'Dashboard commandes, stock, clients, livraisons',
+              'Gestion COD avec 5 transporteurs tunisiens',
+              'Analytics adaptés au marché tunisien',
+              'Bilingue français / arabe',
+            ].map(item => (
+              <div key={item} className="flex items-start gap-3 bg-[#FAFAF9] rounded-xl border border-gray-200 p-4">
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="none" className="shrink-0 mt-0.5">
+                  <circle cx="8" cy="8" r="7" fill="#DCFCE7" />
+                  <path d="M5 8L7 10L11 6" stroke="#16A34A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <p className="text-sm text-gray-700 leading-relaxed">{item}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>

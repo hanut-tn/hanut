@@ -50,25 +50,58 @@ const DONE: RoadmapItem[] = [
     desc: 'Invitation de membres avec rôles Admin, Opérateur, Lecture seule. Journal d\'activité non modifiable.',
   },
   {
-    title: 'Application mobile (en cours)',
-    desc: 'Le dashboard web est déjà adapté au mobile, avec navigation mobile et écrans optimisés pour les vendeurs sur téléphone.',
+    title: 'Templates visuels boutique',
+    desc: '4 identités visuelles complètes : Mode, Luxe, Fresh, Dark. Chaque boutique a son propre style.',
+  },
+  {
+    title: 'Éditeur boutique avec aperçu iPhone',
+    desc: 'Choisissez votre style et voyez le rendu en direct dans un aperçu mobile fidèle, sans quitter le dashboard.',
+  },
+  {
+    title: 'Personnalisation couleur, logo, bannière',
+    desc: 'Couleur de marque, logo et bannière uploadables pour que la boutique ressemble vraiment à votre marque.',
+  },
+  {
+    title: 'Boutique sans branding Hanut (plan Pro)',
+    desc: 'Le plan Pro retire la mention "Propulsé par Hanut" — votre boutique, votre marque.',
+  },
+  {
+    title: 'Catégories produits',
+    desc: 'Organisez votre catalogue par catégories, visibles en barre de filtres sur la boutique publique.',
+  },
+  {
+    title: 'Galerie photos produits (multi-photos)',
+    desc: 'Ajoutez plusieurs photos par produit depuis le catalogue.',
+  },
+  {
+    title: 'Recherche dans la boutique',
+    desc: 'Vos clients retrouvent un produit en tapant son nom, directement depuis la mini boutique.',
+  },
+  {
+    title: 'Partage WhatsApp après commande',
+    desc: 'Le client peut partager sa confirmation de commande sur WhatsApp en un clic.',
   },
 ]
 
 const IN_DEV: RoadmapItem[] = [
   {
-    title: 'Intégration API transporteurs',
+    title: 'Intégration API transporteurs IntiGo/Navex',
     desc: 'Création de colis et statut automatique directement depuis Hanut.',
     eta: 'T3 2026',
   },
   {
-    title: 'Notifications SMS client',
+    title: 'Notifications SMS client via Twilio',
     desc: 'Confirmation de commande et lien de suivi envoyés au client.',
     eta: 'T3 2026',
   },
   {
     title: 'Application mobile Expo',
     desc: 'Notifications push à chaque nouvelle commande, gestion complète depuis votre téléphone.',
+    eta: 'T4 2026',
+  },
+  {
+    title: 'Paiement en ligne Konnect.tn',
+    desc: 'Proposez le paiement digital à vos clients en complément du COD.',
     eta: 'T4 2026',
   },
 ]
@@ -79,8 +112,12 @@ const PLANNED: RoadmapItem[] = [
     desc: 'Multi-boutiques, équipe illimitée, accès API, rapport fiscal. En cours de préparation.',
   },
   {
-    title: 'Intégration paiement en ligne',
-    desc: 'Konnect / Flouci pour les vendeurs qui veulent proposer le paiement digital en complément du COD.',
+    title: 'Domaines personnalisés',
+    desc: 'Connectez votre propre nom de domaine à votre boutique Hanut.',
+  },
+  {
+    title: 'Avis clients sur la boutique',
+    desc: 'Vos clients laissent un avis après réception de leur commande, affiché sur votre boutique.',
   },
   {
     title: 'Marketplace Hanut',

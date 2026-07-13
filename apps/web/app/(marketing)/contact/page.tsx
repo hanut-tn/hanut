@@ -10,12 +10,20 @@ const FAQ = [
     a: "Cliquez sur \"Commencer\" en haut de la page. La création de compte prend moins de 2 minutes : email, mot de passe, et vous êtes dans le tableau de bord.",
   },
   {
+    q: 'Quelle est la différence entre Starter et Pro ?',
+    a: "Le plan Starter vous donne accès à la mini boutique avec 1 template et 100 commandes par mois. Le plan Pro débloque les 4 templates, la personnalisation avancée, les commandes illimitées, l'équipe et les analytics avancés.",
+  },
+  {
     q: 'Comment connecter un livreur ?',
     a: "Depuis vos Paramètres → Livreurs, ajoutez vos identifiants API IntiGo, Navex ou Adex. Un guide pas-à-pas est disponible pour chaque livreur.",
   },
   {
     q: 'Comment partager mon lien de commande ?',
     a: "Dans Paramètres → Lien commande, personnalisez votre slug (hanut.tn/s/votre-boutique) et copiez le lien pour le mettre dans votre bio Instagram ou statut WhatsApp.",
+  },
+  {
+    q: 'Puis-je personnaliser ma boutique ?',
+    a: "Oui — choisissez parmi 4 templates visuels, votre couleur de marque, ajoutez votre logo et votre bannière. Sur le plan Pro, le branding Hanut est retiré de votre boutique.",
   },
   {
     q: 'Hanut fonctionne-t-il sans site web ?',
@@ -112,6 +120,7 @@ export default function ContactPage() {
                   <p className="text-sm text-gray-500 mt-0.5">Chattez directement avec notre équipe support</p>
                 </div>
               </a>
+              <p className="text-sm text-gray-500 -mt-2 px-1">+216 54 727 060</p>
 
               {/* Email */}
               <a
