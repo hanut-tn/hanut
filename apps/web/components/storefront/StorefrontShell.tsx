@@ -221,10 +221,14 @@ export default function StorefrontShell({
         key={id}
         type="button"
         onClick={() => setCategoryFilter(id)}
-        style={{
-          backgroundColor: isActive ? 'var(--primary)' : 'var(--card-bg, #fff)',
-          color: isActive ? '#fff' : 'var(--text-secondary, #78716C)',
-          border: isActive ? 'none' : '1px solid color-mix(in srgb, var(--text-secondary, #78716C) 30%, transparent)',
+        style={isActive ? {
+          backgroundColor: 'var(--primary)',
+          color: '#ffffff',
+          boxShadow: '0 2px 8px color-mix(in srgb, var(--primary) 40%, transparent)',
+        } : {
+          backgroundColor: 'color-mix(in srgb, var(--text-primary, #111827) 8%, transparent)',
+          color: 'var(--text-primary, #111827)',
+          border: '1px solid color-mix(in srgb, var(--text-primary, #111827) 12%, transparent)',
         }}
         className="shrink-0 min-h-[32px] touch-manipulation rounded-full px-4 py-1.5 text-sm font-medium whitespace-nowrap transition-colors flex items-center"
       >
@@ -238,7 +242,7 @@ export default function StorefrontShell({
       ref={shellRef}
       dir={isRtl ? 'rtl' : 'ltr'}
       style={buildCssVariables(config)}
-      className={`min-h-screen ${isRtl ? 'font-arabic' : ''}`}
+      className={`w-full min-h-screen overflow-x-hidden ${isRtl ? 'font-arabic' : ''}`}
     >
       {/* Navbar Hanut sticky */}
       {!hideTopBar && (

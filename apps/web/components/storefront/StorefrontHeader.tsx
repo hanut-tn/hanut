@@ -79,7 +79,16 @@ export default function StorefrontHeader({ shopName, shopDescription, logoUrl, b
   }
 
   return (
-    <div style={{ background: 'var(--header-bg)' }}>
+    <div className="relative overflow-hidden" style={{ background: 'var(--header-bg)' }}>
+      {/* Cercles décoratifs — purement esthétiques, ne gênent pas le contenu */}
+      <div
+        className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10 pointer-events-none"
+        style={{ backgroundColor: '#ffffff', transform: 'translate(30%, -30%)' }}
+      />
+      <div
+        className="absolute bottom-0 left-0 w-20 h-20 rounded-full opacity-10 pointer-events-none"
+        style={{ backgroundColor: '#ffffff', transform: 'translate(-30%, 30%)' }}
+      />
       <HeaderContent
         shopName={shopName}
         shopDescription={shopDescription}

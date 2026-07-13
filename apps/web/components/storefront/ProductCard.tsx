@@ -45,7 +45,7 @@ export default function ProductCard({ product, t, onSelect, onQuickAdd }: Props)
         borderRadius: 'var(--card-radius, 1rem)',
         boxShadow: 'var(--card-shadow, 0 1px 3px 0 rgb(0 0 0 / 0.1))',
       }}
-      className="border border-black/5 overflow-hidden flex flex-col"
+      className="w-full border border-black/5 overflow-hidden flex flex-col"
     >
       {/* Image */}
       <button
@@ -54,7 +54,7 @@ export default function ProductCard({ product, t, onSelect, onQuickAdd }: Props)
         disabled={isOut}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
-        className="relative block aspect-[4/3] bg-gray-50 w-full"
+        className="relative block aspect-[4/3] w-full overflow-hidden"
         aria-label={product.name}
       >
         {displaySrc ? (
@@ -67,12 +67,15 @@ export default function ProductCard({ product, t, onSelect, onQuickAdd }: Props)
             className={`object-cover transition-opacity duration-200 ${isOut ? 'opacity-60' : ''}`}
           />
         ) : (
-          <span className="absolute inset-0 flex items-center justify-center text-gray-400">
-            <ImageOff className="w-8 h-8 opacity-40" />
+          <span
+            style={{ backgroundColor: 'color-mix(in srgb, var(--primary) 8%, var(--card-bg, #fff))' }}
+            className="absolute inset-0 flex items-center justify-center"
+          >
+            <ImageOff className="w-8 h-8" style={{ color: 'var(--primary)', opacity: 0.5 }} />
           </span>
         )}
         {isOut && (
-          <span className="absolute inset-0 bg-white/60 flex items-center justify-center">
+          <span className="absolute inset-0 bg-black/50 flex items-center justify-center">
             <span className="text-xs px-3 py-1 rounded-full font-semibold bg-red-600 text-white shadow-sm">
               {t.shop.outOfStock}
             </span>
@@ -107,7 +110,13 @@ export default function ProductCard({ product, t, onSelect, onQuickAdd }: Props)
             {hasPriceRange ? t.shop.fromPrice(product.minPrice) : `${product.minPrice} DT`}
           </p>
           {product.hasVariants && (
-            <span className="inline-block mt-1 text-[10px] bg-gray-50 text-gray-600 border border-gray-200 rounded px-1.5 py-0.5">
+            <span
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--primary) 10%, transparent)',
+                color: 'var(--primary)',
+              }}
+              className="inline-block mt-1 text-[10px] font-medium rounded-full px-2 py-0.5"
+            >
               {t.shop.variantsCount(product.variants.length)}
             </span>
           )}
@@ -117,11 +126,11 @@ export default function ProductCard({ product, t, onSelect, onQuickAdd }: Props)
           type="button"
           onClick={handleAdd}
           disabled={isOut}
-          style={isOut ? undefined : { backgroundColor: justAdded ? 'var(--primary-dark)' : 'var(--primary)' }}
+          style={isOut
+            ? { backgroundColor: 'color-mix(in srgb, var(--text-secondary, #78716C) 20%, transparent)', color: 'var(--text-secondary, #78716C)' }
+            : { backgroundColor: justAdded ? 'var(--primary-dark)' : 'var(--primary)' }}
           className={`w-full min-h-[40px] touch-manipulation flex items-center justify-center gap-1.5 rounded-xl text-sm font-semibold transition-all duration-150 ease-out ${
-            isOut
-              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              : 'text-white active:scale-[0.97]'
+            isOut ? 'cursor-not-allowed' : 'text-white active:scale-[0.97]'
           }`}
         >
           {isOut ? (

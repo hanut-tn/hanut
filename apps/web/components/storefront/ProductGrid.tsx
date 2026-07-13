@@ -15,9 +15,9 @@ type Props = {
 }
 
 const LAYOUT_CLASS: Record<StorefrontLayout, string> = {
-  'grid-2': 'grid grid-cols-2 gap-3 px-3 py-4 sm:gap-4 sm:px-4',
-  'grid-3': 'grid grid-cols-2 gap-3 px-3 py-4 sm:grid-cols-3 sm:gap-4 sm:px-4 lg:grid-cols-4 lg:gap-5',
-  list: 'flex flex-col gap-3 px-3 py-4 sm:px-4',
+  'grid-2': 'grid grid-cols-2 gap-3 px-3 py-4 sm:gap-4 sm:px-4 w-full',
+  'grid-3': 'grid grid-cols-2 gap-3 px-3 py-4 sm:grid-cols-3 sm:gap-4 sm:px-4 lg:grid-cols-4 lg:gap-5 w-full',
+  list: 'flex flex-col gap-3 px-3 py-4 sm:px-4 w-full',
 }
 
 export default function ProductGrid({ products, t, layout = 'grid-3', onSelect, onQuickAdd }: Props) {
