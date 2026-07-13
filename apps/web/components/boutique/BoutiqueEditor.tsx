@@ -188,42 +188,34 @@ export default function BoutiqueEditor({ seller, products, categories, initialCo
 
       <div className="flex-1 overflow-auto flex items-start justify-center py-8 px-4">
         {viewMode === 'mobile' ? (
-          /* Cadre iPhone */
-          <div className="relative shrink-0" style={{ width: '390px' }}>
+          /* Cadre téléphone — pas d'encoche/caméra, l'écran est plein cadre */
+          <div className="relative shrink-0" style={{ width: '300px' }}>
             <div
-              className="relative rounded-[3rem] overflow-hidden shadow-2xl"
+              className="relative rounded-[2.25rem] overflow-hidden shadow-2xl"
               style={{
-                border: '8px solid #1a1a1a',
+                border: '6px solid #1a1a1a',
                 backgroundColor: '#1a1a1a',
-                boxShadow: '0 0 0 2px #3a3a3a, 0 40px 80px rgba(0,0,0,0.4)',
+                boxShadow: '0 0 0 2px #3a3a3a, 0 24px 48px rgba(0,0,0,0.35)',
               }}
             >
-              {/* Dynamic Island */}
-              <div className="flex justify-center pt-3 pb-1 bg-black">
-                <div
-                  className="rounded-full bg-black"
-                  style={{ width: '120px', height: '34px', border: '2px solid #2a2a2a' }}
-                />
-              </div>
-
-              {/* Écran — boutique scrollable */}
-              <div className="overflow-y-auto overflow-x-hidden bg-white" style={{ height: '750px', width: '100%' }}>
+              {/* Écran — boutique scrollable, plein cadre */}
+              <div className="overflow-y-auto overflow-x-hidden bg-white" style={{ height: 'min(70vh, 640px)', width: '100%' }}>
                 {storefrontPreview}
               </div>
 
               {/* Home indicator */}
-              <div className="flex justify-center py-2 bg-white">
-                <div className="w-28 h-1 bg-gray-300 rounded-full" />
+              <div className="flex justify-center py-1.5 bg-white">
+                <div className="w-24 h-1 bg-gray-300 rounded-full" />
               </div>
             </div>
 
             {/* Boutons volume gauche */}
-            <div className="absolute left-[-10px] top-[100px] w-[4px] h-[32px] bg-[#2a2a2a] rounded-l-sm" />
-            <div className="absolute left-[-10px] top-[145px] w-[4px] h-[60px] bg-[#2a2a2a] rounded-l-sm" />
-            <div className="absolute left-[-10px] top-[215px] w-[4px] h-[60px] bg-[#2a2a2a] rounded-l-sm" />
+            <div className="absolute left-[-8px] top-[80px] w-[3px] h-[26px] bg-[#2a2a2a] rounded-l-sm" />
+            <div className="absolute left-[-8px] top-[116px] w-[3px] h-[48px] bg-[#2a2a2a] rounded-l-sm" />
+            <div className="absolute left-[-8px] top-[172px] w-[3px] h-[48px] bg-[#2a2a2a] rounded-l-sm" />
 
             {/* Bouton power droite */}
-            <div className="absolute right-[-10px] top-[160px] w-[4px] h-[80px] bg-[#2a2a2a] rounded-r-sm" />
+            <div className="absolute right-[-8px] top-[128px] w-[3px] h-[64px] bg-[#2a2a2a] rounded-r-sm" />
           </div>
         ) : (
           /* Aperçu desktop — pleine largeur */
