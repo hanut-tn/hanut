@@ -7,8 +7,8 @@ import Link from 'next/link'
 import { ShoppingCart, Search } from 'lucide-react'
 import { useLang } from '@/lib/i18n/use-lang'
 import { storefrontTranslations } from '@/lib/i18n/storefront'
-import { DEFAULT_STOREFRONT_CONFIG, type Category, type StorefrontConfig, type EditTarget, type PopoverPosition } from '@hanut/types'
-import { buildCssVariables, loadGoogleFont } from '@/lib/storefront/config'
+import { DEFAULT_STOREFRONT_CONFIG, type Category, type StorefrontConfig } from '@hanut/types'
+import { buildCssVariables, loadTemplateFont } from '@/lib/storefront/config'
 import {
   addItemToCart, cartTotals, reconcileCartWithProducts, type CartItem, type StorefrontProduct,
 } from '@/lib/storefront/cart'
@@ -37,23 +37,19 @@ type Props = {
   hideTopBar?: boolean
   /** Aperçu dashboard : apparence 100% fidèle, mais bloque le passage à un vrai checkout (OTP/commande réels). */
   previewMode?: boolean
-  /** Éditeur visuel WYSIWYG : clic sur un élément → ouvre son panneau de modification au lieu de son action normale. */
-  editMode?: boolean
-  onEditTargetChange?: (target: EditTarget, position?: PopoverPosition) => void
 }
 
 export default function StorefrontShell({
   sellerSlug, sellerName, shopDescription, logoUrl, bannerUrl = null, products, categories,
   config = DEFAULT_STOREFRONT_CONFIG, hideTopBar = false, previewMode = false,
-  editMode = false, onEditTargetChange,
 }: Props) {
   const { t, lang, isRtl, toggleLang } = useLang(storefrontTranslations)
   const router = useRouter()
   const shellRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    loadGoogleFont(config.typography.font)
-  }, [config.typography.font])
+    loadTemplateFont(config.template)
+  }, [config.template])
 
   const [cart, setCart] = useState<CartItem[]>([])
   const [step, setStep] = useState<Step>('catalog')
@@ -218,41 +214,18 @@ export default function StorefrontShell({
     setStep('checkout')
   }
 
-  // Catch-all "fond" : ignore les clics qui tombent sur un contrôle
-  // interactif (recherche, chips catégorie, panier...) ou sur un élément
-  // déjà pris en charge par un handler dédié (carte/bouton, via [data-edit]).
-  // Le header et le bouton "Ajouter" font stopPropagation() eux-mêmes avant
-  // que ce handler ne s'exécute — cette exclusion est une sécurité
-  // supplémentaire, pas le mécanisme principal d'évitement du conflit.
-  function handleBackgroundClick(e: React.MouseEvent) {
-    if (!editMode) return
-    const target = e.target as HTMLElement
-    if (target.closest('button, a, input, select, textarea, [data-edit]')) return
-    onEditTargetChange?.({ type: 'background' }, { top: e.clientY, left: e.clientX })
-  }
-
-  // Un seul rendu de chip, réutilisé pour la liste verticale (desktop, à
-  // gauche des produits) et la barre horizontale (mobile) — même logique de
-  // clic/édition, seule la classe de mise en forme diffère selon l'usage.
   function renderCategoryChip(id: string, label: string, layoutClassName: string) {
     const isActive = categoryFilter === id
     return (
       <button
         key={id}
         type="button"
-        data-edit="chips"
-        onClick={editMode ? (e) => {
-          e.stopPropagation()
-          const rect = e.currentTarget.getBoundingClientRect()
-          onEditTargetChange?.({ type: 'chips' }, { top: rect.bottom + 8, left: rect.left })
-        } : () => setCategoryFilter(id)}
+        onClick={() => setCategoryFilter(id)}
         style={{
-          fontSize: 'var(--chips-font-size, 14px)',
-          padding: 'var(--chips-padding-y, 6px) var(--chips-padding-x, 12px)',
-          backgroundColor: isActive ? 'var(--chips-active-bg, var(--primary))' : 'var(--chips-bg, #fff)',
-          color: isActive ? 'var(--chips-active-text, #fff)' : 'var(--chips-text, #78716C)',
+          backgroundColor: isActive ? 'var(--primary)' : '#fff',
+          color: isActive ? '#fff' : '#78716C',
         }}
-        className={`min-h-[32px] touch-manipulation rounded-full font-medium border border-transparent transition-colors flex items-center ${layoutClassName}`}
+        className={`min-h-[32px] touch-manipulation rounded-full px-3.5 py-1.5 text-sm font-medium border border-gray-200 transition-colors flex items-center ${layoutClassName}`}
       >
         {label}
       </button>
@@ -264,16 +237,8 @@ export default function StorefrontShell({
       ref={shellRef}
       dir={isRtl ? 'rtl' : 'ltr'}
       style={buildCssVariables(config)}
-      onClick={editMode ? handleBackgroundClick : undefined}
-      className={`min-h-screen ${isRtl ? 'font-arabic' : ''} ${editMode ? 'edit-mode cursor-default' : ''}`}
+      className={`min-h-screen ${isRtl ? 'font-arabic' : ''}`}
     >
-      {/* Bandeau mode édition */}
-      {editMode && (
-        <div className="sticky top-0 z-40 bg-blue-500 text-white text-xs text-center py-1.5 font-medium">
-          ✏️ Mode édition — cliquez sur un élément pour le modifier
-        </div>
-      )}
-
       {/* Navbar Hanut sticky */}
       {!hideTopBar && (
         <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-30">
@@ -285,8 +250,7 @@ export default function StorefrontShell({
               <button
                 type="button"
                 onClick={toggleLang}
-                style={{ fontSize: 'calc(0.75rem * var(--font-size-scale, 1))' }}
-                className="font-medium text-gray-500 border border-gray-200 rounded-full px-2.5 py-1 min-h-[32px] touch-manipulation transition-colors hover:bg-gray-50 hover:text-[#1C1917]"
+                className="text-xs font-medium text-gray-500 border border-gray-200 rounded-full px-2.5 py-1 min-h-[32px] touch-manipulation transition-colors hover:bg-gray-50 hover:text-[#1C1917]"
               >
                 {t.common.langToggle}
               </button>
@@ -312,34 +276,19 @@ export default function StorefrontShell({
 
       {/* En-tête boutique */}
       {step === 'catalog' && (
-        <div
-          onClick={editMode ? (e) => {
-            e.stopPropagation()
-            const rect = e.currentTarget.getBoundingClientRect()
-            onEditTargetChange?.({ type: 'header' }, { top: rect.top, left: rect.left })
-          } : undefined}
-          className={editMode ? 'cursor-pointer ring-2 ring-transparent hover:ring-blue-400 hover:ring-offset-2 transition-all rounded-sm' : undefined}
-        >
-          <StorefrontHeader
-            shopName={sellerName}
-            shopDescription={shopDescription}
-            logoUrl={logoUrl}
-            bannerUrl={bannerUrl}
-            t={t}
-          />
-        </div>
+        <StorefrontHeader
+          shopName={sellerName}
+          shopDescription={shopDescription}
+          logoUrl={logoUrl}
+          bannerUrl={bannerUrl}
+          t={t}
+        />
       )}
 
       {/* Recherche */}
       {step === 'catalog' && products.length > 0 && (
         <div className="max-w-5xl mx-auto px-4 pt-3">
-          <StorefrontSearchBar
-            value={searchQuery}
-            onChange={setSearchQuery}
-            t={t}
-            editMode={editMode}
-            onEditTargetChange={onEditTargetChange}
-          />
+          <StorefrontSearchBar value={searchQuery} onChange={setSearchQuery} t={t} />
         </div>
       )}
 
@@ -369,60 +318,37 @@ export default function StorefrontShell({
               {hasNoResults ? (
                 <div className="px-4 py-16 text-center">
                   <Search className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-30" />
-                  <p style={{ fontSize: 'calc(1rem * var(--font-size-scale, 1))' }} className="font-semibold text-[#1C1917]">
-                    {t.search.noResultsTitle}
-                  </p>
+                  <p className="font-semibold text-[#1C1917]">{t.search.noResultsTitle}</p>
                   {normalizedQuery && (
-                    <p style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }} className="text-[#78716C] mt-1">
-                      {t.search.noResultsFor(searchQuery.trim())}
-                    </p>
+                    <p className="text-sm text-[#78716C] mt-1">{t.search.noResultsFor(searchQuery.trim())}</p>
                   )}
                   <button
                     type="button"
                     onClick={() => { setSearchQuery(''); setCategoryFilter('all') }}
-                    className="mt-4 font-medium hover:underline"
-                    style={{ color: 'var(--primary)', fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
+                    className="mt-4 text-sm font-medium hover:underline"
+                    style={{ color: 'var(--primary)' }}
                   >
                     {t.search.resetButton}
                   </button>
                 </div>
               ) : (
-                <div
-                  data-edit="layout"
-                  onClick={editMode ? (e) => {
-                    e.stopPropagation()
-                    const card = (e.target as HTMLElement).closest('[data-edit="card"]')
-                    if (card) {
-                      const rect = card.getBoundingClientRect()
-                      onEditTargetChange?.({ type: 'card' }, { top: rect.top, left: rect.right + 8 })
-                      return
-                    }
-                    // Clic dans la grille mais hors d'une carte (gouttière) → réglage de la disposition.
-                    const rect = e.currentTarget.getBoundingClientRect()
-                    onEditTargetChange?.({ type: 'layout' }, { top: rect.top, left: rect.left })
-                  } : undefined}
-                >
-                  <ProductGrid
-                    products={filteredProducts}
-                    t={t}
-                    layout={config.layout}
-                    editMode={editMode}
-                    buttonText={config.button.text}
-                    onSelect={setSelectedProduct}
-                    onQuickAdd={product =>
-                      addToCart({
-                        productId: product.id,
-                        productName: product.name,
-                        productImage: product.image_url,
-                        productPrice: product.price,
-                        variantLabel: null,
-                        quantity: 1,
-                        maxQty: product.stock,
-                      })
-                    }
-                    onEditTargetChange={onEditTargetChange}
-                  />
-                </div>
+                <ProductGrid
+                  products={filteredProducts}
+                  t={t}
+                  layout={config.layout}
+                  onSelect={setSelectedProduct}
+                  onQuickAdd={product =>
+                    addToCart({
+                      productId: product.id,
+                      productName: product.name,
+                      productImage: product.image_url,
+                      productPrice: product.price,
+                      variantLabel: null,
+                      quantity: 1,
+                      maxQty: product.stock,
+                    })
+                  }
+                />
               )}
             </div>
           </div>
@@ -474,8 +400,6 @@ export default function StorefrontShell({
           t={t}
           onOpenCart={() => setIsCartOpen(true)}
           onCheckout={goToCheckout}
-          editMode={editMode}
-          onEditTargetChange={onEditTargetChange}
         />
       )}
 
@@ -513,31 +437,18 @@ export default function StorefrontShell({
       {/* Toast */}
       {toast && (
         <div className="pointer-events-none fixed bottom-24 left-1/2 z-[60] -translate-x-1/2">
-          <div
-            style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }}
-            className="rounded-full bg-[#1C1917] px-4 py-2 text-white shadow-lg whitespace-nowrap"
-          >
-            {toast}
-          </div>
+          <div className="rounded-full bg-[#1C1917] px-4 py-2 text-sm text-white shadow-lg whitespace-nowrap">{toast}</div>
         </div>
       )}
 
       {/* Footer */}
       <footer className="py-6 text-center border-t border-gray-100 bg-white">
         <div className="flex items-center justify-center gap-4">
-          <Link
-            href="/"
-            style={{ fontSize: 'calc(0.75rem * var(--font-size-scale, 1))' }}
-            className="inline-flex items-center gap-1.5 text-[#78716C] hover:text-gray-600 transition-colors"
-          >
+          <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-[#78716C] hover:text-gray-600 transition-colors">
             <Image src="/icon-16.png" alt="" width={16} height={16} unoptimized style={{ borderRadius: '3px' }} />
             Propulsé par Hanut
           </Link>
-          <Link
-            href="/privacy"
-            style={{ fontSize: 'calc(0.75rem * var(--font-size-scale, 1))' }}
-            className="text-[#78716C] hover:text-gray-600 transition-colors"
-          >
+          <Link href="/privacy" className="text-xs text-[#78716C] hover:text-gray-600 transition-colors">
             Confidentialité
           </Link>
         </div>

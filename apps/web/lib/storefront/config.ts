@@ -3,129 +3,55 @@
 // `className` — voir la note dans packages/types/src/storefront.ts.
 
 import type { CSSProperties } from 'react'
-import type {
-  StorefrontConfig, StorefrontColors, StorefrontTypography, StorefrontCards, StorefrontButton,
-  StorefrontSearch, StorefrontChips, StorefrontCartBar, StorefrontTextStyle, StorefrontHeader,
-} from '@hanut/types'
-import {
-  STOREFRONT_FONTS, FONT_SIZE_SCALE, CARD_RADIUS_VALUES, CARD_SHADOW_VALUES, IMAGE_RATIO_VALUES,
-  TEXT_WEIGHT_VALUES,
-} from '@hanut/types'
+import type { StorefrontConfig, StorefrontTemplate } from '@hanut/types'
+import { STOREFRONT_TEMPLATES } from '@hanut/types'
 import { adjustColor } from './colors'
 
-/** Patch partiel de StorefrontConfig — chaque sous-objet est lui-même partiel
- * (contrairement à `Partial<StorefrontConfig>`, où `colors` présent impliquerait
- * les 5 couleurs). Utilisé pour les mises à jour incrémentales de l'éditeur. */
-export type StorefrontConfigPatch = {
-  colors?: Partial<StorefrontColors>
-  typography?: Partial<StorefrontTypography>
-  cards?: Partial<StorefrontCards>
-  button?: Partial<StorefrontButton>
-  search?: Partial<StorefrontSearch>
-  chips?: Partial<StorefrontChips>
-  cartBar?: Partial<StorefrontCartBar>
-  productName?: Partial<StorefrontTextStyle>
-  productPrice?: Partial<StorefrontTextStyle>
-  header?: Partial<StorefrontHeader>
-  layout?: StorefrontConfig['layout']
-}
-
 export function buildCssVariables(config: StorefrontConfig): CSSProperties {
-  const font = STOREFRONT_FONTS[config.typography.font]
-  const fontSize = FONT_SIZE_SCALE[config.typography.size]
-  const cardRadius = CARD_RADIUS_VALUES[config.cards.radius].css
-  const cardShadow = CARD_SHADOW_VALUES[config.cards.shadow].css
-  const imageAspect = IMAGE_RATIO_VALUES[config.cards.imageRatio].css
-  const buttonRadius = CARD_RADIUS_VALUES[config.button.radius].css
+  const template = STOREFRONT_TEMPLATES[config.template]
+
+  // Fond du header : dégradé de la couleur d'accent, noir plein, ou crème
+  // selon le template — stocké tel quel dans une CSS var (une valeur de
+  // `background` complète, y compris `linear-gradient(...)`, est un token
+  // CSS valide comme n'importe quelle autre chaîne).
+  const headerBg = template.headerStyle === 'gradient'
+    ? 'linear-gradient(135deg, var(--primary), var(--primary-dark))'
+    : template.headerStyle === 'dark'
+      ? '#000000'
+      : '#faf8f5'
+  const headerText = template.headerStyle === 'cream' ? '#1a1a1a' : '#ffffff'
 
   return {
-    '--primary': config.colors.primary,
-    '--primary-dark': adjustColor(config.colors.primary, -15),
-    '--primary-light': adjustColor(config.colors.primary, 40),
-    '--page-bg': config.colors.pageBg,
-    '--card-bg': config.colors.cardBg,
-    '--text-primary': config.colors.textPrimary,
-    '--text-secondary': config.colors.textSecondary,
-    '--card-radius': cardRadius,
-    '--card-shadow': cardShadow,
-    '--image-aspect': imageAspect,
-    '--card-image-height': `${config.cards.imageHeight}px`,
-    '--card-gap': `${config.cards.gap}px`,
-    '--card-padding': `${config.cards.padding}px`,
-    '--button-radius': buttonRadius,
-    '--button-font-size': `${config.button.fontSize}px`,
-    '--button-padding-x': `${config.button.paddingX}px`,
-    '--button-padding-y': `${config.button.paddingY}px`,
-    '--font-family': font.family,
-    '--font-size-scale': fontSize.scale,
+    '--primary': config.primary_color,
+    '--primary-dark': adjustColor(config.primary_color, -15),
+    '--primary-light': adjustColor(config.primary_color, 40),
 
-    '--search-bg': config.search.bg,
-    '--search-border': config.search.borderColor,
-    '--search-text': config.search.textColor,
+    '--page-bg': template.pageBg,
+    '--card-bg': template.cardBg,
+    '--text-primary': template.textPrimary,
+    '--text-secondary': template.textSecondary,
+    '--card-radius': template.cardRadius,
+    '--card-shadow': template.cardShadow,
+    '--font-family': template.fontFamily,
 
-    '--chips-bg': config.chips.bg,
-    '--chips-text': config.chips.textColor,
-    '--chips-active-bg': config.chips.activeBg,
-    '--chips-active-text': config.chips.activeTextColor,
-    '--chips-font-size': `${config.chips.fontSize}px`,
-    '--chips-padding-x': `${config.chips.paddingX}px`,
-    '--chips-padding-y': `${config.chips.paddingY}px`,
+    '--header-bg': headerBg,
+    '--header-text': headerText,
 
-    '--cartbar-bg': config.cartBar.bg,
-    '--cartbar-text': config.cartBar.textColor,
-    '--cartbar-btn-bg': config.cartBar.buttonBg,
-    '--cartbar-btn-text': config.cartBar.buttonTextColor,
-
-    '--product-name-color': config.productName.color,
-    '--product-name-weight': TEXT_WEIGHT_VALUES[config.productName.weight].css,
-    '--product-name-size': `${config.productName.size}px`,
-    '--product-price-color': config.productPrice.color,
-    '--product-price-weight': TEXT_WEIGHT_VALUES[config.productPrice.weight].css,
-    '--product-price-size': `${config.productPrice.size}px`,
-
-    '--logo-size': `${config.header.logoSize}px`,
-    '--banner-height': `${config.header.bannerHeight}px`,
-
-    backgroundColor: config.colors.pageBg,
-    fontFamily: font.family,
-    color: config.colors.textPrimary,
+    backgroundColor: template.pageBg,
+    fontFamily: template.fontFamily,
+    color: template.textPrimary,
   } as CSSProperties
 }
 
-/** Fusionne en profondeur (colors/typography/cards/...) plutôt qu'un spread superficiel —
- * un patch partiel (une seule couleur changée, par ex.) ne doit pas écraser le reste de
- * l'objet imbriqué. Utilisé côté serveur (actions.ts) et côté client (éditeur, état local
- * en direct). */
-export function mergeStorefrontConfig(
-  base: StorefrontConfig,
-  ...patches: (StorefrontConfigPatch | null | undefined)[]
-): StorefrontConfig {
-  return patches.reduce<StorefrontConfig>((acc, patch) => {
-    if (!patch) return acc
-    return {
-      colors: { ...acc.colors, ...patch.colors },
-      typography: { ...acc.typography, ...patch.typography },
-      cards: { ...acc.cards, ...patch.cards },
-      button: { ...acc.button, ...patch.button },
-      search: { ...acc.search, ...patch.search },
-      chips: { ...acc.chips, ...patch.chips },
-      cartBar: { ...acc.cartBar, ...patch.cartBar },
-      productName: { ...acc.productName, ...patch.productName },
-      productPrice: { ...acc.productPrice, ...patch.productPrice },
-      header: { ...acc.header, ...patch.header },
-      layout: patch.layout ?? acc.layout,
-    }
-  }, base)
-}
-
-/** Charge une police Google Fonts côté client (idempotent, une seule balise par police). */
-export function loadGoogleFont(fontKey: keyof typeof STOREFRONT_FONTS): void {
-  const font = STOREFRONT_FONTS[fontKey]
-  if (!font || typeof document === 'undefined') return
-  if (document.querySelector(`link[data-font="${fontKey}"]`)) return
+/** Charge la police Google Fonts d'un template, si besoin (idempotent). Seul
+ * le template "luxe" utilise une police externe (Playfair Display) — les
+ * autres s'appuient sur Inter, déjà chargée par le layout global. */
+export function loadTemplateFont(template: StorefrontTemplate): void {
+  if (template !== 'luxe' || typeof document === 'undefined') return
+  if (document.querySelector('link[data-font="playfair"]')) return
   const link = document.createElement('link')
   link.rel = 'stylesheet'
-  link.href = font.url
-  link.setAttribute('data-font', fontKey)
+  link.href = 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap'
+  link.setAttribute('data-font', 'playfair')
   document.head.appendChild(link)
 }

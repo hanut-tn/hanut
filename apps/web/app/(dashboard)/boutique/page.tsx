@@ -5,13 +5,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getVariantLabel } from '@/lib/variants'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getUserContext } from '@/lib/get-context'
-import { updateShopBranding } from '@/app/(dashboard)/settings/actions'
-import { getStorefrontConfig, updateStorefrontConfig } from './actions'
+import { getStorefrontData } from './actions'
 import BoutiqueEditor from '@/components/boutique/BoutiqueEditor'
 import type { Category } from '@hanut/types'
 import type { StorefrontProduct } from '@/lib/storefront/cart'
@@ -62,17 +60,13 @@ export default async function BoutiquePage() {
 
   const serviceClient = createServiceClient()
 
-  const headersList = await headers()
-  const host = headersList.get('host') ?? 'www.hanut.tn'
-  const appUrl = host.startsWith('localhost') ? `http://${host}` : `https://${host}`
-
-  const [{ data: seller }, config, { data: products }, { data: categories }] = await Promise.all([
+  const [{ data: seller }, { config, shopInfo }, { data: products }, { data: categories }] = await Promise.all([
     serviceClient
       .from('sellers')
-      .select('name, slug, shop_name, shop_description, logo_url, banner_url')
+      .select('name, slug')
       .eq('id', context.sellerId)
       .single(),
-    getStorefrontConfig(),
+    getStorefrontData(),
     serviceClient
       .from('products')
       .select('id, name, description, price, stock, variants, image_url, images_gallery, low_stock_alert, product_categories(category_id)')
@@ -91,17 +85,11 @@ export default async function BoutiquePage() {
       seller={{
         name: seller?.name ?? '',
         slug: seller?.slug ?? null,
-        shopName: seller?.shop_name ?? null,
-        shopDescription: seller?.shop_description ?? null,
-        logoUrl: seller?.logo_url ?? null,
-        bannerUrl: seller?.banner_url ?? null,
       }}
+      products={((products ?? []) as DbProduct[]).map(toStorefrontProduct)}
+      categories={(categories ?? []) as Category[]}
       initialConfig={config}
-      appUrl={appUrl}
-      previewProducts={((products ?? []) as DbProduct[]).map(toStorefrontProduct)}
-      previewCategories={(categories ?? []) as Category[]}
-      updateShopBranding={updateShopBranding}
-      updateStorefrontConfig={updateStorefrontConfig}
+      initialShopInfo={shopInfo}
     />
   )
 }

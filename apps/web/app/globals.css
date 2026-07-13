@@ -68,17 +68,6 @@
   .animate-fade-in {
     animation: hanut-fade-in 200ms ease-out;
   }
-
-  /* Éditeur boutique — mode édition (/boutique) : survol des éléments
-     cliquables de l'aperçu. Le parent StorefrontShell porte `.edit-mode`
-     uniquement quand `editMode` est actif ; jamais appliqué sur la vraie
-     boutique publique (/s/[slug]). */
-  .edit-mode [data-edit]:hover {
-    outline: 2px solid #3b82f6;
-    outline-offset: 2px;
-    cursor: pointer;
-    border-radius: 4px;
-  }
 }
 
 @keyframes hanut-slide-up {

@@ -34,60 +34,6 @@ export async function updateProfile(input: ProfileInput): Promise<ActionResult> 
   return {}
 }
 
-export type ShopBrandingInput = {
-  shopName: string
-  shopDescription: string
-  logoUrl: string | null
-  bannerUrl: string | null
-}
-
-export async function updateShopBranding(input: ShopBrandingInput): Promise<ActionResult> {
-  const context = await getUserContext()
-  if (!context) return { error: 'Non autorisé' }
-  if (!context.isSeller) return { error: 'Réservé au propriétaire' }
-  const activeCheck = requireActive(context)
-  if (activeCheck) return activeCheck
-
-  const shopName = input.shopName.trim()
-  const shopDescription = input.shopDescription.trim()
-  const logoUrl = input.logoUrl?.trim() || null
-  const bannerUrl = input.bannerUrl?.trim() || null
-
-  if (shopName.length > 100) return { error: 'Le nom de la boutique est trop long (100 caractères max).' }
-  if (shopDescription.length > 300) return { error: 'La description est trop longue (300 caractères max).' }
-  // Doit provenir du stockage Supabase du projet : toute autre origine est
-  // bloquée silencieusement par la CSP (img-src), le logo resterait cassé.
-  // On retire un éventuel slash final de la variable d'env avant de
-  // concaténer : sinon un "/" de trop dans NEXT_PUBLIC_SUPABASE_URL donne un
-  // double slash qui ne matche plus l'URL réelle (simple slash, normalisée
-  // en interne par le SDK Supabase Storage).
-  const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').replace(/\/+$/, '')
-  const storagePrefix = `${supabaseUrl}/storage/v1/object/public/`
-  if (logoUrl && (logoUrl.length > 2048 || !logoUrl.startsWith(storagePrefix))) {
-    // Diagnostic temporaire : montre l'URL reçue ET le préfixe attendu en
-    // entier pour repérer précisément où la comparaison diverge.
-    return { error: `URL de logo invalide. Reçu="${logoUrl}" Attendu="${storagePrefix}"` }
-  }
-  if (bannerUrl && (bannerUrl.length > 2048 || !bannerUrl.startsWith(storagePrefix))) {
-    return { error: `URL de bannière invalide. Reçu="${bannerUrl}" Attendu="${storagePrefix}"` }
-  }
-
-  const serviceClient = createServiceClient()
-  const { error } = await serviceClient
-    .from('sellers')
-    .update({
-      shop_name: shopName || null,
-      shop_description: shopDescription || null,
-      logo_url: logoUrl,
-      banner_url: bannerUrl,
-    })
-    .eq('id', context.sellerId)
-
-  if (error) return { error: error.message }
-  revalidatePath('/settings')
-  return {}
-}
-
 export async function updateSlug(slug: string): Promise<ActionResult> {
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }

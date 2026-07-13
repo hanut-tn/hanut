@@ -5,20 +5,15 @@ import Image from 'next/image'
 import { ImageOff, Plus, Check } from 'lucide-react'
 import type { StorefrontProduct } from '@/lib/storefront/cart'
 import type { StorefrontDict } from '@/lib/i18n/storefront'
-import type { EditTarget, PopoverPosition } from '@hanut/types'
 
 type Props = {
   product: StorefrontProduct
   t: StorefrontDict
-  editMode?: boolean
   onSelect: (product: StorefrontProduct) => void
   onQuickAdd: (product: StorefrontProduct) => void
-  onEditTargetChange?: (target: EditTarget, position?: PopoverPosition) => void
-  /** Texte custom du bouton "Ajouter" (config.button.text) — retombe sur la traduction si vide. */
-  buttonText?: string
 }
 
-export default function ProductCard({ product, t, editMode = false, onSelect, onQuickAdd, onEditTargetChange, buttonText }: Props) {
+export default function ProductCard({ product, t, onSelect, onQuickAdd }: Props) {
   const isOut = product.stock === 0
   const isLow = !isOut && product.stock <= product.low_stock_alert
   const hasPriceRange = product.maxPrice > product.minPrice
@@ -45,23 +40,21 @@ export default function ProductCard({ product, t, editMode = false, onSelect, on
 
   return (
     <div
-      data-edit="card"
       style={{
         backgroundColor: 'var(--card-bg, #fff)',
         borderRadius: 'var(--card-radius, 1rem)',
         boxShadow: 'var(--card-shadow, 0 1px 3px 0 rgb(0 0 0 / 0.1))',
       }}
-      className={`border border-black/5 overflow-hidden flex flex-col ${editMode ? 'cursor-pointer' : ''}`}
+      className="border border-black/5 overflow-hidden flex flex-col"
     >
-      {/* Image — ratio configurable par le vendeur (carré/portrait/large) */}
+      {/* Image */}
       <button
         type="button"
-        onClick={editMode ? undefined : handleAdd}
-        disabled={editMode ? false : isOut}
+        onClick={handleAdd}
+        disabled={isOut}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
-        style={{ height: 'var(--card-image-height, 200px)' }}
-        className="relative block bg-gray-50 w-full"
+        className="relative block aspect-[4/3] bg-gray-50 w-full"
         aria-label={product.name}
       >
         {displaySrc ? (
@@ -80,19 +73,13 @@ export default function ProductCard({ product, t, editMode = false, onSelect, on
         )}
         {isOut && (
           <span className="absolute inset-0 bg-white/60 flex items-center justify-center">
-            <span
-              style={{ fontSize: 'calc(0.75rem * var(--font-size-scale, 1))' }}
-              className="px-3 py-1 rounded-full font-semibold bg-red-600 text-white shadow-sm"
-            >
+            <span className="text-xs px-3 py-1 rounded-full font-semibold bg-red-600 text-white shadow-sm">
               {t.shop.outOfStock}
             </span>
           </span>
         )}
         {isLow && (
-          <span
-            style={{ fontSize: 'calc(0.75rem * var(--font-size-scale, 1))' }}
-            className="absolute top-2 start-2 px-2 py-0.5 rounded-full font-medium bg-amber-500 text-white"
-          >
+          <span className="absolute top-2 start-2 text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500 text-white">
             {t.shop.lowStock(product.stock)}
           </span>
         )}
@@ -111,38 +98,12 @@ export default function ProductCard({ product, t, editMode = false, onSelect, on
       </button>
 
       {/* Body */}
-      <div style={{ padding: 'var(--card-padding, 12px)' }} className="flex flex-col gap-2 flex-1">
+      <div className="px-3 pb-3 pt-2 flex flex-col gap-2 flex-1">
         <div className="flex-1">
-          <p
-            data-edit="productName"
-            onClick={editMode ? (e) => {
-              e.stopPropagation()
-              const rect = e.currentTarget.getBoundingClientRect()
-              onEditTargetChange?.({ type: 'productName' }, { top: rect.top, left: rect.right + 8 })
-            } : undefined}
-            style={{
-              color: 'var(--product-name-color, var(--text-primary, #111827))',
-              fontWeight: 'var(--product-name-weight, 600)',
-              fontSize: 'var(--product-name-size, 16px)',
-            }}
-            className="line-clamp-2"
-          >
+          <p style={{ color: 'var(--text-primary, #111827)' }} className="text-sm font-semibold line-clamp-2">
             {product.name}
           </p>
-          <p
-            data-edit="productPrice"
-            onClick={editMode ? (e) => {
-              e.stopPropagation()
-              const rect = e.currentTarget.getBoundingClientRect()
-              onEditTargetChange?.({ type: 'productPrice' }, { top: rect.top, left: rect.right + 8 })
-            } : undefined}
-            style={{
-              color: 'var(--product-price-color, var(--primary))',
-              fontWeight: 'var(--product-price-weight, 700)',
-              fontSize: 'var(--product-price-size, 16px)',
-            }}
-            className="mt-0.5"
-          >
+          <p style={{ color: 'var(--primary)' }} className="text-base font-bold mt-0.5">
             {hasPriceRange ? t.shop.fromPrice(product.minPrice) : `${product.minPrice} DT`}
           </p>
           {product.hasVariants && (
@@ -154,28 +115,18 @@ export default function ProductCard({ product, t, editMode = false, onSelect, on
 
         <button
           type="button"
-          data-edit="button"
-          onClick={editMode ? (e) => {
-            e.stopPropagation()
-            const rect = e.currentTarget.getBoundingClientRect()
-            onEditTargetChange?.({ type: 'button' }, { top: rect.top - 80, left: rect.left })
-          } : handleAdd}
-          disabled={editMode ? false : isOut}
-          style={{
-            fontSize: 'var(--button-font-size, 14px)',
-            padding: 'var(--button-padding-y, 10px) var(--button-padding-x, 16px)',
-            borderRadius: 'var(--button-radius, 0.75rem)',
-            ...(isOut && !editMode ? {} : { backgroundColor: justAdded ? 'var(--primary-dark)' : 'var(--primary)' }),
-          }}
-          className={`w-full min-h-[40px] touch-manipulation flex items-center justify-center gap-1.5 font-semibold transition-all duration-150 ease-out ${
-            isOut && !editMode
+          onClick={handleAdd}
+          disabled={isOut}
+          style={isOut ? undefined : { backgroundColor: justAdded ? 'var(--primary-dark)' : 'var(--primary)' }}
+          className={`w-full min-h-[40px] touch-manipulation flex items-center justify-center gap-1.5 rounded-xl text-sm font-semibold transition-all duration-150 ease-out ${
+            isOut
               ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
               : 'text-white active:scale-[0.97]'
           }`}
         >
-          {isOut && !editMode ? (
+          {isOut ? (
             t.shop.outOfStock
-          ) : justAdded && !editMode ? (
+          ) : justAdded ? (
             <>
               <Check className="w-4 h-4" />
               {t.shop.added}
@@ -183,7 +134,7 @@ export default function ProductCard({ product, t, editMode = false, onSelect, on
           ) : (
             <>
               <Plus className="w-4 h-4" />
-              {buttonText || t.shop.add}
+              {t.shop.add}
             </>
           )}
         </button>

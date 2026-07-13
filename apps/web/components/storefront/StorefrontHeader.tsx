@@ -12,17 +12,11 @@ type Props = {
   t: StorefrontDict
 }
 
-function Avatar({ shopName, logoUrl, size }: { shopName: string; logoUrl: string | null; size: 'md' | 'lg' }) {
-  // 'lg' est la seule taille utilisée aujourd'hui (header boutique) — taille
-  // configurable via --logo-size. 'md' reste figé (aucun appelant actuel).
-  const dimensionStyle = size === 'lg' ? { width: 'var(--logo-size, 64px)', height: 'var(--logo-size, 64px)' } : undefined
-  const sizeClasses = size === 'lg' ? '' : 'w-14 h-14 ring-4 ring-white'
-  const fontSize = size === 'lg' ? 'calc(var(--logo-size, 64px) * 0.4)' : 'calc(1.25rem * var(--font-size-scale, 1))'
-
+function Avatar({ shopName, logoUrl }: { shopName: string; logoUrl: string | null }) {
   if (logoUrl) {
     return (
-      <div style={dimensionStyle} className={`relative rounded-full overflow-hidden bg-white shrink-0 shadow-md ${sizeClasses}`}>
-        <Image src={logoUrl} alt="" fill sizes="120px" className="object-cover" />
+      <div className="relative w-16 h-16 rounded-full overflow-hidden bg-white shrink-0 shadow-md">
+        <Image src={logoUrl} alt="" fill sizes="64px" className="object-cover" />
       </div>
     )
   }
@@ -30,30 +24,30 @@ function Avatar({ shopName, logoUrl, size }: { shopName: string; logoUrl: string
   const initial = shopName.trim().charAt(0).toUpperCase() || '?'
   return (
     <div
-      style={{ color: 'var(--primary)', fontSize, ...dimensionStyle }}
-      className={`rounded-full bg-white font-bold flex items-center justify-center shrink-0 shadow-md ${sizeClasses}`}
+      style={{ color: 'var(--primary)' }}
+      className="w-16 h-16 rounded-full bg-white font-bold flex items-center justify-center shrink-0 shadow-md text-2xl"
     >
       {initial}
     </div>
   )
 }
 
-function HeaderContent({ shopName, shopDescription, logoUrl, t, onBanner }: Props & { onBanner: boolean }) {
+function HeaderContent({ shopName, shopDescription, logoUrl, t, textColor, badgeBg }: Props & { textColor: string; badgeBg: string }) {
   return (
     <div className="max-w-5xl mx-auto py-8 px-6 flex items-center gap-4">
-      <Avatar shopName={shopName} logoUrl={logoUrl} size="lg" />
+      <Avatar shopName={shopName} logoUrl={logoUrl} />
       <div className="min-w-0">
-        <h1 style={{ fontSize: 'calc(1.5rem * var(--font-size-scale, 1))' }} className="font-bold text-white truncate">
+        <h1 style={{ color: textColor }} className="text-2xl font-bold truncate">
           {shopName}
         </h1>
         {shopDescription && (
-          <p style={{ fontSize: 'calc(0.875rem * var(--font-size-scale, 1))' }} className="text-white/85 mt-1">
+          <p style={{ color: textColor, opacity: 0.85 }} className="text-sm mt-1">
             {shopDescription}
           </p>
         )}
         <span
-          style={{ fontSize: 'calc(0.75rem * var(--font-size-scale, 1))' }}
-          className={`inline-flex items-center gap-1.5 mt-2 text-white px-3 py-1 rounded-full ${onBanner ? 'bg-black/30' : 'bg-white/20'}`}
+          style={{ color: textColor, backgroundColor: badgeBg }}
+          className="inline-flex items-center gap-1.5 mt-2 text-xs px-3 py-1 rounded-full"
         >
           <MapPin className="w-3 h-3" />
           {t.shop.deliveryBadge}
@@ -66,20 +60,34 @@ function HeaderContent({ shopName, shopDescription, logoUrl, t, onBanner }: Prop
 export default function StorefrontHeader({ shopName, shopDescription, logoUrl, bannerUrl, t }: Props) {
   if (bannerUrl) {
     return (
-      <div className="relative w-full" style={{ height: 'var(--banner-height, 200px)' }}>
+      <div className="relative w-full h-48 sm:h-64">
         <Image src={bannerUrl} alt="" fill sizes="100vw" className="object-cover" priority />
         {/* Overlay pour garder le texte lisible quelle que soit l'image */}
         <div className="absolute inset-0 bg-black/35" />
         <div className="absolute inset-x-0 bottom-0">
-          <HeaderContent shopName={shopName} shopDescription={shopDescription} logoUrl={logoUrl} t={t} onBanner />
+          <HeaderContent
+            shopName={shopName}
+            shopDescription={shopDescription}
+            logoUrl={logoUrl}
+            t={t}
+            textColor="#ffffff"
+            badgeBg="rgba(0,0,0,0.3)"
+          />
         </div>
       </div>
     )
   }
 
   return (
-    <div style={{ background: 'linear-gradient(to right, var(--primary), var(--primary-dark))' }}>
-      <HeaderContent shopName={shopName} shopDescription={shopDescription} logoUrl={logoUrl} t={t} onBanner={false} />
+    <div style={{ background: 'var(--header-bg)' }}>
+      <HeaderContent
+        shopName={shopName}
+        shopDescription={shopDescription}
+        logoUrl={logoUrl}
+        t={t}
+        textColor="var(--header-text)"
+        badgeBg="color-mix(in srgb, var(--header-text) 20%, transparent)"
+      />
     </div>
   )
 }
