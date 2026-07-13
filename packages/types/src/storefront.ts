@@ -84,7 +84,7 @@ export const STOREFRONT_TEMPLATES: Record<StorefrontTemplate, {
     textSecondary: '#166534',
     cardRadius: '1.5rem',
     cardShadow: '0 1px 4px rgba(0,0,0,0.08)',
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: "'Nunito', Inter, sans-serif",
     headerStyle: 'gradient',
   },
   dark: {

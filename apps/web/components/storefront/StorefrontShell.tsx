@@ -4,20 +4,14 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ShoppingCart, Search } from 'lucide-react'
 import { useLang } from '@/lib/i18n/use-lang'
 import { storefrontTranslations } from '@/lib/i18n/storefront'
 import { DEFAULT_STOREFRONT_CONFIG, type Category, type StorefrontConfig } from '@hanut/types'
 import { buildCssVariables, loadTemplateFont } from '@/lib/storefront/config'
+import { getTemplateComponents } from './templates'
 import {
   addItemToCart, cartTotals, reconcileCartWithProducts, type CartItem, type StorefrontProduct,
 } from '@/lib/storefront/cart'
-import ProductGrid from './ProductGrid'
-import StorefrontHeader from './StorefrontHeader'
-import StorefrontSearchBar from './StorefrontSearchBar'
-import ProductQuickModal from './ProductQuickModal'
-import CartBar from './CartBar'
-import CartDrawer from './CartDrawer'
 import CheckoutForm, { type CheckoutData } from './CheckoutForm'
 import OtpStep from './OtpStep'
 import OrderConfirmation, { type OrderResult } from './OrderConfirmation'
@@ -43,12 +37,18 @@ type Props = {
    * classes Tailwind responsives (`sm:`, `lg:`) réagissent à CE viewport,
    * pas à la largeur du cadre, donc `sm:grid-cols-3`/`lg:grid-cols-4`
    * s'activaient à tort sur un écran desktop large, écrasant la grille dans
-   * les 300px du téléphone. Force le nombre de colonnes "mobile" (2) sans
-   * dépendre des breakpoints quand true.
+   * les 300px du téléphone. Force la variante de grille sans breakpoints
+   * quand true.
    */
   forceMobileLayout?: boolean
 }
 
+// StorefrontShell est le seul orchestrateur : il possède tout l'état métier
+// (panier, étape, recherche, filtres) et délègue le rendu visuel aux
+// composants du template actif (voir ./templates). Un composant de template
+// ne reçoit jamais `config` — tout le style passe par les CSS vars posées
+// ici via buildCssVariables, donc changer de template ne change jamais la
+// logique, seulement l'apparence.
 export default function StorefrontShell({
   sellerSlug, sellerName, shopDescription, logoUrl, bannerUrl = null, products, categories,
   config = DEFAULT_STOREFRONT_CONFIG, hideTopBar = false, previewMode = false, forceMobileLayout = false,
@@ -224,28 +224,21 @@ export default function StorefrontShell({
     setStep('checkout')
   }
 
-  function renderCategoryChip(id: string, label: string) {
-    const isActive = categoryFilter === id
-    return (
-      <button
-        key={id}
-        type="button"
-        onClick={() => setCategoryFilter(id)}
-        style={isActive ? {
-          backgroundColor: 'var(--primary)',
-          color: '#ffffff',
-          boxShadow: '0 2px 8px color-mix(in srgb, var(--primary) 40%, transparent)',
-        } : {
-          backgroundColor: 'color-mix(in srgb, var(--text-primary, #111827) 8%, transparent)',
-          color: 'var(--text-primary, #111827)',
-          border: '1px solid color-mix(in srgb, var(--text-primary, #111827) 12%, transparent)',
-        }}
-        className="shrink-0 min-h-[32px] touch-manipulation rounded-full px-4 py-1.5 text-sm font-medium whitespace-nowrap transition-colors flex items-center"
-      >
-        {label}
-      </button>
-    )
+  function handleQuickAdd(product: StorefrontProduct) {
+    addToCart({
+      productId: product.id,
+      productName: product.name,
+      productImage: product.image_url,
+      productPrice: product.price,
+      variantLabel: null,
+      quantity: 1,
+      maxQty: product.stock,
+    })
   }
+
+  const {
+    Header, SearchBar, CategoryBar, ProductCard, CartBar, CartDrawer, ProductModal, gridClass, gridClassMobile,
+  } = getTemplateComponents(config.template)
 
   return (
     <div
@@ -254,74 +247,48 @@ export default function StorefrontShell({
       style={buildCssVariables(config)}
       className={`w-full min-h-screen overflow-x-hidden ${isRtl ? 'font-arabic' : ''}`}
     >
-      {/* Navbar Hanut sticky */}
+      {/* Navbar Hanut sticky — chrome plateforme, identique quel que soit le template */}
       {!hideTopBar && (
         <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-30">
           <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
             <Link href="/" className="flex items-center shrink-0" aria-label="Hanut">
               <Image src="/logo-horizontal.svg" alt="Hanut" width={84} height={27} unoptimized />
             </Link>
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={toggleLang}
-                className="text-xs font-medium text-gray-500 border border-gray-200 rounded-full px-2.5 py-1 min-h-[32px] touch-manipulation transition-colors hover:bg-gray-50 hover:text-[#1C1917]"
-              >
-                {t.common.langToggle}
-              </button>
-              {showCartUi && (
-                <button
-                  type="button"
-                  onClick={() => setIsCartOpen(true)}
-                  aria-label={t.cart.title}
-                  className="relative min-h-[38px] min-w-[38px] touch-manipulation flex items-center justify-center rounded-lg border border-gray-200 text-[#1C1917] hover:bg-gray-50 transition-colors"
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                  {totals.totalItems > 0 && (
-                    <span className="absolute -top-1.5 -end-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--primary)] text-white text-[10px] font-bold flex items-center justify-center">
-                      {totals.totalItems}
-                    </span>
-                  )}
-                </button>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={toggleLang}
+              className="text-xs font-medium text-gray-500 border border-gray-200 rounded-full px-2.5 py-1 min-h-[32px] touch-manipulation transition-colors hover:bg-gray-50 hover:text-[#1C1917]"
+            >
+              {t.common.langToggle}
+            </button>
           </div>
         </header>
       )}
 
-      {/* En-tête boutique */}
+      {/* En-tête boutique — visuel du template, porte aussi l'accès au panier */}
       {step === 'catalog' && (
-        <StorefrontHeader
-          shopName={sellerName}
+        <Header
+          sellerName={sellerName}
           shopDescription={shopDescription}
           logoUrl={logoUrl}
           bannerUrl={bannerUrl}
+          cartCount={totals.totalItems}
+          onCartOpen={() => setIsCartOpen(true)}
           t={t}
         />
       )}
 
-      {/* Recherche */}
+      {/* Recherche — visuel du template */}
       {step === 'catalog' && products.length > 0 && (
-        <div className="max-w-5xl mx-auto px-4 pt-3">
-          <StorefrontSearchBar value={searchQuery} onChange={setSearchQuery} t={t} />
+        <div className="max-w-5xl mx-auto">
+          <SearchBar value={searchQuery} onChange={setSearchQuery} t={t} />
         </div>
       )}
 
-      {/* Barre de filtres catégories — horizontale scrollable, toutes tailles d'écran */}
+      {/* Catégories — visuel du template, positionnement sticky géré ici */}
       {step === 'catalog' && availableCategories.length > 0 && (
-        <div
-          style={{
-            backgroundColor: 'color-mix(in srgb, var(--page-bg, #F9FAFB) 95%, transparent)',
-            borderBottom: '1px solid color-mix(in srgb, var(--text-primary, #111827) 8%, transparent)',
-          }}
-          className={`sticky z-20 backdrop-blur ${hideTopBar ? 'top-0' : 'top-14'}`}
-        >
-          <div className="max-w-5xl mx-auto overflow-x-auto scrollbar-none">
-            <div className="flex gap-2 px-4 py-2.5 w-max min-w-full">
-              {renderCategoryChip('all', t.shop.categoryAll)}
-              {availableCategories.map(c => renderCategoryChip(c.id, c.name))}
-            </div>
-          </div>
+        <div className={`sticky z-20 ${hideTopBar ? 'top-0' : 'top-14'}`}>
+          <CategoryBar categories={availableCategories} selected={categoryFilter} onSelect={setCategoryFilter} t={t} />
         </div>
       )}
 
@@ -330,10 +297,9 @@ export default function StorefrontShell({
         {step === 'catalog' ? (
           hasNoResults ? (
             <div className="px-4 py-16 text-center">
-              <Search className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-30" />
-              <p className="font-semibold text-[#1C1917]">{t.search.noResultsTitle}</p>
+              <p style={{ color: 'var(--text-primary)' }} className="font-semibold">{t.search.noResultsTitle}</p>
               {normalizedQuery && (
-                <p className="text-sm text-[#78716C] mt-1">{t.search.noResultsFor(searchQuery.trim())}</p>
+                <p style={{ color: 'var(--text-secondary)' }} className="text-sm mt-1">{t.search.noResultsFor(searchQuery.trim())}</p>
               )}
               <button
                 type="button"
@@ -344,25 +310,23 @@ export default function StorefrontShell({
                 {t.search.resetButton}
               </button>
             </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="px-4 py-20 text-center">
+              <p style={{ color: 'var(--text-primary)' }} className="font-semibold text-lg">{t.shop.emptyTitle}</p>
+              <p style={{ color: 'var(--text-secondary)' }} className="text-sm mt-1">{t.shop.emptyDesc}</p>
+            </div>
           ) : (
-            <ProductGrid
-              products={filteredProducts}
-              t={t}
-              layout={config.layout}
-              forceMobile={forceMobileLayout}
-              onSelect={setSelectedProduct}
-              onQuickAdd={product =>
-                addToCart({
-                  productId: product.id,
-                  productName: product.name,
-                  productImage: product.image_url,
-                  productPrice: product.price,
-                  variantLabel: null,
-                  quantity: 1,
-                  maxQty: product.stock,
-                })
-              }
-            />
+            <div className={forceMobileLayout ? gridClassMobile : gridClass}>
+              {filteredProducts.map(product => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  t={t}
+                  onSelect={setSelectedProduct}
+                  onQuickAdd={handleQuickAdd}
+                />
+              ))}
+            </div>
           )
         ) : null}
 
@@ -405,17 +369,12 @@ export default function StorefrontShell({
         )}
       </main>
 
-      {/* Barre panier sticky */}
+      {/* Barre panier sticky — visuel du template */}
       {showCartUi && cart.length > 0 && (
-        <CartBar
-          totals={totals}
-          t={t}
-          onOpenCart={() => setIsCartOpen(true)}
-          onCheckout={goToCheckout}
-        />
+        <CartBar totals={totals} t={t} onOpenCart={() => setIsCartOpen(true)} onCheckout={goToCheckout} />
       )}
 
-      {/* Tiroir panier */}
+      {/* Tiroir panier — visuel du template */}
       {isCartOpen && showCartUi && (
         <CartDrawer
           items={cart}
@@ -430,9 +389,9 @@ export default function StorefrontShell({
         />
       )}
 
-      {/* Modal sélection variante */}
+      {/* Modal sélection variante — visuel du template */}
       {selectedProduct && (
-        <ProductQuickModal
+        <ProductModal
           product={selectedProduct}
           cart={cart}
           t={t}

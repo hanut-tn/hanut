@@ -43,15 +43,28 @@ export function buildCssVariables(config: StorefrontConfig): CSSProperties {
   } as CSSProperties
 }
 
-/** Charge la police Google Fonts d'un template, si besoin (idempotent). Seul
- * le template "luxe" utilise une police externe (Playfair Display) — les
- * autres s'appuient sur Inter, déjà chargée par le layout global. */
+const TEMPLATE_FONTS: Partial<Record<StorefrontTemplate, { url: string; attr: string }>> = {
+  luxe: {
+    url: 'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap',
+    attr: 'playfair',
+  },
+  fresh: {
+    url: 'https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap',
+    attr: 'nunito',
+  },
+}
+
+/** Charge la police Google Fonts d'un template, si besoin (idempotent). Les
+ * templates "mode" et "dark" s'appuient sur Inter, déjà chargée par le
+ * layout global. */
 export function loadTemplateFont(template: StorefrontTemplate): void {
-  if (template !== 'luxe' || typeof document === 'undefined') return
-  if (document.querySelector('link[data-font="playfair"]')) return
+  if (typeof document === 'undefined') return
+  const font = TEMPLATE_FONTS[template]
+  if (!font) return
+  if (document.querySelector(`link[data-font="${font.attr}"]`)) return
   const link = document.createElement('link')
   link.rel = 'stylesheet'
-  link.href = 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap'
-  link.setAttribute('data-font', 'playfair')
+  link.href = font.url
+  link.setAttribute('data-font', font.attr)
   document.head.appendChild(link)
 }
