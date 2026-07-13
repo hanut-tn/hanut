@@ -1,22 +1,37 @@
 'use client'
 
+import Image from 'next/image'
 import { ShoppingBag } from 'lucide-react'
 import type { TemplateHeaderProps } from '../types'
 
-// Identité Dark : fond noir, pas d'avatar, nom énorme uppercase + ®, panier
-// avec effet lumineux (glow). Contraste maximal, esthétique streetwear.
-export default function DarkHeader({ sellerName, shopDescription, cartCount, onCartOpen, t }: TemplateHeaderProps) {
+// Identité Dark : fond noir, pas d'avatar rond (logo affiché en carré s'il
+// existe), nom énorme uppercase + ®, panier avec effet lumineux (glow).
+// Contraste maximal, esthétique streetwear.
+export default function DarkHeader({ sellerName, shopDescription, logoUrl, bannerUrl, cartCount, onCartOpen, t }: TemplateHeaderProps) {
   return (
     <header style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+      {bannerUrl && (
+        <div className="relative w-full h-36 sm:h-44">
+          <Image src={bannerUrl} alt="" fill sizes="100vw" className="object-cover opacity-80" priority />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.2), #0a0a0a)' }} />
+        </div>
+      )}
       <div className="max-w-5xl mx-auto px-5 py-6 flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-black uppercase tracking-tight text-white truncate">
-            {sellerName}
-            <span className="align-super text-xs font-normal ms-0.5 opacity-50">®</span>
-          </h1>
-          {shopDescription && (
-            <p className="text-xs mt-1 truncate" style={{ color: 'rgba(255,255,255,0.5)' }}>{shopDescription}</p>
+        <div className="flex items-center gap-3 min-w-0">
+          {logoUrl && (
+            <div className="relative w-11 h-11 shrink-0 overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.15)' }}>
+              <Image src={logoUrl} alt="" fill sizes="44px" className="object-cover" />
+            </div>
           )}
+          <div className="min-w-0">
+            <h1 className="text-2xl font-black uppercase tracking-tight text-white truncate">
+              {sellerName}
+              <span className="align-super text-xs font-normal ms-0.5 opacity-50">®</span>
+            </h1>
+            {shopDescription && (
+              <p className="text-xs mt-1 truncate" style={{ color: 'rgba(255,255,255,0.5)' }}>{shopDescription}</p>
+            )}
+          </div>
         </div>
 
         <button

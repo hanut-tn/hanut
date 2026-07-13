@@ -9,10 +9,15 @@ import type { TemplateHeaderProps } from '../types'
 // Défile avec le contenu (pas sticky) : seule la barre Hanut générique
 // (StorefrontShell) reste épinglée en haut, pour éviter tout conflit
 // d'empilement entre deux éléments sticky à top:0.
-export default function ModeHeader({ sellerName, logoUrl, cartCount, onCartOpen, t }: TemplateHeaderProps) {
+export default function ModeHeader({ sellerName, logoUrl, bannerUrl, cartCount, onCartOpen, t }: TemplateHeaderProps) {
   return (
     <header className="bg-white border-b border-gray-100">
-      <div className="flex items-center justify-between px-4 h-14 gap-3">
+      {bannerUrl && (
+        <div className="relative w-full h-32 sm:h-40">
+          <Image src={bannerUrl} alt="" fill sizes="100vw" className="object-cover" priority />
+        </div>
+      )}
+      <div className="flex items-center justify-between px-4 h-14 gap-3 max-w-5xl mx-auto">
         <div className="flex items-center gap-2.5 min-w-0">
           {logoUrl && (
             <div className="relative w-7 h-7 shrink-0 overflow-hidden bg-white">
