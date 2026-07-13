@@ -6,7 +6,7 @@
 // template n'a jamais besoin de lire `StorefrontConfig` directement.
 
 import type { StorefrontProduct, CartItem } from '@/lib/storefront/cart'
-import type { StorefrontDict } from '@/lib/i18n/storefront'
+import type { StorefrontDict, Lang } from '@/lib/i18n/storefront'
 import type { Category } from '@hanut/types'
 
 export interface TemplateHeaderProps {
@@ -16,6 +16,8 @@ export interface TemplateHeaderProps {
   bannerUrl: string | null
   cartCount: number
   onCartOpen: () => void
+  lang: Lang
+  onLangToggle: () => void
   t: StorefrontDict
 }
 

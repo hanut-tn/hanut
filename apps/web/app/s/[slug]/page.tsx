@@ -94,7 +94,7 @@ export default async function StorefrontPage({ params }: Props) {
 
   const { data: seller } = await supabase
     .from('sellers')
-    .select('id, name, slug, shop_name, shop_description, logo_url, banner_url, storefront_config')
+    .select('id, name, slug, shop_name, shop_description, logo_url, banner_url, storefront_config, plan')
     .eq('slug', slug)
     .single()
 
@@ -104,6 +104,11 @@ export default async function StorefrontPage({ params }: Props) {
     ...DEFAULT_STOREFRONT_CONFIG,
     ...(seller.storefront_config as Partial<StorefrontConfig> | null ?? {}),
   }
+
+  // Branding Hanut visible uniquement pour le plan Starter — Pro/Business
+  // ont une boutique en marque blanche. Même repli que le reste du code
+  // (settings/page.tsx) : un plan manquant est traité comme Starter.
+  const showHanutBranding = (seller.plan ?? 'starter') === 'starter'
 
   const [{ data: products }, { data: categories }] = await Promise.all([
     supabase
@@ -131,6 +136,7 @@ export default async function StorefrontPage({ params }: Props) {
       products={storefrontProducts}
       categories={(categories ?? []) as Category[]}
       config={config}
+      showHanutBranding={showHanutBranding}
     />
   )
 }

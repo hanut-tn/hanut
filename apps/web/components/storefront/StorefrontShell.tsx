@@ -29,6 +29,13 @@ type Props = {
   config?: StorefrontConfig
   /** Masque la navbar Hanut — utilisé pour l'aperçu en direct intégré au dashboard. */
   hideTopBar?: boolean
+  /**
+   * Barre de branding Hanut discrète en haut de la boutique — visible pour
+   * le plan Starter, masquée pour Pro/Business. `true` par défaut : seule
+   * la page publique `/s/[slug]` connaît le plan réel du vendeur et passe
+   * la valeur calculée ; l'aperçu dashboard n'a pas encore cette donnée.
+   */
+  showHanutBranding?: boolean
   /** Aperçu dashboard : apparence 100% fidèle, mais bloque le passage à un vrai checkout (OTP/commande réels). */
   previewMode?: boolean
   /**
@@ -51,7 +58,7 @@ type Props = {
 // logique, seulement l'apparence.
 export default function StorefrontShell({
   sellerSlug, sellerName, shopDescription, logoUrl, bannerUrl = null, products, categories,
-  config = DEFAULT_STOREFRONT_CONFIG, hideTopBar = false, previewMode = false, forceMobileLayout = false,
+  config = DEFAULT_STOREFRONT_CONFIG, hideTopBar = false, showHanutBranding = true, previewMode = false, forceMobileLayout = false,
 }: Props) {
   const { t, lang, isRtl, toggleLang } = useLang(storefrontTranslations)
   const router = useRouter()
@@ -247,25 +254,18 @@ export default function StorefrontShell({
       style={buildCssVariables(config)}
       className={`w-full min-h-screen overflow-x-hidden ${isRtl ? 'font-arabic' : ''}`}
     >
-      {/* Navbar Hanut sticky — chrome plateforme, identique quel que soit le template */}
-      {!hideTopBar && (
-        <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-30">
-          <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
-            <Link href="/" className="flex items-center shrink-0" aria-label="Hanut">
-              <Image src="/logo-horizontal.svg" alt="Hanut" width={84} height={27} unoptimized />
-            </Link>
-            <button
-              type="button"
-              onClick={toggleLang}
-              className="text-xs font-medium text-gray-500 border border-gray-200 rounded-full px-2.5 py-1 min-h-[32px] touch-manipulation transition-colors hover:bg-gray-50 hover:text-[#1C1917]"
-            >
-              {t.common.langToggle}
-            </button>
-          </div>
-        </header>
+      {/* Barre de branding Hanut — masquée en aperçu dashboard, et pour les
+          plans Pro/Business sur la boutique publique. Le toggle langue vit
+          désormais dans le header de chaque template, pas ici. */}
+      {!hideTopBar && showHanutBranding && (
+        <div className="sticky top-0 z-30 bg-white border-b border-gray-100 flex items-center justify-between px-4 h-10">
+          <Link href="/" target="_blank" className="flex items-center gap-1.5" aria-label="Hanut">
+            <span className="text-sm font-bold text-brand-600">🛍️ Hanut</span>
+          </Link>
+        </div>
       )}
 
-      {/* En-tête boutique — visuel du template, porte aussi l'accès au panier */}
+      {/* En-tête boutique — visuel du template, porte aussi l'accès au panier et au toggle langue */}
       {step === 'catalog' && (
         <Header
           sellerName={sellerName}
@@ -274,6 +274,8 @@ export default function StorefrontShell({
           bannerUrl={bannerUrl}
           cartCount={totals.totalItems}
           onCartOpen={() => setIsCartOpen(true)}
+          lang={lang}
+          onLangToggle={toggleLang}
           t={t}
         />
       )}
@@ -287,7 +289,7 @@ export default function StorefrontShell({
 
       {/* Catégories — visuel du template, positionnement sticky géré ici */}
       {step === 'catalog' && availableCategories.length > 0 && (
-        <div className={`sticky z-20 ${hideTopBar ? 'top-0' : 'top-14'}`}>
+        <div className={`sticky z-20 ${!hideTopBar && showHanutBranding ? 'top-10' : 'top-0'}`}>
           <CategoryBar categories={availableCategories} selected={categoryFilter} onSelect={setCategoryFilter} t={t} />
         </div>
       )}
@@ -412,13 +414,20 @@ export default function StorefrontShell({
         </div>
       )}
 
-      {/* Footer */}
+      {/* Footer — toujours présent (marketing gratuit), lien cliquable pour
+          Starter, mention discrète et non cliquable pour Pro/Business. */}
       <footer className="py-6 text-center border-t border-gray-100 bg-white">
         <div className="flex items-center justify-center gap-4">
-          <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-[#78716C] hover:text-gray-600 transition-colors">
-            <Image src="/icon-16.png" alt="" width={16} height={16} unoptimized style={{ borderRadius: '3px' }} />
-            Propulsé par Hanut
-          </Link>
+          {showHanutBranding ? (
+            <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-[#78716C] hover:text-gray-600 transition-colors">
+              <Image src="/icon-16.png" alt="" width={16} height={16} unoptimized style={{ borderRadius: '3px' }} />
+              Propulsé par Hanut
+            </Link>
+          ) : (
+            <span className="text-xs" style={{ color: 'color-mix(in srgb, var(--text-secondary) 50%, transparent)' }}>
+              Propulsé par Hanut
+            </span>
+          )}
           <Link href="/privacy" className="text-xs text-[#78716C] hover:text-gray-600 transition-colors">
             Confidentialité
           </Link>
