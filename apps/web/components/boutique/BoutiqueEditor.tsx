@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Smartphone, Monitor } from 'lucide-react'
 import type { Category, StorefrontConfig } from '@hanut/types'
 import { uploadProductImage } from '@/app/(dashboard)/catalog/actions'
 import { saveStorefrontData, type ShopInfo } from '@/app/(dashboard)/boutique/actions'
@@ -40,6 +41,7 @@ export default function BoutiqueEditor({ seller, products, categories, initialCo
   const [msg, setMsg] = useState<Msg | null>(null)
   const [activeStep, setActiveStep] = useState<EditorStep>('style')
   const [mobileView, setMobileView] = useState<MobileView>('editor')
+  const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('mobile')
   const [logoUploading, setLogoUploading] = useState(false)
   const [bannerUploading, setBannerUploading] = useState(false)
 
@@ -143,20 +145,93 @@ export default function BoutiqueEditor({ seller, products, categories, initialCo
     </div>
   )
 
+  const storefrontPreview = (
+    <StorefrontShell
+      sellerSlug={seller.slug ?? ''}
+      sellerName={shopInfo.shop_name || seller.name}
+      shopDescription={shopInfo.shop_description}
+      logoUrl={shopInfo.logo_url}
+      bannerUrl={shopInfo.banner_url}
+      products={products}
+      categories={categories}
+      config={config}
+      hideTopBar
+      previewMode
+    />
+  )
+
   const preview = (
-    <div className="h-full overflow-auto bg-gray-100">
-      <StorefrontShell
-        sellerSlug={seller.slug ?? ''}
-        sellerName={shopInfo.shop_name || seller.name}
-        shopDescription={shopInfo.shop_description}
-        logoUrl={shopInfo.logo_url}
-        bannerUrl={shopInfo.banner_url}
-        products={products}
-        categories={categories}
-        config={config}
-        hideTopBar
-        previewMode
-      />
+    <div className="h-full flex flex-col overflow-hidden bg-gray-100">
+      {/* Toggle Mobile / Desktop */}
+      <div className="flex items-center justify-center gap-2 py-3 bg-gray-100 border-b border-gray-200 shrink-0">
+        <button
+          type="button"
+          onClick={() => setViewMode('mobile')}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+            viewMode === 'mobile' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Smartphone className="w-4 h-4" />
+          Mobile
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode('desktop')}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+            viewMode === 'desktop' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Monitor className="w-4 h-4" />
+          Desktop
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-auto flex items-start justify-center py-8 px-4">
+        {viewMode === 'mobile' ? (
+          /* Cadre iPhone */
+          <div className="relative shrink-0" style={{ width: '390px' }}>
+            <div
+              className="relative rounded-[3rem] overflow-hidden shadow-2xl"
+              style={{
+                border: '8px solid #1a1a1a',
+                backgroundColor: '#1a1a1a',
+                boxShadow: '0 0 0 2px #3a3a3a, 0 40px 80px rgba(0,0,0,0.4)',
+              }}
+            >
+              {/* Dynamic Island */}
+              <div className="flex justify-center pt-3 pb-1 bg-black">
+                <div
+                  className="rounded-full bg-black"
+                  style={{ width: '120px', height: '34px', border: '2px solid #2a2a2a' }}
+                />
+              </div>
+
+              {/* Écran — boutique scrollable */}
+              <div className="overflow-y-auto overflow-x-hidden bg-white" style={{ height: '750px', width: '100%' }}>
+                {storefrontPreview}
+              </div>
+
+              {/* Home indicator */}
+              <div className="flex justify-center py-2 bg-white">
+                <div className="w-28 h-1 bg-gray-300 rounded-full" />
+              </div>
+            </div>
+
+            {/* Boutons volume gauche */}
+            <div className="absolute left-[-10px] top-[100px] w-[4px] h-[32px] bg-[#2a2a2a] rounded-l-sm" />
+            <div className="absolute left-[-10px] top-[145px] w-[4px] h-[60px] bg-[#2a2a2a] rounded-l-sm" />
+            <div className="absolute left-[-10px] top-[215px] w-[4px] h-[60px] bg-[#2a2a2a] rounded-l-sm" />
+
+            {/* Bouton power droite */}
+            <div className="absolute right-[-10px] top-[160px] w-[4px] h-[80px] bg-[#2a2a2a] rounded-r-sm" />
+          </div>
+        ) : (
+          /* Aperçu desktop — pleine largeur */
+          <div className="w-full min-h-full bg-white">
+            {storefrontPreview}
+          </div>
+        )}
+      </div>
     </div>
   )
 
