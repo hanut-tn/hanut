@@ -4,43 +4,61 @@ import Image from 'next/image'
 import { ShoppingBag } from 'lucide-react'
 import type { TemplateHeaderProps } from '../types'
 
-// Identité Mode : ultra-compact, une seule ligne, angles droits, aucune
-// fioriture. Pas d'avatar ni de description — juste le nom et le panier.
-// Défile avec le contenu (pas sticky) : seule la barre Hanut générique
-// (StorefrontShell) reste épinglée en haut, pour éviter tout conflit
-// d'empilement entre deux éléments sticky à top:0.
-export default function ModeHeader({ sellerName, logoUrl, bannerUrl, cartCount, onCartOpen, t }: TemplateHeaderProps) {
-  return (
-    <header className="bg-white border-b border-gray-100">
-      {bannerUrl && (
-        <div className="relative w-full h-32 sm:h-40">
-          <Image src={bannerUrl} alt="" fill sizes="100vw" className="object-cover" priority />
-        </div>
-      )}
-      <div className="flex items-center justify-between px-4 h-14 gap-3 max-w-5xl mx-auto">
-        <div className="flex items-center gap-2.5 min-w-0">
-          {logoUrl && (
-            <div className="relative w-7 h-7 shrink-0 overflow-hidden bg-white">
-              <Image src={logoUrl} alt="" fill sizes="28px" className="object-cover" />
-            </div>
-          )}
-          <span className="text-xs font-bold tracking-[0.2em] uppercase text-gray-900 truncate">
-            {sellerName}
+// Identité Mode : angles droits, uppercase tracking large. Comportement
+// logo/bannière unifié avec les 3 autres templates : bannière → image
+// pleine largeur avec le nom en overlay ; sans bannière → bandeau dégradé
+// couleur principale avec logo (si présent) + nom. Sans logo, rien n'est
+// affiché à sa place (pas d'avatar de repli).
+export default function ModeHeader({ sellerName, shopDescription, logoUrl, bannerUrl, cartCount, onCartOpen, t }: TemplateHeaderProps) {
+  function CartButton() {
+    return (
+      <button
+        type="button"
+        onClick={onCartOpen}
+        aria-label={t.cart.title}
+        style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
+        className="absolute top-4 end-4 z-10 w-10 h-10 flex items-center justify-center text-white"
+      >
+        <ShoppingBag className="w-[18px] h-[18px]" strokeWidth={1.5} />
+        {cartCount > 0 && (
+          <span className="absolute -top-1 -end-1 min-w-[16px] h-4 px-0.5 bg-white text-gray-900 text-[9px] font-bold flex items-center justify-center rounded-full">
+            {cartCount}
           </span>
+        )}
+      </button>
+    )
+  }
+
+  if (bannerUrl) {
+    return (
+      <header className="relative w-full" style={{ height: '180px' }}>
+        <Image src={bannerUrl} alt={sellerName} fill sizes="100vw" className="object-cover" priority />
+        <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.25)' }} />
+        <CartButton />
+        <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+          <h1 className="text-xl font-bold uppercase tracking-widest truncate">{sellerName}</h1>
+          {shopDescription && <p className="text-sm opacity-80 mt-0.5 truncate">{shopDescription}</p>}
         </div>
-        <button
-          type="button"
-          onClick={onCartOpen}
-          aria-label={t.cart.title}
-          className="relative w-9 h-9 shrink-0 flex items-center justify-center text-gray-900"
-        >
-          <ShoppingBag className="w-[18px] h-[18px]" strokeWidth={1.5} />
-          {cartCount > 0 && (
-            <span className="absolute top-0.5 right-0 min-w-[15px] h-[15px] px-0.5 bg-gray-900 text-white text-[9px] font-bold flex items-center justify-center rounded-full">
-              {cartCount}
-            </span>
-          )}
-        </button>
+      </header>
+    )
+  }
+
+  return (
+    <header
+      className="relative"
+      style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', padding: '1.5rem', color: '#ffffff' }}
+    >
+      <CartButton />
+      <div className="flex items-center gap-3 max-w-5xl mx-auto pe-12">
+        {logoUrl && (
+          <div className="relative overflow-hidden rounded-2xl shrink-0" style={{ width: '56px', height: '56px' }}>
+            <Image src={logoUrl} alt={sellerName} fill sizes="56px" className="object-cover" />
+          </div>
+        )}
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold uppercase tracking-widest truncate">{sellerName}</h1>
+          {shopDescription && <p className="text-sm opacity-80 mt-0.5 truncate">{shopDescription}</p>}
+        </div>
       </div>
     </header>
   )
