@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import {
-  Users, Link2, MapPin,
+  Palette, MapPin,
   Truck, Inbox, PackageCheck, Banknote, ShoppingBag, ShoppingCart,
   Check,
   ArrowRight,
@@ -10,6 +10,8 @@ import MarketingNavbar from '@/components/marketing/Navbar'
 import MarketingFooter from '@/components/marketing/Footer'
 import PricingSection from '@/components/marketing/PricingSection'
 import StickyPhoneShowcase from '@/components/marketing/StickyPhoneShowcase'
+import TemplatePreview from '@/components/boutique/steps/TemplatePreview'
+import { STOREFRONT_TEMPLATES, type StorefrontTemplate } from '@hanut/types'
 import { HANUT_CONTACT } from '@/lib/constants'
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -275,6 +277,7 @@ export default function LandingPage() {
       <main>
         <Hero />
         <CarrierBand />
+        <BoutiqueIdentitySection />
         <StickyPhoneShowcase />
         <EarlyAdoptersSection />
         <PricingSection />
@@ -421,37 +424,35 @@ function Hero() {
 
       <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 lg:grid-cols-5 lg:gap-16">
         <div className="min-w-0 text-center lg:col-span-3 lg:text-left">
-          <div className="mb-6 inline-flex max-w-full items-center overflow-hidden rounded-full border border-brand-100 bg-white shadow-sm sm:mb-8">
-            <span className="inline-flex items-center gap-2 bg-brand-50 px-3 py-2 text-xs font-bold text-brand-700 sm:px-3.5 sm:text-sm">
+          <div className="mb-6 inline-flex max-w-full items-center gap-2 overflow-hidden rounded-full border border-brand-100 bg-white px-3.5 py-2 shadow-sm sm:mb-8 sm:px-4">
+            <span className="inline-flex items-center gap-2 text-xs font-bold text-brand-700 sm:text-sm">
               <ShoppingBag className="h-4 w-4" aria-hidden="true" />
-              Mini boutique
-            </span>
-            <span className="px-3 py-2 text-xs font-semibold text-neutral-600 sm:px-3.5 sm:text-sm">
-              Commandes + clients
+              Boutique · Commandes · Clients
             </span>
           </div>
 
           <h1 className="mx-auto mb-5 max-w-[21rem] text-[2.35rem] font-extrabold leading-[1.02] text-[#1C1917] sm:mb-6 sm:max-w-none sm:text-5xl lg:mx-0 lg:text-6xl">
-            <span className="block sm:inline">Votre boutique</span>{' '}
-            <span className="block sm:inline">en ligne,</span>
-            <br className="hidden sm:block" />
-            <span className="relative inline-block text-brand-600">
-              <span className="relative z-10">sans site web</span>
-              <span className="absolute -bottom-1 left-0 h-3 w-full rounded-full bg-brand-100 sm:h-4" aria-hidden="true" />
+            <span className="block">Votre boutique en ligne.</span>
+            <span className="block">
+              Vos commandes{' '}
+              <span className="relative inline-block text-brand-600">
+                <span className="relative z-10">centralisées</span>
+                <span className="absolute -bottom-1 left-0 h-3 w-full rounded-full bg-brand-100 sm:h-4" aria-hidden="true" />
+              </span>.
             </span>
           </h1>
 
           <p className="mx-auto mb-8 max-w-[21rem] text-base leading-relaxed text-neutral-500 sm:mb-10 sm:max-w-xl sm:text-xl lg:mx-0">
-            Partagez un lien. Vos clients choisissent leurs produits, confirment leur
-            adresse et passent commande en 2 minutes. Gérez commandes et clients
-            au même endroit.
+            Créez une boutique personnalisée en 2 minutes. Vos clients commandent
+            directement depuis un lien. Gérez commandes, stock et livraisons depuis
+            un seul tableau de bord.
           </p>
 
           <div className="mx-auto mb-8 hidden w-full max-w-[21rem] grid-cols-1 gap-3 sm:mb-10 sm:grid sm:max-w-xl sm:grid-cols-3 lg:mx-0">
             {[
-              { icon: Link2, label: 'Un lien à partager' },
-              { icon: ShoppingCart, label: 'Commandes directes' },
-              { icon: Users, label: 'Clients centralisés' },
+              { icon: Palette, label: 'Boutique avec votre identité' },
+              { icon: ShoppingCart, label: 'Commandes en temps réel' },
+              { icon: Truck, label: 'Livraisons COD simplifiées' },
             ].map((item) => (
               <div
                 key={item.label}
@@ -480,7 +481,7 @@ function Hero() {
               href="#features"
               className="inline-flex min-h-[52px] w-full max-w-[21rem] items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-5 py-3.5 text-base font-semibold text-neutral-800 shadow-sm transition-all hover:border-brand-200 hover:text-brand-700 hover:shadow-md sm:w-auto sm:max-w-none sm:px-6 sm:py-4"
             >
-              Voir comment ça marche
+              Voir une démo
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                 <path d="M2 7H12M12 7L8 3M12 7L8 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -592,6 +593,49 @@ function CarrierBand() {
   )
 }
 
+// ─── Identité boutique ────────────────────────────────────────────────────────
+
+const IDENTITY_TEMPLATES: StorefrontTemplate[] = ['mode', 'luxe', 'fresh', 'dark']
+
+function BoutiqueIdentitySection() {
+  return (
+    <section className="bg-white px-4 py-20 sm:px-6 sm:py-28">
+      <div className="mx-auto max-w-6xl text-center">
+        <span className="mb-5 inline-flex items-center gap-2 rounded-lg border border-brand-100 bg-brand-50 px-3 py-2 text-sm font-bold text-brand-700">
+          <Palette className="h-4 w-4" aria-hidden="true" />
+          Personnalisation
+        </span>
+        <h2 className="mx-auto max-w-2xl text-3xl font-extrabold leading-tight text-[#1C1917] sm:text-4xl lg:text-5xl">
+          Une boutique qui vous ressemble
+        </h2>
+        <p className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-neutral-500">
+          Choisissez parmi 4 identités visuelles complètes.
+          Changez de style en un clic.
+        </p>
+
+        <div className="mx-auto mt-12 grid max-w-4xl grid-cols-2 gap-5 sm:grid-cols-4">
+          {IDENTITY_TEMPLATES.map((key) => {
+            const tmpl = STOREFRONT_TEMPLATES[key]
+            return (
+              <div key={key} className="rounded-2xl border border-neutral-200 bg-[#FAFAF9] p-4 shadow-sm">
+                <div className="overflow-hidden rounded-xl border border-neutral-100 shadow-sm">
+                  <TemplatePreview template={key} primaryColor="#16A34A" />
+                </div>
+                <p className="mt-3 text-sm font-black text-[#1C1917]">{tmpl.label}</p>
+                <p className="text-xs font-semibold text-neutral-500">{tmpl.description}</p>
+              </div>
+            )
+          })}
+        </div>
+
+        <p className="mt-8 text-sm font-semibold text-neutral-500">
+          4 templates · Couleur personnalisée · Logo · Bannière
+        </p>
+      </div>
+    </section>
+  )
+}
+
 // ─── Early Adopters ───────────────────────────────────────────────────────────
 
 const EARLY_BENEFITS = [
@@ -623,11 +667,12 @@ function EarlyAdoptersSection() {
               Construit pour la Tunisie
             </span>
             <h2 className="text-3xl font-extrabold leading-tight text-[#1C1917] sm:text-4xl lg:text-5xl">
-              Votre façon de vendre ne change pas. Votre gestion devient sérieuse.
+              Rejoignez les premiers vendeurs tunisiens
             </h2>
             <p className="mt-5 text-lg leading-relaxed text-neutral-500">
-              Beaucoup de vendeurs vendent déjà via Instagram, Facebook, TikTok ou téléphone.
-              Hanut ajoute la couche qui manque: boutique, commandes, clients et COD.
+              Hanut combine ce qu&apos;aucun outil tunisien ne combine : une boutique en
+              ligne professionnelle + une gestion complète de vos commandes, clients
+              et livraisons COD.
             </p>
 
             <div className="mt-8 grid grid-cols-3 gap-3">

@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Tarifs — Hanut',
-  description: 'Starter 39 DT et Pro 79 DT par mois. Sans engagement, annulable à tout moment. -20% avec le plan annuel.',
+  title: 'Tarifs Hanut — Boutique en ligne + Gestion commandes Tunisie',
+  description: 'Starter 39 DT ou Pro 79 DT. Créez votre boutique, gérez vos commandes et livraisons COD. Essai Pro 14 jours gratuit.',
   openGraph: {
-    title: 'Tarifs Hanut — À partir de 39 DT/mois',
-    description: 'Starter 39 DT et Pro 79 DT par mois. Sans engagement.',
+    title: 'Tarifs Hanut — Boutique en ligne + Gestion commandes Tunisie',
+    description: 'Starter 39 DT ou Pro 79 DT. Créez votre boutique, gérez vos commandes et livraisons COD. Essai Pro 14 jours gratuit.',
     siteName: 'Hanut',
     locale: 'fr_TN',
     type: 'website',

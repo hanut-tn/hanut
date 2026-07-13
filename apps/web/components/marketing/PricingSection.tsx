@@ -20,7 +20,7 @@ const PLANS: Plan[] = [
     desc: 'Pour débuter et tester',
     features: [
       '100 commandes / mois',
-      'Catalogue produits illimité',
+      'Boutique 1 template (Mode)',
       'Lien de commande public',
       'Livraisons COD (5 transporteurs)',
       'Analytics 30 jours',
@@ -34,9 +34,9 @@ const PLANS: Plan[] = [
     badge: 'Recommandé',
     features: [
       'Commandes illimitées',
+      '4 templates + logo et bannière',
+      'Boutique sans branding Hanut',
       'Analytics 180 jours + comparaison',
-      'Fiche client CRM (tags et notes)',
-      'Export CSV commandes et analytics',
       'Équipe jusqu\'à 3 membres',
     ],
     highlighted: true,

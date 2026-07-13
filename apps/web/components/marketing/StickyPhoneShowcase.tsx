@@ -5,17 +5,17 @@ import Link from 'next/link'
 import {
   ArrowRight,
   BarChart3,
-  Bell,
   Check,
   ClipboardList,
   Inbox,
-  PackagePlus,
+  Palette,
   ShoppingBag,
   ShoppingCart,
+  Truck,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
-type StepId = 'catalog' | 'storefront' | 'checkout' | 'tracking' | 'orders' | 'analytics'
+type StepId = 'editor' | 'storefront' | 'checkout' | 'orders' | 'delivery' | 'analytics'
 
 type ShowcaseStep = {
   id: StepId
@@ -28,49 +28,49 @@ type ShowcaseStep = {
 
 const STEPS: ShowcaseStep[] = [
   {
-    id: 'catalog',
-    eyebrow: 'Catalogue Hanut',
-    title: 'Le vendeur met tous ses produits au propre.',
-    description: 'Photos, prix, variantes et stock sont organisés dans Hanut. Plus besoin de chercher les infos dans les messages.',
-    bullets: ['Produits illimités', 'Variantes et stock', 'Prix prêts à partager'],
-    icon: PackagePlus,
+    id: 'editor',
+    eyebrow: 'Éditeur boutique',
+    title: 'Créez votre boutique.',
+    description: 'Choisissez un template, votre couleur, logo et bannière. Votre boutique est prête en 2 minutes, sans aucune compétence technique.',
+    bullets: ['4 templates visuels', 'Couleur personnalisée', 'Logo et bannière'],
+    icon: Palette,
   },
   {
     id: 'storefront',
-    eyebrow: 'Mini boutique',
-    title: 'Le client voit une vraie boutique mobile.',
-    description: 'Un seul lien à mettre dans votre bio. Le client ouvre, choisit ses produits et remplit son panier.',
-    bullets: ['Lien public', 'Catalogue clair', 'Panier instantané'],
+    eyebrow: 'Lien public',
+    title: 'Partagez votre lien.',
+    description: 'Un lien unique hanut.tn/s/votre-boutique à mettre dans votre bio Instagram ou statut WhatsApp. Le client ouvre, choisit ses produits et remplit son panier.',
+    bullets: ['Lien hanut.tn/s/...', 'Catalogue en direct', 'Compatible bio Instagram'],
     icon: ShoppingBag,
   },
   {
     id: 'checkout',
     eyebrow: 'Formulaire client',
-    title: 'Le client confirme avec ses informations.',
+    title: 'Vos clients commandent.',
     description: 'Nom, téléphone, adresse, articles et total arrivent proprement. La commande est exploitable tout de suite.',
     bullets: ['Adresse complète', 'Téléphone vérifié', 'Commande structurée'],
     icon: ClipboardList,
   },
   {
-    id: 'tracking',
-    eyebrow: 'Suivi automatique',
-    title: 'Le client suit sa commande sans vous écrire.',
-    description: 'Confirmée, en livraison, livrée: le statut change clairement et le client garde confiance.',
-    bullets: ['Lien de suivi', 'Statut en temps réel', 'Message de livraison'],
-    icon: Bell,
-  },
-  {
     id: 'orders',
     eyebrow: 'Dashboard commandes',
-    title: 'Toutes les commandes arrivent au même endroit.',
+    title: 'Gérez les commandes.',
     description: 'Vous voyez qui a commandé, quoi livrer, combien collecter et ce qui reste à traiter.',
     bullets: ['Commandes centralisées', 'Clients attachés', 'Statuts visibles'],
     icon: Inbox,
   },
   {
+    id: 'delivery',
+    eyebrow: 'Livraisons COD',
+    title: 'Suivez les livraisons.',
+    description: 'Gérez vos expéditions chez 5 transporteurs tunisiens. Vous savez exactement ce qui est collecté, en attente ou reversé.',
+    bullets: ['COD collecté / reversé', '5 transporteurs', 'Statut en temps réel'],
+    icon: Truck,
+  },
+  {
     id: 'analytics',
     eyebrow: 'Pilotage',
-    title: 'Vous savez ce qui marche vraiment.',
+    title: 'Analysez vos ventes.',
     description: 'Hanut montre vos meilleurs produits, votre chiffre d’affaires et la santé de vos livraisons.',
     bullets: ['Chiffre d’affaires', 'Top produits', 'Livraison COD'],
     icon: BarChart3,
@@ -78,22 +78,22 @@ const STEPS: ShowcaseStep[] = [
 ]
 
 const STEP_INDEX: Record<StepId, string> = {
-  catalog: '01',
+  editor: '01',
   storefront: '02',
   checkout: '03',
-  tracking: '04',
-  orders: '05',
+  orders: '04',
+  delivery: '05',
   analytics: '06',
 }
 
 export default function StickyPhoneShowcase() {
-  const [active, setActive] = useState<StepId>('catalog')
+  const [active, setActive] = useState<StepId>('editor')
   const stepRefs = useRef<Record<StepId, HTMLElement | null>>({
-    catalog: null,
+    editor: null,
     storefront: null,
     checkout: null,
-    tracking: null,
     orders: null,
+    delivery: null,
     analytics: null,
   })
 
@@ -250,11 +250,11 @@ function PhoneFrame({ active, compact = false }: { active: StepId; compact?: boo
               </div>
               <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-[linear-gradient(180deg,rgba(255,255,255,0.72)_0%,rgba(255,255,255,0)_100%)]" />
               <div key={active} className="phone-screen-enter h-full">
-                {active === 'catalog' && <CatalogScreen />}
+                {active === 'editor' && <EditorScreen />}
                 {active === 'storefront' && <StorefrontScreen />}
                 {active === 'checkout' && <CheckoutScreen />}
-                {active === 'tracking' && <TrackingScreen />}
                 {active === 'orders' && <OrdersScreen />}
+                {active === 'delivery' && <DeliveryScreen />}
                 {active === 'analytics' && <AnalyticsScreen />}
               </div>
               <div className="absolute bottom-3 left-1/2 z-20 h-1 w-24 -translate-x-1/2 rounded-full bg-neutral-200" />
@@ -275,33 +275,37 @@ function PhoneHeader({ title, subtitle }: { title: string; subtitle: string }) {
   )
 }
 
-function CatalogScreen() {
+function EditorScreen() {
+  const templates = [
+    { name: 'Mode', selected: true, bg: 'bg-white', border: 'border-neutral-300', text: 'text-neutral-900' },
+    { name: 'Luxe', selected: false, bg: 'bg-[#faf8f5]', border: 'border-neutral-200', text: 'text-neutral-700' },
+    { name: 'Fresh', selected: false, bg: 'bg-brand-50', border: 'border-neutral-200', text: 'text-brand-700' },
+    { name: 'Dark', selected: false, bg: 'bg-neutral-900', border: 'border-neutral-700', text: 'text-white' },
+  ]
   return (
     <div className="h-full bg-[#FAFAF9]">
-      <PhoneHeader title="Catalogue" subtitle="Hanut vendeur" />
+      <PhoneHeader title="Ma boutique" subtitle="Éditeur" />
       <div className="px-4">
-        <div className="mb-3 rounded-2xl bg-brand-600 p-4 text-white">
-          <p className="text-xs font-bold text-white/75">Produits actifs</p>
-          <p className="mt-1 text-3xl font-black">24</p>
-        </div>
-        <div className="space-y-2">
-          {[
-            ['Robe été', '85 DT', 'Stock 12', 'bg-rose-50 text-rose-400'],
-            ['Hijab satin', '35 DT', 'Stock 34', 'bg-brand-50 text-brand-500'],
-            ['Sac cuir', '120 DT', 'Stock 7', 'bg-amber-50 text-amber-400'],
-            ['Sneakers', '75 DT', 'Stock 18', 'bg-blue-50 text-blue-400'],
-          ].map(([name, price, stock, cls]) => (
-            <div key={name} className="flex items-center gap-3 rounded-xl border border-neutral-100 bg-white p-3 shadow-sm">
-              <span className={`flex h-11 w-11 items-center justify-center rounded-lg ${cls}`}>
-                <ShoppingBag className="h-5 w-5" aria-hidden />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-black text-[#1C1917]">{name}</p>
-                <p className="text-xs font-semibold text-neutral-500">{stock}</p>
+        <p className="mb-2 text-xs font-black uppercase text-neutral-400">Choisissez un style</p>
+        <div className="mb-4 grid grid-cols-4 gap-2">
+          {templates.map((t) => (
+            <div key={t.name} className={`overflow-hidden rounded-xl border-2 ${t.selected ? 'border-brand-600' : t.border}`}>
+              <div className={`flex h-12 items-center justify-center ${t.bg}`}>
+                <span className={`text-[9px] font-black ${t.text}`}>{t.name}</span>
               </div>
-              <p className="text-sm font-black text-brand-700">{price}</p>
             </div>
           ))}
+        </div>
+        <div className="rounded-2xl border border-neutral-100 bg-white p-3 shadow-sm">
+          <p className="mb-2 text-xs font-black uppercase text-neutral-400">Couleur</p>
+          <div className="flex items-center gap-2">
+            {['bg-brand-600', 'bg-rose-400', 'bg-amber-400', 'bg-blue-400', 'bg-neutral-800'].map((c, i) => (
+              <span key={c} className={`h-6 w-6 rounded-full ${c} ${i === 0 ? 'ring-2 ring-offset-2 ring-brand-600' : ''}`} />
+            ))}
+          </div>
+        </div>
+        <div className="mt-3 rounded-xl bg-brand-600 py-3 text-center text-sm font-black text-white">
+          Enregistrer
         </div>
       </div>
     </div>
@@ -385,15 +389,15 @@ function CheckoutScreen() {
   )
 }
 
-function TrackingScreen() {
+function DeliveryScreen() {
   return (
     <div className="h-full overflow-hidden bg-white">
       <div className="sticky-tracking-content">
         <div className="bg-[linear-gradient(180deg,#F0FDF4_0%,#FFFFFF_82%)] px-4 pb-4 pt-12">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-[10px] font-black uppercase text-brand-700">Suivi commande</p>
-              <p className="mt-1 font-mono text-lg font-black text-[#1C1917]">#247</p>
+              <p className="text-[10px] font-black uppercase text-brand-700">Livraison COD</p>
+              <p className="mt-1 font-mono text-lg font-black text-[#1C1917]">TN-8821</p>
             </div>
             <span className="rounded-full bg-brand-600 px-2.5 py-1 text-[9px] font-black text-white">LIVE</span>
           </div>
