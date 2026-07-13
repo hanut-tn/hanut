@@ -214,7 +214,7 @@ export default function StorefrontShell({
     setStep('checkout')
   }
 
-  function renderCategoryChip(id: string, label: string, layoutClassName: string) {
+  function renderCategoryChip(id: string, label: string) {
     const isActive = categoryFilter === id
     return (
       <button
@@ -222,10 +222,11 @@ export default function StorefrontShell({
         type="button"
         onClick={() => setCategoryFilter(id)}
         style={{
-          backgroundColor: isActive ? 'var(--primary)' : '#fff',
-          color: isActive ? '#fff' : '#78716C',
+          backgroundColor: isActive ? 'var(--primary)' : 'var(--card-bg, #fff)',
+          color: isActive ? '#fff' : 'var(--text-secondary, #78716C)',
+          border: isActive ? 'none' : '1px solid color-mix(in srgb, var(--text-secondary, #78716C) 30%, transparent)',
         }}
-        className={`min-h-[32px] touch-manipulation rounded-full px-3.5 py-1.5 text-sm font-medium border border-gray-200 transition-colors flex items-center ${layoutClassName}`}
+        className="shrink-0 min-h-[32px] touch-manipulation rounded-full px-4 py-1.5 text-sm font-medium whitespace-nowrap transition-colors flex items-center"
       >
         {label}
       </button>
@@ -292,12 +293,14 @@ export default function StorefrontShell({
         </div>
       )}
 
-      {/* Barre de filtres catégories — horizontale, mobile uniquement (voir colonne de gauche en sm+) */}
+      {/* Barre de filtres catégories — horizontale scrollable, toutes tailles d'écran */}
       {step === 'catalog' && availableCategories.length > 0 && (
-        <div className={`sm:hidden sticky z-20 ${hideTopBar ? 'top-0' : 'top-14'} bg-gray-50/95 backdrop-blur border-b border-gray-100`}>
-          <div className="max-w-5xl mx-auto flex gap-2 overflow-x-auto px-4 py-2.5 scrollbar-none">
-            {renderCategoryChip('all', t.shop.categoryAll, 'shrink-0 whitespace-nowrap')}
-            {availableCategories.map(c => renderCategoryChip(c.id, c.name, 'shrink-0 whitespace-nowrap'))}
+        <div className={`sticky z-20 ${hideTopBar ? 'top-0' : 'top-14'} bg-gray-50/95 backdrop-blur border-b border-gray-100`}>
+          <div className="max-w-5xl mx-auto overflow-x-auto scrollbar-none">
+            <div className="flex gap-2 px-4 py-2.5 w-max min-w-full">
+              {renderCategoryChip('all', t.shop.categoryAll)}
+              {availableCategories.map(c => renderCategoryChip(c.id, c.name))}
+            </div>
           </div>
         </div>
       )}
@@ -305,53 +308,41 @@ export default function StorefrontShell({
       {/* Contenu */}
       <main className={`max-w-5xl mx-auto ${showCartUi && cart.length > 0 ? 'pb-28' : 'pb-10'}`}>
         {step === 'catalog' ? (
-          <div className="sm:flex sm:items-start sm:gap-6 sm:px-4 sm:pt-4">
-            {/* Catégories — colonne à gauche des produits, sm+ uniquement */}
-            {availableCategories.length > 0 && (
-              <aside className={`hidden sm:flex sm:flex-col sm:gap-1 w-44 shrink-0 sticky ${hideTopBar ? 'top-4' : 'top-[4.5rem]'}`}>
-                {renderCategoryChip('all', t.shop.categoryAll, 'w-full justify-start')}
-                {availableCategories.map(c => renderCategoryChip(c.id, c.name, 'w-full justify-start'))}
-              </aside>
-            )}
-
-            <div className="min-w-0 flex-1">
-              {hasNoResults ? (
-                <div className="px-4 py-16 text-center">
-                  <Search className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-30" />
-                  <p className="font-semibold text-[#1C1917]">{t.search.noResultsTitle}</p>
-                  {normalizedQuery && (
-                    <p className="text-sm text-[#78716C] mt-1">{t.search.noResultsFor(searchQuery.trim())}</p>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => { setSearchQuery(''); setCategoryFilter('all') }}
-                    className="mt-4 text-sm font-medium hover:underline"
-                    style={{ color: 'var(--primary)' }}
-                  >
-                    {t.search.resetButton}
-                  </button>
-                </div>
-              ) : (
-                <ProductGrid
-                  products={filteredProducts}
-                  t={t}
-                  layout={config.layout}
-                  onSelect={setSelectedProduct}
-                  onQuickAdd={product =>
-                    addToCart({
-                      productId: product.id,
-                      productName: product.name,
-                      productImage: product.image_url,
-                      productPrice: product.price,
-                      variantLabel: null,
-                      quantity: 1,
-                      maxQty: product.stock,
-                    })
-                  }
-                />
+          hasNoResults ? (
+            <div className="px-4 py-16 text-center">
+              <Search className="w-10 h-10 mx-auto mb-3 text-[#78716C] opacity-30" />
+              <p className="font-semibold text-[#1C1917]">{t.search.noResultsTitle}</p>
+              {normalizedQuery && (
+                <p className="text-sm text-[#78716C] mt-1">{t.search.noResultsFor(searchQuery.trim())}</p>
               )}
+              <button
+                type="button"
+                onClick={() => { setSearchQuery(''); setCategoryFilter('all') }}
+                className="mt-4 text-sm font-medium hover:underline"
+                style={{ color: 'var(--primary)' }}
+              >
+                {t.search.resetButton}
+              </button>
             </div>
-          </div>
+          ) : (
+            <ProductGrid
+              products={filteredProducts}
+              t={t}
+              layout={config.layout}
+              onSelect={setSelectedProduct}
+              onQuickAdd={product =>
+                addToCart({
+                  productId: product.id,
+                  productName: product.name,
+                  productImage: product.image_url,
+                  productPrice: product.price,
+                  variantLabel: null,
+                  quantity: 1,
+                  maxQty: product.stock,
+                })
+              }
+            />
+          )
         ) : null}
 
         {step === 'checkout' && (
