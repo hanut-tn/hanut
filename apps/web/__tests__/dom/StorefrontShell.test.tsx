@@ -113,7 +113,9 @@ describe('StorefrontShell — rendu RTL', () => {
 
   it('bascule en dir="rtl" et police arabe après le changement de langue', async () => {
     const { container } = renderShell()
-    const toggle = screen.getByText('🇹🇳 العربية')
+    // Le toggle langue vit désormais dans le header du template actif
+    // (ex: ModeHeader), plus dans la barre de branding Hanut générique.
+    const toggle = screen.getByText('ع')
 
     fireEvent.click(toggle)
 
