@@ -8,7 +8,7 @@ import Image from 'next/image'
 import {
   Search, LayoutGrid, List, Plus, Package, SearchX, ImageOff, Pencil,
   Trash2, ChevronDown, ChevronUp, AlertTriangle, PackageX, CheckCircle2,
-  MoreHorizontal, SlidersHorizontal, FileText, Eye, Tag,
+  MoreHorizontal, SlidersHorizontal, FileText, Eye, Tag, EyeOff, Star,
 } from 'lucide-react'
 import type { Product, ProductVariant, ProductWithCategories, Category } from '@hanut/types'
 import type { ProductInput, StockAdjustmentInput } from '@/app/(dashboard)/catalog/actions'
@@ -24,6 +24,7 @@ type SortMode =
   | 'price_asc' | 'price_desc'
   | 'low_stock' | 'stock_desc'
 type StockFilter = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock'
+type VisibilityFilter = 'all' | 'featured' | 'hidden'
 
 const VIEW_STORAGE_KEY = 'hanut:catalog-view'
 
@@ -40,6 +41,8 @@ type Props = {
   createCategory: (name: string) => Promise<{ category?: Category; error?: string }>
   updateCategory: (id: string, name: string) => Promise<{ error?: string }>
   deleteCategory: (id: string) => Promise<{ error?: string }>
+  toggleProductFeatured: (productId: string, isFeatured: boolean, label?: string | null) => Promise<{ error?: string }>
+  toggleProductStorefrontVisibility: (productId: string, isVisible: boolean) => Promise<{ error?: string }>
 }
 
 // ── Statut stock (sémantique seuil, pas pourcentage) ─────────────────────────
@@ -75,6 +78,25 @@ function StockBar({ product }: { product: Product }) {
         style={{ width: `${pct}%` }}
       />
     </div>
+  )
+}
+
+// ── Badges visibilité / mise en avant (image en grille + liste mobile) ────────
+function HiddenBadge() {
+  return (
+    <span className="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-800/80 text-white">
+      <EyeOff className="w-2.5 h-2.5" />
+      Masqué
+    </span>
+  )
+}
+
+function FeaturedBadge({ product }: { product: Product }) {
+  return (
+    <span className="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#16A34A] text-white">
+      <Star className="w-2.5 h-2.5 fill-current" />
+      {product.featured_label || 'En vedette'}
+    </span>
   )
 }
 
@@ -144,12 +166,14 @@ function VariantBadge({ product }: { product: Product }) {
 
 // ── Menu ⋯ : popover desktop / bottom sheet mobile (portal, échappe aux overflow) ──
 function ProductActionsMenu({
-  product, canWrite, onAdjust, onDelete,
+  product, canWrite, onAdjust, onDelete, onToggleFeatured, onToggleVisibility,
 }: {
   product: Product
   canWrite: boolean
   onAdjust: (p: Product) => void
   onDelete: (p: Product) => void
+  onToggleFeatured: (p: Product) => void
+  onToggleVisibility: (p: Product) => void
 }) {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 })
@@ -189,6 +213,24 @@ function ProductActionsMenu({
         <FileText className="w-4 h-4 text-[#78716C]" />
         Fiche & mouvements de stock
       </Link>
+      {canWrite && (
+        <>
+          <div className="my-1 border-t border-[#E7E5E4]" />
+          <button type="button" className={itemClass} onClick={() => { close(); onToggleFeatured(product) }}>
+            <Star className="w-4 h-4 text-[#78716C]" />
+            {product.is_featured ? 'Retirer la mise en avant' : 'Mettre en avant'}
+          </button>
+          <button type="button" className={itemClass} onClick={() => { close(); onToggleVisibility(product) }}>
+            {product.is_visible_in_storefront ? (
+              <EyeOff className="w-4 h-4 text-[#78716C]" />
+            ) : (
+              <Eye className="w-4 h-4 text-[#78716C]" />
+            )}
+            {product.is_visible_in_storefront ? 'Masquer de la boutique' : 'Afficher dans la boutique'}
+          </button>
+          <div className="my-1 border-t border-[#E7E5E4]" />
+        </>
+      )}
       {canWrite && (
         <button
           type="button"
@@ -249,13 +291,15 @@ function ProductActionsMenu({
 
 // ── Carte produit (grille) ────────────────────────────────────────────────────
 function ProductCard({
-  product, canWrite, onEdit, onAdjust, onDelete,
+  product, canWrite, onEdit, onAdjust, onDelete, onToggleFeatured, onToggleVisibility,
 }: {
   product: ProductWithCategories
   canWrite: boolean
   onEdit: (p: ProductWithCategories) => void
   onAdjust: (p: Product) => void
   onDelete: (p: Product) => void
+  onToggleFeatured: (p: Product) => void
+  onToggleVisibility: (p: Product) => void
 }) {
   const badge = getStockBadge(product)
   const margin =
@@ -283,10 +327,18 @@ function ProductCard({
             <span className="text-xs">Aucune photo</span>
           </div>
         )}
-        {badge && (
-          <span className={`absolute top-2 left-2 text-xs px-2 py-0.5 rounded-full font-medium ${badge.className}`}>
-            {badge.label}
-          </span>
+        <div className="absolute top-2 left-2 z-10 flex flex-col items-start gap-1">
+          {badge && (
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge.className}`}>
+              {badge.label}
+            </span>
+          )}
+          {!product.is_visible_in_storefront && <HiddenBadge />}
+        </div>
+        {product.is_featured && (
+          <div className="absolute top-2 right-2 z-10">
+            <FeaturedBadge product={product} />
+          </div>
         )}
       </Link>
 
@@ -332,7 +384,14 @@ function ProductCard({
               Voir
             </Link>
           )}
-          <ProductActionsMenu product={product} canWrite={canWrite} onAdjust={onAdjust} onDelete={onDelete} />
+          <ProductActionsMenu
+            product={product}
+            canWrite={canWrite}
+            onAdjust={onAdjust}
+            onDelete={onDelete}
+            onToggleFeatured={onToggleFeatured}
+            onToggleVisibility={onToggleVisibility}
+          />
         </div>
       </div>
     </div>
@@ -341,13 +400,15 @@ function ProductCard({
 
 // ── Carte liste mobile ────────────────────────────────────────────────────────
 function ProductListMobileCard({
-  product, canWrite, onEdit, onAdjust, onDelete,
+  product, canWrite, onEdit, onAdjust, onDelete, onToggleFeatured, onToggleVisibility,
 }: {
   product: ProductWithCategories
   canWrite: boolean
   onEdit: (p: ProductWithCategories) => void
   onAdjust: (p: Product) => void
   onDelete: (p: Product) => void
+  onToggleFeatured: (p: Product) => void
+  onToggleVisibility: (p: Product) => void
 }) {
   const badge = getStockBadge(product)
 
@@ -382,6 +443,12 @@ function ProductListMobileCard({
           <p className="text-sm font-bold text-brand-600">{product.price} DT</p>
           <VariantChips variants={product.variants} />
           <CategoryBadges categories={product.categories} />
+          {(product.is_featured || !product.is_visible_in_storefront) && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {product.is_featured && <FeaturedBadge product={product} />}
+              {!product.is_visible_in_storefront && <HiddenBadge />}
+            </div>
+          )}
           <div className="mt-1.5 flex items-center gap-2">
             <div className="h-1.5 flex-1 rounded-full bg-[#E7E5E4]">
               <div
@@ -418,7 +485,14 @@ function ProductListMobileCard({
             Voir le détail
           </Link>
         )}
-        <ProductActionsMenu product={product} canWrite={canWrite} onAdjust={onAdjust} onDelete={onDelete} />
+        <ProductActionsMenu
+          product={product}
+          canWrite={canWrite}
+          onAdjust={onAdjust}
+          onDelete={onDelete}
+          onToggleFeatured={onToggleFeatured}
+          onToggleVisibility={onToggleVisibility}
+        />
       </div>
     </div>
   )
@@ -458,12 +532,14 @@ function SortableTh({
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function CatalogClient({
   products, categories, role, upsertProduct, deleteProduct, adjustStock, createCategory, updateCategory, deleteCategory,
+  toggleProductFeatured, toggleProductStorefrontVisibility,
 }: Props) {
   const [view, setViewState] = useState<ViewMode>('grid')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [sort, setSort] = useState<SortMode>('newest')
   const [stockFilter, setStockFilter] = useState<StockFilter>('all')
+  const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [allCategories, setAllCategories] = useState<Category[]>(categories)
   const [showCategoriesModal, setShowCategoriesModal] = useState(false)
@@ -537,6 +613,9 @@ export default function CatalogClient({
     else if (stockFilter === 'low_stock') result = result.filter(p => p.stock <= p.low_stock_alert && p.stock > 0)
     else if (stockFilter === 'out_of_stock') result = result.filter(p => p.stock === 0)
 
+    if (visibilityFilter === 'featured') result = result.filter(p => p.is_featured)
+    else if (visibilityFilter === 'hidden') result = result.filter(p => !p.is_visible_in_storefront)
+
     if (categoryFilter !== 'all') {
       result = result.filter(p => p.categories.some(c => c.id === categoryFilter))
     }
@@ -551,7 +630,7 @@ export default function CatalogClient({
       case 'stock_desc': result.sort((a, b) => b.stock - a.stock); break
     }
     return result
-  }, [allProducts, debouncedSearch, sort, stockFilter, categoryFilter])
+  }, [allProducts, debouncedSearch, sort, stockFilter, visibilityFilter, categoryFilter])
 
   function handleDelete(id: string) {
     const prev = allProducts
@@ -574,6 +653,36 @@ export default function CatalogClient({
   function openDelete(product: Product) {
     setDeleteError(null)
     setConfirmDelete(product)
+  }
+
+  function handleToggleFeatured(product: Product) {
+    const nextFeatured = !product.is_featured
+    const prev = allProducts
+    setAllProducts(list => list.map(p => (p.id === product.id ? { ...p, is_featured: nextFeatured } : p)))
+    startTransition(async () => {
+      const result = await toggleProductFeatured(product.id, nextFeatured, product.featured_label)
+      if (result?.error) {
+        setAllProducts(prev)
+        showToast(result.error)
+      } else {
+        showToast(nextFeatured ? '✓ Produit mis en avant' : '✓ Mise en avant retirée')
+      }
+    })
+  }
+
+  function handleToggleVisibility(product: Product) {
+    const nextVisible = !product.is_visible_in_storefront
+    const prev = allProducts
+    setAllProducts(list => list.map(p => (p.id === product.id ? { ...p, is_visible_in_storefront: nextVisible } : p)))
+    startTransition(async () => {
+      const result = await toggleProductStorefrontVisibility(product.id, nextVisible)
+      if (result?.error) {
+        setAllProducts(prev)
+        showToast(result.error)
+      } else {
+        showToast(nextVisible ? '✓ Produit affiché dans la boutique' : '✓ Produit masqué de la boutique')
+      }
+    })
   }
 
   const selectClass =
@@ -709,6 +818,35 @@ export default function CatalogClient({
             <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
           </div>
         )}
+
+        <div className="flex w-full items-center border border-[#E7E5E4] rounded-lg overflow-hidden sm:w-auto">
+          <button
+            onClick={() => setVisibilityFilter('all')}
+            className={`flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-sm transition-colors sm:flex-none ${
+              visibilityFilter === 'all' ? 'bg-[#0B5E46] text-white' : 'text-[#78716C] hover:bg-[#FAFAF9]'
+            }`}
+          >
+            Tous
+          </button>
+          <button
+            onClick={() => setVisibilityFilter('featured')}
+            className={`flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-sm transition-colors sm:flex-none ${
+              visibilityFilter === 'featured' ? 'bg-[#0B5E46] text-white' : 'text-[#78716C] hover:bg-[#FAFAF9]'
+            }`}
+          >
+            <Star className="w-3.5 h-3.5" />
+            En vedette
+          </button>
+          <button
+            onClick={() => setVisibilityFilter('hidden')}
+            className={`flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-sm transition-colors sm:flex-none ${
+              visibilityFilter === 'hidden' ? 'bg-[#0B5E46] text-white' : 'text-[#78716C] hover:bg-[#FAFAF9]'
+            }`}
+          >
+            <EyeOff className="w-3.5 h-3.5" />
+            Masqués
+          </button>
+        </div>
       </div>
 
       {/* Vue À RÉAPPROVISIONNER */}
@@ -817,7 +955,7 @@ export default function CatalogClient({
           </p>
           <p className="text-sm text-[#78716C] mb-4">Essayez d&apos;autres termes ou réinitialisez les filtres</p>
           <button
-            onClick={() => { setSearch(''); setStockFilter('all') }}
+            onClick={() => { setSearch(''); setStockFilter('all'); setVisibilityFilter('all') }}
             className="btn-secondary text-sm"
           >
             Réinitialiser les filtres
@@ -833,6 +971,8 @@ export default function CatalogClient({
               onEdit={setModal}
               onAdjust={setAdjustProduct}
               onDelete={openDelete}
+              onToggleFeatured={handleToggleFeatured}
+              onToggleVisibility={handleToggleVisibility}
             />
           ))}
         </div>
@@ -848,6 +988,8 @@ export default function CatalogClient({
                 onEdit={setModal}
                 onAdjust={setAdjustProduct}
                 onDelete={openDelete}
+                onToggleFeatured={handleToggleFeatured}
+                onToggleVisibility={handleToggleVisibility}
               />
             ))}
           </div>
@@ -899,6 +1041,12 @@ export default function CatalogClient({
                         <p className="font-medium text-[#1C1917]">{p.name}</p>
                         <VariantChips variants={p.variants} />
                         <CategoryBadges categories={p.categories} />
+                        {(p.is_featured || !p.is_visible_in_storefront) && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {p.is_featured && <FeaturedBadge product={p} />}
+                            {!p.is_visible_in_storefront && <HiddenBadge />}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 font-semibold text-[#1C1917] whitespace-nowrap">{p.price} DT</td>
                       <td className="px-4 py-3 text-[#78716C]">
@@ -948,7 +1096,14 @@ export default function CatalogClient({
                               <Pencil className="w-4 h-4" />
                             </button>
                           )}
-                          <ProductActionsMenu product={p} canWrite={canWrite} onAdjust={setAdjustProduct} onDelete={openDelete} />
+                          <ProductActionsMenu
+                            product={p}
+                            canWrite={canWrite}
+                            onAdjust={setAdjustProduct}
+                            onDelete={openDelete}
+                            onToggleFeatured={handleToggleFeatured}
+                            onToggleVisibility={handleToggleVisibility}
+                          />
                         </div>
                       </td>
                     </tr>

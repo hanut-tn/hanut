@@ -28,6 +28,9 @@ const ProductSchema = z.object({
   image_url: z.string().url('URL de l’image invalide').max(2048).optional().nullable(),
   images_gallery: z.array(z.string().url('URL de galerie invalide').max(2048)).max(5, 'Maximum 5 photos supplémentaires.').optional(),
   categoryIds: z.array(z.string().uuid()).optional(),
+  is_featured: z.boolean().optional(),
+  featured_label: z.string().trim().max(20, 'Le label ne doit pas dépasser 20 caractères.').optional().nullable(),
+  is_visible_in_storefront: z.boolean().optional(),
 })
 
 const UpdateProductSchema = ProductSchema.extend({
@@ -68,6 +71,9 @@ export async function upsertProduct(input: ProductInput): Promise<{ error?: stri
     image_url: product.image_url ?? null,
     images_gallery: product.images_gallery ?? [],
     description: product.description ?? null,
+    is_featured: product.is_featured ?? false,
+    featured_label: product.featured_label ?? null,
+    is_visible_in_storefront: product.is_visible_in_storefront ?? true,
   }
 
   const validatedProductId = 'id' in product && typeof product.id === 'string'
@@ -93,14 +99,21 @@ export async function upsertProduct(input: ProductInput): Promise<{ error?: stri
     })
     if (error) return { error: error.message }
 
-    // images_gallery n'est pas géré par la RPC update_product (non modifiée
+    // images_gallery, is_featured, featured_label et is_visible_in_storefront
+    // ne sont pas gérés par la RPC update_product (non modifiée
     // volontairement) — mise à jour séparée, même pattern que categoryIds.
-    if (product.images_gallery !== undefined) {
-      const { error: galleryError } = await supabase.from('products')
-        .update({ images_gallery: product.images_gallery })
+    const extraUpdate: Record<string, unknown> = {}
+    if (product.images_gallery !== undefined) extraUpdate.images_gallery = product.images_gallery
+    if (product.is_featured !== undefined) extraUpdate.is_featured = product.is_featured
+    if (product.featured_label !== undefined) extraUpdate.featured_label = product.featured_label
+    if (product.is_visible_in_storefront !== undefined) extraUpdate.is_visible_in_storefront = product.is_visible_in_storefront
+
+    if (Object.keys(extraUpdate).length > 0) {
+      const { error: extraError } = await supabase.from('products')
+        .update(extraUpdate)
         .eq('id', validatedProductId)
         .eq('seller_id', context.sellerId)
-      if (galleryError) return { error: galleryError.message }
+      if (extraError) return { error: extraError.message }
     }
   } else {
     const { data, error } = await supabase.from('products')
@@ -131,6 +144,61 @@ export async function upsertProduct(input: ProductInput): Promise<{ error?: stri
 
   revalidatePath('/catalog')
   if (productId) revalidatePath(`/catalog/${productId}`)
+  revalidateTag(`dashboard-${context.sellerId}`)
+  return {}
+}
+
+// Actions dédiées à la mise en avant / au masquage — utilisées par le menu
+// rapide du catalogue (⋯), sans passer par le formulaire complet.
+// Elles renvoient { error? } comme le reste des actions de ce fichier
+// (contrairement à Promise<void>) pour que l'UI puisse afficher une erreur
+// si la mise à jour échoue (RLS, réseau...) plutôt que d'échouer en silence.
+
+export async function toggleProductFeatured(
+  productId: string,
+  isFeatured: boolean,
+  label?: string | null
+): Promise<{ error?: string }> {
+  const context = await getUserContext()
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
+
+  if (label != null && label.trim().length > 20) {
+    return { error: 'Le label ne doit pas dépasser 20 caractères.' }
+  }
+
+  const supabase = await createServerClient()
+  const { error } = await supabase.from('products')
+    .update({ is_featured: isFeatured, featured_label: isFeatured ? (label?.trim() || null) : null })
+    .eq('id', productId)
+    .eq('seller_id', context.sellerId)
+  if (error) return { error: error.message }
+
+  revalidatePath('/catalog')
+  revalidateTag(`dashboard-${context.sellerId}`)
+  return {}
+}
+
+export async function toggleProductStorefrontVisibility(
+  productId: string,
+  isVisible: boolean
+): Promise<{ error?: string }> {
+  const context = await getUserContext()
+  if (!context) return { error: 'Non autorisé' }
+  if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
+  const activeCheck = requireActive(context)
+  if (activeCheck) return activeCheck
+
+  const supabase = await createServerClient()
+  const { error } = await supabase.from('products')
+    .update({ is_visible_in_storefront: isVisible })
+    .eq('id', productId)
+    .eq('seller_id', context.sellerId)
+  if (error) return { error: error.message }
+
+  revalidatePath('/catalog')
   revalidateTag(`dashboard-${context.sellerId}`)
   return {}
 }

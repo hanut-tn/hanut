@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Upload, Plus, Trash2, Info, Boxes, Settings2, Tag } from 'lucide-react'
+import { X, Upload, Plus, Trash2, Info, Boxes, Settings2, Tag, Eye, EyeOff } from 'lucide-react'
 import type { Product, ProductVariant, Category } from '@hanut/types'
 import type { ProductInput } from '@/app/(dashboard)/catalog/actions'
 import { uploadProductImage } from '@/app/(dashboard)/catalog/actions'
@@ -36,11 +36,25 @@ const EMPTY: ProductInput = {
   variants: [],
   image_url: null,
   description: '',
+  is_featured: false,
+  featured_label: null,
+  is_visible_in_storefront: true,
 }
 
 type GalleryItem = { url: string; file: File | null }
 
 const MAX_GALLERY_IMAGES = 5
+
+const FEATURED_LABELS = [
+  'En vedette',
+  'Coup de cœur',
+  'Nouveauté',
+  'Best-seller',
+  'Promo',
+  'Exclusif',
+  'Limité',
+  'Populaire',
+]
 
 export default function ProductModal({ product, onClose, onSave, allCategories, productCategoryIds, onManageCategories }: Props) {
   const [form, setForm] = useState<ProductInput>(
@@ -56,8 +70,14 @@ export default function ProductModal({ product, onClose, onSave, allCategories, 
           image_url: product.image_url ?? null,
           description: product.description ?? '',
           categoryIds: allCategories ? (productCategoryIds ?? []) : undefined,
+          is_featured: product.is_featured,
+          featured_label: product.featured_label,
+          is_visible_in_storefront: product.is_visible_in_storefront,
         }
       : { ...EMPTY, categoryIds: allCategories ? [] : undefined }
+  )
+  const [customLabelMode, setCustomLabelMode] = useState(
+    !!product?.featured_label && !FEATURED_LABELS.includes(product.featured_label)
   )
   const [tab, setTab] = useState<Tab>('infos')
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -678,6 +698,113 @@ export default function ProductModal({ product, onClose, onSave, allCategories, 
                     </span>
                   </div>
                 )}
+
+                {/* Visibilité boutique */}
+                <div>
+                  <label className="block text-sm font-medium text-[#1C1917] mb-2">
+                    Visibilité boutique
+                  </label>
+                  <div className="space-y-2">
+                    <label
+                      className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-colors ${
+                        form.is_visible_in_storefront !== false
+                          ? 'border-[#16A34A] bg-[#F0FDF4]'
+                          : 'border-[#E7E5E4] hover:border-[#16A34A]/50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="storefront-visibility"
+                        className="sr-only"
+                        checked={form.is_visible_in_storefront !== false}
+                        onChange={() => set('is_visible_in_storefront', true)}
+                      />
+                      <Eye className="w-4 h-4 mt-0.5 shrink-0 text-[#16A34A]" />
+                      <span className="text-sm font-medium text-[#1C1917]">Visible dans ma boutique</span>
+                    </label>
+                    <label
+                      className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-colors ${
+                        form.is_visible_in_storefront === false
+                          ? 'border-[#78716C] bg-[#FAFAF9]'
+                          : 'border-[#E7E5E4] hover:border-[#78716C]/50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="storefront-visibility"
+                        className="sr-only"
+                        checked={form.is_visible_in_storefront === false}
+                        onChange={() => set('is_visible_in_storefront', false)}
+                      />
+                      <EyeOff className="w-4 h-4 mt-0.5 shrink-0 text-[#78716C]" />
+                      <div>
+                        <span className="block text-sm font-medium text-[#1C1917]">Masqué de la boutique</span>
+                        <span className="text-xs text-[#78716C]">
+                          Le produit reste dans votre catalogue mais vos clients ne le verront pas.
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Mise en avant */}
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-[#1C1917]">Mettre en avant</label>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={form.is_featured ?? false}
+                      onClick={() => set('is_featured', !(form.is_featured ?? false))}
+                      className={`relative inline-flex h-6 w-11 shrink-0 touch-manipulation items-center rounded-full transition-colors ${
+                        form.is_featured ? 'bg-[#16A34A]' : 'bg-[#E7E5E4]'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                          form.is_featured ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-[#78716C]">
+                    Le produit apparaît en premier dans la boutique avec un badge.
+                  </p>
+
+                  {form.is_featured && (
+                    <div className="mt-3">
+                      <label className="block text-xs font-medium text-[#1C1917] mb-1">Label du badge</label>
+                      <select
+                        className="input"
+                        value={customLabelMode ? 'custom' : (form.featured_label ?? '')}
+                        onChange={e => {
+                          if (e.target.value === 'custom') {
+                            setCustomLabelMode(true)
+                            set('featured_label', '')
+                          } else {
+                            setCustomLabelMode(false)
+                            set('featured_label', e.target.value || null)
+                          }
+                        }}
+                      >
+                        <option value="">En vedette (par défaut)</option>
+                        {FEATURED_LABELS.map(l => (
+                          <option key={l} value={l}>{l}</option>
+                        ))}
+                        <option value="custom">Personnalisé…</option>
+                      </select>
+                      {customLabelMode && (
+                        <input
+                          className="input mt-2"
+                          value={form.featured_label ?? ''}
+                          onChange={e => set('featured_label', e.target.value.slice(0, 20))}
+                          placeholder="Ex: Édition limitée"
+                          maxLength={20}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </div>

@@ -26,6 +26,8 @@ type DbProduct = {
   low_stock_alert: number
   variants: DbVariant[]
   product_categories: { category_id: string }[] | null
+  is_featured: boolean
+  featured_label: string | null
 }
 
 function toStorefrontProduct(p: DbProduct): StorefrontProduct {
@@ -50,6 +52,8 @@ function toStorefrontProduct(p: DbProduct): StorefrontProduct {
     maxPrice: Math.max(...candidates),
     categoryIds: (p.product_categories ?? []).map(pc => pc.category_id),
     images_gallery: p.images_gallery ?? [],
+    is_featured: p.is_featured,
+    featured_label: p.featured_label,
   }
 }
 
@@ -69,8 +73,10 @@ export default async function BoutiquePage() {
     getStorefrontData(),
     serviceClient
       .from('products')
-      .select('id, name, description, price, stock, variants, image_url, images_gallery, low_stock_alert, product_categories(category_id)')
+      .select('id, name, description, price, stock, variants, image_url, images_gallery, low_stock_alert, is_featured, featured_label, product_categories(category_id)')
       .eq('seller_id', context.sellerId)
+      .eq('is_visible_in_storefront', true)
+      .order('is_featured', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(12),
     serviceClient

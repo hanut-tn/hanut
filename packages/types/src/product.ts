@@ -19,6 +19,9 @@ export interface Product {
   images_gallery: string[]
   description?: string | null
   created_at: string
+  is_featured: boolean
+  featured_label: string | null
+  is_visible_in_storefront: boolean
 }
 
 export interface Category {

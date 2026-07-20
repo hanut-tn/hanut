@@ -40,6 +40,8 @@ function makeProduct(overrides: Partial<StorefrontProduct> = {}): StorefrontProd
     maxPrice: 50,
     categoryIds: [],
     images_gallery: [],
+    is_featured: false,
+    featured_label: null,
     ...overrides,
   }
 }

@@ -60,6 +60,21 @@ export default function DarkProductCard({ product, t, onSelect, onQuickAdd }: Te
             {t.shop.outOfStock}
           </span>
         )}
+        {product.is_featured && (
+          <div className="absolute top-2 left-2">
+            <span
+              className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5"
+              style={{
+                backgroundColor: 'transparent',
+                border: '1px solid var(--primary)',
+                color: 'var(--primary)',
+                textShadow: '0 0 8px currentColor',
+              }}
+            >
+              {product.featured_label || 'En vedette'}
+            </span>
+          </div>
+        )}
       </button>
 
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} className="px-3 pb-3 pt-2.5 flex flex-col gap-2 flex-1">

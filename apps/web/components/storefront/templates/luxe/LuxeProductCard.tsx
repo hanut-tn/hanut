@@ -53,6 +53,16 @@ export default function LuxeProductCard({ product, t, onSelect, onQuickAdd }: Te
             {t.shop.outOfStock}
           </span>
         )}
+        {product.is_featured && (
+          <div className="absolute top-3 left-0 right-0 flex justify-center">
+            <span
+              className="text-[10px] tracking-widest uppercase px-3 py-1 border"
+              style={{ borderColor: 'var(--primary)', color: 'var(--primary)', backgroundColor: 'var(--card-bg)' }}
+            >
+              {product.featured_label || 'En vedette'}
+            </span>
+          </div>
+        )}
       </button>
 
       <div className="px-4 py-4 flex flex-col items-center gap-1.5 flex-1">

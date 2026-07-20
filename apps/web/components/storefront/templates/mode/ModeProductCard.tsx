@@ -50,6 +50,16 @@ export default function ModeProductCard({ product, t, onSelect, onQuickAdd }: Te
             {t.shop.outOfStock}
           </span>
         )}
+        {product.is_featured && (
+          <div className="absolute top-0 left-0 right-0 flex justify-start p-2">
+            <span
+              className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5"
+              style={{ backgroundColor: 'var(--primary)', color: '#fff' }}
+            >
+              {product.featured_label || 'En vedette'}
+            </span>
+          </div>
+        )}
       </button>
 
       <div className="pt-2.5 flex flex-col gap-1">

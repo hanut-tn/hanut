@@ -61,7 +61,16 @@ export default function FreshProductCard({ product, t, onSelect, onQuickAdd }: T
             <span className="text-xs px-3 py-1 rounded-full font-bold bg-white text-red-600 shadow-sm">{t.shop.outOfStock}</span>
           </span>
         )}
-        {isNew && (
+        {product.is_featured ? (
+          <div className="absolute top-2 left-2">
+            <span
+              className="text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm"
+              style={{ backgroundColor: 'var(--primary)', color: '#fff' }}
+            >
+              ✨ {product.featured_label || 'En vedette'}
+            </span>
+          </div>
+        ) : isNew && (
           <span
             style={{ backgroundColor: 'var(--primary)' }}
             className="absolute top-2 start-2 text-[10px] px-2.5 py-1 rounded-full font-bold text-white shadow-sm flex items-center gap-1"

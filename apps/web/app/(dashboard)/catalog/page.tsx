@@ -12,6 +12,7 @@ import CatalogClient from '@/components/catalog/CatalogClient'
 import {
   upsertProduct, deleteProduct, adjustStock,
   getCategories, createCategory, updateCategory, deleteCategory,
+  toggleProductFeatured, toggleProductStorefrontVisibility,
 } from './actions'
 import type { Product, ProductWithCategories, Category } from '@hanut/types'
 
@@ -52,6 +53,8 @@ export default async function CatalogPage() {
       createCategory={createCategory}
       updateCategory={updateCategory}
       deleteCategory={deleteCategory}
+      toggleProductFeatured={toggleProductFeatured}
+      toggleProductStorefrontVisibility={toggleProductStorefrontVisibility}
     />
   )
 }

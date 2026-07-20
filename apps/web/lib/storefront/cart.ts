@@ -29,6 +29,8 @@ export interface StorefrontProduct {
   maxPrice: number
   categoryIds: string[]
   images_gallery: string[]
+  is_featured: boolean
+  featured_label: string | null
 }
 
 export interface CartItem {
