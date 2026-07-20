@@ -237,7 +237,7 @@ export default function AnalyticsClient({ initialData, plan, loadData, slug }: P
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <div className="flex min-w-0 items-center gap-2">
             <div className="flex min-w-0 gap-2 overflow-x-auto scrollbar-none">
-              {([7, 30, 90] as Period[]).map(p => (
+              {([7, 30, ...(plan !== 'starter' ? [90] : [])] as Period[]).map(p => (
                 <button
                   key={p}
                   onClick={() => { setPeriod(p); setCustomMode(false) }}

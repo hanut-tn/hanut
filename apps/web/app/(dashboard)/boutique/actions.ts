@@ -60,10 +60,19 @@ export async function saveStorefrontData(
   const parsedConfig = ConfigSchema.safeParse(config)
   if (!parsedConfig.success) return { error: parsedConfig.error.issues[0].message }
 
+  // Personnalisation boutique (templates hors Mode, couleur, logo, bannière)
+  // réservée au plan Pro — cf. audit limites de plan. L'UI bloque déjà ces
+  // contrôles pour Starter ; ce filet de sécurité serveur empêche un
+  // contournement direct de l'action.
+  const isStarter = context.plan === 'starter'
+  if (isStarter && parsedConfig.data.template && parsedConfig.data.template !== 'mode') {
+    return { error: 'Ce template est disponible uniquement sur le plan Pro.' }
+  }
+
   const shopName = (shopInfo.shop_name ?? '').trim()
   const shopDescription = (shopInfo.shop_description ?? '').trim()
-  const logoUrl = shopInfo.logo_url?.trim() || null
-  const bannerUrl = shopInfo.banner_url?.trim() || null
+  let logoUrl = shopInfo.logo_url?.trim() || null
+  let bannerUrl = shopInfo.banner_url?.trim() || null
 
   if (shopName.length > 100) return { error: 'Le nom de la boutique est trop long (100 caractères max).' }
   if (shopDescription.length > 300) return { error: 'La description est trop longue (300 caractères max).' }
@@ -94,6 +103,15 @@ export async function saveStorefrontData(
     ...DEFAULT_STOREFRONT_CONFIG,
     ...(existing?.storefront_config as Partial<StorefrontConfig> | null ?? {}),
     ...parsedConfig.data,
+  }
+
+  if (isStarter) {
+    // Filet de sécurité serveur, même logique que le blocage de template :
+    // un Starter ne doit jamais pouvoir enregistrer une couleur, un logo ou
+    // une bannière personnalisés, quel que soit ce qui a été envoyé.
+    nextConfig.primary_color = DEFAULT_STOREFRONT_CONFIG.primary_color
+    logoUrl = null
+    bannerUrl = null
   }
 
   const { error } = await supabase

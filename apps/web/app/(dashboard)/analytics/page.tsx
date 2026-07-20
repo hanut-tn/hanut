@@ -38,18 +38,18 @@ export default async function AnalyticsPage() {
   from.setDate(from.getDate() - 30)
   from.setHours(0, 0, 0, 0)
 
-  const [{ data: raw }, { data: seller }] = await Promise.all([
-    supabase.rpc('get_analytics_data', {
-      p_seller_id: context.sellerId,
-      p_from: from.toISOString(),
-      p_to: now.toISOString(),
-    }),
+  // Passe par fetchAnalyticsData (pas un appel RPC direct) pour que le
+  // plafond de jours et le retrait des top-stats côté plan Starter
+  // s'appliquent aussi au chargement initial de la page, pas seulement aux
+  // rechargements déclenchés depuis le client.
+  const [raw, { data: seller }] = await Promise.all([
+    fetchAnalyticsData(from.toISOString(), now.toISOString()),
     supabase.from('sellers').select('slug').eq('id', context.sellerId).single(),
   ])
 
   return (
     <AnalyticsClient
-      initialData={(raw as AnalyticsData) ?? EMPTY_DATA}
+      initialData={raw ?? EMPTY_DATA}
       plan={context.plan}
       loadData={fetchAnalyticsData}
       slug={seller?.slug ?? null}

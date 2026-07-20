@@ -22,6 +22,7 @@ type Props = {
   categories: Category[]
   initialConfig: StorefrontConfig
   initialShopInfo: ShopInfo
+  plan: 'starter' | 'pro' | 'business'
 }
 
 type EditorStep = 'style' | 'color' | 'identity'
@@ -34,7 +35,7 @@ const STEPS: { key: EditorStep; label: string }[] = [
   { key: 'identity', label: 'Identité' },
 ]
 
-export default function BoutiqueEditor({ seller, products, categories, initialConfig, initialShopInfo }: Props) {
+export default function BoutiqueEditor({ seller, products, categories, initialConfig, initialShopInfo, plan }: Props) {
   const [config, setConfig] = useState<StorefrontConfig>(initialConfig)
   const [shopInfo, setShopInfo] = useState<ShopInfo>(initialShopInfo)
   const [isSaving, setIsSaving] = useState(false)
@@ -103,8 +104,8 @@ export default function BoutiqueEditor({ seller, products, categories, initialCo
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
-        {activeStep === 'style' && <StyleStep config={config} onChange={setConfig} />}
-        {activeStep === 'color' && <ColorStep config={config} onChange={setConfig} />}
+        {activeStep === 'style' && <StyleStep config={config} onChange={setConfig} plan={plan} />}
+        {activeStep === 'color' && <ColorStep config={config} onChange={setConfig} plan={plan} />}
         {activeStep === 'identity' && (
           <IdentityStep
             shopInfo={shopInfo}
@@ -113,6 +114,7 @@ export default function BoutiqueEditor({ seller, products, categories, initialCo
             bannerUploading={bannerUploading}
             onLogoFile={file => uploadImage(file, 'logo_url')}
             onBannerFile={file => uploadImage(file, 'banner_url')}
+            plan={plan}
           />
         )}
       </div>

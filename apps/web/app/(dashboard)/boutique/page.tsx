@@ -96,6 +96,7 @@ export default async function BoutiquePage() {
       categories={(categories ?? []) as Category[]}
       initialConfig={config}
       initialShopInfo={shopInfo}
+      plan={context.plan}
     />
   )
 }
