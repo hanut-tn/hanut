@@ -258,7 +258,13 @@ export default function StorefrontShell({
           plans Pro/Business sur la boutique publique. Le toggle langue vit
           désormais dans le header de chaque template, pas ici. */}
       {!hideTopBar && showHanutBranding && (
-        <div className="sticky top-0 z-30 bg-white border-b border-gray-100 flex items-center justify-between px-4 h-10">
+        <div
+          className="sticky top-0 z-30 flex items-center justify-between px-4 h-10"
+          style={{
+            backgroundColor: 'var(--page-bg)',
+            borderBottom: '1px solid color-mix(in srgb, var(--text-primary) 10%, transparent)',
+          }}
+        >
           <Link href="/" target="_blank" className="flex items-center gap-1.5" aria-label="Hanut">
             <span className="text-sm font-bold text-brand-600">🛍️ Hanut</span>
           </Link>
@@ -415,11 +421,23 @@ export default function StorefrontShell({
       )}
 
       {/* Footer — toujours présent (marketing gratuit), lien cliquable pour
-          Starter, mention discrète et non cliquable pour Pro/Business. */}
-      <footer className="py-6 text-center border-t border-gray-100 bg-white">
+          Starter, mention discrète et non cliquable pour Pro/Business.
+          Couleurs pilotées par les CSS vars du template actif : un fond
+          blanc en dur ici cassait le thème Dark (bandeau blanc éclatant au
+          bas d'une boutique entièrement noire). */}
+      <footer
+        className="py-6 text-center"
+        style={{
+          backgroundColor: 'var(--page-bg)',
+          borderTop: '1px solid color-mix(in srgb, var(--text-primary) 10%, transparent)',
+        }}
+      >
         <div className="flex items-center justify-center gap-4">
           {showHanutBranding ? (
-            <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-[#78716C] hover:text-gray-600 transition-colors">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-xs text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] transition-colors"
+            >
               <Image src="/icon-16.png" alt="" width={16} height={16} unoptimized style={{ borderRadius: '3px' }} />
               Propulsé par Hanut
             </Link>
@@ -428,7 +446,10 @@ export default function StorefrontShell({
               Propulsé par Hanut
             </span>
           )}
-          <Link href="/privacy" className="text-xs text-[#78716C] hover:text-gray-600 transition-colors">
+          <Link
+            href="/privacy"
+            className="text-xs text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] transition-colors"
+          >
             Confidentialité
           </Link>
         </div>
