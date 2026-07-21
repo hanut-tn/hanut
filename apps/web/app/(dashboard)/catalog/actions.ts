@@ -40,7 +40,7 @@ const UpdateProductSchema = ProductSchema.extend({
 export type ProductVariant = z.infer<typeof ProductVariantSchema>
 export type ProductInput = z.infer<typeof ProductSchema> & { id?: string }
 
-export async function upsertProduct(input: ProductInput): Promise<{ error?: string }> {
+export async function upsertProduct(input: ProductInput): Promise<{ error?: string; productId?: string }> {
   const context = await getUserContext()
   if (!context) return { error: 'Non autorisé' }
   if (context.role === 'readonly') return { error: 'Action réservée aux admins et opérateurs' }
@@ -145,7 +145,7 @@ export async function upsertProduct(input: ProductInput): Promise<{ error?: stri
   revalidatePath('/catalog')
   if (productId) revalidatePath(`/catalog/${productId}`)
   revalidateTag(`dashboard-${context.sellerId}`)
-  return {}
+  return { productId }
 }
 
 // Actions dédiées à la mise en avant / au masquage — utilisées par le menu

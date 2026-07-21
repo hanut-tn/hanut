@@ -117,7 +117,7 @@ describe('middleware — redirection /billing quand démo expirée', () => {
       auth: {
         getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1', email_confirmed_at: '2026-01-01T00:00:00.000Z' } } }),
       },
-      from: vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: expiredDate })),
+      from: vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: expiredDate, onboarding_completed: true })),
     })
 
     const response = await middleware(requestFor('/dashboard'))
@@ -140,7 +140,10 @@ describe('middleware — redirection /billing quand démo expirée', () => {
       from: vi.fn((table: string) => {
         if (table === 'sellers') {
           sellerCallCount += 1
-          return sellerCallCount === 1 ? ownerQuery : sellerQuery
+          // Appel 1 = vérification onboarding (nouveau, pas de ligne sellers
+          // pour un membre d'équipe), appel 2 = lookup owner existant pour
+          // subscription_end (même raison : null).
+          return sellerCallCount <= 2 ? ownerQuery : sellerQuery
         }
         if (table === 'team_members') return membershipQuery
         throw new Error(`Unexpected table: ${table}`)
@@ -161,7 +164,7 @@ describe('middleware — redirection /billing quand démo expirée', () => {
       auth: {
         getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1', email_confirmed_at: '2026-01-01T00:00:00.000Z' } } }),
       },
-      from: vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: futureDate })),
+      from: vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: futureDate, onboarding_completed: true })),
     })
 
     const response = await middleware(requestFor('/dashboard'))

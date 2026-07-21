@@ -9,6 +9,8 @@ export interface Seller {
   subscription_end?: string | null
   slug?: string | null
   onboarding_completed?: boolean
+  /** Étape courante de l'onboarding obligatoire (/setup) : 1=Bienvenue, 2=Style, 3=Produit, 4=Live, 5=Terminé. */
+  onboarding_step?: number
   onboarding_steps?: {
     link_copied?: boolean
     first_order?: boolean

@@ -165,6 +165,28 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(verifyUrl)
   }
 
+  // Onboarding obligatoire (/setup) avant tout accès au dashboard.
+  // /setup lui-même est exempté (sinon boucle de redirection infinie) —
+  // c'est la seule route qui nécessite une session mais pas un onboarding
+  // complété. Vérifié en base plutôt que via un claim JWT : contrairement à
+  // subscription_end (qui évolue lentement), onboarding_completed doit être
+  // reflété immédiatement après le clic "Terminer" — un claim périmé
+  // jusqu'au prochain rafraîchissement de session (jusqu'à 1h) renverrait le
+  // vendeur vers /setup juste après l'avoir complété.
+  if (!pathname.startsWith('/setup')) {
+    const { data: sellerRow } = await supabase
+      .from('sellers')
+      .select('onboarding_completed')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    // Pas de ligne sellers à cet id → membre d'équipe (ou cas limite) :
+    // l'onboarding ne concerne que le propriétaire de la boutique.
+    if (sellerRow && !sellerRow.onboarding_completed) {
+      return NextResponse.redirect(new URL('/setup', req.url))
+    }
+  }
+
   // Vérification démo expirée — uniquement pour les routes non-billing.
   if (!pathname.startsWith('/billing')) {
     // Lire subscription_end depuis les claims JWT (0 requête DB).

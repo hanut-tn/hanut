@@ -139,7 +139,7 @@ describe('middleware auth boundaries', () => {
       auth: {
         getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1', email_confirmed_at: '2026-01-01T00:00:00.000Z' } } }),
       },
-      from: vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: null })),
+      from: vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: null, onboarding_completed: true })),
     })
 
     const response = await middleware(requestFor('/dashboard'))
@@ -153,13 +153,53 @@ describe('middleware auth boundaries', () => {
       auth: {
         getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1', email_confirmed_at: '2026-01-01T00:00:00.000Z' } } }),
       },
-      from: vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: expiredDate })),
+      from: vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: expiredDate, onboarding_completed: true })),
     })
 
     const response = await middleware(requestFor('/dashboard'))
 
     expect(response.status).toBe(307)
     expect(response.headers.get('location')).toBe('https://hanut.test/billing')
+  })
+
+  it('redirects to /setup when the seller has not completed onboarding', async () => {
+    supabaseSsrMock.createServerClient.mockReturnValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1', email_confirmed_at: '2026-01-01T00:00:00.000Z' } } }),
+      },
+      from: vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: null, onboarding_completed: false })),
+    })
+
+    const response = await middleware(requestFor('/dashboard'))
+
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe('https://hanut.test/setup')
+  })
+
+  it('never redirects /setup itself, even when onboarding is not completed', async () => {
+    supabaseSsrMock.createServerClient.mockReturnValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'seller-1', email_confirmed_at: '2026-01-01T00:00:00.000Z' } } }),
+      },
+      from: vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: null, onboarding_completed: false })),
+    })
+
+    const response = await middleware(requestFor('/setup'))
+
+    expect(response.headers.get('location')).toBeNull()
+  })
+
+  it('does not gate team members (no sellers row at their own user id) on onboarding', async () => {
+    supabaseSsrMock.createServerClient.mockReturnValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'member-1', email_confirmed_at: '2026-01-01T00:00:00.000Z' } } }),
+      },
+      from: vi.fn().mockReturnValue(chainMaybeSingle(null)),
+    })
+
+    const response = await middleware(requestFor('/dashboard'))
+
+    expect(response.headers.get('location')).toBeNull()
   })
 
   it('allows /api/auth/callback without session', async () => {
@@ -205,7 +245,11 @@ describe('middleware auth boundaries', () => {
     const from = vi.fn((table: string) => {
       if (table === 'sellers') {
         sellerQueryCount += 1
-        return sellerQueryCount === 1 ? ownerQuery : sellerQuery
+        // Appel 1 = vérification onboarding (nouveau), appel 2 = lookup
+        // propriétaire pour subscription_end (existant) — les deux
+        // interrogent l'id du membre et doivent renvoyer null (pas de ligne
+        // sellers à cet id, seule l'équipe l'a).
+        return sellerQueryCount <= 2 ? ownerQuery : sellerQuery
       }
       if (table === 'team_members') return membershipQuery
       throw new Error(`Unexpected table: ${table}`)
@@ -233,7 +277,7 @@ describe('middleware auth boundaries', () => {
     const payload = btoa(JSON.stringify({ sub: 'seller-1', subscription_end: future }))
     const jwtWithClaims = `${header}.${payload}.fake-sig`
 
-    const fromSpy = vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: future }))
+    const fromSpy = vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: future, onboarding_completed: true }))
 
     supabaseSsrMock.createServerClient.mockReturnValue({
       auth: {
@@ -246,7 +290,12 @@ describe('middleware auth boundaries', () => {
     const response = await middleware(requestFor('/dashboard'))
 
     expect(response.headers.get('location')).toBeNull()
-    expect(fromSpy).not.toHaveBeenCalled()
+    // La vérification onboarding_completed n'a pas d'équivalent claim JWT
+    // (staleness inacceptable pour un gate one-shot, cf. commentaire dans
+    // middleware.ts) — elle interroge donc toujours la DB, même quand le
+    // claim subscription_end évite sa propre requête. 1 appel, pas 0.
+    expect(fromSpy).toHaveBeenCalledTimes(1)
+    expect(fromSpy).toHaveBeenCalledWith('sellers')
   })
 
   it('re-verifies against the DB when the JWT claim says expired, and lets the seller through if the DB shows an active subscription', async () => {
@@ -260,7 +309,7 @@ describe('middleware auth boundaries', () => {
     const payload = btoa(JSON.stringify({ sub: 'seller-1', subscription_end: expiredInClaim }))
     const staleJwt = `${header}.${payload}.fake-sig`
 
-    const fromSpy = vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: activeInDb }))
+    const fromSpy = vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: activeInDb, onboarding_completed: true }))
 
     supabaseSsrMock.createServerClient.mockReturnValue({
       auth: {
@@ -282,7 +331,7 @@ describe('middleware auth boundaries', () => {
     const payload = btoa(JSON.stringify({ sub: 'seller-1' })) // pas de subscription_end
     const jwtWithoutClaims = `${header}.${payload}.fake-sig`
 
-    const fromSpy = vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: future }))
+    const fromSpy = vi.fn().mockReturnValue(chainMaybeSingle({ subscription_end: future, onboarding_completed: true }))
 
     supabaseSsrMock.createServerClient.mockReturnValue({
       auth: {
