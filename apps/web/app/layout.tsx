@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Noto_Sans_Arabic } from 'next/font/google'
+import { Inter, Noto_Sans_Arabic, Playfair_Display } from 'next/font/google'
 import { headers } from 'next/headers'
 import { CspNonceProvider } from '@/components/providers/CspNonceProvider'
 import './globals.css'
@@ -11,6 +11,26 @@ import './globals.css'
 const notoSansArabic = Noto_Sans_Arabic({
   subsets: ['arabic'],
   variable: '--font-noto-arabic',
+  display: 'swap',
+})
+
+// Police par défaut du site (tailwind.config.ts → fontFamily.sans référence
+// déjà var(--font-inter), mais la variable n'était définie nulle part —
+// le site retombait donc silencieusement sur system-ui).
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+})
+
+// Réservée aux titres émotionnels de la landing (Hero, storytelling Sarra,
+// CTA final) via la classe utilitaire .font-playfair — jamais pour du texte
+// courant.
+const playfairDisplay = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-playfair',
+  style: ['normal', 'italic'],
+  weight: ['400', '600', '700'],
   display: 'swap',
 })
 
@@ -45,7 +65,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const nonce = (await headers()).get('x-nonce') ?? undefined
 
   return (
-    <html lang="fr" className={notoSansArabic.variable}>
+    <html lang="fr" className={`${notoSansArabic.variable} ${inter.variable} ${playfairDisplay.variable}`}>
       <body>
         <CspNonceProvider nonce={nonce}>
           {children}

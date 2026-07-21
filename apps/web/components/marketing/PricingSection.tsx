@@ -46,6 +46,21 @@ const PLANS: Plan[] = [
 export default function PricingSection() {
   return (
     <section id="pricing" className="bg-[#FAFAF9] px-4 py-24 sm:px-6 sm:py-32">
+      <div className="mx-auto mb-16 max-w-lg text-center">
+        <h2 className="font-playfair text-4xl text-[#1C1917]">
+          Ce que ça vous coûte vraiment
+        </h2>
+        <div className="mt-8 rounded-2xl border border-red-100 bg-red-50 p-6">
+          <p className="leading-relaxed text-neutral-700">
+            Si vous perdez <strong>3 commandes par semaine</strong> à 60 DT chacune,
+            c&apos;est <strong className="text-red-600">720 DT perdus par mois.</strong>
+          </p>
+          <p className="mt-3 font-semibold text-brand-600">
+            Hanut Starter : 39 DT/mois.
+          </p>
+        </div>
+      </div>
+
       <div className="mx-auto grid max-w-6xl grid-cols-1 items-start gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14">
         <div className="lg:sticky lg:top-24">
           <span className="mb-5 inline-flex rounded-lg border border-brand-100 bg-white px-3 py-2 text-sm font-bold text-brand-700 shadow-sm">

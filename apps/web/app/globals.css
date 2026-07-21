@@ -61,12 +61,24 @@
     font-family: var(--font-noto-arabic), sans-serif;
   }
 
+  .font-playfair {
+    font-family: var(--font-playfair), Georgia, serif;
+  }
+
   .animate-slide-up {
     animation: hanut-slide-up 200ms ease-out;
   }
 
   .animate-fade-in {
     animation: hanut-fade-in 200ms ease-out;
+  }
+
+  .animate-cta-glow {
+    animation: hanut-cta-glow 2.4s ease-in-out infinite;
+  }
+
+  .animate-reveal {
+    animation: hanut-reveal 500ms ease-out both;
   }
 }
 
@@ -78,4 +90,21 @@
 @keyframes hanut-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes hanut-cta-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(22, 163, 74, 0.3); }
+  50%      { box-shadow: 0 0 40px rgba(22, 163, 74, 0.6); }
+}
+
+@keyframes hanut-reveal {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-cta-glow,
+  .animate-reveal {
+    animation: none;
+  }
 }

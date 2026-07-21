@@ -6,82 +6,83 @@ import {
   ArrowRight,
   BarChart3,
   Check,
-  ClipboardList,
-  Inbox,
+  Link2,
+  Moon,
   Palette,
   ShoppingBag,
-  ShoppingCart,
+  Sunrise,
   Truck,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import IPhoneFrame from './IPhoneFrame'
 
-type StepId = 'editor' | 'storefront' | 'checkout' | 'orders' | 'delivery' | 'analytics'
+type StepId = 'editor' | 'share' | 'order' | 'dashboard' | 'delivery' | 'analytics'
 
 type ShowcaseStep = {
   id: StepId
-  eyebrow: string
+  time: string
   title: string
-  description: string
-  bullets: string[]
+  subtitle: string
+  emotion: string
   icon: LucideIcon
 }
 
 const STEPS: ShowcaseStep[] = [
   {
     id: 'editor',
-    eyebrow: 'Éditeur boutique',
-    title: 'Créez votre boutique.',
-    description: 'Choisissez un template, votre couleur, logo et bannière. Votre boutique est prête en 2 minutes, sans aucune compétence technique.',
-    bullets: ['4 templates visuels', 'Couleur personnalisée', 'Logo et bannière'],
+    time: '2 minutes',
+    title: 'Votre boutique est prête.',
+    subtitle: 'Choisissez votre style. Ajoutez vos produits. Partagez votre lien.',
+    emotion: 'Facilité',
     icon: Palette,
   },
   {
-    id: 'storefront',
-    eyebrow: 'Lien public',
-    title: 'Partagez votre lien.',
-    description: 'Un lien unique hanut.tn/s/votre-boutique à mettre dans votre bio Instagram ou statut WhatsApp. Le client ouvre, choisit ses produits et remplit son panier.',
-    bullets: ['Lien hanut.tn/s/...', 'Catalogue en direct', 'Compatible bio Instagram'],
-    icon: ShoppingBag,
+    id: 'share',
+    time: '1 lien',
+    title: 'Un lien. Dans votre bio. C’est tout.',
+    subtitle: 'hanut.tn/s/votre-boutique — partagez-le partout.',
+    emotion: 'Liberté',
+    icon: Link2,
   },
   {
-    id: 'checkout',
-    eyebrow: 'Formulaire client',
-    title: 'Vos clients commandent.',
-    description: 'Nom, téléphone, adresse, articles et total arrivent proprement. La commande est exploitable tout de suite.',
-    bullets: ['Adresse complète', 'Téléphone vérifié', 'Commande structurée'],
-    icon: ClipboardList,
+    id: 'order',
+    time: '23h47',
+    title: 'Votre client commande pendant que vous dormez.',
+    subtitle: 'La commande arrive. Le stock se met à jour. Vous ne faites rien.',
+    emotion: 'Magie',
+    icon: Moon,
   },
   {
-    id: 'orders',
-    eyebrow: 'Dashboard commandes',
-    title: 'Gérez les commandes.',
-    description: 'Vous voyez qui a commandé, quoi livrer, combien collecter et ce qui reste à traiter.',
-    bullets: ['Commandes centralisées', 'Clients attachés', 'Statuts visibles'],
-    icon: Inbox,
+    id: 'dashboard',
+    time: 'Le matin',
+    title: 'Tout est là. Rien n’est perdu.',
+    subtitle: '12 nouvelles commandes. Stock à jour. Clients centralisés.',
+    emotion: 'Soulagement',
+    icon: Sunrise,
   },
   {
     id: 'delivery',
-    eyebrow: 'Livraisons COD',
-    title: 'Suivez les livraisons.',
-    description: 'Gérez vos expéditions chez 5 transporteurs tunisiens. Vous savez exactement ce qui est collecté, en attente ou reversé.',
-    bullets: ['COD collecté / reversé', '5 transporteurs', 'Statut en temps réel'],
+    time: '1 clic',
+    title: 'La livraison, sans vous battre avec le livreur.',
+    subtitle: 'Suivez vos expéditions chez 5 transporteurs tunisiens.',
+    emotion: 'Contrôle',
     icon: Truck,
   },
   {
     id: 'analytics',
-    eyebrow: 'Pilotage',
-    title: 'Analysez vos ventes.',
-    description: 'Hanut montre vos meilleurs produits, votre chiffre d’affaires et la santé de vos livraisons.',
-    bullets: ['Chiffre d’affaires', 'Top produits', 'Livraison COD'],
+    time: 'Ce mois-ci',
+    title: 'Vous savez enfin ce qui marche.',
+    subtitle: 'Top produits, chiffre d’affaires, santé des livraisons.',
+    emotion: 'Puissance',
     icon: BarChart3,
   },
 ]
 
 const STEP_INDEX: Record<StepId, string> = {
   editor: '01',
-  storefront: '02',
-  checkout: '03',
-  orders: '04',
+  share: '02',
+  order: '03',
+  dashboard: '04',
   delivery: '05',
   analytics: '06',
 }
@@ -90,9 +91,9 @@ export default function StickyPhoneShowcase() {
   const [active, setActive] = useState<StepId>('editor')
   const stepRefs = useRef<Record<StepId, HTMLElement | null>>({
     editor: null,
-    storefront: null,
-    checkout: null,
-    orders: null,
+    share: null,
+    order: null,
+    dashboard: null,
     delivery: null,
     analytics: null,
   })
@@ -133,12 +134,12 @@ export default function StickyPhoneShowcase() {
               <ShoppingBag className="h-4 w-4" aria-hidden="true" />
               Expérience Hanut
             </span>
-            <h2 className="mx-auto max-w-[22rem] text-[2rem] font-extrabold leading-tight text-[#1C1917] sm:max-w-3xl sm:text-4xl lg:mx-0 lg:text-5xl">
-              Un seul flux, de votre produit à la livraison.
+            <h2 className="font-playfair mx-auto max-w-[22rem] text-[2rem] leading-tight text-[#1C1917] sm:max-w-3xl sm:text-4xl lg:mx-0 lg:text-5xl">
+              De votre produit à la livraison, sans rien perdre.
             </h2>
           </div>
           <p className="mx-auto mt-4 max-w-[22rem] text-base leading-relaxed text-neutral-500 sm:text-lg lg:mx-0 lg:mt-0">
-            Le téléphone reste le fil conducteur: à chaque étape, l’écran montre exactement
+            Le téléphone reste le fil conducteur : à chaque étape, l’écran montre exactement
             ce que Hanut apporte au vendeur et au client.
           </p>
         </div>
@@ -181,21 +182,18 @@ export default function StickyPhoneShowcase() {
                       </span>
                     </div>
 
-                    <p className="text-sm font-black text-brand-700">{step.eyebrow}</p>
-                    <h3 className="mt-3 text-xl font-extrabold leading-tight text-[#1C1917] sm:text-3xl">
+                    <div className="flex items-center gap-2">
+                      <p className="font-mono text-xs font-bold text-brand-700">{step.time}</p>
+                      <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-600">
+                        {step.emotion}
+                      </span>
+                    </div>
+                    <h3 className="font-playfair mt-3 text-xl leading-tight text-[#1C1917] sm:text-3xl">
                       {step.title}
                     </h3>
                     <p className="mt-4 max-w-xl text-base leading-relaxed text-neutral-500">
-                      {step.description}
+                      {step.subtitle}
                     </p>
-                    <div className="mt-5 flex flex-wrap gap-2 sm:mt-6">
-                      {step.bullets.map((bullet) => (
-                        <span key={bullet} className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm font-semibold text-neutral-700">
-                          <Check className="h-3.5 w-3.5 text-brand-600" aria-hidden />
-                          {bullet}
-                        </span>
-                      ))}
-                    </div>
                   </button>
                 </article>
               )
@@ -207,7 +205,7 @@ export default function StickyPhoneShowcase() {
               <div className="mb-5 rounded-[1.5rem] border border-neutral-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-xs font-black uppercase text-brand-700">{activeStep.eyebrow}</p>
+                    <p className="text-xs font-black uppercase text-brand-700">{activeStep.emotion}</p>
                     <p className="mt-1 text-sm font-semibold text-neutral-500">{STEP_INDEX[activeStep.id]} / 06</p>
                   </div>
                   <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
@@ -215,7 +213,16 @@ export default function StickyPhoneShowcase() {
                   </span>
                 </div>
               </div>
-              <PhoneFrame active={active} />
+              <IPhoneFrame>
+                <div key={active} className="phone-screen-enter h-full">
+                  {active === 'editor' && <EditorScreen />}
+                  {active === 'share' && <ShareScreen />}
+                  {active === 'order' && <OrderScreen />}
+                  {active === 'dashboard' && <DashboardScreen />}
+                  {active === 'delivery' && <DeliveryScreen />}
+                  {active === 'analytics' && <AnalyticsScreen />}
+                </div>
+              </IPhoneFrame>
               <div className="mt-7 text-center">
                 <Link
                   href="/register"
@@ -230,39 +237,6 @@ export default function StickyPhoneShowcase() {
         </div>
       </div>
     </section>
-  )
-}
-
-function PhoneFrame({ active, compact = false }: { active: StepId; compact?: boolean }) {
-  return (
-    <div className={`relative mx-auto aspect-[390/844] ${compact ? 'w-[13.5rem] sm:w-[15rem]' : 'w-[17rem] xl:w-[18rem]'}`} aria-hidden="true">
-      <div className="absolute -inset-5 rounded-[3.5rem] bg-white/70 shadow-[0_34px_80px_rgba(15,23,42,0.14)]" />
-      <div className="absolute -left-[5px] top-[18%] h-[8%] w-[5px] rounded-l-md bg-[#4B5563]" />
-      <div className="absolute -left-[5px] top-[29%] h-[12%] w-[5px] rounded-l-md bg-[#4B5563]" />
-      <div className="absolute -right-[5px] top-[28%] h-[12%] w-[5px] rounded-r-md bg-[#4B5563]" />
-
-      <div className="relative h-full rounded-[3.15rem] bg-[linear-gradient(135deg,#6B7280_0%,#111827_32%,#020617_68%,#9CA3AF_100%)] p-[2px] shadow-[0_30px_70px_rgba(15,23,42,0.28)]">
-        <div className="h-full rounded-[3rem] bg-[linear-gradient(180deg,#1F2937_0%,#030712_100%)] p-[5px]">
-          <div className="h-full rounded-[2.68rem] bg-black p-[2px]">
-            <div className="relative h-full overflow-hidden rounded-[2.48rem] bg-white ring-1 ring-black/5">
-              <div className="absolute left-1/2 top-3 z-30 flex h-6 w-[5.7rem] -translate-x-1/2 items-center justify-center rounded-full bg-black shadow-sm">
-                <span className="h-1.5 w-1.5 rounded-full bg-white/20" />
-              </div>
-              <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-[linear-gradient(180deg,rgba(255,255,255,0.72)_0%,rgba(255,255,255,0)_100%)]" />
-              <div key={active} className="phone-screen-enter h-full">
-                {active === 'editor' && <EditorScreen />}
-                {active === 'storefront' && <StorefrontScreen />}
-                {active === 'checkout' && <CheckoutScreen />}
-                {active === 'orders' && <OrdersScreen />}
-                {active === 'delivery' && <DeliveryScreen />}
-                {active === 'analytics' && <AnalyticsScreen />}
-              </div>
-              <div className="absolute bottom-3 left-1/2 z-20 h-1 w-24 -translate-x-1/2 rounded-full bg-neutral-200" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   )
 }
 
@@ -312,78 +286,87 @@ function EditorScreen() {
   )
 }
 
-function StorefrontScreen() {
+function ShareScreen() {
   return (
-    <div className="flex h-full flex-col bg-white">
-      <div className="flex items-center justify-between border-b border-neutral-100 px-5 pb-4 pt-12">
-        <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-sm font-black text-white">S</span>
-          <div>
-            <p className="text-sm font-black text-[#1C1917]">Boutique Sarra</p>
-            <p className="text-[10px] font-semibold text-neutral-500">Mode & accessoires</p>
-          </div>
+    <div className="flex h-full flex-col items-center justify-center bg-white px-6 text-center">
+      <span className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+        <Link2 className="h-7 w-7" aria-hidden="true" />
+      </span>
+      <p className="mt-5 text-xs font-black uppercase text-neutral-400">Votre lien public</p>
+      <p className="mt-2 rounded-full border border-brand-100 bg-brand-50 px-4 py-2 font-mono text-sm font-bold text-brand-700">
+        hanut.tn/s/boutique-sarra
+      </p>
+      <div className="mt-6 grid w-full grid-cols-2 gap-2">
+        <div className="rounded-xl border border-neutral-100 bg-[#FAFAF9] p-3">
+          <p className="text-[11px] font-black text-[#1C1917]">Bio Instagram</p>
+          <p className="mt-1 text-[10px] font-semibold text-neutral-500">Collé dans le profil</p>
         </div>
-        <span className="relative">
-          <ShoppingCart className="h-5 w-5 text-neutral-500" aria-hidden />
-          <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-[9px] font-black text-white">2</span>
-        </span>
-      </div>
-      <div className="grid flex-1 grid-cols-2 gap-2 bg-[#FAFAF9] p-3">
-        {[
-          ['Robe été', '85 DT', 'bg-rose-50 text-rose-300'],
-          ['Hijab satin', '35 DT', 'bg-brand-50 text-brand-300'],
-          ['Sac cuir', '120 DT', 'bg-amber-50 text-amber-300'],
-          ['Sneakers', '75 DT', 'bg-blue-50 text-blue-300'],
-        ].map(([name, price, cls]) => (
-          <div key={name} className="overflow-hidden rounded-xl border border-neutral-100 bg-white">
-            <div className={`flex h-20 items-center justify-center ${cls}`}>
-              <ShoppingBag className="h-7 w-7" aria-hidden />
-            </div>
-            <div className="p-2">
-              <p className="truncate text-[11px] font-black text-[#1C1917]">{name}</p>
-              <p className="text-xs font-black text-brand-700">{price}</p>
-              <div className="mt-2 rounded-md bg-brand-600 py-1 text-center text-[10px] font-black text-white">Ajouter</div>
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="mx-3 mb-8 rounded-2xl bg-brand-600 px-4 py-3 text-white">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-black">2 articles · 120 DT</span>
-          <ArrowRight className="h-4 w-4" aria-hidden />
+        <div className="rounded-xl border border-neutral-100 bg-[#FAFAF9] p-3">
+          <p className="text-[11px] font-black text-[#1C1917]">Statut WhatsApp</p>
+          <p className="mt-1 text-[10px] font-semibold text-neutral-500">Partagé en story</p>
         </div>
       </div>
     </div>
   )
 }
 
-function CheckoutScreen() {
+function OrderScreen() {
+  return (
+    <div className="h-full bg-[#0d1117] px-5 pt-14">
+      <p className="text-[10px] font-black uppercase tracking-wide text-white/40">23:47 · en ligne</p>
+      <div className="mt-5 rounded-2xl border border-brand-500/30 bg-white p-4 shadow-xl">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-600 text-white">
+            <Check className="h-5 w-5" strokeWidth={3} aria-hidden="true" />
+          </span>
+          <div>
+            <p className="text-sm font-black text-[#1C1917]">Nouvelle commande !</p>
+            <p className="text-[11px] font-semibold text-neutral-500">Boutique Sarra · à l&apos;instant</p>
+          </div>
+        </div>
+        <div className="mt-3 flex justify-between border-t border-neutral-100 pt-3 text-xs">
+          <span className="font-semibold text-neutral-500">Robe été × 1</span>
+          <span className="font-black text-[#1C1917]">85 DT</span>
+        </div>
+      </div>
+      <p className="mt-4 text-center text-[11px] font-semibold text-white/40">
+        Stock mis à jour automatiquement.
+      </p>
+    </div>
+  )
+}
+
+function DashboardScreen() {
   return (
     <div className="h-full bg-[#FAFAF9]">
-      <PhoneHeader title="Commande" subtitle="Formulaire client" />
-      <div className="px-4">
-        <div className="rounded-2xl border border-neutral-100 bg-white p-4 shadow-sm">
-          {[
-            ['Nom complet', 'Sarra Ben Ali'],
-            ['Téléphone', '22 345 678'],
-            ['Adresse', 'Rue de Marseille, Tunis'],
-            ['Ville', 'Tunis'],
-          ].map(([label, value]) => (
-            <div key={label} className="mb-3 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2">
-              <p className="text-[9px] font-black uppercase text-neutral-400">{label}</p>
-              <p className="text-xs font-bold text-[#1C1917]">{value}</p>
+      <PhoneHeader title="Commandes" subtitle="Dashboard Hanut" />
+      <div className="space-y-3 px-4">
+        {[
+          ['Fatima K.', 'Robe été + Hijab', '120 DT', 'Confirmée'],
+          ['Mehdi B.', 'Sac cuir', '120 DT', 'En livraison'],
+          ['Sarra A.', 'Sneakers', '75 DT', 'Livrée'],
+          ['Hamza T.', 'Hijab satin', '35 DT', 'À traiter'],
+        ].map(([name, order, total, status]) => (
+          <div key={name} className="rounded-2xl border border-neutral-100 bg-white p-3 shadow-sm">
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-black text-brand-700">
+                {name.slice(0, 1)}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-black text-[#1C1917]">{name}</p>
+                <p className="truncate text-xs font-semibold text-neutral-500">{order}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-black text-[#1C1917]">{total}</p>
+                <p className="text-[10px] font-bold text-brand-700">{status}</p>
+              </div>
             </div>
-          ))}
-          <div className="mt-4 rounded-xl bg-brand-600 py-3 text-center text-sm font-black text-white">
-            Confirmer la commande
           </div>
-        </div>
-        <div className="mt-3 rounded-2xl bg-white p-4 shadow-sm">
-          <div className="flex justify-between text-xs">
-            <span className="font-semibold text-neutral-500">2 articles</span>
-            <span className="font-black text-brand-700">120 DT</span>
-          </div>
-        </div>
+        ))}
+      </div>
+      <div className="mx-4 mt-4 rounded-2xl bg-[#10261D] p-4 text-white">
+        <p className="text-xs font-semibold text-white/70">Ce matin</p>
+        <p className="mt-1 text-2xl font-black">12 commandes</p>
       </div>
     </div>
   )
@@ -435,7 +418,7 @@ function DeliveryScreen() {
                     ? 'sticky-step-two border-neutral-200 bg-neutral-200'
                     : 'sticky-step-three border-neutral-300 bg-white'
               }`}>
-                <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden />
+                <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />
               </span>
               <div className="min-w-0 flex-1 rounded-xl border border-neutral-100 bg-neutral-50 px-3 py-2">
                 <p className="text-xs font-black text-[#1C1917]">{label}</p>
@@ -461,7 +444,7 @@ function DeliveryScreen() {
         <div className="sticky-thanks mx-4 mb-5 mt-3 rounded-2xl bg-brand-600 p-3.5 text-white opacity-0 shadow-xl shadow-brand-900/20">
           <div className="flex gap-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-brand-700">
-              <Check className="h-4 w-4" strokeWidth={3} aria-hidden />
+              <Check className="h-4 w-4" strokeWidth={3} aria-hidden="true" />
             </span>
             <div>
               <p className="text-xs font-black">Votre commande a été livrée.</p>
@@ -469,42 +452,6 @@ function DeliveryScreen() {
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  )
-}
-
-function OrdersScreen() {
-  return (
-    <div className="h-full bg-[#FAFAF9]">
-      <PhoneHeader title="Commandes" subtitle="Dashboard Hanut" />
-      <div className="space-y-3 px-4">
-        {[
-          ['Fatima K.', 'Robe été + Hijab', '120 DT', 'Confirmée'],
-          ['Mehdi B.', 'Sac cuir', '120 DT', 'En livraison'],
-          ['Sarra A.', 'Sneakers', '75 DT', 'Livrée'],
-          ['Hamza T.', 'Hijab satin', '35 DT', 'À traiter'],
-        ].map(([name, order, total, status]) => (
-          <div key={name} className="rounded-2xl border border-neutral-100 bg-white p-3 shadow-sm">
-            <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-black text-brand-700">
-                {name.slice(0, 1)}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-black text-[#1C1917]">{name}</p>
-                <p className="truncate text-xs font-semibold text-neutral-500">{order}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs font-black text-[#1C1917]">{total}</p>
-                <p className="text-[10px] font-bold text-brand-700">{status}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="mx-4 mt-4 rounded-2xl bg-[#10261D] p-4 text-white">
-        <p className="text-xs font-semibold text-white/70">Aujourd’hui</p>
-        <p className="mt-1 text-2xl font-black">8 commandes</p>
       </div>
     </div>
   )
