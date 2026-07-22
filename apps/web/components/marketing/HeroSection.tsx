@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { BagIllustration, HijabIllustration, PerfumeIllustration, SneakerIllustration } from './ProductIllustrations'
 
 // ─── Mockup boutique animée (repris de l'ancien Hero, adapté au fond noir) ────
 
@@ -150,9 +151,8 @@ function HeroPhoneMockup() {
 
           <rect x="59" y="172" width="126" height="196" rx="18" fill="#FFFFFF" stroke="#E7E5E4" />
           <rect x="72" y="186" width="100" height="88" rx="15" fill="#FFE4E6" />
-          <circle cx="112" cy="228" r="24" fill="#FDA4AF" opacity="0.85" />
-          <path d="M124 207C142 222 143 248 124 259C107 248 105 222 124 207Z" fill="#FB7185" />
-          <text x="73" y="303" fontSize="15" fontWeight="800" fill="#1C1917">Robe été</text>
+          <svg x="90" y="198" width="64" height="64"><PerfumeIllustration color="#E11D48" /></svg>
+          <text x="73" y="303" fontSize="15" fontWeight="800" fill="#1C1917">Parfum Rose</text>
           <text x="73" y="327" fontSize="17" fontWeight="900" fill="#16A34A">85 DT</text>
           <rect x="73" y="339" width="99" height="17" rx="8.5" fill="#F0FDF4" />
           <text x="122.5" y="351.5" textAnchor="middle" fontSize="9" fontWeight="800" fill="#15803D">Ajouter</text>
@@ -161,8 +161,7 @@ function HeroPhoneMockup() {
 
           <rect x="205" y="172" width="126" height="196" rx="18" fill="#FFFFFF" stroke="#E7E5E4" />
           <rect x="218" y="186" width="100" height="88" rx="15" fill="#DCFCE7" />
-          <circle cx="268" cy="229" r="31" fill="#86EFAC" opacity="0.8" />
-          <path d="M246 235C258 207 288 204 298 232C287 258 257 260 246 235Z" fill="#22C55E" />
+          <svg x="236" y="198" width="64" height="64"><HijabIllustration color="#16A34A" /></svg>
           <text x="219" y="303" fontSize="15" fontWeight="800" fill="#1C1917">Hijab satin</text>
           <text x="219" y="327" fontSize="17" fontWeight="900" fill="#16A34A">35 DT</text>
           <rect x="219" y="339" width="99" height="17" rx="8.5" fill="#F0FDF4" />
@@ -170,8 +169,7 @@ function HeroPhoneMockup() {
 
           <rect x="59" y="389" width="126" height="196" rx="18" fill="#FFFFFF" stroke="#E7E5E4" />
           <rect x="72" y="403" width="100" height="88" rx="15" fill="#FEF3C7" />
-          <rect x="96" y="431" width="52" height="38" rx="12" fill="#F59E0B" />
-          <path d="M105 431C106 417 139 417 140 431" stroke="#D97706" strokeWidth="6" strokeLinecap="round" />
+          <svg x="90" y="415" width="64" height="64"><BagIllustration color="#D97706" /></svg>
           <text x="73" y="520" fontSize="15" fontWeight="800" fill="#1C1917">Sac cuir</text>
           <text x="73" y="544" fontSize="17" fontWeight="900" fill="#16A34A">120 DT</text>
           <rect x="73" y="556" width="99" height="17" rx="8.5" fill="#F0FDF4" />
@@ -179,8 +177,7 @@ function HeroPhoneMockup() {
 
           <rect x="205" y="389" width="126" height="196" rx="18" fill="#FFFFFF" stroke="#E7E5E4" />
           <rect x="218" y="403" width="100" height="88" rx="15" fill="#DBEAFE" />
-          <path d="M239 455C259 437 289 437 306 458C287 471 254 472 239 455Z" fill="#60A5FA" />
-          <path d="M242 457H308" stroke="#2563EB" strokeWidth="6" strokeLinecap="round" />
+          <svg x="236" y="415" width="64" height="64"><SneakerIllustration color="#2563EB" /></svg>
           <text x="219" y="520" fontSize="15" fontWeight="800" fill="#1C1917">Sneakers</text>
           <text x="219" y="544" fontSize="17" fontWeight="900" fill="#16A34A">75 DT</text>
           <rect x="219" y="556" width="99" height="17" rx="8.5" fill="#F0FDF4" />
@@ -231,7 +228,7 @@ function HeroPhoneMockup() {
           <text x="121" y="425" fontSize="11" fontWeight="600" fill="#78716C">Paiement COD à la réception</text>
 
           <rect x="70" y="486" width="250" height="112" rx="22" fill="#FAFAF9" stroke="#E7E5E4" />
-          <text x="90" y="522" fontSize="14" fontWeight="800" fill="#1C1917">Robe été</text>
+          <text x="90" y="522" fontSize="14" fontWeight="800" fill="#1C1917">Parfum Rose</text>
           <text x="272" y="522" textAnchor="end" fontSize="13" fontWeight="800" fill="#1C1917">85 DT</text>
           <text x="90" y="552" fontSize="14" fontWeight="800" fill="#1C1917">Hijab satin</text>
           <text x="272" y="552" textAnchor="end" fontSize="13" fontWeight="800" fill="#1C1917">35 DT</text>
