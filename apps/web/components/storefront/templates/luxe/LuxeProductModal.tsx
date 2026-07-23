@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
-import { X, ImageOff, Minus, Plus } from 'lucide-react'
+import { X, ImageOff, Minus, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { buildCartKey } from '@/lib/storefront/cart'
 import { useFocusTrap } from '@/lib/use-focus-trap'
 import type { TemplateProductModalProps } from '../types'
@@ -15,6 +15,25 @@ export default function LuxeProductModal({ product, cart, t, isRtl, portalContai
   const [quantity, setQuantity] = useState(1)
   const panelRef = useRef<HTMLDivElement>(null)
   useFocusTrap(panelRef)
+
+  const galleryImages = [product.image_url, ...product.images_gallery].filter((url): url is string => Boolean(url))
+  const hasGallery = galleryImages.length > 1
+  const [activeImg, setActiveImg] = useState(0)
+  const touchStartX = useRef<number | null>(null)
+
+  function goTo(index: number) {
+    setActiveImg(Math.max(0, Math.min(galleryImages.length - 1, index)))
+  }
+  function handleTouchStart(e: TouchEvent) {
+    touchStartX.current = e.touches[0].clientX
+  }
+  function handleTouchEnd(e: TouchEvent) {
+    if (touchStartX.current === null) return
+    const delta = e.changedTouches[0].clientX - touchStartX.current
+    touchStartX.current = null
+    if (Math.abs(delta) < 40) return
+    goTo(delta < 0 ? activeImg + 1 : activeImg - 1)
+  }
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -90,13 +109,57 @@ export default function LuxeProductModal({ product, cart, t, isRtl, portalContai
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 space-y-5">
-          <div className="relative aspect-[3/4] max-w-[240px] mx-auto" style={{ backgroundColor: 'color-mix(in srgb, var(--primary) 6%, var(--card-bg, #fff))' }}>
-            {product.image_url ? (
-              <Image src={product.image_url} alt={product.name} fill sizes="240px" className="object-cover" />
+          <div
+            className="relative aspect-[3/4] max-w-[240px] mx-auto overflow-hidden"
+            style={{ backgroundColor: 'color-mix(in srgb, var(--primary) 6%, var(--card-bg, #fff))' }}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            {galleryImages.length > 0 ? (
+              <Image key={activeImg} src={galleryImages[activeImg]} alt={product.name} fill sizes="240px" className="object-cover" />
             ) : (
               <span className="absolute inset-0 flex items-center justify-center"><ImageOff className="w-8 h-8 opacity-30" style={{ color: 'var(--primary)' }} strokeWidth={1} /></span>
             )}
+            {hasGallery && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => goTo(activeImg - 1)}
+                  disabled={activeImg === 0}
+                  style={{ backgroundColor: 'color-mix(in srgb, var(--page-bg, #faf8f5) 85%, transparent)', color: 'var(--text-primary, #1a1a1a)' }}
+                  className="absolute left-1 top-1/2 -translate-y-1/2 w-7 h-7 touch-manipulation flex items-center justify-center disabled:opacity-0"
+                  aria-label="Image précédente"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goTo(activeImg + 1)}
+                  disabled={activeImg === galleryImages.length - 1}
+                  style={{ backgroundColor: 'color-mix(in srgb, var(--page-bg, #faf8f5) 85%, transparent)', color: 'var(--text-primary, #1a1a1a)' }}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 touch-manipulation flex items-center justify-center disabled:opacity-0"
+                  aria-label="Image suivante"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </>
+            )}
           </div>
+          {hasGallery && (
+            <div className="flex justify-center gap-2 overflow-x-auto scrollbar-none">
+              {galleryImages.map((img, i) => (
+                <button
+                  key={img + i}
+                  type="button"
+                  onClick={() => goTo(i)}
+                  className="relative shrink-0 w-12 h-12 overflow-hidden transition-opacity"
+                  style={{ border: i === activeImg ? '2px solid var(--primary)' : `1px solid ${BORDER}`, opacity: i === activeImg ? 1 : 0.6 }}
+                >
+                  <Image src={img} alt="" fill sizes="48px" className="object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
 
           <div>
             <p className="text-lg font-medium">{effectivePrice} DT</p>

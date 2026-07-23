@@ -177,6 +177,58 @@ export default function IdentityStep({ shopInfo, onChange, logoUploading, banner
           />
         </div>
       </div>
+
+      <div className="pt-2 border-t border-gray-100 space-y-3">
+        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-2xl">
+          <div>
+            <p className="font-medium text-gray-900 text-sm">Boutique ouverte</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {shopInfo.is_open ? 'Vos clients peuvent commander' : 'Boutique en pause — vos clients voient un message'}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={shopInfo.is_open}
+            onClick={() => onChange(prev => ({ ...prev, is_open: !prev.is_open }))}
+            className={`relative w-12 h-6 shrink-0 rounded-full transition-colors ${shopInfo.is_open ? 'bg-brand-600' : 'bg-gray-200'}`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                shopInfo.is_open ? 'translate-x-6' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+
+        {!shopInfo.is_open && (
+          <div className="space-y-3">
+            <div>
+              <textarea
+                value={shopInfo.closed_message ?? ''}
+                onChange={e => onChange(prev => ({ ...prev, closed_message: e.target.value }))}
+                placeholder="Ex: Boutique fermée jusqu'au 25 juillet. On revient bientôt !"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                rows={3}
+                maxLength={200}
+              />
+              <p className="text-[10px] text-gray-400 mt-1">{(shopInfo.closed_message ?? '').length}/200 caractères</p>
+            </div>
+            <div>
+              <label htmlFor="identity-closed-until" className="text-xs text-gray-500 block mb-1">
+                Date de réouverture <span className="text-gray-400 font-normal">(optionnel)</span>
+              </label>
+              <input
+                id="identity-closed-until"
+                type="date"
+                value={shopInfo.closed_until?.slice(0, 10) ?? ''}
+                onChange={e => onChange(prev => ({ ...prev, closed_until: e.target.value || null }))}
+                className="border border-gray-200 rounded-xl px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

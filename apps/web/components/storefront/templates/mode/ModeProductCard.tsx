@@ -12,6 +12,14 @@ export default function ModeProductCard({ product, t, onSelect, onQuickAdd }: Te
   const hasPriceRange = product.maxPrice > product.minPrice
   const [isHovering, setIsHovering] = useState(false)
 
+  const galleryImages = [product.image_url, ...product.images_gallery].filter((url): url is string => Boolean(url))
+  const hasGallery = galleryImages.length > 1
+
+  const effectiveStock = product.hasVariants
+    ? product.variants.reduce((sum, v) => sum + v.qty, 0)
+    : product.stock
+  const isLowStock = effectiveStock > 0 && effectiveStock <= product.low_stock_alert
+
   function handleAdd() {
     if (isOut) return
     if (product.hasVariants) {
@@ -58,6 +66,26 @@ export default function ModeProductCard({ product, t, onSelect, onQuickAdd }: Te
             >
               {product.featured_label || 'En vedette'}
             </span>
+          </div>
+        )}
+        {isLowStock && (
+          <div className="absolute top-2 right-2">
+            <span
+              className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 bg-white text-red-600"
+            >
+              {t.shop.lowStock(effectiveStock)}
+            </span>
+          </div>
+        )}
+        {hasGallery && !isOut && (
+          <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
+            {galleryImages.map((_, i) => (
+              <div
+                key={i}
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: i === 0 ? '#fff' : 'rgba(255,255,255,0.5)' }}
+              />
+            ))}
           </div>
         )}
       </button>

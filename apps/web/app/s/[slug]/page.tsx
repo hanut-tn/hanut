@@ -6,6 +6,7 @@ import { getVariantLabel } from '@/lib/variants'
 import type { StorefrontProduct } from '@/lib/storefront/cart'
 import { DEFAULT_STOREFRONT_CONFIG, type Category, type StorefrontConfig } from '@hanut/types'
 import StorefrontShell from '@/components/storefront/StorefrontShell'
+import BoutiqueAbsencePage from '@/components/storefront/BoutiqueAbsencePage'
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -15,15 +16,45 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const supabase = createServiceClient()
     const { data: seller } = await supabase
       .from('sellers')
-      .select('name, shop_name, shop_description')
+      .select('id, name, shop_name, shop_description, logo_url, banner_url')
       .eq('slug', slug)
       .single()
     if (seller) {
       const displayName = seller.shop_name || seller.name
+      const description = seller.shop_description
+        || `Commandez chez ${displayName}, paiement à la livraison partout en Tunisie.`
+
+      // Image OG : bannière > logo > photo du premier produit visible > défaut Hanut.
+      const { data: firstProduct } = await supabase
+        .from('products')
+        .select('image_url')
+        .eq('seller_id', seller.id)
+        .eq('is_visible_in_storefront', true)
+        .gt('stock', 0)
+        .order('is_featured', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      const ogImage = seller.banner_url || seller.logo_url || firstProduct?.image_url || '/og-image.png'
+
       return {
         title: `${displayName} — Boutique en ligne`,
-        description: seller.shop_description
-          || `Commandez chez ${displayName}, paiement à la livraison partout en Tunisie.`,
+        description,
+        openGraph: {
+          title: displayName,
+          description,
+          url: `https://www.hanut.tn/s/${slug}`,
+          siteName: 'Hanut',
+          images: [{ url: ogImage, width: 1200, height: 630, alt: displayName }],
+          type: 'website',
+          locale: 'fr_TN',
+        },
+        twitter: {
+          card: 'summary_large_image',
+          title: displayName,
+          description,
+          images: [ogImage],
+        },
       }
     }
   } catch {
@@ -98,11 +129,22 @@ export default async function StorefrontPage({ params }: Props) {
 
   const { data: seller } = await supabase
     .from('sellers')
-    .select('id, name, slug, shop_name, shop_description, logo_url, banner_url, storefront_config, plan')
+    .select('id, name, slug, shop_name, shop_description, logo_url, banner_url, storefront_config, plan, is_open, closed_message, closed_until')
     .eq('slug', slug)
     .single()
 
   if (!seller) notFound()
+
+  if (!seller.is_open) {
+    return (
+      <BoutiqueAbsencePage
+        shopName={seller.shop_name || seller.name}
+        logoUrl={seller.logo_url ?? null}
+        closedMessage={seller.closed_message ?? null}
+        closedUntil={seller.closed_until ?? null}
+      />
+    )
+  }
 
   const config: StorefrontConfig = {
     ...DEFAULT_STOREFRONT_CONFIG,

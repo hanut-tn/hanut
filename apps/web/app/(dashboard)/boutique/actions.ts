@@ -21,16 +21,29 @@ export type ShopInfo = {
   shop_description: string | null
   logo_url: string | null
   banner_url: string | null
+  is_open: boolean
+  closed_message: string | null
+  closed_until: string | null
+}
+
+const EMPTY_SHOP_INFO: ShopInfo = {
+  shop_name: null,
+  shop_description: null,
+  logo_url: null,
+  banner_url: null,
+  is_open: true,
+  closed_message: null,
+  closed_until: null,
 }
 
 export async function getStorefrontData(): Promise<{ config: StorefrontConfig; shopInfo: ShopInfo }> {
   const context = await getUserContext()
-  if (!context) return { config: DEFAULT_STOREFRONT_CONFIG, shopInfo: { shop_name: null, shop_description: null, logo_url: null, banner_url: null } }
+  if (!context) return { config: DEFAULT_STOREFRONT_CONFIG, shopInfo: EMPTY_SHOP_INFO }
 
   const supabase = await createServerClient()
   const { data } = await supabase
     .from('sellers')
-    .select('storefront_config, shop_name, shop_description, logo_url, banner_url')
+    .select('storefront_config, shop_name, shop_description, logo_url, banner_url, is_open, closed_message, closed_until')
     .eq('id', context.sellerId)
     .single()
 
@@ -41,6 +54,9 @@ export async function getStorefrontData(): Promise<{ config: StorefrontConfig; s
       shop_description: data?.shop_description ?? null,
       logo_url: data?.logo_url ?? null,
       banner_url: data?.banner_url ?? null,
+      is_open: data?.is_open ?? true,
+      closed_message: data?.closed_message ?? null,
+      closed_until: data?.closed_until ?? null,
     },
   }
 }
@@ -91,6 +107,11 @@ export async function saveStorefrontData(
     return { error: `URL de bannière invalide. Reçu="${bannerUrl}" Attendu="${storagePrefix}"` }
   }
 
+  const isOpen = shopInfo.is_open ?? true
+  const closedMessage = (shopInfo.closed_message ?? '').trim()
+  const closedUntil = shopInfo.closed_until?.trim() || null
+  if (closedMessage.length > 200) return { error: "Le message d'absence est trop long (200 caractères max)." }
+
   const supabase = await createServerClient()
 
   const { data: existing } = await supabase
@@ -122,6 +143,9 @@ export async function saveStorefrontData(
       shop_description: shopDescription || null,
       logo_url: logoUrl,
       banner_url: bannerUrl,
+      is_open: isOpen,
+      closed_message: closedMessage || null,
+      closed_until: closedUntil,
     })
     .eq('id', context.sellerId)
 
